@@ -11049,21 +11049,18 @@ ${ev.description || ""}`
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
-  var CM_NEWS_FILTERS = NEWS_GEO_GROUPS;
-  var cmNewsGeo = NEWS_GEO_GROUPS[0];
+  var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
+  var CM_NEWS_COUNT = 3;
   function paintCmNews(el, arts) {
-    const filtered = articlesOfGroup(arts, cmNewsGeo);
-    el.innerHTML = `
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
+    const top = articlesOfGroup(arts, CM_NEWS_GROUP).slice(0, CM_NEWS_COUNT);
+    if (!top.length) {
+      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u0413\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+    } else {
+      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+    }
     const controls = document.getElementById("cm-news-controls");
     if (controls) {
-      controls.innerHTML = `
-      <div class="cm-news-filters">
-        ${CM_NEWS_FILTERS.map((g) => `
-          <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-        `).join("")}
-      </div>`;
+      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
     }
   }
   async function renderCommunityNews() {
@@ -11077,51 +11074,15 @@ ${ev.description || ""}`
       return;
     section.dataset.wired = "1";
     section.addEventListener("click", (e) => {
-      if (e.target.closest(".cm-news-board-bar")) {
-        openNewsHub(cmNewsGeo);
-        return;
-      }
-      const chip = e.target.closest("[data-cm-geo]");
-      if (chip) {
-        cmNewsGeo = chip.dataset.cmGeo;
-        paintCmNews(el, arts);
-        return;
-      }
       const card = e.target.closest("[data-article-id]");
       if (card) {
         const id = Number(card.dataset.articleId);
         if (Number.isFinite(id))
           openArticle(id);
+        return;
       }
+      openNewsHub(CM_NEWS_GROUP);
     });
-    const EDGE = 30;
-    let feedArmed = false;
-    const feedNow = () => section.querySelector(".cm-news-feed");
-    section.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1)
-        return;
-      const feed = feedNow();
-      if (!feed)
-        return;
-      const r = feed.getBoundingClientRect();
-      const t = e.touches[0];
-      const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
-      const inEdge = t.clientX < r.left + EDGE || t.clientX > r.right - EDGE;
-      if (inFeedY && inEdge) {
-        feed.style.overflowY = "hidden";
-        feedArmed = true;
-      }
-    }, { passive: true });
-    const releaseFeed = () => {
-      if (!feedArmed)
-        return;
-      const feed = feedNow();
-      if (feed)
-        feed.style.overflowY = "";
-      feedArmed = false;
-    };
-    section.addEventListener("touchend", releaseFeed, { passive: true });
-    section.addEventListener("touchcancel", releaseFeed, { passive: true });
   }
 
   // src/tabs/community.js
@@ -11305,12 +11266,15 @@ ${ev.description || ""}`
     <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
          \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
 
+    <!-- \u{1F534} 31.07: \u0448\u0430\u043F\u043A\u0430 \u0441\u0442\u0430\u043B\u0430 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u044C\u043E\u044E <button>. \u0420\u0430\u043D\u0456\u0448\u0435 \u0446\u0435 \u0431\u0443\u0432 <div>, \u043F\u043E \u044F\u043A\u043E\u043C\u0443
+         \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0442\u0430\u043F\u0430\u043B\u043E\u0441\u044C; \u0442\u0435\u043F\u0435\u0440 \u0443\u0432\u0435\u0441\u044C \u0432\u0456\u0434\u0436\u0435\u0442 \u0432\u0435\u0434\u0435 \u0432 \u0445\u0430\u0431 \u043D\u043E\u0432\u0438\u043D, \u0456 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0456 \u0442\u0430
+         \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
     <section id="cm-news-board" class="cm-block cm-block--news">
-      <div class="cm-news-board-bar">
+      <button class="cm-news-board-bar" type="button" data-cm-news-open>
         <span class="cm-news-board-dot"></span>
         <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
         <span class="cm-news-board-live">LIVE</span>
-      </div>
+      </button>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>

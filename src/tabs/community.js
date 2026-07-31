@@ -219,12 +219,15 @@ function renderSkeleton() {
     <!-- Порядок блоків (рішення Роми 08.07):
          Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
 
+    <!-- 🔴 31.07: шапка стала справжньою <button>. Раніше це був <div>, по якому
+         нічого не тапалось; тепер увесь віджет веде в хаб новин, і клавіатурі та
+         читачу екрана потрібен реальний елемент керування, а не клікабельний блок. -->
     <section id="cm-news-board" class="cm-block cm-block--news">
-      <div class="cm-news-board-bar">
+      <button class="cm-news-board-bar" type="button" data-cm-news-open>
         <span class="cm-news-board-dot"></span>
         <span class="cm-news-board-label">Табло новин</span>
         <span class="cm-news-board-live">LIVE</span>
-      </div>
+      </button>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>

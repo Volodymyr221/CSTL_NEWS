@@ -1150,33 +1150,45 @@ export async function renderContactsBlock() {
   }
 }
 
-// ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────────
-// Стрічка новин переїхала сюди окремим блоком: 3 кнопки-фільтри + прокрутка
-// карток ВСЕРЕДИНІ блока. Картки й модалку перевикористовуємо з news.js.
-// ⚠️ 31.07: власний список категорій і власний `cmNewsMatch` ПРИБРАНІ — гео-групи
-// тепер живуть одним місцем правди в `news.js` (`NEWS_GEO_GROUPS`, `articlesOfGroup`),
-// бо з появою хаба користувачів стало двоє. Дві копії того самого правила вже
-// розходились у цьому проєкті (списки антиспаму), і симптом виглядав як баг продукту.
-const CM_NEWS_FILTERS = NEWS_GEO_GROUPS;
-let cmNewsGeo = NEWS_GEO_GROUPS[0];
+// ── Блок НОВИНИ у вкладці «Громада» ──────────────────────────────────────────
+// 🔴 ПЕРЕРОБЛЕНО 31.07 (потік /byyou). Було: 3 кнопки-фільтри + ПРОКРУТКА карток
+// усередині блока. Заміряно перед переробкою (390×844): блок займав **567px = 77.6%**
+// видимої зони, а всередині нього стояв скролер із вікном 465px на вміст 6 933px —
+// тобто **6 468px було сховано в картці**, яка з'їдала три чверті головного екрана.
+// Це був ЄДИНИЙ вкладений скролер у Громаді (решта шість віджетів — рівно 0).
+//
+// Стало: **три найсвіжіші новини Громади, без прокрутки взагалі**. Уся глибина
+// переїхала в повноекранний хаб (`tabs/news-hub.js`), куди веде тап по віджету.
+//
+// ⚠️ Чіпи категорій прибрані (рішення Вови 31.07). Причина не «щоб було чисто»:
+// за живими даними Громада дає 0.26 статті на день, а «Україна та Світ» ~30 — тобто
+// чіп у віджеті показував би **3 випадкові з 212**, і читати категорію все одно
+// можна лише в хабі. Три кнопки під трьома картками були «вкладкою у вкладці»
+// за кілька десятків пікселів від таб-бару.
+// ⚠️ Гео-групи живуть одним місцем правди в `news.js` — тут своєї копії НЕМА.
+const CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];   // 'Громада' — місцеве і є сенсом головної
+const CM_NEWS_COUNT = 3;
 
 function paintCmNews(el, arts) {
-  const filtered = articlesOfGroup(arts, cmNewsGeo);
-  // Екран табло — лише новини (стрічка), від самого верху.
-  // Стрічку (.cm-news-feed) звужено на 30px з кожного боку і зацентровано (CSS margin):
-  // краї табло поза overflow-контейнером → дотик там скролить СТОРІНКУ, а не стрічку.
-  el.innerHTML = `
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
-  // Кнопки-фільтри — у нижню панель, інтегровану в раму табло.
+  const top = articlesOfGroup(arts, CM_NEWS_GROUP).slice(0, CM_NEWS_COUNT);
+  if (!top.length) {
+    el.innerHTML = '<div class="cm-block-empty">Новин Громади поки немає</div>';
+  } else {
+    // БЕЗ обгортки-скролера — три однакові рядки (`compact: true`).
+    // 🔴 ЧОМУ НЕ «1 hero + 2 рядки», як стояло в плані: заміряв обидва варіанти
+    // живцем, і hero програв ДВІЧІ. (1) Віджет виходив **824px = 112.8% видимої
+    // зони** — тобто БІЛЬШИЙ за старий скролер (567px), а сенс потоку рівно
+    // протилежний. (2) Головніше: висота hero залежить від ДАНИХ — з фото він
+    // ~380px, без фото 179px. Віджет, що стрибає на 200px залежно від того, чи
+    // редактор доклав картинку, це не макет, а лотерея. Три однакові рядки дають
+    // передбачувану висоту незалежно від вмісту.
+    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+  }
+  // Нижня панель: замість трьох чіпів — один вхід у хаб.
   const controls = document.getElementById('cm-news-controls');
   if (controls) {
-    controls.innerHTML = `
-      <div class="cm-news-filters">
-        ${CM_NEWS_FILTERS.map(g => `
-          <button class="cm-news-chip ${g === cmNewsGeo ? 'active' : ''}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-        `).join('')}
-      </div>`;
+    controls.innerHTML =
+      `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
   }
 }
 
@@ -1191,47 +1203,18 @@ export async function renderCommunityNews() {
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   section.addEventListener('click', e => {
-    // Шапка «Табло новин» → повноекранний хаб, відкритий на поточній категорії.
-    // ⚠️ ТИМЧАСОВА точка входу (крок 2 потоку): вона потрібна, щоб хаб узагалі можна
-    // було перевірити наживо до того, як віджет перероблять. На кроці 6 шапка стане
-    // справжньою <button> з нормальною доступністю, а тапабельним буде весь віджет.
-    if (e.target.closest('.cm-news-board-bar')) { openNewsHub(cmNewsGeo); return; }
-    const chip = e.target.closest('[data-cm-geo]');
-    if (chip) {
-      cmNewsGeo = chip.dataset.cmGeo;
-      paintCmNews(el, arts);
-      return;
-    }
+    // Картка → стаття. Стоїть ПЕРШИМ: картки лежать усередині віджета, а сам віджет
+    // теж веде в хаб — без цієї черговості тап по новині відкривав би хаб.
     const card = e.target.closest('[data-article-id]');
     if (card) {
       const id = Number(card.dataset.articleId);
       if (Number.isFinite(id)) openArticle(id);
+      return;
     }
+    // Будь-яке інше місце віджета (шапка, «Усі новини», порожнє поле) → хаб.
+    // Категорію передаємо ЯВНО: віджет показує Громаду, тож і хаб має відкритись на
+    // Громаді. Інакше людина тапала б по місцевій новині, а потрапляла у «Волинь»,
+    // яку востаннє гортала (хаб памʼятає останню категорію для свайпів усередині себе).
+    openNewsHub(CM_NEWS_GROUP);
   });
-
-  // Бокова зона свайпу сторінки (#3, рішення Роми «вигляд табло зберігаємо»):
-  // картки повної ширини, АЛЕ палець у 30px від краю стрічки → на час жесту стрічка
-  // не скролиться (overflow:hidden) → вертикальний свайп іде СТОРІНЦІ; у центрі —
-  // скролить стрічку; тап відкриває картку (не чіпаємо, бо БЕЗ preventDefault).
-  // Хардненуто за дослідженням iOS: рішення на touchstart (до руху, момент-скрол цілий),
-  // {passive:true}, обовʼязковий restore на touchcancel (iOS PWA шле pointercancel).
-  const EDGE = 30;
-  let feedArmed = false;
-  const feedNow = () => section.querySelector('.cm-news-feed');
-  section.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;            // мультитач/пінч — ігноруємо
-    const feed = feedNow(); if (!feed) return;
-    const r = feed.getBoundingClientRect();
-    const t = e.touches[0];
-    const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
-    const inEdge  = t.clientX < r.left + EDGE || t.clientX > r.right - EDGE;
-    if (inFeedY && inEdge) { feed.style.overflowY = 'hidden'; feedArmed = true; }
-  }, { passive: true });
-  const releaseFeed = () => {
-    if (!feedArmed) return;
-    const feed = feedNow(); if (feed) feed.style.overflowY = '';   // повертаємо CSS-значення (auto)
-    feedArmed = false;
-  };
-  section.addEventListener('touchend', releaseFeed, { passive: true });
-  section.addEventListener('touchcancel', releaseFeed, { passive: true });
 }
