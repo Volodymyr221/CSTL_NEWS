@@ -20,7 +20,7 @@ import { openLayer, closeLayer } from '../core/layers.js';
 import { escapeHtml, attachSwipe } from '../core/utils.js';
 import {
   ensureNewsLoaded, newsCardsHtml, openArticle,
-  NEWS_GEO_GROUPS, articlesOfGroup, markNewsSeen,
+  NEWS_GEO_GROUPS, articlesOfGroup, markNewsSeen, handleImgError,
 } from './news.js';
 
 const IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
@@ -33,6 +33,27 @@ let _hub = null;
 let _lastGroup = NEWS_GEO_GROUPS[0];
 
 export function isNewsHubOpen() { return !!_hub; }
+
+// Скелет на перший показ (крок 10). До цього екран відкривався з написом
+// «Завантаження…» посеред порожнечі — а `data/articles.json` це 1.31 МБ, тобто на
+// слабкому звʼязку порожнеча тримається помітно довго.
+// ⚠️ Скелет повторює РЕАЛЬНУ розкладку списку (велика перша + рядки з мініатюрою
+// праворуч), а не абстрактні смужки: сенс у тому, щоб при появі даних нічого не
+// стрибнуло. Заглушка, схожа на щось інше, лише додає ривок.
+// `aria-hidden` — читачу екрана ці порожні блоки не потрібні, для нього є
+// `nh-loading` з текстом.
+function skeletonHtml() {
+  const row = `<div class="nh-sk-row"><div class="nh-sk-txt">
+      <span class="nh-sk-line"></span><span class="nh-sk-line nh-sk-line--short"></span>
+    </div><span class="nh-sk-thumb"></span></div>`;
+  return `<div class="nh-sk" aria-hidden="true">
+      <div class="nh-sk-lead"><span class="nh-sk-photo"></span>
+        <span class="nh-sk-line nh-sk-line--big"></span>
+        <span class="nh-sk-line nh-sk-line--big nh-sk-line--short"></span></div>
+      ${row.repeat(4)}
+    </div>
+    <div class="nh-loading sr-only" role="status">Завантаження новин…</div>`;
+}
 
 // Відкрити хаб. group — з якої категорії почати (за замовчуванням остання відкрита).
 export async function openNewsHub(group) {
@@ -60,10 +81,13 @@ export async function openNewsHub(group) {
                 aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join('')}
     </div>
-    <div class="nh-list" data-nh-list>
-      <div class="nh-loading">Завантаження…</div>
-    </div>`;
+    <div class="nh-list" data-nh-list>${skeletonHtml()}</div>`;
   document.body.appendChild(screen);
+  // Биті чужі фото → брендовий плейсхолдер 🏰 замість системної іконки «зламане
+  // зображення». ⚠️ `error` НЕ спливає, тому слухаємо у фазі ЗАХОПЛЕННЯ (третій
+  // аргумент `true`) — зі звичайним слухачем на контейнері подія просто не дійшла б.
+  // Обробник спільний із модалкою статті (`news.js`), своєї копії тут нема.
+  screen.addEventListener('error', handleImgError, true);
   // 🔴 Мітка «хаб відкритий» на <body> (31.07, баг зі скріна IMG_3776).
   // Через неї CSS піднімає модалку статті НАД хабом. Скарга Вови: «модалка новини
   // відкривається під сторінкою НОВИНИ» — і так воно й було: `#article-modal` має
@@ -174,19 +198,48 @@ async function paint(group) {
   const all = articlesOfGroup(arts, group);
   _shown = 0;
   list.innerHTML = '';
-  appendChunk(list, all);
-  armSentinel(list, all);
+  appendChunk(list, all, group);
+  markLead(list, all);
+  armSentinel(list, all, group);
 }
 
 // Дописати наступні PAGE_SIZE карток. `insertAdjacentHTML('beforeend')` — саме
 // дописування, а не `innerHTML +=`: останнє перебудувало б УЖЕ намальовані картки,
 // зруйнувавши прокрутку під пальцем і перезавантаживши всі картинки.
-function appendChunk(list, all) {
+function appendChunk(list, all, group) {
   const next = all.slice(_shown, _shown + PAGE_SIZE);
   if (!next.length) return false;
+  const from = list.children.length;
   list.insertAdjacentHTML('beforeend', newsCardsHtml(next, { compact: true }));
+  const fresh = [...list.children].slice(from);
+  fresh.forEach(node => dropRedundantGeo(node, group));
   _shown += next.length;
   return true;
+}
+
+// 🔴 ГЕО-МІТКА, ЯКА ПОВТОРЮЄ АКТИВНУ ВКЛАДКУ, — ЦЕ ШУМ (31.07).
+// У вкладці «Громада» кожна картка писала «ГРОМАДА», у «Волині» — «ВОЛИНЬ».
+// ⚠️ Але прибирати гео СКРІЗЬ не можна: у розділі «Україна та Світ» мітка каже,
+// що саме це — Україна чи Світ, і там вона єдина несе інформацію. Тому звіряємо
+// текст із назвою активної групи і знімаємо лише збіг.
+// Робимо в JS, а не в CSS: правило «сховати, якщо текст дорівнює назві вкладки»
+// селектором не виражається.
+function dropRedundantGeo(node, group) {
+  const b = node.querySelector && node.querySelector('.news-badge--geo');
+  if (!b) return;
+  const t = b.textContent.trim().toLowerCase();
+  // 'Олика' — стара назва Громади у старих статтях, для читача це те саме.
+  if (t === group.toLowerCase() || (group === 'Громада' && t === 'олика')) b.remove();
+}
+
+// Перша новина списку — ВЕЛИКОЮ карткою з фото (патерн Apple News / Google News).
+// ⚠️ Тільки якщо фото справді є: «герой» без знімка — це просто роздутий блок
+// тексту, який з'їдає екран і нічого не додає. Тому клас вішає JS, а не
+// `:first-child` у CSS — CSS не бачить, чи вантажиться картинка.
+function markLead(list, all) {
+  const first = list.firstElementChild;
+  if (!first || !all.length) return;
+  if (all[0].image && first.querySelector('img')) first.classList.add('nh-lead');
 }
 
 // «Сторож» — порожній вузол у кінці списку. Щойно він потрапляє у видиму область,
@@ -194,7 +247,7 @@ function appendChunk(list, all) {
 // сам вирішує, коли перевіряти, і не смикає наш код на кожен кадр прокрутки.
 // `rootMargin` 600px — дописуємо ЗАЗДАЛЕГІДЬ, за пів екрана до кінця, щоб людина не
 // впиралась у порожнечу і не бачила підвантаження.
-function armSentinel(list, all) {
+function armSentinel(list, all, group) {
   if (_io) { _io.disconnect(); _io = null; }
   if (_shown >= all.length) return;            // усе вмістилось — сторож не потрібен
   const mark = document.createElement('div');
@@ -205,7 +258,7 @@ function armSentinel(list, all) {
     if (!_hub) { _io.disconnect(); _io = null; return; }
     // Сторож завжди має лишатись ОСТАННІМ, інакше нова порція ляже під нього і він
     // більше ніколи не вийде з видимої області → дозавантаження зупиниться назавжди.
-    const more = appendChunk(list, all);
+    const more = appendChunk(list, all, group);
     list.appendChild(mark);
     if (!more || _shown >= all.length) { _io.disconnect(); _io = null; mark.remove(); }
   }, { root: list, rootMargin: '600px' });

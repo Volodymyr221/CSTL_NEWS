@@ -4455,6 +4455,27 @@ textarea.cm-board-input.bm-invalid {
   font-size: 22px;                 /* плейсхолдер 🏰 успадковує розмір від класу */
 }
 .cm-news-top3 .news-card-row-body { padding: 0; flex: 1; min-width: 0; }
+/* 🆕 31.07 (редизайн): мітки — тихий капс, а не «цукерки». Та сама мова, що в хабі
+   (`style/news-hub.css`), інакше два екрани про одне й те саме говорили б по-різному:
+   у віджеті кольорові пігулки, а за один тап від нього — спокійний текст.
+   ⚠️ Колір ІНШИЙ, ніж у хабі, і це не недогляд: хаб лежить на світло-сірому, а
+   віджет — на кремовій картці всередині багряного табло. Бордо `--news-accent`
+   на кремовому дає ту саму гучність, а от жовтий «⭐ Ексклюзив» на ньому губився б,
+   тому лишаємо його теплим — він тут єдина кольорова пляма і несе сенс «наше».
+   ⚠️ Ексклюзивний обідок навколо картки знято з тієї ж причини, що в хабі: кільце
+   читалось як тривога, а не як «краще». */
+.cm-news-top3 .news-badge {
+  background: none !important;
+  color: var(--news-accent);
+  padding: 0;
+  height: auto;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.cm-news-top3 .news-badge--excl { color: #9A6B00; }
+.cm-news-top3 .news-card-meta { display: flex; gap: 9px; margin-bottom: 3px; }
+.cm-news-top3 .news-card-row.exclusive { box-shadow: none; }
 /* Два рядки заголовка замість трьох: рядок стає рівно під висоту мініатюри. */
 .cm-news-top3 .news-card-row-title { font-size: 14.5px; -webkit-line-clamp: 2; margin-bottom: 4px; }
 /* Анонс у віджеті НЕ показуємо — на 3 картки він додав би ~40px кожній, а повний
