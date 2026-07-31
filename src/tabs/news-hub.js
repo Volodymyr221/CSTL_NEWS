@@ -61,8 +61,11 @@ export async function openNewsHub(group) {
   // Шар історії. `close` — миттєве прибирання (системний жест уже відпрацював свою
   // анімацію); `animateOut` — плавне зникнення для натискання КНОПКИ «назад», де
   // анімації нема. Той самий розподіл, що в екрані спільноти «Стрічки».
+  // ⚠️ Спостерігач дозавантаження знімаємо ТУТ, а не покладаємось на прибирання
+  // вузла: `IntersectionObserver` тримає посилання на ціль і на свій `root`, тож
+  // мовчки пережив би закритий екран — а кожне наступне відкриття вішало б ще один.
   const layer = openLayer(
-    () => { screen.remove(); _hub = null; },
+    () => { if (_io) { _io.disconnect(); _io = null; } screen.remove(); _hub = null; },
     { animateOut: () => screen.classList.remove('open') },
   );
   _hub = { screen, layer };
@@ -103,11 +106,64 @@ function setGroup(group) {
   paint(group);
 }
 
-// Намалювати список категорії. `ensureNewsLoaded` кешує — після першого разу
+// ── ПОРЦІЇ (крок 4) ─────────────────────────────────────────────────────────
+// 🔴 НАВІЩО. Без порцій хаб малює всю категорію одразу — заміряно 212 карток у
+// «Україна та Світ» і 166 у «Волині», тобто рівно та хвороба, від якої тікали з
+// віджета (там було 216 карток і 162 `<img>` в одному DOM). Перенести вкладений
+// скролер на власний екран і лишити той самий обсяг = перекласти проблему, а не
+// вирішити.
+//
+// ⚠️ Порції — це про РЕНДЕР, не про мережу. `data/articles.json` (1.31 МБ) однаково
+// тягнеться цілим; його розділення на «свіже + архів» Вова свідомо відклав у
+// наступний потік 31.07. Тобто тут стає легше телефону (менше вузлів і картинок),
+// а не каналу. Плутати ці дві речі не можна.
+const PAGE_SIZE = 20;
+let _shown = 0;           // скільки карток уже намальовано в поточній категорії
+let _io = null;           // спостерігач за «сторожем» унизу списку
+
+// Намалювати ПЕРШУ порцію категорії. `ensureNewsLoaded` кешує — після першого разу
 // перемикання вкладок у мережу не ходить.
 async function paint(group) {
   const arts = await ensureNewsLoaded();
   if (!_hub || _lastGroup !== group) return;   // встигли перемкнути / закрити — не малюємо
   const list = _hub.screen.querySelector('.nh-list');
-  list.innerHTML = newsCardsHtml(articlesOfGroup(arts, group), { compact: true });
+  const all = articlesOfGroup(arts, group);
+  _shown = 0;
+  list.innerHTML = '';
+  appendChunk(list, all);
+  armSentinel(list, all);
+}
+
+// Дописати наступні PAGE_SIZE карток. `insertAdjacentHTML('beforeend')` — саме
+// дописування, а не `innerHTML +=`: останнє перебудувало б УЖЕ намальовані картки,
+// зруйнувавши прокрутку під пальцем і перезавантаживши всі картинки.
+function appendChunk(list, all) {
+  const next = all.slice(_shown, _shown + PAGE_SIZE);
+  if (!next.length) return false;
+  list.insertAdjacentHTML('beforeend', newsCardsHtml(next, { compact: true }));
+  _shown += next.length;
+  return true;
+}
+
+// «Сторож» — порожній вузол у кінці списку. Щойно він потрапляє у видиму область,
+// дописуємо наступну порцію. `IntersectionObserver` замість слухача `scroll`: браузер
+// сам вирішує, коли перевіряти, і не смикає наш код на кожен кадр прокрутки.
+// `rootMargin` 600px — дописуємо ЗАЗДАЛЕГІДЬ, за пів екрана до кінця, щоб людина не
+// впиралась у порожнечу і не бачила підвантаження.
+function armSentinel(list, all) {
+  if (_io) { _io.disconnect(); _io = null; }
+  if (_shown >= all.length) return;            // усе вмістилось — сторож не потрібен
+  const mark = document.createElement('div');
+  mark.className = 'nh-more';
+  list.appendChild(mark);
+  _io = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    if (!_hub) { _io.disconnect(); _io = null; return; }
+    // Сторож завжди має лишатись ОСТАННІМ, інакше нова порція ляже під нього і він
+    // більше ніколи не вийде з видимої області → дозавантаження зупиниться назавжди.
+    const more = appendChunk(list, all);
+    list.appendChild(mark);
+    if (!more || _shown >= all.length) { _io.disconnect(); _io = null; mark.remove(); }
+  }, { root: list, rootMargin: '600px' });
+  _io.observe(mark);
 }

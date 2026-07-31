@@ -10025,6 +10025,10 @@ ${ev.description || ""}`
     document.body.appendChild(screen);
     const layer = openLayer(
       () => {
+        if (_io) {
+          _io.disconnect();
+          _io = null;
+        }
         screen.remove();
         _hub = null;
       },
@@ -10060,12 +10064,55 @@ ${ev.description || ""}`
     _hub.screen.querySelector(".nh-list").scrollTop = 0;
     paint(group);
   }
+  var PAGE_SIZE = 20;
+  var _shown = 0;
+  var _io = null;
   async function paint(group) {
     const arts = await ensureNewsLoaded();
     if (!_hub || _lastGroup !== group)
       return;
     const list = _hub.screen.querySelector(".nh-list");
-    list.innerHTML = newsCardsHtml(articlesOfGroup(arts, group), { compact: true });
+    const all = articlesOfGroup(arts, group);
+    _shown = 0;
+    list.innerHTML = "";
+    appendChunk(list, all);
+    armSentinel(list, all);
+  }
+  function appendChunk(list, all) {
+    const next = all.slice(_shown, _shown + PAGE_SIZE);
+    if (!next.length)
+      return false;
+    list.insertAdjacentHTML("beforeend", newsCardsHtml(next, { compact: true }));
+    _shown += next.length;
+    return true;
+  }
+  function armSentinel(list, all) {
+    if (_io) {
+      _io.disconnect();
+      _io = null;
+    }
+    if (_shown >= all.length)
+      return;
+    const mark = document.createElement("div");
+    mark.className = "nh-more";
+    list.appendChild(mark);
+    _io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting))
+        return;
+      if (!_hub) {
+        _io.disconnect();
+        _io = null;
+        return;
+      }
+      const more = appendChunk(list, all);
+      list.appendChild(mark);
+      if (!more || _shown >= all.length) {
+        _io.disconnect();
+        _io = null;
+        mark.remove();
+      }
+    }, { root: list, rootMargin: "600px" });
+    _io.observe(mark);
   }
 
   // src/tabs/community-blocks.js
