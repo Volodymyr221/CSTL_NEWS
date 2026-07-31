@@ -64,6 +64,16 @@ export async function openNewsHub(group) {
       <div class="nh-loading">Завантаження…</div>
     </div>`;
   document.body.appendChild(screen);
+  // 🔴 Мітка «хаб відкритий» на <body> (31.07, баг зі скріна IMG_3776).
+  // Через неї CSS піднімає модалку статті НАД хабом. Скарга Вови: «модалка новини
+  // відкривається під сторінкою НОВИНИ» — і так воно й було: `#article-modal` має
+  // z-index 1100, а цей екран 1200 (число я скопіював з `.fd-screen`, не звіривши;
+  // у «Стрічці» конфлікт не спливав, бо звідти статті не відкривають).
+  // ⚠️ Чому саме міткою, а не просто підняттям модалки назавжди: шапка застосунку
+  // лишається доступною при відкритій статті, тож людина може тапнути бургер —
+  // а сайдбар теж має z-index 1200 і поїхав би ПІД статтю. Поки відкритий хаб,
+  // шапки не видно взагалі, тому в цьому стані підняття безпечне.
+  document.body.classList.add('nh-open');
 
   // Шар історії. `close` — миттєве прибирання (системний жест уже відпрацював свою
   // анімацію); `animateOut` — плавне зникнення для натискання КНОПКИ «назад», де
@@ -72,7 +82,12 @@ export async function openNewsHub(group) {
   // вузла: `IntersectionObserver` тримає посилання на ціль і на свій `root`, тож
   // мовчки пережив би закритий екран — а кожне наступне відкриття вішало б ще один.
   const layer = openLayer(
-    () => { if (_io) { _io.disconnect(); _io = null; } screen.remove(); _hub = null; },
+    () => {
+      if (_io) { _io.disconnect(); _io = null; }
+      screen.remove();
+      document.body.classList.remove('nh-open');
+      _hub = null;
+    },
     { animateOut: () => screen.classList.remove('open') },
   );
   _hub = { screen, layer };
