@@ -202,6 +202,36 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
+  function attachSwipe(el, onLeft, onRight, opts = {}) {
+    const edgeGuard = opts.edgeGuard || 0;
+    let startX = null, startY = null;
+    el.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) {
+        startX = null;
+        return;
+      }
+      const t = e.touches[0];
+      if (edgeGuard && t.clientX <= edgeGuard) {
+        startX = null;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+      if (startX == null)
+        return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0 && onLeft)
+          onLeft();
+        if (dx > 0 && onRight)
+          onRight();
+      }
+    }, { passive: true });
+  }
   function deepLink(source, id) {
     return `${location.origin}${location.pathname}#/post/${source}/${id}`;
   }
@@ -7290,6 +7320,36 @@
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
   }
+  var NEWS_GEO_GROUPS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
+  function matchGeoGroup(a, group) {
+    if (group === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
+      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
+    if (group === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
+      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+    return a.geo === group;
+  }
+  function articlesOfGroup(arts, group) {
+    return arts.filter((a) => matchGeoGroup(a, group)).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  }
+  var NEWS_SEEN_KEY = "cstl_news_seen_ts";
+  function newsSeenTs() {
+    const v = Number(localStorage.getItem(NEWS_SEEN_KEY) || 0);
+    return Number.isFinite(v) ? v : 0;
+  }
+  function markNewsSeen() {
+    try {
+      localStorage.setItem(NEWS_SEEN_KEY, String(Date.now()));
+    } catch (_) {
+    }
+  }
+  function countNewCommunity(arts) {
+    const seen = newsSeenTs();
+    if (!seen) {
+      markNewsSeen();
+      return 0;
+    }
+    return articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter((a) => (a.ts || 0) > seen).length;
+  }
   async function initNews() {
     await ensureNewsLoaded();
     attachNewsListeners();
@@ -7337,10 +7397,12 @@
     await ensureNewsLoaded();
     openArticle(id);
   }
+  var CATEGORY_DEFAULT = "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E";
   function badgesHtml(a) {
+    const cat = normCategory(a.category);
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(normCategory(a.category))}</span>
+    ${cat !== CATEGORY_DEFAULT ? `<span class="news-badge news-badge--cat" style="background:${catColor2(cat)}">${escapeHtml(cat)}</span>` : ""}
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
@@ -9986,6 +10048,140 @@ ${ev.description || ""}`
     document.body.classList.add("modal-open");
   }
 
+  // src/tabs/news-hub.js
+  var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
+  var _hub = null;
+  var _lastGroup = NEWS_GEO_GROUPS[0];
+  async function openNewsHub(group) {
+    if (_hub)
+      return;
+    const active = NEWS_GEO_GROUPS.includes(group) ? group : _lastGroup;
+    _lastGroup = active;
+    markNewsSeen();
+    window.dispatchEvent(new CustomEvent("cstl-news-seen"));
+    const screen = document.createElement("div");
+    screen.className = "nh-screen";
+    screen.innerHTML = `
+    <div class="nh-bar">
+      <button class="nh-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">${IC_BACK}</button>
+      <div class="nh-title">\u041D\u043E\u0432\u0438\u043D\u0438</div>
+    </div>
+    <div class="nh-tabs" role="tablist">
+      ${NEWS_GEO_GROUPS.map((g) => `
+        <button class="nh-tab${g === active ? " is-on" : ""}" type="button" role="tab"
+                aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
+      `).join("")}
+    </div>
+    <div class="nh-list" data-nh-list>
+      <div class="nh-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </div>`;
+    document.body.appendChild(screen);
+    const layer = openLayer(
+      () => {
+        if (_io) {
+          _io.disconnect();
+          _io = null;
+        }
+        screen.remove();
+        _hub = null;
+      },
+      { animateOut: () => screen.classList.remove("open") }
+    );
+    _hub = { screen, layer };
+    screen.querySelector(".nh-back").addEventListener("click", () => closeLayer(layer, { animate: 240 }));
+    requestAnimationFrame(() => screen.classList.add("open"));
+    screen.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-nh-group]");
+      if (tab) {
+        setGroup(tab.dataset.nhGroup);
+        return;
+      }
+      const card = e.target.closest("[data-article-id]");
+      if (card) {
+        const id = Number(card.dataset.articleId);
+        if (Number.isFinite(id))
+          openArticle(id);
+      }
+    });
+    attachSwipe(
+      screen.querySelector(".nh-list"),
+      () => stepGroup(1),
+      // палець уліво → наступна категорія
+      () => stepGroup(-1),
+      // палець управо → попередня
+      { edgeGuard: 28 }
+    );
+    await paint(active);
+  }
+  function stepGroup(dir) {
+    const i = NEWS_GEO_GROUPS.indexOf(_lastGroup) + dir;
+    if (i < 0 || i >= NEWS_GEO_GROUPS.length)
+      return;
+    setGroup(NEWS_GEO_GROUPS[i]);
+  }
+  function setGroup(group) {
+    if (!_hub || !NEWS_GEO_GROUPS.includes(group) || group === _lastGroup)
+      return;
+    _lastGroup = group;
+    _hub.screen.querySelectorAll(".nh-tab").forEach((t) => {
+      const on = t.dataset.nhGroup === group;
+      t.classList.toggle("is-on", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    _hub.screen.querySelector(".nh-list").scrollTop = 0;
+    paint(group);
+  }
+  var PAGE_SIZE = 20;
+  var _shown = 0;
+  var _io = null;
+  async function paint(group) {
+    const arts = await ensureNewsLoaded();
+    if (!_hub || _lastGroup !== group)
+      return;
+    const list = _hub.screen.querySelector(".nh-list");
+    const all = articlesOfGroup(arts, group);
+    _shown = 0;
+    list.innerHTML = "";
+    appendChunk(list, all);
+    armSentinel(list, all);
+  }
+  function appendChunk(list, all) {
+    const next = all.slice(_shown, _shown + PAGE_SIZE);
+    if (!next.length)
+      return false;
+    list.insertAdjacentHTML("beforeend", newsCardsHtml(next, { compact: true }));
+    _shown += next.length;
+    return true;
+  }
+  function armSentinel(list, all) {
+    if (_io) {
+      _io.disconnect();
+      _io = null;
+    }
+    if (_shown >= all.length)
+      return;
+    const mark = document.createElement("div");
+    mark.className = "nh-more";
+    list.appendChild(mark);
+    _io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting))
+        return;
+      if (!_hub) {
+        _io.disconnect();
+        _io = null;
+        return;
+      }
+      const more = appendChunk(list, all);
+      list.appendChild(mark);
+      if (!more || _shown >= all.length) {
+        _io.disconnect();
+        _io = null;
+        mark.remove();
+      }
+    }, { root: list, rootMargin: "600px" });
+    _io.observe(mark);
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -10876,29 +11072,47 @@ ${ev.description || ""}`
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
-  var CM_NEWS_FILTERS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
-  var cmNewsGeo = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
-  function cmNewsMatch(a) {
-    if (cmNewsGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
-      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-    if (cmNewsGeo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
-      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
-    return a.geo === cmNewsGeo;
-  }
+  var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
+  var CM_NEWS_COUNT = 3;
   function paintCmNews(el, arts) {
-    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    el.innerHTML = `
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
+    const top = articlesOfGroup(arts, CM_NEWS_GROUP).slice(0, CM_NEWS_COUNT);
+    if (!top.length) {
+      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u0413\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+    } else {
+      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+    }
     const controls = document.getElementById("cm-news-controls");
     if (controls) {
-      controls.innerHTML = `
-      <div class="cm-news-filters">
-        ${CM_NEWS_FILTERS.map((g) => `
-          <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-        `).join("")}
-      </div>`;
+      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
     }
+    paintNewsBadge(arts);
+  }
+  function paintNewsBadge(arts) {
+    const bar = document.querySelector(".cm-news-board-bar");
+    if (!bar)
+      return;
+    const n = countNewCommunity(arts);
+    const old = bar.querySelector(".cm-news-new");
+    if (!n) {
+      if (old)
+        old.remove();
+      return;
+    }
+    const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+    if (old)
+      old.outerHTML = html;
+    else
+      bar.insertAdjacentHTML("beforeend", html);
+  }
+  function pluralNew(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043D\u043E\u0432\u0438\u0445";
+    if (o === 1)
+      return "\u043D\u043E\u0432\u0430";
+    if (o >= 2 && o <= 4)
+      return "\u043D\u043E\u0432\u0456";
+    return "\u043D\u043E\u0432\u0438\u0445";
   }
   async function renderCommunityNews() {
     const el = document.getElementById("cm-news-content");
@@ -10911,47 +11125,16 @@ ${ev.description || ""}`
       return;
     section.dataset.wired = "1";
     section.addEventListener("click", (e) => {
-      const chip = e.target.closest("[data-cm-geo]");
-      if (chip) {
-        cmNewsGeo = chip.dataset.cmGeo;
-        paintCmNews(el, arts);
-        return;
-      }
       const card = e.target.closest("[data-article-id]");
       if (card) {
         const id = Number(card.dataset.articleId);
         if (Number.isFinite(id))
           openArticle(id);
+        return;
       }
+      openNewsHub(CM_NEWS_GROUP);
     });
-    const EDGE = 30;
-    let feedArmed = false;
-    const feedNow = () => section.querySelector(".cm-news-feed");
-    section.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1)
-        return;
-      const feed = feedNow();
-      if (!feed)
-        return;
-      const r = feed.getBoundingClientRect();
-      const t = e.touches[0];
-      const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
-      const inEdge = t.clientX < r.left + EDGE || t.clientX > r.right - EDGE;
-      if (inFeedY && inEdge) {
-        feed.style.overflowY = "hidden";
-        feedArmed = true;
-      }
-    }, { passive: true });
-    const releaseFeed = () => {
-      if (!feedArmed)
-        return;
-      const feed = feedNow();
-      if (feed)
-        feed.style.overflowY = "";
-      feedArmed = false;
-    };
-    section.addEventListener("touchend", releaseFeed, { passive: true });
-    section.addEventListener("touchcancel", releaseFeed, { passive: true });
+    window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
   }
 
   // src/tabs/community.js
@@ -11135,12 +11318,13 @@ ${ev.description || ""}`
     <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
          \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
 
+    <!-- \u{1F534} 31.07: \u0448\u0430\u043F\u043A\u0430 \u0441\u0442\u0430\u043B\u0430 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u044C\u043E\u044E <button>. \u0420\u0430\u043D\u0456\u0448\u0435 \u0446\u0435 \u0431\u0443\u0432 <div>, \u043F\u043E \u044F\u043A\u043E\u043C\u0443
+         \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0442\u0430\u043F\u0430\u043B\u043E\u0441\u044C; \u0442\u0435\u043F\u0435\u0440 \u0443\u0432\u0435\u0441\u044C \u0432\u0456\u0434\u0436\u0435\u0442 \u0432\u0435\u0434\u0435 \u0432 \u0445\u0430\u0431 \u043D\u043E\u0432\u0438\u043D, \u0456 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0456 \u0442\u0430
+         \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
     <section id="cm-news-board" class="cm-block cm-block--news">
-      <div class="cm-news-board-bar">
-        <span class="cm-news-board-dot"></span>
+      <button class="cm-news-board-bar" type="button" data-cm-news-open>
         <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
-        <span class="cm-news-board-live">LIVE</span>
-      </div>
+      </button>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
@@ -11752,7 +11936,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var IC_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>';
   var IC_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>';
   var IC_BELL_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M14.235 19c.865 0 1.322 1.024.745 1.668A3.992 3.992 0 0 1 12 22a3.992 3.992 0 0 1-2.98-1.332c-.552-.616-.158-1.579.634-1.661L10 19h4.235z"/><path d="M12 2c1.358 0 2.506.903 2.875 2.141l.046.171.008.043a8.013 8.013 0 0 1 4.024 6.069l.028.287L19 11v2.931l.021.136a3 3 0 0 0 1.143 1.847l.167.117.162.099c.86.487.56 1.766-.377 1.864L20 18H4c-1.028 0-1.387-1.364-.493-1.87a3 3 0 0 0 1.472-2.063L5 13.924V11c0-2.71 1.346-5.152 3.454-6.62A3.002 3.002 0 0 1 12 2z"/></svg>';
-  var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
+  var IC_BACK2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
   var IC_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>';
   var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
   var IC_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round"><path d="M14 9V5.2c0 -.53 .64 -.8 1.02 -.42l7.2 7.2a.6 .6 0 0 1 0 .85l-7.2 7.2c-.38 .38 -1.02 .1 -1.02 -.42V16c-5 0 -8.5 1.6 -11 5.1 1 -5 4 -10 11 -11z"/></svg>';
@@ -13339,7 +13523,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
          \u043F\u0440\u0438\u0447\u0438\u043D\u0430 \u0437\u043D\u0438\u043A\u043B\u0430, \u0430 \u043D\u0435 \u043D\u0430\u0441\u043B\u0456\u0434\u043A\u0438 \u0437\u0430\u043B\u0430\u0442\u0430\u043D\u0456. \u041B\u0438\u0448\u0438\u043B\u043E\u0441\u044C \u043E\u0434\u043D\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E: \u0441\u043A\u0440\u043E\u043B \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E
          (\u0434\u0438\u0432. \u043D\u0438\u0436\u0447\u0435), \u0449\u043E\u0431 \u0432\u043E\u043D\u043E \u043D\u0435 \u0432\u0438\u0441\u0456\u043B\u043E, \u043A\u043E\u043B\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u043E\u0457\u0445\u0430\u0432 \u0447\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u0438. -->
     <div class="fd-screen-fixedbar">
-      <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      <button class="fd-screen-back" type="button">${IC_BACK2}</button>
       <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
@@ -14920,7 +15104,6 @@ END:VEVENT`
     <div class="dev-lock-bg" aria-hidden="true"></div>
     <div class="dev-lock-in">
       <img class="dev-lock-logo" src="./logo.png" alt="">
-      <div class="dev-lock-brand">CSTL LIFE</div>
       <h1 class="dev-lock-title">\u0423\u043F\u0441. \u041C\u0438 \u0449\u0435 \u0442\u0440\u043E\u0445\u0438 \u0447\u0430\u043A\u043B\u0443\u0454\u043C\u043E \u043D\u0430\u0434 CSTL LIFE</h1>
       <p class="dev-lock-text">\u041F\u043E\u043A\u0438 \u0449\u043E \u0434\u043E\u0441\u0442\u0443\u043F \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0438 \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0438.<br>
         \u0429\u0435 \u0442\u0440\u043E\u0445\u0438 \u0442\u0435\u0440\u043F\u0456\u043D\u043D\u044F \u2014 \u0456 \u0437\u0443\u0441\u0442\u0440\u0456\u043D\u0435\u043C\u043E\u0441\u044C \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443.</p>

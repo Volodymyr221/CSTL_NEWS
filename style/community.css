@@ -4295,13 +4295,18 @@ textarea.cm-board-input.bm-invalid {
     radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),        /* віньєтка по контуру (підсилена) */
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%), /* глянець згори */
     linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);                        /* винно-багряний як борд Автобусів → затемнений низ (не чорнота) */
-  border: 1px solid rgba(0, 0, 0, 0.55);
-  border-radius: 22px;
+  /* 🔴 31.07, ВАРІАНТ B (вибір Вови зі скріншотів — метод шапки Дошки 28.07).
+     Замовлення було «багряний, але тонше»: характер і силует замку лишаються,
+     «корпус приладу» йде. Кути 22→18, рамка 0.55→0.35, тіні приблизно вдвічі
+     тихіші, нижня inset-лінія прибрана зовсім — саме вона й читалась як край
+     фізичної коробки. Варіант C (зняти глянець, віньєтку і замок) відкинуто
+     самим Вовою: це вже «зняти прилад», від чого він відмовився на кроці 1. */
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 18px;
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.34),
-    0 3px 8px rgba(0, 0, 0, 0.26),
-    inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    0 8px 20px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
   overflow: hidden;
 }
 /* Легкий силует замку в кутку — як фоновий акцент табло автобусів. */
@@ -4314,36 +4319,61 @@ textarea.cm-board-input.bm-invalid {
     linear-gradient(#ffffff, #ffffff) 60px 40px / 34px 90px no-repeat,
     linear-gradient(#ffffff, #ffffff) 100px 10px / 46px 120px no-repeat,
     linear-gradient(#ffffff, #ffffff) 150px 40px / 34px 90px no-repeat;
-  opacity: 0.05;
+  opacity: 0.035;   /* 31.07 (варіант B): 0.05 → 0.035, силует лише вгадується */
   pointer-events: none;
   z-index: 0;
 }
-/* Шапка-табличка табло — з тонкою розділовою гранню під нею. */
+/* Шапка-табличка табло — з тонкою розділовою гранню під нею.
+   🔴 31.07: стала <button> (весь віджет веде в хаб). Через це знадобився скид
+   власних стилів кнопки — `border`, `background` і особливо `font: inherit`:
+   без нього браузер підставив би СИСТЕМНИЙ шрифт кнопки, і напис «ТАБЛО НОВИН»
+   поїхав би іншою гарнітурою, ніж решта застосунку. `width: 100%` — бо кнопка
+   за замовчуванням стискається під вміст, а шапка мусить бути на всю ширину.
+   `position: relative` + `z-index: 1` — щоб вона лежала НАД силуетом замку
+   (`::before` віджета), інакше тап у правій частині шапки не доходив би. */
 .cm-news-board-bar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 15px 9px;
+  width: 100%;
+  padding: 13px 15px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   color: #F3DECB;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 .cm-news-board-label { flex: 1; min-width: 0; }
-.cm-news-board-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #86efac, #22c55e);
-  box-shadow: 0 0 8px #4ADE80, 0 0 2px #fff inset;
-  animation: cm-news-blink 2s ease-in-out infinite;
-}
-@keyframes cm-news-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-.cm-news-board-live {
-  font-size: 10px;
-  color: #FCA5A5;
-  letter-spacing: 1.5px;
+/* 🔴 31.07: `.cm-news-board-dot` (зелена крапка, що блимала ВІЧНО) і
+   `.cm-news-board-live` («LIVE») ВИДАЛЕНІ разом із розміткою і `@keyframes
+   cm-news-blink`. Обидва брехали: нічого живого у віджеті не було — новини тягне
+   RSS раз на кілька годин, а анімація крутилась безперервно на кожному відкритті
+   Громади. Замість цього крок 8 ставить чесний лічильник «N нових». */
+/* «N нових» — те, чим мав би бути «LIVE»: зʼявляється, лише коли справді є
+   непрочитані новини Громади, і гасне після відкриття хаба. Без бейджа шапка
+   виглядає рівно як раніше — це НЕ постійний елемент.
+   `text-transform: none` — шапка вся у верхньому регістрі, а «3 нові» капслоком
+   читалось би як крик; регістр перебиваємо саме тут. */
+.cm-news-new {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFF1F3;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  text-shadow: none;
 }
 /* Зона карток — БЕЗ темного боксу/рамки (рішення Роми 08.07). Замість «екрана» —
    лише мʼяке центральне світіння прямо на градієнті табло, над яким левітують
@@ -4373,76 +4403,84 @@ textarea.cm-board-input.bm-invalid {
   border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
-/* 3 СЕНСОРНІ кнопки на поверхні — максимальний мінімалізм (рішення Роми 08.07):
-   лише текст, жодних плиток/фонів. Активна ПІДСВІЧУЄТЬСЯ (світиться), не «фізична». */
-.cm-news-filters {
+/* 🔴 31.07: ТРИ ЧІПИ-ФІЛЬТРИ ПРИБРАНІ (рішення Вови) — разом із ними пішли
+   `.cm-news-filters`, `.cm-news-chip`, `.cm-news-chip.active` і роздільник між ними.
+   Причина в `community-blocks.js` над `paintCmNews`: фільтр над трьома картками
+   показував 3 випадкові з 212, а три кнопки під віджетом були другим рядом
+   перемикачів за кілька десятків пікселів від таб-бару.
+   Замість них — ОДИН вхід у повноекранний хаб. */
+.cm-news-all {
   display: flex;
-  padding: 9px 0 1px;
-}
-.cm-news-chip {
-  position: relative;
-  flex: 1;
-  padding: 10px 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 11px 4px 9px;
   border: none;
   background: transparent;
-  color: rgba(255, 236, 240, 0.5);   /* неактивна — приглушена */
-  font-size: 15px;
+  color: rgba(255, 236, 240, 0.92);
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.2px;
-  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.2s, text-shadow 0.2s;
 }
-/* Чистий тонкий роздільник — коротка вертикальна лінія по центру між кнопками
-   (псевдоелемент, НЕ box-shadow — не накладається). */
-.cm-news-chip + .cm-news-chip::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 50%;
-  transform: translateY(-50%);
-  width: 1px; height: 16px;
-  background: rgba(255, 255, 255, 0.16);
-}
-/* Активна — СВІТИТЬСЯ: яскраво-білий текст + мʼяке сяйво (не плитка, не рамка). */
-.cm-news-chip.active {
-  color: #fff;
-  text-shadow: 0 0 10px rgba(255, 235, 240, 0.65), 0 0 2px rgba(255, 255, 255, 0.5);
-}
-.cm-news-chip:active { color: #fff; }
+.cm-news-all svg { width: 16px; height: 16px; }
+.cm-news-all:active { color: #fff; }
 
-/* Стрічка карток — КОМПАКТНИЙ блок із ВНУТРІШНІМ скролом (як інші віджети Громади),
-   БЕЗ зайвих відступів зверху/знизу. Блок не розтягується на всі пости. */
-.cm-news-feed {
-  max-height: 465px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+/* 🔴 31.07: `.cm-news-feed` (вкладений скролер) ВИДАЛЕНО РАЗОМ ІЗ ПРАВИЛАМИ.
+   Він мав `max-height: 465px; overflow-y: auto` при вмісті 6 933px — тобто ховав
+   6 468px усередині картки, яка займала 77.6% екрана. Уся глибина переїхала в
+   повноекранний хаб (`tabs/news-hub.js`).
+   ⚠️ Разом із ним відпав JS-хак «30px від краю» в `community-blocks.js`: та зона
+   існувала ЛИШЕ щоб на час жесту глушити цей скролер (`overflow:hidden`) і віддати
+   вертикальний свайп сторінці. Немає скролера — немає з ким конфліктувати. */
+/* 🔴 КОМПАКТНИЙ РЯДОК ВІДЖЕТА (31.07). Базовий `.news-card-row` кладе картинку
+   ЗВЕРХИ на всю ширину висотою 180px — у стрічці хаба це доречно, а у віджеті з
+   трьох новин давало 360px на рядок і 824px на весь блок. Тут — мініатюра 72×72
+   ЗБОКУ: рядок стає ~96px і, головне, ОДНАКОВИЙ незалежно від того, чи є фото.
+   ⚠️ Scoped під `.cm-news-top3`, бо ті самі класи носить стрічка хаба — там
+   картинка мусить лишитись великою. */
+.cm-news-top3 .news-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+}
+.cm-news-top3 .news-card-row-img,
+.cm-news-top3 .img-fallback {
+  width: 72px; height: 72px;
+  flex: none;
+  border-radius: 10px;
+  font-size: 22px;                 /* плейсхолдер 🏰 успадковує розмір від класу */
+}
+.cm-news-top3 .news-card-row-body { padding: 0; flex: 1; min-width: 0; }
+/* Два рядки заголовка замість трьох: рядок стає рівно під висоту мініатюри. */
+.cm-news-top3 .news-card-row-title { font-size: 14.5px; -webkit-line-clamp: 2; margin-bottom: 4px; }
+/* Анонс у віджеті НЕ показуємо — на 3 картки він додав би ~40px кожній, а повний
+   текст однаково за один тап. Заголовка й джерела для «що сталось» достатньо. */
+.cm-news-top3 .news-card-row-excerpt { display: none; }
+/* Гео-бейдж у віджеті — ЧИСТИЙ ПОВТОР: віджет показує лише Громаду, тож на всіх
+   трьох картках стояло однакове «ГРОМАДА». Заміряно ~26px × 3 = 78px шуму.
+   ⚠️ Ховаємо ТІЛЬКИ у віджеті — у хабі, де три категорії поруч, він потрібен. */
+.cm-news-top3 .news-badge--geo { display: none; }
+
+.cm-news-top3 {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* Стелю карток піднято на 20px (padding-top 20→0, рішення Роми). Маску з карток
-     ПРИБРАНО (робила «ужасні» червоні краї на самих картках). Замість неї — тонкі
-     смужки-розпливи на КРАЯХ зони екрана (::before/::after у .cm-block-body). */
   padding: 0 0 8px;
-  /* Картки — ПОВНА ширина (рішення Роми 12.07 «вигляд табло зберігаємо»). Бокову
-     зону свайпу сторінки дає JS-перемикач у community-blocks.js (#3): палець у 30px
-     від краю → стрічка на час жесту overflow:hidden → свайп іде сторінці. */
-  scrollbar-width: none;
-  border-radius: 14px;   /* заокруглений clip overflow → картки клипаються по дузі на верх/низ, не квадратом (п.11) */
-  /* Стрічка не їздить УБІК (27.07): заголовки й анонси приходять із RSS, і одне
-     довге посилання розпирало б скролер — а він через `overflow-y: auto` має ще й
-     горизонтальну прокрутку. `break-word` переносить лише те, що інакше не влізе. */
+  /* Довгий заголовок із RSS не має розпирати колонку вбік. */
   word-break: normal; overflow-wrap: break-word;
 }
-.cm-news-feed::-webkit-scrollbar { display: none; }
 /* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
-.cm-news-feed > * {
+.cm-news-top3 > * {
   flex-shrink: 0;
-  /* Левітація: тінь знизу (картка «висить») + мʼяка світла аура ззаду. */
+  /* 31.07 (варіант B): картки ЛЕЖАТЬ, а не левітують. Стара потрійна тінь
+     (22px розмиття + світла аура) працювала, поки картка була одна з двадцяти в
+     глибокому скролері; на трьох статичних вона читалась як зайвий об'єм. */
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.38),
-    0 2px 6px rgba(0, 0, 0, 0.22),
-    0 0 20px rgba(255, 214, 220, 0.10);
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    0 1px 3px rgba(0, 0, 0, 0.16);
 }
 /* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */

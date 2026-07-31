@@ -203,11 +203,28 @@ export async function getCityName(lat, lon) {
 
 // Горизонтальний свайп на елементі. Викликає onLeft при свайпі вліво,
 // onRight при свайпі вправо. Поріг 50px, врахування Y щоб не плутати зі скролом.
-export function attachSwipe(el, onLeft, onRight) {
+//
+// 🔴 opts.edgeGuard (31.07) — СКІЛЬКИ ПІКСЕЛІВ ВІД ЛІВОГО КРАЮ ІГНОРУВАТИ.
+// Без цього один рух пальця робить ДВІ речі: iOS обробляє свій системний жест
+// «назад» (його не можна скасувати з коду — `preventDefault` на нього не діє), а ми
+// тим часом кидаємо onRight. Рівно цей клас бага вже коштував проєкту двох ітерацій
+// у «Стрічці» (скріни IMG_3557 / IMG_3559 — історія в шапці `core/layers.js`).
+// Тому дотик, ЩО ПОЧАВСЯ в системній зоні, ми не обслуговуємо взагалі: він чужий.
+// За замовчуванням 0 — стара поведінка не змінюється.
+//
+// ⚠️ До 31.07 ця функція не мала ЖОДНОГО виклику (імпорт у `community-blocks.js`
+// стояв невикористаним). Перший справжній користувач — хаб новин; тому опція
+// додана сюди, а не другою копією свайпу поруч (HOT_RULES №8).
+export function attachSwipe(el, onLeft, onRight, opts = {}) {
+  const edgeGuard = opts.edgeGuard || 0;
   let startX = null, startY = null;
   el.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
+    // Мультитач (пінч-зум) — не наш жест, і його дельта однаково була б сміттям.
+    if (e.touches.length !== 1) { startX = null; return; }
+    const t = e.touches[0];
+    if (edgeGuard && t.clientX <= edgeGuard) { startX = null; return; }
+    startX = t.clientX;
+    startY = t.clientY;
   }, { passive: true });
   el.addEventListener('touchend', e => {
     if (startX == null) return;

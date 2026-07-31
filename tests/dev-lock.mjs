@@ -34,6 +34,18 @@ import { chromiumPath, serve, projectFile, reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
 
+// 🔴 ОДИН МАРКЕР «ЗАСТОСУНОК ПОБУДОВАНИЙ» НА ВЕСЬ СТЕНД (31.07).
+// Було ТРИ копії селектора `.cm-news-feed`, і коли той клас видалили разом із
+// вкладеним скролером віджета новин, вони зламались ПО-РІЗНОМУ й непомітно:
+//   • позитивні перевірки («на localhost застосунок побудований») чесно впали;
+//   • негативна («хибний код застосунку НЕ побудував») лишилась ЗЕЛЕНОЮ — бо
+//     мертвий селектор завжди дає false, тобто вона проходила з хибної причини
+//     і більше не спіймала б справжній регрес;
+//   • гілка `DEV_CODE` (ручна перевірка справжнім кодом) падала б завжди.
+// Тому маркер один і міряє НАСЛІДОК, а не назву контейнера: «у віджеті новин є
+// хоч одна справжня картка статті» — ознака, що init() відпрацював і дані є.
+const BUILT_MARKER = '#cm-news-content [data-article-id]';
+
 // Сторож присутності: якщо рубильник колись приберуть або перейменують — стенд
 // мусить сказати це прямо, а не мовчки міряти не те.
 const SRC = projectFile('src/core/dev-lock.js');
@@ -81,7 +93,7 @@ async function visit(host, { deviceFlag = false } = {}) {
   }
   await page.goto(`http://${host}:${port}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);        // даємо застосунку шанс побудуватись
-  const state = await page.evaluate(() => ({
+  const state = await page.evaluate(M => ({
     gate:      !!document.querySelector('.dev-lock'),
     bodyClass: document.body.classList.contains('dev-locked'),
     gateText:  (document.querySelector('.dev-lock-title') || {}).textContent || '',
@@ -109,11 +121,13 @@ async function visit(host, { deviceFlag = false } = {}) {
     // ⬇️ ГОЛОВНЕ: чи побудований застосунок ПІД заслінкою.
     // Беремо ознаки, які зʼявляються тільки з init(): віджети Громади наповнені,
     // і хоча б один блок перестав бути «Завантаження…».
-    newsBuilt: !!document.querySelector('.cm-news-feed'),
+    // ⚠️ 31.07: маркер переїхав у спільну константу BUILT_MARKER — пояснення чому
+    // саме такий і що зламалось до цього, лежить біля неї вгорі файлу.
+    newsBuilt: !!document.querySelector(M),
     blockBuilt: !!document.querySelector('.cm-contact-row, .cm-contact-chip, .cm-board-note'),
     loading:   document.querySelectorAll('.cm-loading').length,
     splash:    !!document.getElementById('splash'),
-  }));
+  }), BUILT_MARKER);
   await ctx.close();
   return state;
 }
@@ -190,12 +204,12 @@ for (const door of ['code', 'email', '1']) {
       const b = document.querySelector('[data-dl-submit]');
       return b && !b.disabled;
     }, { timeout: 15000 }).catch(() => {});
-    return page.evaluate(() => ({
+    return page.evaluate(M => ({
       note: (document.querySelector('[data-dl-note]') || {}).textContent || '',
       gate: !!document.querySelector('.dev-lock'),
-      built: !!document.querySelector('.cm-news-feed'),
+      built: !!document.querySelector(M),
       tries: (() => { try { return JSON.parse(localStorage.getItem('cstl_dev_tries') || '{}'); } catch { return {}; } })(),
-    }));
+    }), BUILT_MARKER);
   };
 
   const wrong = await tryCode('очевидно-не-той-код');
@@ -231,11 +245,11 @@ if (process.env.DEV_CODE) {
   await page.click('[data-dl-submit]');
   await page.waitForSelector('.dev-lock', { state: 'detached', timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(2500);
-  const after = await page.evaluate(() => ({
+  const after = await page.evaluate(M => ({
     gate: !!document.querySelector('.dev-lock'),
-    built: !!document.querySelector('.cm-news-feed'),
+    built: !!document.querySelector(M),
     door: localStorage.getItem('cstl_dev_ok'),
-  }));
+  }), BUILT_MARKER);
   ok('правильний код: заслінка зникла', !after.gate);
   ok('правильний код: застосунок побудований', after.built);
   ok('правильний код: пристрій позначений саме як «code»', after.door === 'code', `прапорець = ${after.door}`);
