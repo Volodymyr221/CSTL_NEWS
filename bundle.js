@@ -10076,6 +10076,7 @@ ${ev.description || ""}`
       <div class="nh-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>`;
     document.body.appendChild(screen);
+    document.body.classList.add("nh-open");
     const layer = openLayer(
       () => {
         if (_io) {
@@ -10083,6 +10084,7 @@ ${ev.description || ""}`
           _io = null;
         }
         screen.remove();
+        document.body.classList.remove("nh-open");
         _hub = null;
       },
       { animateOut: () => screen.classList.remove("open") }

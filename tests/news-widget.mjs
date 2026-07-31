@@ -144,6 +144,62 @@ await page.waitForTimeout(700);
 const grown = await page.evaluate(() => document.querySelectorAll('.nh-list [data-article-id]').length);
 ok('прокрутка донизу дописує наступну порцію', grown > big, `${big} → ${grown}`);
 
+// ── 3.1 🔴 СТАТТЯ ВІДКРИВАЄТЬСЯ НАД ХАБОМ (баг зі скріна IMG_3776) ──────────
+// Вова: «модалка новини відкривається під сторінкою НОВИНИ». Так і було:
+// `#article-modal` має z-index 1100, а `.nh-screen` — 1200, тож модалка чесно
+// відкривалась, але лежала ПІД хабом і людина бачила далі список новин.
+//
+// 🔴 Міряємо НАСЛІДОК, а не z-index: `elementFromPoint` у центрі екрана має
+// віддати вузол СТАТТІ. Порівняння самих чисел z-index нічого не довело б —
+// вони залежать ще й від контексту накладання, тож можуть бути «правильні» на
+// папері й неправильні на екрані.
+await page.locator('.nh-list [data-article-id]').first().click();
+await page.waitForTimeout(800);
+const over = await page.evaluate(() => {
+  const m = document.getElementById('article-modal');
+  const at = document.elementFromPoint(195, 500);
+  return {
+    open: m.classList.contains('open'),
+    top: Math.round(m.getBoundingClientRect().top),
+    // Чи належить те, що під пальцем у центрі, саме модалці статті.
+    fromArticle: !!(at && m.contains(at)),
+    atClass: at ? at.className : null,
+    hubStill: !!document.querySelector('.nh-screen'),
+    flag: document.body.classList.contains('nh-open'),
+  };
+});
+ok('стаття з хаба відкрилась', over.open);
+ok('🔴 стаття лежить НАД хабом, а не під ним', over.fromArticle, `у центрі: "${over.atClass}"`);
+// `top: 0` навмисний: базово модалка починається з 56px, щоб лишити видимою шапку
+// застосунку, але над хабом на тому місці стоїть смуга хаба (57px, а на iPhone ще
+// +safe-area) — числа не збігаються, тому над хабом показуємо рівне затемнення.
+ok('над хабом модалка починається від самого верху', over.top === 0, `top = ${over.top}px`);
+ok('мітка body.nh-open стоїть', over.flag);
+ok('хаб під статтею лишився (є куди повернутись)', over.hubStill);
+
+// КОНТРОЛЬ: знімаємо мітку — і перевірка МУСИТЬ побачити хаб зверху. Без цього
+// «стаття над хабом» була б зелена навіть тоді, коли підняття взагалі не працює.
+const ctrlZ = await page.evaluate(() => {
+  document.body.classList.remove('nh-open');
+  const at = document.elementFromPoint(195, 500);
+  const m = document.getElementById('article-modal');
+  const fromArticle = !!(at && m.contains(at));
+  document.body.classList.add('nh-open');
+  return { fromArticle, atClass: at ? at.className : null };
+});
+ok('🔴 КОНТРОЛЬ: без мітки стаття знову опиняється ПІД хабом',
+   !ctrlZ.fromArticle, `у центрі: "${ctrlZ.atClass}"`);
+
+// Закрити статтю — хаб мусить лишитись на місці.
+await page.evaluate(() => {
+  const b = document.querySelector('#article-modal .article-close, #article-modal [class*="close"]');
+  if (b) b.click();
+});
+await page.waitForTimeout(700);
+ok('стаття закрилась, хаб лишився', await page.evaluate(() =>
+  !document.getElementById('article-modal').classList.contains('open') &&
+  !!document.querySelector('.nh-screen')));
+
 // Системний «назад» закриває САМЕ хаб, а не всю вкладку.
 await page.goBack();
 await page.waitForTimeout(700);
@@ -152,6 +208,28 @@ const back = await page.evaluate(() => ({
   tab: (document.querySelector('.app-main') || {}).dataset?.tab,
 }));
 ok('«назад» закриває хаб, вкладка лишається Громадою', !back.hub && back.tab === 'community', JSON.stringify(back));
+ok('мітка body.nh-open знята разом із хабом',
+   await page.evaluate(() => !document.body.classList.contains('nh-open')));
+
+// ── 3.2 ПОТІК ГРОМАДИ НЕ ЗАЧЕПЛЕНО ─────────────────────────────────────────
+// Підняття модалки scoped під `body.nh-open`, тож стаття, відкрита з ВІДЖЕТА,
+// мусить лишитись рівно такою, якою була: починатись під шапкою застосунку.
+// Без цієї перевірки «полагодив хаб — непомітно змінив Громаду» пройшло б тихо.
+await page.locator('.cm-block--news [data-article-id]').first().click();
+await page.waitForTimeout(700);
+const fromWidget = await page.evaluate(() => {
+  const m = document.getElementById('article-modal');
+  const at = document.elementFromPoint(195, 500);
+  return {
+    open: m.classList.contains('open'),
+    top: Math.round(m.getBoundingClientRect().top),
+    fromArticle: !!(at && m.contains(at)),
+  };
+});
+ok('стаття з віджета відкривається', fromWidget.open);
+ok('стаття з віджета — зверху', fromWidget.fromArticle);
+ok('стаття з віджета лишає шапку видимою (top = 56px, як було)',
+   fromWidget.top === 56, `top = ${fromWidget.top}px`);
 
 await ctx.close();
 
