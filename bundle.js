@@ -202,6 +202,36 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
+  function attachSwipe(el, onLeft, onRight, opts = {}) {
+    const edgeGuard = opts.edgeGuard || 0;
+    let startX = null, startY = null;
+    el.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) {
+        startX = null;
+        return;
+      }
+      const t = e.touches[0];
+      if (edgeGuard && t.clientX <= edgeGuard) {
+        startX = null;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+      if (startX == null)
+        return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0 && onLeft)
+          onLeft();
+        if (dx > 0 && onRight)
+          onRight();
+      }
+    }, { passive: true });
+  }
   function deepLink(source, id) {
     return `${location.origin}${location.pathname}#/post/${source}/${id}`;
   }
@@ -10050,7 +10080,21 @@ ${ev.description || ""}`
           openArticle(id);
       }
     });
+    attachSwipe(
+      screen.querySelector(".nh-list"),
+      () => stepGroup(1),
+      // палець уліво → наступна категорія
+      () => stepGroup(-1),
+      // палець управо → попередня
+      { edgeGuard: 28 }
+    );
     await paint(active);
+  }
+  function stepGroup(dir) {
+    const i = NEWS_GEO_GROUPS.indexOf(_lastGroup) + dir;
+    if (i < 0 || i >= NEWS_GEO_GROUPS.length)
+      return;
+    setGroup(NEWS_GEO_GROUPS[i]);
   }
   function setGroup(group) {
     if (!_hub || !NEWS_GEO_GROUPS.includes(group) || group === _lastGroup)

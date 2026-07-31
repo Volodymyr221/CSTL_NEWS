@@ -17,7 +17,7 @@
 // (баг зі скріна IMG_3559, 24.07 — детально в шапці `core/layers.js`). Ми лише
 // кладемо запис в історію і прибираємо екран, коли система повідомляє `popstate`.
 import { openLayer, closeLayer } from '../core/layers.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, attachSwipe } from '../core/utils.js';
 import {
   ensureNewsLoaded, newsCardsHtml, openArticle,
   NEWS_GEO_GROUPS, articlesOfGroup,
@@ -87,7 +87,29 @@ export async function openNewsHub(group) {
     }
   });
 
+  // Свайп між категоріями (крок 5). Вішаємо на СПИСОК, а не на весь екран: інакше
+  // жест ловився б і на смузі вкладок, де палець і так має цілитись у кнопку.
+  // ⚠️ `edgeGuard: 28` — дотик, що почався в лівій смузі, віддаємо системі: там живе
+  // жест «назад» iOS, і без цього один рух пальця і повертав би екран, і гортав
+  // категорію. Ортогональність до вертикальної прокрутки тримає сам `attachSwipe`
+  // (|dx| > |dy| і поріг 50px), тому діагональний рух лишається прокруткою.
+  attachSwipe(
+    screen.querySelector('.nh-list'),
+    () => stepGroup(+1),   // палець уліво → наступна категорія
+    () => stepGroup(-1),   // палець управо → попередня
+    { edgeGuard: 28 },
+  );
+
   await paint(active);
+}
+
+// Сусідня категорія. БЕЗ закільцьовування: на краю списку свайп нічого не робить.
+// Кільце тут було б шкідливе — людина не бачить, що опинилась на іншому кінці,
+// і три розділи занадто короткі, щоб це читалось як «прокрутка по колу».
+function stepGroup(dir) {
+  const i = NEWS_GEO_GROUPS.indexOf(_lastGroup) + dir;
+  if (i < 0 || i >= NEWS_GEO_GROUPS.length) return;
+  setGroup(NEWS_GEO_GROUPS[i]);
 }
 
 // Перемкнути категорію: підсвітити вкладку і перемалювати список.
