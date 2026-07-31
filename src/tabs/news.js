@@ -59,6 +59,14 @@ export function matchGeoGroup(a, group) {
   return a.geo === group;
 }
 
+// До якого з трьох розділів належить стаття. Потрібно там, де поруч лежать новини
+// з РІЗНИХ розділів і мітка має називати розділ, а не сире поле `geo`: у даних
+// стоїть 'Олика' (стара назва Громади) або 'Світ', а читач знає три назви.
+// 🛑 Копію не робити — це те саме місце правди, що `NEWS_GEO_GROUPS`.
+export function geoGroupOf(a) {
+  return NEWS_GEO_GROUPS.find(g => matchGeoGroup(a, g)) || null;
+}
+
 // Статті групи, найсвіжіші зверху. `slice()` — щоб не сортувати чужий масив на місці
 // (`allArticles` спільний, і мовчазна перестановка вдарила б по інших читачах).
 export function articlesOfGroup(arts, group) {
@@ -238,15 +246,33 @@ function badgesHtml(a) {
 // ⚠️ `data-article-id` НЕ чіпати: за ним відкривають статтю всі три делеговані
 // слухачі (віджет, хаб, deep-link), і за ним же сторож `tests/dev-lock.mjs`
 // визначає, що застосунок узагалі побудований.
+// 🔴 ІЄРАРХІЯ «ЗВІДКИ → ЩО → КОЛИ» (31.07, крок 4). Скарга Вови: «тут все
+// зливається… треба, щоб кожна новина несла якийсь сенс».
+//
+// 🔬 ЗАМІРЯНО, а не вгадано (`tests/tools/_measure-meta.mjs`, по 20 карток):
+//   Волинь          — **19 з 20 = 95%** карток мали ПОРОЖНІЙ верхній рядок
+//   Громада         — 11 з 20 = 55%
+//   Україна та Світ — 0
+// Причина не в дизайні, а в даних і двох чесних рішеннях, що зійшлись разом:
+// гео-мітка знімається, коли повторює активну вкладку, а категорія не малюється,
+// коли вона «Суспільство» (94.5% статей, баг B-28). У підсумку в «Волині» картка
+// починалась одразу із заголовка — і список ставав суцільною стіною тексту.
+//
+// ➡️ Полагоджено ДЖЕРЕЛОМ: воно є в КОЖНОЇ статті і завжди щось означає («хто це
+// каже»). Тепер джерело стоїть у верхньому рядку поруч із мітками, а час іде вниз
+// окремо. Виходить рівно та тріада, якою будують картку Apple News і Google News:
+// **звідки → що сталось → коли**. Порожнього рядка більше не буває в жодній картці.
+// ⚠️ Джерело НЕ капсом: капс тут носять мітки розділів, і два капси поспіль знову
+// злились би в один орнамент.
 function renderCard(a, variant) {
   return `
     <article class="nc nc--${variant}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
       ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="nc-body">
-        <div class="nc-meta">${badgesHtml(a)}</div>
+        <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
-        <div class="nc-foot">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
+        <div class="nc-foot">${formatTime(a.ts)}</div>
       </div>
     </article>
   `;
@@ -290,12 +316,21 @@ export function openArticle(id) {
     : (article.excerpt || article.content || '');
   const bodyHtml = renderArticleBody(rawText);
 
+  // 🔴 ОДНА МОВА НА ВСЬОМУ ШЛЯХУ (31.07, крок 7). Вова: «треба продумати детально
+  // логіку… від самого початку, коли людина бачить табло, і до того як людина
+  // заходить читати новину».
+  // Мітки статті малюються ТИМИ САМИМИ класами `.nc-badge`, що й у картці, і за
+  // тим самим правилом: категорія «Суспільство» не показується, бо її має 94.5%
+  // статей (баг B-28) — інакше картка мовчала б, а стаття за один тап від неї
+  // писала б «СУСПІЛЬСТВО», і це виглядало б як різні джерела правди.
   if (modalMetaTags) {
+    const cat = normCategory(article.category);
     modalMetaTags.innerHTML = `
-      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-      <span class="modal-meta-sep">•</span>
-      <span class="news-card-category">${escapeHtml(normCategory(article.category))}</span>
-      ${article.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
+      <span class="nc-badge nc-badge--geo">${escapeHtml(article.geo)}</span>
+      ${cat !== CATEGORY_DEFAULT ? `
+        <span class="modal-meta-sep">•</span>
+        <span class="nc-badge nc-badge--cat">${escapeHtml(cat)}</span>` : ''}
+      ${article.exclusive ? '<span class="nc-badge nc-badge--excl">⭐ Ексклюзив</span>' : ''}
     `;
   }
 

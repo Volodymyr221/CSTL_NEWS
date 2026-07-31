@@ -7308,6 +7308,9 @@
       return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
     return a.geo === group;
   }
+  function geoGroupOf(a) {
+    return NEWS_GEO_GROUPS.find((g) => matchGeoGroup(a, g)) || null;
+  }
   function articlesOfGroup(arts, group) {
     return arts.filter((a) => matchGeoGroup(a, group)).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
@@ -7390,10 +7393,10 @@
     <article class="nc nc--${variant}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
       ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
       <div class="nc-body">
-        <div class="nc-meta">${badgesHtml(a)}</div>
+        <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="nc-foot">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+        <div class="nc-foot">${formatTime(a.ts)}</div>
       </div>
     </article>
   `;
@@ -7426,11 +7429,13 @@
     const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
     const bodyHtml = renderArticleBody(rawText);
     if (modalMetaTags) {
+      const cat = normCategory(article.category);
       modalMetaTags.innerHTML = `
-      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-      <span class="modal-meta-sep">\u2022</span>
-      <span class="news-card-category">${escapeHtml(normCategory(article.category))}</span>
-      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+      <span class="nc-badge nc-badge--geo">${escapeHtml(article.geo)}</span>
+      ${cat !== CATEGORY_DEFAULT ? `
+        <span class="modal-meta-sep">\u2022</span>
+        <span class="nc-badge nc-badge--cat">${escapeHtml(cat)}</span>` : ""}
+      ${article.exclusive ? '<span class="nc-badge nc-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     `;
     }
     modalContent.innerHTML = `
@@ -11069,13 +11074,21 @@ ${ev.description || ""}`
     }
   }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
-  var CM_NEWS_COUNT = 3;
+  function digestOf(arts) {
+    return NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g)[0]).filter(Boolean);
+  }
   function paintCmNews(el, arts) {
-    const top = articlesOfGroup(arts, CM_NEWS_GROUP).slice(0, CM_NEWS_COUNT);
+    const top = digestOf(arts);
     if (!top.length) {
-      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u0413\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     } else {
-      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: "mini" })}</div>`;
+      const html = top.map((a, i) => newsCardsHtml([a], { variant: i === 0 ? "lead" : "mini" })).join("");
+      el.innerHTML = `<div class="cm-news-top3">${html}</div>`;
+      [...el.querySelectorAll(".nc")].forEach((node, i) => {
+        const b = node.querySelector(".nc-badge--geo");
+        if (b)
+          b.textContent = geoGroupOf(top[i]) || b.textContent;
+      });
     }
     const controls = document.getElementById("cm-news-controls");
     if (controls) {
@@ -11120,6 +11133,7 @@ ${ev.description || ""}`
     if (!section || section.dataset.wired)
       return;
     section.dataset.wired = "1";
+    section.addEventListener("error", handleImgError, true);
     section.addEventListener("click", (e) => {
       const card = e.target.closest("[data-article-id]");
       if (card) {
