@@ -23,7 +23,7 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
-import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup } from './news.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity } from './news.js';
 import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
@@ -1190,6 +1190,31 @@ function paintCmNews(el, arts) {
     controls.innerHTML =
       `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
   }
+  paintNewsBadge(arts);
+}
+
+// «N нових» у шапці віджета — на місці, де до 31.07 стояв фальшивий «LIVE».
+// Окремою функцією, бо її кличе ще й подія `cstl-news-seen` (гасіння після хаба),
+// і перемальовувати заради цього весь віджет не треба.
+function paintNewsBadge(arts) {
+  const bar = document.querySelector('.cm-news-board-bar');
+  if (!bar) return;
+  const n = countNewCommunity(arts);
+  const old = bar.querySelector('.cm-news-new');
+  if (!n) { if (old) old.remove(); return; }
+  const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+  if (old) old.outerHTML = html;
+  else bar.insertAdjacentHTML('beforeend', html);
+}
+
+// «1 нова · 2 нові · 5 нових» — українська має три форми, і «1 нових» різало б око.
+// Окремо 11-14: вони беруть форму «нових» попри останню цифру («11 нових», не «11 нова»).
+function pluralNew(n) {
+  const t = n % 100, o = n % 10;
+  if (t >= 11 && t <= 14) return 'нових';
+  if (o === 1) return 'нова';
+  if (o >= 2 && o <= 4) return 'нові';
+  return 'нових';
 }
 
 export async function renderCommunityNews() {
@@ -1217,4 +1242,8 @@ export async function renderCommunityNews() {
     // яку востаннє гортала (хаб памʼятає останню категорію для свайпів усередині себе).
     openNewsHub(CM_NEWS_GROUP);
   });
+
+  // Хаб відкрили → новини побачено → бейдж гасне. Слухаємо ПОДІЮ, а не імпортуємо
+  // хаб назад (він уже імпортований звідси — зворотний імпорт замкнув би коло).
+  window.addEventListener('cstl-news-seen', () => paintNewsBadge(arts));
 }

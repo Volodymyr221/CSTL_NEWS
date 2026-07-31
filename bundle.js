@@ -7331,6 +7331,25 @@
   function articlesOfGroup(arts, group) {
     return arts.filter((a) => matchGeoGroup(a, group)).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
+  var NEWS_SEEN_KEY = "cstl_news_seen_ts";
+  function newsSeenTs() {
+    const v = Number(localStorage.getItem(NEWS_SEEN_KEY) || 0);
+    return Number.isFinite(v) ? v : 0;
+  }
+  function markNewsSeen() {
+    try {
+      localStorage.setItem(NEWS_SEEN_KEY, String(Date.now()));
+    } catch (_) {
+    }
+  }
+  function countNewCommunity(arts) {
+    const seen = newsSeenTs();
+    if (!seen) {
+      markNewsSeen();
+      return 0;
+    }
+    return articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter((a) => (a.ts || 0) > seen).length;
+  }
   async function initNews() {
     await ensureNewsLoaded();
     attachNewsListeners();
@@ -10036,6 +10055,8 @@ ${ev.description || ""}`
       return;
     const active = NEWS_GEO_GROUPS.includes(group) ? group : _lastGroup;
     _lastGroup = active;
+    markNewsSeen();
+    window.dispatchEvent(new CustomEvent("cstl-news-seen"));
     const screen = document.createElement("div");
     screen.className = "nh-screen";
     screen.innerHTML = `
@@ -11062,6 +11083,34 @@ ${ev.description || ""}`
     if (controls) {
       controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
     }
+    paintNewsBadge(arts);
+  }
+  function paintNewsBadge(arts) {
+    const bar = document.querySelector(".cm-news-board-bar");
+    if (!bar)
+      return;
+    const n = countNewCommunity(arts);
+    const old = bar.querySelector(".cm-news-new");
+    if (!n) {
+      if (old)
+        old.remove();
+      return;
+    }
+    const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+    if (old)
+      old.outerHTML = html;
+    else
+      bar.insertAdjacentHTML("beforeend", html);
+  }
+  function pluralNew(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043D\u043E\u0432\u0438\u0445";
+    if (o === 1)
+      return "\u043D\u043E\u0432\u0430";
+    if (o >= 2 && o <= 4)
+      return "\u043D\u043E\u0432\u0456";
+    return "\u043D\u043E\u0432\u0438\u0445";
   }
   async function renderCommunityNews() {
     const el = document.getElementById("cm-news-content");
@@ -11083,6 +11132,7 @@ ${ev.description || ""}`
       }
       openNewsHub(CM_NEWS_GROUP);
     });
+    window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
   }
 
   // src/tabs/community.js
@@ -11271,9 +11321,7 @@ ${ev.description || ""}`
          \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
     <section id="cm-news-board" class="cm-block cm-block--news">
       <button class="cm-news-board-bar" type="button" data-cm-news-open>
-        <span class="cm-news-board-dot"></span>
         <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
-        <span class="cm-news-board-live">LIVE</span>
       </button>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
       <div id="cm-news-controls" class="cm-news-controls"></div>

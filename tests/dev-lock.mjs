@@ -109,7 +109,14 @@ async function visit(host, { deviceFlag = false } = {}) {
     // ⬇️ ГОЛОВНЕ: чи побудований застосунок ПІД заслінкою.
     // Беремо ознаки, які зʼявляються тільки з init(): віджети Громади наповнені,
     // і хоча б один блок перестав бути «Завантаження…».
-    newsBuilt: !!document.querySelector('.cm-news-feed'),
+    // ⚠️ 31.07: маркером був `.cm-news-feed` — вкладений скролер віджета новин.
+    // Його НАВМИСНО видалили (новини переїхали в повноекранний хаб), і стенд через
+    // це впав чотирма перевірками на цілому продукті: зламався не замок, а мірка.
+    // Тому тепер міряємо НАСЛІДОК, а не назву контейнера: «у віджеті новин є
+    // хоч одна справжня картка статті». Такий маркер переживе наступну переробку
+    // вигляду, бо картка зі своїм `data-article-id` — це і є ознака, що init()
+    // відпрацював і дані намальовані.
+    newsBuilt: !!document.querySelector('#cm-news-content [data-article-id]'),
     blockBuilt: !!document.querySelector('.cm-contact-row, .cm-contact-chip, .cm-board-note'),
     loading:   document.querySelectorAll('.cm-loading').length,
     splash:    !!document.getElementById('splash'),

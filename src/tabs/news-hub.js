@@ -20,7 +20,7 @@ import { openLayer, closeLayer } from '../core/layers.js';
 import { escapeHtml, attachSwipe } from '../core/utils.js';
 import {
   ensureNewsLoaded, newsCardsHtml, openArticle,
-  NEWS_GEO_GROUPS, articlesOfGroup,
+  NEWS_GEO_GROUPS, articlesOfGroup, markNewsSeen,
 } from './news.js';
 
 const IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
@@ -39,6 +39,13 @@ export async function openNewsHub(group) {
   if (_hub) return;                                  // вже відкритий — другий не потрібен
   const active = NEWS_GEO_GROUPS.includes(group) ? group : _lastGroup;
   _lastGroup = active;
+
+  // Новини побачено — бейдж «N нових» на віджеті гасне (крок 8).
+  // ⚠️ Подією, а НЕ прямим імпортом віджета: `community-blocks.js` уже імпортує цей
+  // модуль, і зворотний імпорт замкнув би коло. Той самий прийом, що `cstl-disc-seen`
+  // між Обговореннями і таб-баром.
+  markNewsSeen();
+  window.dispatchEvent(new CustomEvent('cstl-news-seen'));
 
   const screen = document.createElement('div');
   screen.className = 'nh-screen';
