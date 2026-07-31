@@ -7290,6 +7290,17 @@
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
   }
+  var NEWS_GEO_GROUPS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
+  function matchGeoGroup(a, group) {
+    if (group === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
+      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
+    if (group === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
+      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+    return a.geo === group;
+  }
+  function articlesOfGroup(arts, group) {
+    return arts.filter((a) => matchGeoGroup(a, group)).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  }
   async function initNews() {
     await ensureNewsLoaded();
     attachNewsListeners();
@@ -9986,6 +9997,77 @@ ${ev.description || ""}`
     document.body.classList.add("modal-open");
   }
 
+  // src/tabs/news-hub.js
+  var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
+  var _hub = null;
+  var _lastGroup = NEWS_GEO_GROUPS[0];
+  async function openNewsHub(group) {
+    if (_hub)
+      return;
+    const active = NEWS_GEO_GROUPS.includes(group) ? group : _lastGroup;
+    _lastGroup = active;
+    const screen = document.createElement("div");
+    screen.className = "nh-screen";
+    screen.innerHTML = `
+    <div class="nh-bar">
+      <button class="nh-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">${IC_BACK}</button>
+      <div class="nh-title">\u041D\u043E\u0432\u0438\u043D\u0438</div>
+    </div>
+    <div class="nh-tabs" role="tablist">
+      ${NEWS_GEO_GROUPS.map((g) => `
+        <button class="nh-tab${g === active ? " is-on" : ""}" type="button" role="tab"
+                aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
+      `).join("")}
+    </div>
+    <div class="nh-list" data-nh-list>
+      <div class="nh-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </div>`;
+    document.body.appendChild(screen);
+    const layer = openLayer(
+      () => {
+        screen.remove();
+        _hub = null;
+      },
+      { animateOut: () => screen.classList.remove("open") }
+    );
+    _hub = { screen, layer };
+    screen.querySelector(".nh-back").addEventListener("click", () => closeLayer(layer, { animate: 240 }));
+    requestAnimationFrame(() => screen.classList.add("open"));
+    screen.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-nh-group]");
+      if (tab) {
+        setGroup(tab.dataset.nhGroup);
+        return;
+      }
+      const card = e.target.closest("[data-article-id]");
+      if (card) {
+        const id = Number(card.dataset.articleId);
+        if (Number.isFinite(id))
+          openArticle(id);
+      }
+    });
+    await paint(active);
+  }
+  function setGroup(group) {
+    if (!_hub || !NEWS_GEO_GROUPS.includes(group) || group === _lastGroup)
+      return;
+    _lastGroup = group;
+    _hub.screen.querySelectorAll(".nh-tab").forEach((t) => {
+      const on = t.dataset.nhGroup === group;
+      t.classList.toggle("is-on", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    _hub.screen.querySelector(".nh-list").scrollTop = 0;
+    paint(group);
+  }
+  async function paint(group) {
+    const arts = await ensureNewsLoaded();
+    if (!_hub || _lastGroup !== group)
+      return;
+    const list = _hub.screen.querySelector(".nh-list");
+    list.innerHTML = newsCardsHtml(articlesOfGroup(arts, group), { compact: true });
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -10876,17 +10958,10 @@ ${ev.description || ""}`
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
-  var CM_NEWS_FILTERS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
-  var cmNewsGeo = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
-  function cmNewsMatch(a) {
-    if (cmNewsGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
-      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-    if (cmNewsGeo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
-      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
-    return a.geo === cmNewsGeo;
-  }
+  var CM_NEWS_FILTERS = NEWS_GEO_GROUPS;
+  var cmNewsGeo = NEWS_GEO_GROUPS[0];
   function paintCmNews(el, arts) {
-    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const filtered = articlesOfGroup(arts, cmNewsGeo);
     el.innerHTML = `
     <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
   `;
@@ -10911,6 +10986,10 @@ ${ev.description || ""}`
       return;
     section.dataset.wired = "1";
     section.addEventListener("click", (e) => {
+      if (e.target.closest(".cm-news-board-bar")) {
+        openNewsHub(cmNewsGeo);
+        return;
+      }
       const chip = e.target.closest("[data-cm-geo]");
       if (chip) {
         cmNewsGeo = chip.dataset.cmGeo;
@@ -11752,7 +11831,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var IC_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>';
   var IC_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>';
   var IC_BELL_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M14.235 19c.865 0 1.322 1.024.745 1.668A3.992 3.992 0 0 1 12 22a3.992 3.992 0 0 1-2.98-1.332c-.552-.616-.158-1.579.634-1.661L10 19h4.235z"/><path d="M12 2c1.358 0 2.506.903 2.875 2.141l.046.171.008.043a8.013 8.013 0 0 1 4.024 6.069l.028.287L19 11v2.931l.021.136a3 3 0 0 0 1.143 1.847l.167.117.162.099c.86.487.56 1.766-.377 1.864L20 18H4c-1.028 0-1.387-1.364-.493-1.87a3 3 0 0 0 1.472-2.063L5 13.924V11c0-2.71 1.346-5.152 3.454-6.62A3.002 3.002 0 0 1 12 2z"/></svg>';
-  var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
+  var IC_BACK2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
   var IC_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>';
   var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
   var IC_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round"><path d="M14 9V5.2c0 -.53 .64 -.8 1.02 -.42l7.2 7.2a.6 .6 0 0 1 0 .85l-7.2 7.2c-.38 .38 -1.02 .1 -1.02 -.42V16c-5 0 -8.5 1.6 -11 5.1 1 -5 4 -10 11 -11z"/></svg>';
@@ -13339,7 +13418,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
          \u043F\u0440\u0438\u0447\u0438\u043D\u0430 \u0437\u043D\u0438\u043A\u043B\u0430, \u0430 \u043D\u0435 \u043D\u0430\u0441\u043B\u0456\u0434\u043A\u0438 \u0437\u0430\u043B\u0430\u0442\u0430\u043D\u0456. \u041B\u0438\u0448\u0438\u043B\u043E\u0441\u044C \u043E\u0434\u043D\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E: \u0441\u043A\u0440\u043E\u043B \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E
          (\u0434\u0438\u0432. \u043D\u0438\u0436\u0447\u0435), \u0449\u043E\u0431 \u0432\u043E\u043D\u043E \u043D\u0435 \u0432\u0438\u0441\u0456\u043B\u043E, \u043A\u043E\u043B\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u043E\u0457\u0445\u0430\u0432 \u0447\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u0438. -->
     <div class="fd-screen-fixedbar">
-      <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      <button class="fd-screen-back" type="button">${IC_BACK2}</button>
       <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>

@@ -23,7 +23,8 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
-import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup } from './news.js';
+import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
@@ -1152,18 +1153,15 @@ export async function renderContactsBlock() {
 // ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────────
 // Стрічка новин переїхала сюди окремим блоком: 3 кнопки-фільтри + прокрутка
 // карток ВСЕРЕДИНІ блока. Картки й модалку перевикористовуємо з news.js.
-const CM_NEWS_FILTERS = ['Громада', 'Волинь', 'Україна та Світ'];
-let cmNewsGeo = 'Громада';
-
-function cmNewsMatch(a) {
-  if (cmNewsGeo === 'Громада')          return a.geo === 'Громада' || a.geo === 'Олика';
-  if (cmNewsGeo === 'Україна та Світ')  return a.geo === 'Україна' || a.geo === 'Світ';
-  return a.geo === cmNewsGeo;
-}
+// ⚠️ 31.07: власний список категорій і власний `cmNewsMatch` ПРИБРАНІ — гео-групи
+// тепер живуть одним місцем правди в `news.js` (`NEWS_GEO_GROUPS`, `articlesOfGroup`),
+// бо з появою хаба користувачів стало двоє. Дві копії того самого правила вже
+// розходились у цьому проєкті (списки антиспаму), і симптом виглядав як баг продукту.
+const CM_NEWS_FILTERS = NEWS_GEO_GROUPS;
+let cmNewsGeo = NEWS_GEO_GROUPS[0];
 
 function paintCmNews(el, arts) {
-  const filtered = arts.filter(cmNewsMatch)
-    .slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const filtered = articlesOfGroup(arts, cmNewsGeo);
   // Екран табло — лише новини (стрічка), від самого верху.
   // Стрічку (.cm-news-feed) звужено на 30px з кожного боку і зацентровано (CSS margin):
   // краї табло поза overflow-контейнером → дотик там скролить СТОРІНКУ, а не стрічку.
@@ -1193,6 +1191,11 @@ export async function renderCommunityNews() {
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   section.addEventListener('click', e => {
+    // Шапка «Табло новин» → повноекранний хаб, відкритий на поточній категорії.
+    // ⚠️ ТИМЧАСОВА точка входу (крок 2 потоку): вона потрібна, щоб хаб узагалі можна
+    // було перевірити наживо до того, як віджет перероблять. На кроці 6 шапка стане
+    // справжньою <button> з нормальною доступністю, а тапабельним буде весь віджет.
+    if (e.target.closest('.cm-news-board-bar')) { openNewsHub(cmNewsGeo); return; }
     const chip = e.target.closest('[data-cm-geo]');
     if (chip) {
       cmNewsGeo = chip.dataset.cmGeo;

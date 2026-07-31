@@ -1,0 +1,131 @@
+/* style/news-hub.css — ПОВНОЕКРАННИЙ ХАБ НОВИН (31.07, потік /byyou «блок новин»).
+   Розмітку пише `src/tabs/news-hub.js`. Причини і числа — у шапці того файлу.
+
+   Патерн екрана дзеркалить перевірений `.fd-screen` («Стрічка», 24.07): fixed на весь
+   екран, під'їзд справа через `transform`, системний жест «назад» закриває шар.
+   ⚠️ Свій `transform` тут ОБОВ'ЯЗКОВО на самому `.nh-screen`, а прокрутка — на
+   внутрішньому `.nh-list`. Причина не косметична: у Safari `transform` на
+   прокручуваному контейнері з `-webkit-overflow-scrolling: touch` РОЗРИВАЄ
+   `position: sticky` у його дітях (це вже коштувало бага «шапка модалки відривається
+   від верху», 30.07). Тому шапка й перемикач лежать ПОЗА скролером, у flex-колонці,
+   і sticky їм узагалі не потрібен. */
+
+.nh-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;                 /* той самий рівень, що .fd-screen — шар поверх вкладки */
+  display: flex;
+  flex-direction: column;        /* шапка + перемикач сталої висоти, список забирає решту */
+  background: var(--app-bg);     /* базова поверхня; --board-bg лише де контент картками */
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.28);
+  transform: translateX(100%);
+  transition: transform 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.nh-screen.open { transform: translateX(0); }
+
+/* ── Шапка ─────────────────────────────────────────────────────────────────── */
+/* Назва по центру, кнопка «назад» накладкою ліворуч (absolute). Так заголовок
+   центрований по ЕКРАНУ, а не по залишку після кнопки — інакше «Новини» стояли б
+   помітно правіше середини. */
+.nh-bar {
+  position: relative;
+  flex: none;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+  background: var(--app-glass-solid);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.nh-back {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nh-back svg { width: 26px; height: 26px; }
+.nh-title {
+  height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+/* ── Перемикач трьох розділів ──────────────────────────────────────────────── */
+/* Переїхав сюди з віджета Громади (рішення Вови 31.07): у віджеті три кнопки над
+   трьома картками були «вкладкою у вкладці» і стояли за кілька десятків пікселів
+   від таб-бару. Тут вони — головний елемент екрана, і за ними стоїть повна стрічка.
+   `flex: 1` на кожній — рівні третини, тож ширина кнопки не стрибає від довжини
+   назви («Громада» проти «Україна та Світ»). */
+.nh-tabs {
+  flex: none;
+  display: flex;
+  background: var(--app-glass-solid);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.nh-tab {
+  position: relative;
+  flex: 1;
+  min-width: 0;                  /* без цього довга назва розпирає свою третину */
+  padding: 11px 3px 12px;
+  border: none;
+  background: transparent;
+  color: var(--gray);
+  /* 13px і відступ 3px — заміряно, не на око. Рівні третини означають, що НАЙДОВША
+     назва диктує кегль усім трьом: при 13.5px/4px «Україна та Світ» просило 111px у
+     клітинці 107px на екрані 320px (старий iPhone SE) — обрізалось трикрапкою; а на
+     360-430px заповнювало клітинку ВПРИТУЛ (130/130), тобто просвіт до сусідів нуль. */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s;
+}
+/* Активна — темний текст і підкреслення знизу. Підкреслення псевдоелементом, а не
+   `border-bottom`: рамка додала б кнопці висоти, і рядок «дихав» би на 2px при
+   кожному перемиканні. */
+.nh-tab.is-on { color: var(--ink); }
+.nh-tab.is-on::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: 0;
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+  background: #722F37;           /* бордо — колір бренду Громади (GEO_COLORS у news.js) */
+}
+
+/* ── Стрічка ───────────────────────────────────────────────────────────────── */
+/* ЄДИНИЙ скролер екрана. Саме він і є сенсом усього потоку: раніше ця стрічка була
+   вкладеною в сторінку Громади (вікно 465px при вмісті 6 933px), тепер вона —
+   власна прокрутка власного екрана, без прокрутки-батька під нею. */
+.nh-list {
+  flex: 1;
+  min-height: 0;                 /* інакше flex-дитина не стискається і скрол їде на body */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;  /* «гумовий» відскок не тягне за собою сторінку під шаром */
+  overflow-anchor: none;         /* у Safari його однаково нема — тримаємо однаково скрізь */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px calc(env(safe-area-inset-bottom) + 16px);
+  /* Довге посилання з RSS не має розпирати колонку вбік (та сама причина, що в
+     `.cm-news-feed`): `break-word` переносить лише те, що інакше не влізе. */
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nh-list > * { flex-shrink: 0; }   /* flex-колонка інакше стискає картки по висоті */
+.nh-loading {
+  padding: 28px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--gray);
+}
