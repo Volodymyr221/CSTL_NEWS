@@ -10076,6 +10076,7 @@ ${ev.description || ""}`
       <div class="nh-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>`;
     document.body.appendChild(screen);
+    screen.addEventListener("error", handleImgError, true);
     document.body.classList.add("nh-open");
     const layer = openLayer(
       () => {
@@ -10144,18 +10145,37 @@ ${ev.description || ""}`
     const all = articlesOfGroup(arts, group);
     _shown = 0;
     list.innerHTML = "";
-    appendChunk(list, all);
-    armSentinel(list, all);
+    appendChunk(list, all, group);
+    markLead(list, all);
+    armSentinel(list, all, group);
   }
-  function appendChunk(list, all) {
+  function appendChunk(list, all, group) {
     const next = all.slice(_shown, _shown + PAGE_SIZE);
     if (!next.length)
       return false;
+    const from = list.children.length;
     list.insertAdjacentHTML("beforeend", newsCardsHtml(next, { compact: true }));
+    const fresh = [...list.children].slice(from);
+    fresh.forEach((node) => dropRedundantGeo(node, group));
     _shown += next.length;
     return true;
   }
-  function armSentinel(list, all) {
+  function dropRedundantGeo(node, group) {
+    const b = node.querySelector && node.querySelector(".news-badge--geo");
+    if (!b)
+      return;
+    const t = b.textContent.trim().toLowerCase();
+    if (t === group.toLowerCase() || group === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" && t === "\u043E\u043B\u0438\u043A\u0430")
+      b.remove();
+  }
+  function markLead(list, all) {
+    const first = list.firstElementChild;
+    if (!first || !all.length)
+      return;
+    if (all[0].image && first.querySelector("img"))
+      first.classList.add("nh-lead");
+  }
+  function armSentinel(list, all, group) {
     if (_io) {
       _io.disconnect();
       _io = null;
@@ -10173,7 +10193,7 @@ ${ev.description || ""}`
         _io = null;
         return;
       }
-      const more = appendChunk(list, all);
+      const more = appendChunk(list, all, group);
       list.appendChild(mark);
       if (!more || _shown >= all.length) {
         _io.disconnect();

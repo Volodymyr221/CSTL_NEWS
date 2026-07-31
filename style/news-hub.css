@@ -141,14 +141,152 @@ body.nh-open .article-modal {
   overflow-anchor: none;         /* у Safari його однаково нема — тримаємо однаково скрізь */
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px 12px calc(env(safe-area-inset-bottom) + 16px);
-  /* Довге посилання з RSS не має розпирати колонку вбік (та сама причина, що в
-     `.cm-news-feed`): `break-word` переносить лише те, що інакше не влізе. */
+  gap: 0;                          /* розділяють ЛІНІЇ, а не проміжки (див. нижче) */
+  padding: 0 16px calc(env(safe-area-inset-bottom) + 20px);
+  /* Довге посилання з RSS не має розпирати колонку вбік: `break-word` переносить
+     лише те, що інакше не влізе. */
   word-break: normal;
   overflow-wrap: break-word;
 }
 .nh-list > * { flex-shrink: 0; }   /* flex-колонка інакше стискає картки по висоті */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   РЕДИЗАЙН СТРІЧКИ — напрям C + велика перша (вибір Вови 31.07 зі скріншотів)
+
+   🔬 ЧОМУ САМЕ ЦЕЙ НАПРЯМ — заміряно на живому застосунку, три варіанти поспіль:
+     A (білі картки Apple News)   — 2 заголовки за погляд, середня картка 299px
+     B (Instagram: фото на ширину) — 3 заголовки, 248px
+     C (список із мініатюрою)      — **8 заголовків**, 108px
+   Робота хаба — сканувати (у «Україна та Світ» 212 статей), тож щільність вирішує:
+   C дає вчетверо більше заголовків за той самий погляд.
+   ⚠️ B відкинуто не за красу, а за дані: частина статей БЕЗ фото (ритм розсипався б),
+   а чужі RSS-джерела масово блокують «гарячі посилання» на картинки.
+
+   🔴 ЩО ТУТ ВИПРАВЛЕНО ЧИСЛАМИ, а не на око:
+   • Картка була `#FAF8EF` — теплота R−B = **11**, при тому що власний сторож
+     проєкту (`board-cream.mjs`) вважає кремовим усе понад **6**. Тепле майже-біле
+     на холодному сірому `--app-bg` читається брудно-жовтим. Це РІВНО та хвороба,
+     яку проєкт вилікував для Дошки 29.07; сторож її не спіймав, бо scoped під
+     `#board-content`. Тепер у рядків фону нема ВЗАГАЛІ — питання теплоти зникає.
+   • Контраст картка→фон був **1.093**, а Дошці забракували 1.122 як «на межі
+     помітності». Замість підбирати відтінок — прибрали саму потребу: рядки
+     розділяє волосяна лінія, а не поверхня.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Рядок списку ─────────────────────────────────────────────────────────── */
+/* Мініатюра ПРАВОРУЧ (`row-reverse`), а не ліворуч: так усі заголовки шикуються в
+   одну ліву колонку і око йде вниз прямою, не стрибаючи через картинки. Саме так
+   роблять NYT, Google News і Apple News у щільних списках. */
+.nh-list .news-card-row {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  border-bottom: 1px solid var(--news-line);
+}
+.nh-list .news-card-row:last-of-type { border-bottom: none; }
+/* Ексклюзив більше НЕ обводимо кільцем. Обідок 1.5px бордо навколо картки читався
+   як помилка або тривога — тобто позначка «краще» виглядала як позначка «увага».
+   Тепер сам напис «⭐ Ексклюзив» у міток і робить цю роботу. */
+.nh-list .news-card-row.exclusive { box-shadow: none; }
+.nh-list .news-card-row-img,
+.nh-list .img-fallback {
+  width: 84px; height: 84px;
+  flex: none;
+  border-radius: 10px;
+  font-size: 26px;                 /* плейсхолдер 🏰 успадковує розмір від класу */
+}
+.nh-list .news-card-row-body { padding: 0; flex: 1; min-width: 0; }
+
+/* ── Мітки: тихий текст замість «цукерок» ─────────────────────────────────── */
+/* Було: до трьох насичених пігулок 20px (бордо + помаранч + жовтий градієнт) на
+   КОЖНІЙ картці. Три кольорові плями сперечались із заголовком за увагу і робили
+   список строкатим — рівно те, чого немає в жодному сучасному новинному застосунку.
+   Стало: маленький капс акцентом, без підкладки. Мітка лишається, крику нема. */
+.nh-list .news-badge {
+  background: none !important;
+  color: var(--news-accent);
+  padding: 0;
+  height: auto;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+}
+.nh-list .news-card-meta { display: flex; gap: 10px; margin-bottom: 4px; }
+
+/* ── Типографіка ──────────────────────────────────────────────────────────── */
+/* `letter-spacing` трохи відʼємний — на великих напівжирних кеглях кирилиця інакше
+   «розсипається»; цей прийом стандартний для заголовків у Apple/Google. */
+.nh-list .news-card-row-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.15px;
+  -webkit-line-clamp: 3;
+  margin-bottom: 4px;
+}
+/* Анонс у щільному списку прихований: він додавав кожному рядку ~40px, а заголовка
+   й джерела достатньо, щоб вирішити «читати чи ні». Повний текст — за один тап. */
+.nh-list .news-card-row-excerpt { display: none; }
+/* 11 → 11.5px: 11px це нижня межа читабельності за Apple HIG, а підпис несе
+   джерело й час — те, за чим людина звіряє свіжість. */
+.nh-list .news-card-row-footer { font-size: 11.5px; }
+
+/* ── ВЕЛИКА ПЕРША («герой») ───────────────────────────────────────────────── */
+/* Клас вішає JS (`markLead`) і ТІЛЬКИ якщо в новини справді є фото — «герой» без
+   знімка це просто роздутий блок тексту, який з'їдає екран і нічого не додає.
+   Тут напрям C поступається місцем напряму A рівно на одну картку: характер
+   екрана дають ексклюзиви Олики, і вони заслуговують на велике фото. */
+.nh-list .news-card-row.nh-lead {
+  display: block;
+  padding: 0 0 16px;
+  margin-bottom: 4px;
+}
+.nh-list .news-card-row.nh-lead .news-card-row-img,
+.nh-list .news-card-row.nh-lead .img-fallback {
+  width: 100%; height: 200px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  font-size: 44px;
+}
+.nh-list .news-card-row.nh-lead .news-card-row-title {
+  font-size: 20px;
+  line-height: 1.24;
+  letter-spacing: -0.4px;
+  -webkit-line-clamp: 4;
+  margin-bottom: 6px;
+}
+/* У «героя» анонс ПОКАЗУЄМО — це єдина картка, де для нього є місце, і саме він
+   робить її «історією», а не просто більшим заголовком. */
+.nh-list .news-card-row.nh-lead .news-card-row-excerpt {
+  display: -webkit-box;
+  font-size: 13.5px;
+  line-height: 1.45;
+  -webkit-line-clamp: 2;
+  margin-bottom: 6px;
+}
+.nh-list .news-card-row.nh-lead .news-card-row-footer { font-size: 12px; }
+
+/* ── Відгук на натиск ─────────────────────────────────────────────────────── */
+/* Без картки-поверхні натиск нема чим показати, тому підсвічуємо саму зону рядка.
+   ⚠️ Через ::before, а не `background` на рядку: фон розтягнувся б рівно по тексту,
+   а підсвітити треба разом із бічними полями списку, інакше «плитка» обривається
+   на 16px від краю екрана і виглядає як недомальована. */
+.nh-list .news-card-row { position: relative; }
+.nh-list .news-card-row::before {
+  content: '';
+  position: absolute;
+  left: -16px; right: -16px; top: 0; bottom: 0;
+  background: var(--news-press);
+  opacity: 0;
+  transition: opacity 0.12s;
+  pointer-events: none;
+}
+.nh-list .news-card-row:active::before { opacity: 1; }
 .nh-loading {
   padding: 28px 0;
   text-align: center;
