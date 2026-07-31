@@ -210,7 +210,7 @@ function appendChunk(list, all, group) {
   const next = all.slice(_shown, _shown + PAGE_SIZE);
   if (!next.length) return false;
   const from = list.children.length;
-  list.insertAdjacentHTML('beforeend', newsCardsHtml(next, { compact: true }));
+  list.insertAdjacentHTML('beforeend', newsCardsHtml(next, { variant: 'row' }));
   const fresh = [...list.children].slice(from);
   fresh.forEach(node => dropRedundantGeo(node, group));
   _shown += next.length;
@@ -225,7 +225,7 @@ function appendChunk(list, all, group) {
 // Робимо в JS, а не в CSS: правило «сховати, якщо текст дорівнює назві вкладки»
 // селектором не виражається.
 function dropRedundantGeo(node, group) {
-  const b = node.querySelector && node.querySelector('.news-badge--geo');
+  const b = node.querySelector && node.querySelector('.nc-badge--geo');
   if (!b) return;
   const t = b.textContent.trim().toLowerCase();
   // 'Олика' — стара назва Громади у старих статтях, для читача це те саме.
@@ -236,10 +236,14 @@ function dropRedundantGeo(node, group) {
 // ⚠️ Тільки якщо фото справді є: «герой» без знімка — це просто роздутий блок
 // тексту, який з'їдає екран і нічого не додає. Тому клас вішає JS, а не
 // `:first-child` у CSS — CSS не бачить, чи вантажиться картинка.
+// ⚠️ Саме ЗАМІНА варіанта (`nc--row` → `nc--lead`), а не додавання класу поверх:
+// інакше картка носила б два варіанти одночасно і правильний вигляд тримався б
+// лише на порядку правил у файлі — тобто зламався б від невинного перенесення
+// блоку в CSS. Варіант у компонента завжди рівно один.
 function markLead(list, all) {
   const first = list.firstElementChild;
   if (!first || !all.length) return;
-  if (all[0].image && first.querySelector('img')) first.classList.add('nh-lead');
+  if (all[0].image && first.querySelector('img')) first.classList.replace('nc--row', 'nc--lead');
 }
 
 // «Сторож» — порожній вузол у кінці списку. Щойно він потрапляє у видиму область,

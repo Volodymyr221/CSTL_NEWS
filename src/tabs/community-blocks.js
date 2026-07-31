@@ -23,7 +23,7 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
-import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity } from './news.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, geoGroupOf, handleImgError } from './news.js';
 import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
@@ -1167,22 +1167,54 @@ export async function renderContactsBlock() {
 // за кілька десятків пікселів від таб-бару.
 // ⚠️ Гео-групи живуть одним місцем правди в `news.js` — тут своєї копії НЕМА.
 const CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];   // 'Громада' — місцеве і є сенсом головної
-const CM_NEWS_COUNT = 3;
+
+// 🔴 ТАБЛО = ДАЙДЖЕСТ, ПО ОДНІЙ НОВИНІ З КОЖНОГО СВІТУ (31.07, крок 5).
+//
+// Скарга Вови, з якої почався потік: «тут зараз тільки показує Олицьку громаду,
+// а НЕЯСНО, ЩО РОБИТЬСЯ В СВІТІ І В УКРАЇНІ».
+//
+// Було: три найсвіжіші новини Громади. Стало: найсвіжіша з КОЖНОГО розділу —
+// Громада, Волинь, «Україна та Світ» — і в кожної видно мітку розділу. Людина
+// одним поглядом бачить: що вдома, що в області, що в країні. Так само влаштовані
+// віджети Apple News і Google News.
+//
+// ⚠️ ЧОМУ НЕ ПОВЕРНУЛИ ЧІПИ-ФІЛЬТРИ, як просилось найпростіше: три кнопки над
+// трьома картками — це «вкладка у вкладці» за кілька десятків пікселів від
+// таб-бару, і тап по «Україна та Світ» однаково показав би 3 випадкові з 212.
+// ⚠️ ЧОМУ НЕ «три найсвіжіші з усіх»: за темпом (Громада 0.26 статті на день,
+// Волинь ~24, «Україна та Світ» ~30) місцеве програвало б майже завжди, і головний
+// екран Олики показував би переважно Україну.
+// ⚠️ ЦІНА, названа вголос і прийнята Вовою: місцевих новин на головній стає
+// **1 замість 3**. Уся глибина Громади — за один тап, у хабі.
+function digestOf(arts) {
+  return NEWS_GEO_GROUPS
+    .map(g => articlesOfGroup(arts, g)[0])
+    .filter(Boolean);
+}
 
 function paintCmNews(el, arts) {
-  const top = articlesOfGroup(arts, CM_NEWS_GROUP).slice(0, CM_NEWS_COUNT);
+  const top = digestOf(arts);
   if (!top.length) {
-    el.innerHTML = '<div class="cm-block-empty">Новин Громади поки немає</div>';
+    el.innerHTML = '<div class="cm-block-empty">Новин поки немає</div>';
   } else {
-    // БЕЗ обгортки-скролера — три однакові рядки (`compact: true`).
-    // 🔴 ЧОМУ НЕ «1 hero + 2 рядки», як стояло в плані: заміряв обидва варіанти
-    // живцем, і hero програв ДВІЧІ. (1) Віджет виходив **824px = 112.8% видимої
-    // зони** — тобто БІЛЬШИЙ за старий скролер (567px), а сенс потоку рівно
-    // протилежний. (2) Головніше: висота hero залежить від ДАНИХ — з фото він
-    // ~380px, без фото 179px. Віджет, що стрибає на 200px залежно від того, чи
-    // редактор доклав картинку, це не макет, а лотерея. Три однакові рядки дають
-    // передбачувану висоту незалежно від вмісту.
-    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+    // ТРИ ОДНАКОВІ компактні картки — по одній з кожного розділу.
+    //
+    // 🔴 ВЕЛИКУ ПЕРШУ З ФОТО ПРОБУВАЛИ І ВІДКИНУЛИ — вдруге за день, і обидва рази
+    // числом, а не на смак. Уранці 31.07 варіант «1 hero + 2 рядки» дав віджет
+    // 824px = 112.8% видимої зони. Увечері я зробив «велику» дешевшою (фото 200 →
+    // 120px, заголовок 2 рядки, без анонсу) — усе одно **547px = 74.8%**, тобто
+    // майже рівно те, з чим потік боровся вранці (було 567px = 77.6%).
+    // Вова подивився обидва варіанти скріншотами і вибрав компактний.
+    // ➡️ Велика картка з фото лишається — але в ХАБІ, де вона відкриває цілий
+    // екран новин і має на це право. Табло — це погляд, а не читання.
+    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: 'mini' })}</div>`;
+    // Мітка розділу — те, що робить дайджест дайджестом («щоб кожна новина несла
+    // сенс», Вова). Пишемо назву РОЗДІЛУ, а не сире поле `geo`: у даних лежить
+    // 'Олика' (стара назва Громади) і 'Світ', а читач знає три назви.
+    [...el.querySelectorAll('.nc')].forEach((node, i) => {
+      const b = node.querySelector('.nc-badge--geo');
+      if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
+    });
   }
   // Нижня панель: замість трьох чіпів — один вхід у хаб.
   const controls = document.getElementById('cm-news-controls');
@@ -1227,6 +1259,14 @@ export async function renderCommunityNews() {
   const section = document.querySelector('.cm-block--news');
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
+  // 🔴 31.07: биті чужі фото → брендовий плейсхолдер 🏰. До цього обробник висів на
+  // модалці статті і на хабі, а САМЕ ТАБЛО лишалось без нього — і на головному
+  // екрані показувалась системна іконка «зламане зображення». Це не рідкість:
+  // чужі RSS-джерела масово блокують «гарячі посилання» на картинки (через це
+  // обробник і експортували з `news.js`). Знайдено скріншотом при редизайні табла.
+  // ⚠️ `error` НЕ спливає, тому слухаємо у фазі ЗАХОПЛЕННЯ (третій аргумент `true`).
+  // Обробник СПІЛЬНИЙ — своєї копії тут нема.
+  section.addEventListener('error', handleImgError, true);
   section.addEventListener('click', e => {
     // Картка → стаття. Стоїть ПЕРШИМ: картки лежать усередині віджета, а сам віджет
     // теж веде в хаб — без цієї черговості тап по новині відкривав би хаб.

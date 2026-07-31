@@ -255,43 +255,62 @@ const look = await page.evaluate(() => {
   const hex = n => { const v = cs.getPropertyValue(n).trim(); const m = v.match(/^#(..)(..)(..)$/);
     return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : null; };
   const screenBg = rgb(getComputedStyle(document.querySelector('.nh-screen')).backgroundColor);
-  const row = document.querySelector('.nh-list .news-card-row:not(.nh-lead)');
-  const title = row.querySelector('.news-card-row-title');
-  const foot = row.querySelector('.news-card-row-footer');
-  const badge = document.querySelector('.nh-list .news-badge');
-  const line = hex('--news-line'), press = hex('--news-press');
+  const row = document.querySelector('.nh-list .nc--row');
+  const title = row.querySelector('.nc-title');
+  const foot = row.querySelector('.nc-foot');
+  const badge = document.querySelector('.nh-list .nc-badge');
+  const line = hex('--news-line'), press = hex('--news-press'), card = hex('--news-card');
+  const rowCs = getComputedStyle(row);
   return {
-    // Поверхня рядка: фону НЕ має бути взагалі — саме так знято питання «кремове».
-    rowBg: getComputedStyle(row).backgroundColor,
+    // 🔄 31.07 (крок 3): рядок став КАРТКОЮ з обідком — пряме замовлення Вови
+    // «зробити у вигляді карточки, а не просто лініями». До цього поверхні не було.
+    rowBg: rowCs.backgroundColor,
+    rowBorderW: parseFloat(rowCs.borderTopWidth),
+    rowBorderC: rgb(rowCs.borderTopColor),
+    rowRadius: parseFloat(rowCs.borderTopLeftRadius),
+    теплотаКартки: card ? warm(card) : null,
     теплотаЛінії: line ? warm(line) : null,
     теплотаНатиску: press ? warm(press) : null,
     контрастЛінії: line ? ratio(line, screenBg) : null,
-    контрастНатиску: press ? ratio(press, screenBg) : null,
+    // ⚠️ Натиск міряємо до КАРТКИ, а не до фону екрана: тепер він лягає на білу
+    // поверхню. Стара пара «натиск↔фон» після появи картки нічого не описувала.
+    контрастНатиску: press && card ? ratio(press, card) : null,
+    контрастКартки: card ? ratio(card, screenBg) : null,
     // Мітки: тихий текст, а не «цукерка» з підкладкою.
     badgeBg: badge ? getComputedStyle(badge).backgroundColor : null,
     badgeTxt: badge ? badge.textContent.trim() : null,
     titleSize: parseFloat(getComputedStyle(title).fontSize),
     footSize: parseFloat(getComputedStyle(foot).fontSize),
-    lead: !!document.querySelector('.nh-lead'),
-    leadHasPhoto: !!document.querySelector('.nh-lead img, .nh-lead .img-fallback'),
+    lead: !!document.querySelector('.nc--lead'),
+    leadHasPhoto: !!document.querySelector('.nc--lead img, .nc--lead .img-fallback'),
     // Ексклюзив більше не обводимо кільцем (обідок читався як тривога).
-    exclRing: (() => { const e = document.querySelector('.nh-list .news-card-row.exclusive');
+    exclRing: (() => { const e = document.querySelector('.nh-list .nc.exclusive');
       return e ? getComputedStyle(e).boxShadow : 'none'; })(),
   };
 });
 
-ok('рядок списку БЕЗ власної поверхні (питання «кремового» зняте)',
-   /rgba\(0, 0, 0, 0\)|transparent/.test(look.rowBg), look.rowBg);
+// 🔴 ЗАМОВЛЕННЯ ВОВИ 31.07 (вечір): «фон залишити, просто такий ОБОДОК зробити,
+// ЯК В ДОШЦІ… і зробити так само її у вигляді КАРТОЧКИ, а не просто лініями».
+// Тому три перевірки нижче — саме про наявність картки, а не про її відсутність.
+ok('🔴 рядок — КАРТКА з власною поверхнею', !/rgba\(0, 0, 0, 0\)|transparent/.test(look.rowBg), look.rowBg);
+ok('🔴 у картки є обідок 1px', look.rowBorderW >= 1, `${look.rowBorderW}px`);
+ok('картка заокруглена (не плитка)', look.rowRadius >= 8, `${look.rowRadius}px`);
 // 🔴 Головний критерій: теплота. Проєкт вважає кремовим усе понад 6 (board-cream.mjs),
-// а стара картка новин мала 11. Нові токени мусять бути нейтральні або прохолодні.
-ok('🔴 лінія новин не тепла (R−B ≤ 3)', look.теплотаЛінії <= 3, `R−B = ${look.теплотаЛінії}`);
+// а стара картка новин мала 11. Уся родина мусить бути нейтральна або прохолодна.
+ok('🔴 картка новин не тепла (R−B ≤ 3)', look.теплотаКартки <= 3, `R−B = ${look.теплотаКартки}`);
+ok('🔴 обідок не теплий (R−B ≤ 3)', look.теплотаЛінії <= 3, `R−B = ${look.теплотаЛінії}`);
 ok('🔴 натиск не теплий (R−B ≤ 3)', look.теплотаНатиску <= 3, `R−B = ${look.теплотаНатиску}`);
-// Лінія мусить бути видима, але не жирна: 1.40 — число, яким проєкт міряв обідок
-// картки Дошки 29.07. Вікно ±0.06 — щоб не падати від округлень.
-ok('лінія тримає контраст ≈1.40 до фону',
+// «Як в дошці» — це про КРИТЕРІЙ, а не про hex: обідок Дошки тримає 1.398 до свого
+// фону. Вікно ±0.06 — щоб не падати від округлень.
+ok('обідок тримає контраст ≈1.40 до фону (норма Дошки)',
    Math.abs(look.контрастЛінії - 1.40) <= 0.06, `${look.контрастЛінії}`);
-ok('натиск відчутний, але не чорнота (1.2…1.4)',
-   look.контрастНатиску > 1.2 && look.контрастНатиску < 1.4, `${look.контрастНатиску}`);
+// Натиск на Дошці = 1.274 до білої картки. Тримаємо ту саму відчутність.
+ok('натиск відчувається як на Дошці (≈1.27 до картки)',
+   Math.abs(look.контрастНатиску - 1.274) <= 0.05, `${look.контрастНатиску}`);
+// 🔴 Сторож проти «а приберімо обідок»: сама картка на світлому фоні дає лише
+// 1.162:1, тобто без обідка вона попливе. Число тут — доказ, що край НЕСУЧИЙ.
+ok('🔴 обідок несучий: контраст самої картки до фону нижчий за обідок',
+   look.контрастКартки < look.контрастЛінії, `картка ${look.контрастКартки} < обідок ${look.контрастЛінії}`);
 ok('мітка — тихий текст, а не «цукерка» з підкладкою',
    /rgba\(0, 0, 0, 0\)|transparent/.test(look.badgeBg || ''), `${look.badgeTxt}: ${look.badgeBg}`);
 ok('заголовок не дрібніший за 15px', look.titleSize >= 15, `${look.titleSize}px`);
@@ -302,11 +321,11 @@ ok('велика перша — саме з фото (інакше це розд
 ok('ексклюзив БЕЗ обідка-кільця', !/0px 0px 0px 1\.5px/.test(look.exclRing), look.exclRing.slice(0, 40));
 
 // Гео-мітка: у «Громаді» це повтор активної вкладки, у «Україна та Світ» — сенс.
-const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
 ok('🔴 у «Громаді» гео-мітки нема (не дублює вкладку)', geoHere === 0, `${geoHere}`);
 await page.locator('.nh-tab', { hasText: 'Україна та Світ' }).click();
 await page.waitForTimeout(700);
-const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
 ok('🔴 КОНТРОЛЬ: у «Україна та Світ» гео-мітка ЛИШИЛАСЬ (там вона інформативна)',
    geoThere > 0, `${geoThere}`);
 
@@ -335,6 +354,65 @@ ok('бейдж «Суспільство» не малюється', /CATEGORY_DE
 // Ключ сховища для «N нових» — щоб його не перейменували мовчки: перейменування
 // означає, що в КОЖНОГО читача бейдж одноразово покаже архів як «нові».
 ok('ключ cstl_news_seen_ts на місці', /cstl_news_seen_ts/.test(NEWS));
+
+// ── 5. 🔴 СТОРОЖ ПРОТИ ПОВЕРНЕННЯ «ДВОХ НАБОРІВ» (31.07, крок 9) ─────────────
+// Хвороба, заради якої й був увесь потік: та сама картка новини малювалась двома
+// незалежними наборами перевизначень — 13 правил `.cm-news-top3 .news-card-*`
+// (табло) і 20 правил `.nh-list .news-card-*` (хаб). Вони розійшлись самі, і Вова
+// побачив наслідок: «карточки новин відображаються по-іншому ніж на сторінці
+// новини… це дуже великий розгардіяш».
+//
+// ⚠️ Міряємо ПРАВИЛО, а не результат, і це свідомий виняток із «критерій міряє
+// наслідок»: наслідок тут — «через півроку хтось додасть одне правило під свій
+// екран». Такий регрес не видно на жодному скріншоті в день, коли його роблять;
+// він проявляється лише коли два екрани встигли розійтись. Тому стережемо саме
+// форму запису — це той рідкісний випадок, коли вона і є предметом.
+//
+// Дозволено рівно одне: екран задає ТОКЕНИ `--nc-*` на своєму контейнері.
+// Заборонено: правило, яке через контейнер екрана чіпає ВЛАСТИВОСТІ картки.
+const CARD_CSS = projectFile('style/news-card.css');
+const HUB_CSS  = projectFile('style/news-hub.css');
+const CM_CSS   = projectFile('style/community.css');
+
+// Правило = селектор + тіло. Шукаємо тіла, де є хоч одна звичайна властивість
+// (рядок виду `щось: значення`, який НЕ починається з `--`).
+const overrides = css => {
+  const out = [];
+  const re = /([^{}]*\.nc[\w-]*[^{}]*)\{([^}]*)\}/g;
+  let m;
+  while ((m = re.exec(css))) {
+    const sel = m[1].trim().replace(/\s+/g, ' ');
+    // Нас цікавлять лише СКОУПЛЕНІ під чужий контейнер правила: у селекторі є
+    // пробіл-нащадок і клас екрана перед `.nc`.
+    if (!/(\.nh-list|\.cm-news-top3|#cm-news-content|\.nh-screen)\s+\.nc/.test(sel)) continue;
+    const props = m[2].split(';').map(s => s.trim())
+      .filter(s => s && !s.startsWith('--') && /^[a-z-]+\s*:/.test(s));
+    if (props.length) out.push(`${sel} { ${props.join('; ')} }`);
+  }
+  return out;
+};
+const badHub = overrides(HUB_CSS), badCm = overrides(CM_CSS);
+ok('🔴 хаб НЕ перевизначає властивості картки (лише токени)',
+   badHub.length === 0, badHub.join(' | ') || 'чисто');
+ok('🔴 табло НЕ перевизначає властивості картки (лише токени)',
+   badCm.length === 0, badCm.join(' | ') || 'чисто');
+
+// 🔴 КОНТРОЛЬ: без нього перевірка вище була б зелена і на порожньому файлі.
+// Підсовуємо їй рівно те правило, яке вона має ловити.
+const trap = overrides('.nh-list .nc-title { font-size: 19px; }');
+ok('🔴 КОНТРОЛЬ: сторож ЛОВИТЬ підкинуте перевизначення',
+   trap.length === 1, trap.join('') || 'НЕ спіймав');
+// І не сварить на дозволене — інакше його швидко почнуть обходити.
+const okTokens = overrides('.nh-list .nc--lead { --nc-img-h: 140px; --nc-title-fs: 17px; }');
+ok('КОНТРОЛЬ: на самі токени сторож НЕ свариться', okTokens.length === 0, okTokens.join('') || 'чисто');
+
+// Форма картки живе одним файлом — і саме він мусить містити варіанти.
+ok('усі три варіанти картки описані в одному файлі',
+   /\.nc--lead/.test(CARD_CSS) && /\.nc--row/.test(CARD_CSS) && /\.nc--mini/.test(CARD_CSS));
+// Розмітку теж пише одна функція: дві (`renderRow` + `renderFeatured`) і були
+// половиною хвороби.
+ok('розмітку картки пише ОДНА функція',
+   /function renderCard\(/.test(NEWS) && !/function renderRow\(/.test(NEWS));
 
 await browser.close();
 await stop();

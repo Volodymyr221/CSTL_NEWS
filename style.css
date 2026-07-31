@@ -10,7 +10,8 @@
 
 @import url('style/base.css');       /* :root, reset, html/body, splash, header, main, toast, deploy-stamp, empty-state */
 @import url('style/filters.css');    /* .filters-bar, .chips-row, .chip */
-@import url('style/news.css');       /* .news-card-featured, .news-card-row, meta */
+@import url('style/news.css');       /* .news-card-featured (легасі), бейджі модалки статті */
+@import url('style/news-card.css');  /* .nc-* — ЄДИНА картка новини (табло + хаб), варіанти lead/row/mini */
 @import url('style/events.css');     /* .ev-card v2 + skeleton + .ics btn */
 @import url('style/buses.css');      /* .bus-card, .bs-search, .bs-dropdown, smart-row */
 @import url('style/power.css');      /* .pw-* — Світло v2: hero-таймер, горизонтальна стрічка */
