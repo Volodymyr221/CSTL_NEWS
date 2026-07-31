@@ -178,11 +178,31 @@ export async function openArticleById(id) {
   openArticle(id);
 }
 
-// HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
+// 🔴 КАТЕГОРІЙНИЙ БЕЙДЖ ПОКАЗУЄМО, ЛИШЕ КОЛИ ВІН ЩОСЬ КАЖЕ (31.07, крок 9, баг B-28).
+//
+// Заміряно по живих `data/articles.json` 31.07: **378 з 400 = 94.5%** статей мають
+// категорію «Суспільство». Тобто на дев'яти картках з десяти бейдж писав те саме
+// слово — займав рядок, вимагав кольору й уваги і не додавав НІЧОГО. Решта: Культура
+// 6 · Спорт 6 · Історія 5 · Економіка 5.
+//
+// ⚠️ Це НЕ «прибрати бейдж», як стояло в плані кроку 9, і різниця важлива.
+// Просте видалення знищило б і ті 5.5%, де категорія справді щось означає. Тому
+// ховаємо саме ЗНАЧЕННЯ ЗА ЗАМОВЧУВАННЯМ: «Суспільство» — це те, що ставить
+// класифікатор, коли не розпізнав тему, тобто по суті «категорії нема».
+//
+// 🔑 Побічна користь: коли B-28 полагодять у `scripts/parse_rss.py` і категорії
+// почнуть розкладатись по чотирьох базових, бейджі повернуться САМІ, без правки
+// цього коду. Показник шуму став показником сигналу.
+// 🛑 Сам B-28 цим НЕ закритий — це лікування симптому. Корінь у класифікаторі.
+const CATEGORY_DEFAULT = 'Суспільство';
+
 function badgesHtml(a) {
+  const cat = normCategory(a.category);
   return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(normCategory(a.category))}</span>
+    ${cat !== CATEGORY_DEFAULT
+      ? `<span class="news-badge news-badge--cat" style="background:${catColor(cat)}">${escapeHtml(cat)}</span>`
+      : ''}
     ${a.exclusive ? '<span class="news-badge news-badge--excl">⭐ Ексклюзив</span>' : ''}
     ${a.imageType === 'illustration' ? '<span class="news-badge news-badge--illus">🖼 Ілюстрація</span>' : ''}
   `;

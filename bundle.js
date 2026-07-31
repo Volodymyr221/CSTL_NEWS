@@ -7397,10 +7397,12 @@
     await ensureNewsLoaded();
     openArticle(id);
   }
+  var CATEGORY_DEFAULT = "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E";
   function badgesHtml(a) {
+    const cat = normCategory(a.category);
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(normCategory(a.category))}</span>
+    ${cat !== CATEGORY_DEFAULT ? `<span class="news-badge news-badge--cat" style="background:${catColor2(cat)}">${escapeHtml(cat)}</span>` : ""}
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
