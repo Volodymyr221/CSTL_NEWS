@@ -11082,8 +11082,7 @@ ${ev.description || ""}`
     if (!top.length) {
       el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     } else {
-      const html = top.map((a, i) => newsCardsHtml([a], { variant: i === 0 ? "lead" : "mini" })).join("");
-      el.innerHTML = `<div class="cm-news-top3">${html}</div>`;
+      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: "mini" })}</div>`;
       [...el.querySelectorAll(".nc")].forEach((node, i) => {
         const b = node.querySelector(".nc-badge--geo");
         if (b)
