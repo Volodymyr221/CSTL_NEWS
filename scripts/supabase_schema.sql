@@ -195,10 +195,20 @@ CREATE POLICY "Public can read published posts"
   ON posts FOR SELECT
   USING (status = 'published');
 
--- Будь-хто може створити НОВИЙ пост — але тільки зі статусом 'pending'
-CREATE POLICY "Anyone can submit a pending post"
-  ON posts FOR INSERT
-  WITH CHECK (status = 'pending');
+-- 🛑 ЗАМІНЕНО 01.08.2026 — не накочувати старий варіант.
+--    Було: "Anyone can submit a pending post" WITH CHECK (status = 'pending')
+--    — тобто подати оголошення міг і анонім.
+--    Стало: лише залогінений і лише під своїм owner_uid.
+--    ⚠️ Сама політика — ДРУГИЙ рубіж. Головний шлях подачі йде через RPC
+--       `submit_board_post`, а вона SECURITY DEFINER і RLS обходить — сторож
+--       входу стоїть УСЕРЕДИНІ неї. Деталі: scripts/supabase_anon_lockdown.sql.
+CREATE POLICY "Logged-in can submit a pending post"
+  ON posts FOR INSERT TO authenticated
+  WITH CHECK (
+    status = 'pending'
+    AND auth.uid() IS NOT NULL
+    AND owner_uid = auth.uid()
+  );
 
 CREATE POLICY "Admins can update posts"  ON posts FOR UPDATE
   USING (is_admin()) WITH CHECK (is_admin());
@@ -224,6 +234,9 @@ CREATE POLICY "Admins manage ads" ON ads FOR ALL
   USING (is_admin()) WITH CHECK (is_admin());
 
 ALTER TABLE ad_events ENABLE ROW LEVEL SECURITY;
+-- ℹ️ Анонімний запис тут ЛИШЕНО СВІДОМО (рішення Вови 01.08.2026): метрика
+--    неавторизованих відвідувачів пишеться до входу. Те саме для analytics_events.
+--    Решту анонімних записів закрито — `scripts/supabase_anon_lockdown.sql`.
 CREATE POLICY "Anyone can log ad events" ON ad_events FOR INSERT
   WITH CHECK (true);
 CREATE POLICY "Admins can read ad events" ON ad_events FOR SELECT
@@ -248,20 +261,40 @@ CREATE POLICY "Admins manage admins" ON admins FOR ALL TO authenticated
 -- 7. STORAGE BUCKET — фото оголошень
 -- ============================================================================
 
--- Створюємо публічний bucket для фото
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('community-photos', 'community-photos', true)
-ON CONFLICT (id) DO NOTHING;
+-- Створюємо публічний bucket для фото.
+-- 🔴 ОНОВЛЕНО 01.08.2026: до цього file_size_limit і allowed_mime_types були NULL,
+--    тобто діяла дефолтна стеля 50 МБ і БУДЬ-ЯКИЙ тип файлу (архів, відео,
+--    HTML-сторінка з робочим публічним посиланням на нашому сховищі).
+--    Стеля 5 МБ заміряна, не на око: у бакеті 103 файли, понад 2 МБ — 6,
+--    понад 5 МБ — жодного. 2 МБ відрізали б 6 справжніх завантажень.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('community-photos', 'community-photos', true, 5242880,
+        ARRAY['image/jpeg','image/png','image/webp'])
+ON CONFLICT (id) DO UPDATE
+  SET file_size_limit    = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
 
--- Публічне читання усіх фото у цьому bucket
-CREATE POLICY "Public read community photos"
-  ON storage.objects FOR SELECT TO public
-  USING (bucket_id = 'community-photos');
+-- 🛑 ЗАМІНЕНО 01.08.2026 — не накочувати старий варіант.
+--    Було: `"Public read community photos"` FOR SELECT TO public.
+--    Назва брехала: це не «читання картинки», а читання СПИСКУ файлів —
+--    анонім отримував усі 103 імені й міг завантажити все підряд. Серед них
+--    були 23 фото з ПРИВАТНИХ переписок і фото 2 неопублікованих оголошень.
+--    Показ картинок від цієї політики НЕ залежить: бакет `public = true`,
+--    віддача через /object/public/… з RLS не звіряється.
+--    Повний розбір → scripts/supabase_anon_lockdown.sql секція 4б.
+CREATE POLICY "Owner reads own community photos"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'community-photos' AND owner = auth.uid());
 
--- Будь-хто може завантажити фото (з submit-форми) — обмеження розміру у клієнті (800px JPEG q0.78)
-CREATE POLICY "Anyone can upload to community-photos"
-  ON storage.objects FOR INSERT TO public
-  WITH CHECK (bucket_id = 'community-photos');
+-- 🛑 ЗАМІНЕНО 01.08.2026 — не накочувати старий варіант.
+--    Було: TO public, тобто анонім клав у сховище що завгодно. Коментар обіцяв
+--    «обмеження розміру у клієнті (800px JPEG q0.78)» — але клієнтське
+--    обмеження нічого не варте: публічний ключ лежить у коді сайту, і до
+--    сховища можна звернутись напряму, минаючи наш JS. Доказ у самих даних —
+--    у бакеті лежали PNG на 3.2 МБ, тобто стиснення трималось не на всіх шляхах.
+CREATE POLICY "Logged-in can upload to community-photos"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'community-photos' AND auth.uid() IS NOT NULL);
 
 -- Тільки admin може видаляти фото
 CREATE POLICY "Admins can delete photos"

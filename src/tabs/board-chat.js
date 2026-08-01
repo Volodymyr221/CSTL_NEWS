@@ -29,6 +29,7 @@ import {
   editMessage, deleteMessage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
   hydrateAvatars, hydrateNames, nameUid,
+  CHAT_BUCKET,
 } from '../core/supabase.js';
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — інакше сире фото падало «Load failed»
 import { COMMUNITY_ALL } from '../core/settlements.js';
@@ -436,14 +437,26 @@ export async function openChat(convOrThread, post, activeId = null) {
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     appendOne(temp);
-    const up = await uploadImageReliable(file, { maxDim: 1600, quality: 0.82 });
-    if (!up.url) {
+    // 🔒 01.08.2026 — фото приватного чату йде в ЗАКРИТЕ сховище `chat-photos`.
+    // Тека = id розмови: саме за нею політика бази звіряє, чи людина її учасник,
+    // тож доступ до файлу й доступ до листування визначає ОДНА умова і вони не
+    // можуть розʼїхатись. Раніше фото лежали в публічному бакеті поряд з
+    // оголошеннями — текст повідомлення був захищений, а картинка ні.
+    const up = await uploadImageReliable(file, {
+      maxDim: 1600, quality: 0.82,
+      bucket: CHAT_BUCKET,
+      folder: `${thread.id}/`,
+    });
+    // Успіх тут — це `path`, а не `url`: у закритого бакета публічної адреси нема.
+    if (!up.path) {
       messages = messages.filter(m => m.client_tag !== tag);
       renderStream();
       showToast('❌ Не вдалося завантажити фото: ' + (up.error || ''), 4000, 'error');
       return;
     }
-    const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
+    // У базу пишемо ШЛЯХ у закритому бакеті, а не адресу: посилання туди
+    // тимчасові, і зберігати протухаючий рядок у БД не можна.
+    const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.path, replyToId: replyId, clientTag: tag });
     if (!res.ok) {
       URL.revokeObjectURL(localUrl);
       messages = messages.filter(m => m.client_tag !== tag);
@@ -453,7 +466,12 @@ export async function openChat(convOrThread, post, activeId = null) {
     }
     // Передзавантажуємо фото зі Storage ПЕРЕД заміною — щоб локальне прев'ю не
     // зникало в порожнечу поки картинка вантажиться (інакше фото «пропадає»).
-    await new Promise((resolve) => { const pre = new Image(); pre.onload = pre.onerror = resolve; pre.src = up.url; });
+    // Передзавантажуємо ПІДПИСАНЕ посилання з відповіді сервера, а не `up.url`:
+    // для закритого бакета `up.url` порожній, і прев'ю зникло б у порожнечу.
+    const readyUrl = res.message && res.message.photo_url;
+    if (readyUrl) {
+      await new Promise((resolve) => { const pre = new Image(); pre.onload = pre.onerror = resolve; pre.src = readyUrl; });
+    }
     if (api._closed) return;
     // Реконсиляція за id/client_tag — прибирає дубль «одне фото = два повідомлення».
     upsertMessage(res.message);

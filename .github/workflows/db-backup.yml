@@ -1,0 +1,203 @@
+# ============================================================================
+# БЕКАП ЖИВОЇ БАЗИ — щодня, зашифрований
+# ============================================================================
+#
+# ЧОМУ ВІН ВЗАГАЛІ З'ЯВИВСЯ (аудит 01.08.2026):
+#   Новини й розклад автобусів лежать у git (`data/*.json`) — вони версіонуються.
+#   А те, що пишуть ЛЮДИ, йде повз git одразу в Supabase: 209 приватних
+#   повідомлень, 108 коментарів Стрічки, 53 коментарі Дошки, 25 оголошень,
+#   10 профілів, 103 фото. Копії не існувало взагалі, тариф Supabase — `free`,
+#   а на ньому автоматичних бекапів немає. Одна помилкова команда — і повертати
+#   нема звідки.
+#
+# 🔴 ЧОМУ ШИФРУВАННЯ ОБОВ'ЯЗКОВЕ, А НЕ «ДЛЯ НАДІЙНОСТІ»:
+#   Репозиторій ПУБЛІЧНИЙ (перевірено через GitHub API: "private": false).
+#   Артефакти публічного репозиторію може завантажити будь-хто. Дамп містить
+#   приватне листування жителів. Тому файл шифрується ДО вивантаження, і назовні
+#   потрапляє лише `.gpg`, який без пароля — набір байтів.
+#   ⛔ НІКОЛИ не додавати сюди крок, що комітить дамп у репозиторій.
+#
+# ЩО ПОТРІБНО ОДИН РАЗ (робить Вова, інструкція — scripts/README_backup.md):
+#   Settings → Secrets and variables → Actions → New repository secret:
+#     SUPABASE_DB_URL    — рядок підключення до бази (через pooler, порт 5432)
+#     BACKUP_PASSPHRASE  — пароль, яким шифрується архів. Загубиш — бекапи мертві.
+# ============================================================================
+
+name: DB Backup
+
+on:
+  schedule:
+    # 01:00 UTC = 04:00 за Києвом. Ніч: парсери новин і автобусів у цей час мовчать,
+    # тож дамп ловить спокійний стан бази.
+    - cron: '0 1 * * *'
+  workflow_dispatch:        # і кнопкою вручну — щоб перевірити, не чекаючи ночі
+
+# Одночасно — лише один бекап. Другий запуск під час першого дав би два дампи
+# з різним станом бази і плутанину, який із них цілий.
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 0. Без ключів далі йти нема сенсу ────────────────────────────────
+      # Крок стоїть ПЕРШИМ і падає з людським текстом. Інакше воркфлоу впав би
+      # десь усередині pg_dump з незрозумілою помилкою підключення.
+      - name: Перевірити, що ключі на місці
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS:   ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          MISSING=""
+          # Форма `if`, а не `[ -z ... ] && ...` — навмисно, але НЕ тому, що друга
+          # зламана: при `set -e` невдала ліва частина `&&` крок не вбиває (перевірено
+          # прогоном обох варіантів). Причина простіша — `A && B` стає пасткою, щойно
+          # опиняється ОСТАННІМ рядком кроку: тоді її ненульовий код падає назовні
+          # як помилка кроку. `if` не залежить від того, де рядок стоїть.
+          if [ -z "${DB_URL}" ]; then MISSING="${MISSING} SUPABASE_DB_URL"; fi
+          if [ -z "${PASS}" ];   then MISSING="${MISSING} BACKUP_PASSPHRASE"; fi
+          if [ -n "${MISSING}" ]; then
+            echo "::error::Немає секретів:${MISSING}. Як їх створити — scripts/README_backup.md"
+            exit 1
+          fi
+          echo "Ключі на місці."
+
+      - uses: actions/checkout@v4
+
+      # ── 1. Інструменти ───────────────────────────────────────────────────
+      # Supabase CLI вміє знімати дамп трьома частинами так, як цього хоче сам
+      # Supabase (ролі / схема / дані) — це важливо, бо схеми `auth` і `storage`
+      # службові, і «просто pg_dump усього» на відновленні конфліктує.
+      - name: Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # psql потрібен окремо: ним беремо перелік файлів сховища (крок 3).
+      # Клієнт саме 17 — база на Postgres 17.6, старший клієнт відмовиться дампити.
+      - name: psql 17
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          psql --version
+
+      # ── 2. Три дампи бази ────────────────────────────────────────────────
+      # Розділення не наша вигадка, а спосіб, яким Supabase документує перенос
+      # проєкту. Кожна частина потрібна:
+      #   roles  — ролі БД
+      #   schema — таблиці, RLS-політики, функції, тригери (уся сьогоднішня робота)
+      #   data   — власне вміст, разом з auth.users (акаунти жителів)
+      # ⚠️ Без auth.users відновлення дало б пости й повідомлення, підписані
+      #    неіснуючими людьми: усе в базі тримається на uid з auth.users.
+      - name: Дамп бази
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          supabase db dump --db-url "$DB_URL" -f out/roles.sql  --role-only
+          supabase db dump --db-url "$DB_URL" -f out/schema.sql
+          supabase db dump --db-url "$DB_URL" -f out/data.sql   --data-only --use-copy
+          ls -lh out/
+
+      # ── 3. Фото зі сховища ───────────────────────────────────────────────
+      # Дамп бази зберігає ПОСИЛАННЯ на фото, але не самі файли. Без цього кроку
+      # відновлена база показувала б порожні рамки замість картинок.
+      # Ключ для цього не потрібен: бакет `community-photos` публічний на читання,
+      # тож файли беремо тим самим відкритим посиланням, що й застосунок.
+      - name: Фото зі сховища
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p out/storage
+          # Адресу проєкту дістаємо з рядка підключення, щоб не тримати її ще одним секретом.
+          REF=$(echo "$DB_URL" | grep -oE 'postgres\.[a-z0-9]+' | head -1 | cut -d. -f2)
+          if [ -z "$REF" ]; then
+            echo "::warning::Не вдалось визначити ref проєкту — фото пропущено, база збережена."
+            exit 0
+          fi
+          psql "$DB_URL" -At -c \
+            "select name from storage.objects where bucket_id='community-photos'" > out/_files.txt
+          COUNT=$(wc -l < out/_files.txt)
+          echo "Файлів у сховищі: $COUNT"
+          FAIL=0
+          while IFS= read -r NAME; do
+            if [ -z "$NAME" ]; then continue; fi   # та сама форма, що й у сторожі вище
+            mkdir -p "out/storage/$(dirname "$NAME")"
+            curl -fsSL --retry 3 --retry-delay 2 \
+              "https://${REF}.supabase.co/storage/v1/object/public/community-photos/${NAME}" \
+              -o "out/storage/${NAME}" || FAIL=$((FAIL+1))
+          done < out/_files.txt
+          rm -f out/_files.txt
+          echo "Не завантажено: $FAIL з $COUNT"
+          # Поодинокий збій мережі не має валити весь бекап — база важливіша за картинку.
+          # Але якщо не дійшла БІЛЬШІСТЬ файлів, це вже не мережа, а зламаний шлях.
+          if [ "$COUNT" -gt 0 ] && [ "$FAIL" -gt $((COUNT / 2)) ]; then
+            echo "::error::Не завантажилась більшість фото — шукати причину, а не ігнорувати."
+            exit 1
+          fi
+
+      # ── 4. Запакувати і зашифрувати ──────────────────────────────────────
+      - name: Архів + шифрування
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          # Довідка всередині архіву: через півроку буде незрозуміло, що це і як розпакувати.
+          cat > out/README.txt <<EOF
+          CSTL NEWS — бекап бази, знято $(date -u +'%Y-%m-%d %H:%M UTC')
+          roles.sql / schema.sql / data.sql — три частини дампа (накочувати в цьому порядку)
+          storage/ — файли бакета community-photos
+          Як відновити і як перевірити — scripts/README_backup.md у репозиторії.
+          EOF
+          tar -czf "cstl-backup-${STAMP}.tar.gz" -C out .
+          # Симетричне шифрування: пароль знає лише Вова через секрет репозиторію.
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+              --passphrase "$PASS" \
+              -o "cstl-backup-${STAMP}.tar.gz.gpg" \
+              "cstl-backup-${STAMP}.tar.gz"
+          # Незашифрований архів прибираємо ОДРАЗУ, щоб він фізично не міг потрапити
+          # в артефакт через помилку в шляху нижче.
+          rm -f "cstl-backup-${STAMP}.tar.gz"
+          ls -lh cstl-backup-*.gpg
+
+      # ── 5. Віддати назовні ───────────────────────────────────────────────
+      # 14 днів: сховище GitHub не безмежне, а помилку в даних помічають зазвичай
+      # за кілька днів. Треба довше — підняти retention-days.
+      - name: Вивантажити
+        uses: actions/upload-artifact@v4
+        with:
+          name: cstl-db-backup-${{ env.STAMP }}
+          path: cstl-backup-*.tar.gz.gpg
+          retention-days: 14
+          if-no-files-found: error       # тиха відсутність файлу = бекап, якого нема
+
+      - name: Підсумок
+        run: |
+          {
+            echo "### Бекап знято"
+            echo ""
+            echo "Артефакт: \`cstl-db-backup-${STAMP}\` · зберігається 14 днів · зашифровано AES256."
+            echo ""
+            echo "Щоб відкрити: завантажити артефакт і виконати"
+            echo '```'
+            echo "gpg --decrypt cstl-backup-${STAMP}.tar.gz.gpg > b.tar.gz && tar -xzf b.tar.gz"
+            echo '```'
+            echo ""
+            echo "⚠️ Бекап, який жодного разу не розгортали, бекапом не рахується —"
+            echo "перевірка відновлення описана в \`scripts/README_backup.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"

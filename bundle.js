@@ -770,15 +770,18 @@
     const r = await netCall(() => supa.from("comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" }).eq("id", commentId).select().single());
     return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
-  async function uploadPhotoToStorage(blob, folder = "") {
+  var PUBLIC_BUCKET = "community-photos";
+  var CHAT_BUCKET = "chat-photos";
+  var CHAT_URL_TTL = 12 * 3600;
+  async function uploadPhotoToStorage(blob, folder = "", bucket = PUBLIC_BUCKET) {
     if (!supa)
-      return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+      return { url: null, path: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!blob)
-      return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
+      return { url: null, path: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
     const ext = blob.type && blob.type.split("/")[1] || "jpg";
     const rand = Math.random().toString(36).slice(2, 10);
     const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
-    const { error: uploadError } = await supa.storage.from("community-photos").upload(path, blob, {
+    const { error: uploadError } = await supa.storage.from(bucket).upload(path, blob, {
       contentType: blob.type || "image/jpeg",
       cacheControl: "31536000",
       // 1 рік — фото незмінне
@@ -786,10 +789,53 @@
     });
     if (uploadError) {
       console.warn("[supabase] uploadPhotoToStorage error:", uploadError.message);
-      return { url: null, error: netErrorText(uploadError) };
+      return { url: null, path: null, error: netErrorText(uploadError) };
     }
-    const { data } = supa.storage.from("community-photos").getPublicUrl(path);
-    return { url: data?.publicUrl || null, error: null };
+    if (bucket !== PUBLIC_BUCKET)
+      return { url: null, path, error: null };
+    const { data } = supa.storage.from(bucket).getPublicUrl(path);
+    return { url: data?.publicUrl || null, path, error: null };
+  }
+  var _chatUrlCache = /* @__PURE__ */ new Map();
+  function isLegacyPhotoUrl(v) {
+    return typeof v === "string" && /^https?:\/\//i.test(v);
+  }
+  async function signChatPhotos(rows) {
+    if (!supa || !Array.isArray(rows) || !rows.length)
+      return rows;
+    const now = Date.now();
+    const need = [];
+    for (const r of rows) {
+      const p = r && r.photo_url;
+      if (!p || isLegacyPhotoUrl(p))
+        continue;
+      const hit = _chatUrlCache.get(p);
+      if (hit && hit.exp > now)
+        continue;
+      if (!need.includes(p))
+        need.push(p);
+    }
+    if (need.length) {
+      try {
+        const { data, error } = await supa.storage.from(CHAT_BUCKET).createSignedUrls(need, CHAT_URL_TTL);
+        if (error)
+          console.warn("[supabase] signChatPhotos:", error.message);
+        for (const it of data || []) {
+          if (it && it.signedUrl && !it.error) {
+            _chatUrlCache.set(it.path, { url: it.signedUrl, exp: now + CHAT_URL_TTL * 800 });
+          }
+        }
+      } catch (e) {
+        console.warn("[supabase] signChatPhotos:", e && e.message);
+      }
+    }
+    return rows.map((r) => {
+      const p = r && r.photo_url;
+      if (!p || isLegacyPhotoUrl(p))
+        return r;
+      const hit = _chatUrlCache.get(p);
+      return hit ? { ...r, photo_url: hit.url, photo_path: p } : r;
+    });
   }
   var _avatarCache = /* @__PURE__ */ new Map();
   var _nameCache = /* @__PURE__ */ new Map();
@@ -1111,7 +1157,7 @@
       console.warn("[supabase] fetchMessages:", error.message);
       return [];
     }
-    return data || [];
+    return await signChatPhotos(data || []);
   }
   async function fetchThreadClearedAt(uid, threadId) {
     if (!supa || !uid)
@@ -1219,7 +1265,8 @@
     const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
     await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview }).eq("id", threadId);
     supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
-    return { ok: true, message: data };
+    const [signed] = await signChatPhotos([data]);
+    return { ok: true, message: signed || data };
   }
   async function editMessage(messageId, text) {
     if (!supa)
@@ -1280,7 +1327,14 @@
     const ch = supa.channel(`thread-${threadId}`).on(
       "postgres_changes",
       { event: "*", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
-      (payload) => onChange({ type: payload.eventType, row: payload.new || payload.old })
+      // Realtime приносить СИРИЙ рядок з бази, тобто у photo_url буде шлях, а
+      // не посилання. Підписуємо тут — інакше фото від співрозмовника
+      // приходило б порожньою рамкою, поки чат не перезавантажать.
+      async (payload) => {
+        const raw = payload.new || payload.old;
+        const [row] = await signChatPhotos([raw]);
+        onChange({ type: payload.eventType, row: row || raw });
+      }
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
@@ -1999,28 +2053,28 @@
   }
 
   // src/core/upload.js
-  async function uploadBlobWithRetry(blob, folder = "", retries = 2) {
+  async function uploadBlobWithRetry(blob, folder = "", retries = 2, bucket = void 0) {
     let lastErr = "";
     for (let attempt = 0; attempt <= retries; attempt++) {
-      const res = await uploadPhotoToStorage(blob, folder);
-      if (res.url)
-        return { url: res.url, error: null };
+      const res = await uploadPhotoToStorage(blob, folder, bucket);
+      if (res.path)
+        return { url: res.url, path: res.path, error: null };
       lastErr = res.error || "upload";
       if (attempt < retries)
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
     }
-    return { url: null, error: lastErr };
+    return { url: null, path: null, error: lastErr };
   }
-  async function uploadImageReliable(file, { folder = "", square = false, maxDim = 1600, quality = 0.82, retries = 2 } = {}) {
+  async function uploadImageReliable(file, { folder = "", square = false, maxDim = 1600, quality = 0.82, retries = 2, bucket = void 0 } = {}) {
     if (!file)
-      return { url: null, error: "\u043D\u0435\u043C\u0430 \u0444\u0430\u0439\u043B\u0443" };
+      return { url: null, path: null, error: "\u043D\u0435\u043C\u0430 \u0444\u0430\u0439\u043B\u0443" };
     let blob;
     try {
       blob = square ? await squareImageBlob(file, maxDim) : await compressImage(file, maxDim, quality);
     } catch (e) {
-      return { url: null, error: e && e.message || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u0444\u043E\u0442\u043E" };
+      return { url: null, path: null, error: e && e.message || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u0444\u043E\u0442\u043E" };
     }
-    return uploadBlobWithRetry(blob, folder, retries);
+    return uploadBlobWithRetry(blob, folder, retries, bucket);
   }
 
   // src/core/settlements.js
@@ -4784,14 +4838,19 @@
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       appendOne(temp);
-      const up = await uploadImageReliable(file, { maxDim: 1600, quality: 0.82 });
-      if (!up.url) {
+      const up = await uploadImageReliable(file, {
+        maxDim: 1600,
+        quality: 0.82,
+        bucket: CHAT_BUCKET,
+        folder: `${thread.id}/`
+      });
+      if (!up.path) {
         messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + (up.error || ""), 4e3, "error");
         return;
       }
-      const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.path, replyToId: replyId, clientTag: tag });
       if (!res.ok) {
         URL.revokeObjectURL(localUrl);
         messages = messages.filter((m) => m.client_tag !== tag);
@@ -4799,11 +4858,14 @@
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0444\u043E\u0442\u043E: " + (res.error || ""), 4e3, "error");
         return;
       }
-      await new Promise((resolve) => {
-        const pre = new Image();
-        pre.onload = pre.onerror = resolve;
-        pre.src = up.url;
-      });
+      const readyUrl = res.message && res.message.photo_url;
+      if (readyUrl) {
+        await new Promise((resolve) => {
+          const pre = new Image();
+          pre.onload = pre.onerror = resolve;
+          pre.src = readyUrl;
+        });
+      }
       if (api._closed)
         return;
       upsertMessage(res.message);
@@ -7391,7 +7453,7 @@
   function renderCard2(a, variant) {
     return `
     <article class="nc nc--${variant}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
-      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || "?").trim().charAt(0).toUpperCase())}</div>`}
       <div class="nc-body">
         <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
