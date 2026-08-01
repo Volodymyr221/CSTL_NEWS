@@ -78,6 +78,30 @@ const ROAD_1 = `
   }
 `;
 
+// ── ЗАМОВЛЕННЯ ВОВИ: багряний + обідок «як у відкритій сторінці новини» ──────
+// Сторінка новин (хаб) дає картці `--news-card: #FFFFFF` + `--news-line: #C9CBCE`
+// (`style/base.css:89-90`). Беремо ТІ САМІ токени, щоб новина виглядала однаково
+// у віджеті й на сторінці.
+// ⚠️ Одне застереження, заміряне: `#C9CBCE` підбирався за контрастом до СВІТЛОГО
+//    фону хаба (1.399). На багряному тлі він читається інакше — тому знімаємо
+//    два підваріанти, з тінню і без.
+const CARD_HUB = `
+  .cm-news-top3 {
+    --nc-card: var(--news-card) !important;
+    --nc-line: var(--news-line) !important;
+  }
+`;
+// Обідок ПЛЮС глибока тінь = два розділювачі в одному місці (помилка, через яку
+// 29.07 «давило на очі» на Дошці). Тому основний підваріант — обідок без тіні.
+const ROAD_1_HUB_FLAT = ROAD_1 + CARD_HUB + `
+  .cm-news-top3 .nc { box-shadow: none !important; }
+`;
+// Другий — обідок і ТИХА тінь: на багряному картка все-таки лежить на темному,
+// і невелика тінь може бути потрібна, щоб вона не виглядала наклейкою.
+const ROAD_1_HUB_SOFT = ROAD_1 + CARD_HUB + `
+  .cm-news-top3 .nc { box-shadow: 0 2px 6px rgba(0,0,0,0.18) !important; }
+`;
+
 // ── Локальні фото замість зовнішніх ─────────────────────────────────────────
 const PHOTOS = ['photos/olyka.day-1.jpg', 'photos/olyka.day-2.jpg', 'photos/olyka.day-3.jpg',
                 'photos/olyka.evening-1.jpg', 'photos/olyka.evening-2.jpg'];
@@ -86,7 +110,14 @@ const BYTES = PHOTOS.map(p => readFileSync(join(ROOT, p)));
 const { url, stop } = await serve();
 const executablePath = chromiumPath();
 const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}) });
-const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+// ⚠️ `serviceWorkers: 'block'` — БЕЗ цього підміна фото мовчки не працює.
+// Заміряно: лічильник підмін показував 0, хоча правило route стояло. Причина —
+// запити, що йдуть через Service Worker, `page.route` не перехоплює, а `sw.js`
+// у цьому проєкті обслуговує саме картинки (cache-first). Знімок при цьому
+// виглядав правдоподібно (у картках стояли плейсхолдери битого фото), тобто
+// перевірка брехала б тихо — рівно те, від чого застерігає правило проєкту
+// «міряй те, що побачить Вова».
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
 const page = await ctx.newPage();
 page.on('pageerror', e => console.log('❌ помилка сторінки:', e.message));
 
@@ -145,7 +176,16 @@ await apply(ROAD_1);
 await page.waitForTimeout(500);
 await shot('ДОРОГА 1 (прилад)', '1-дорога1');
 
+await apply(ROAD_1_HUB_FLAT);
+await page.waitForTimeout(500);
+await shot('+ обідок хаба, без тіні', '2-обідок-без-тіні');
+
+await apply(ROAD_1_HUB_SOFT);
+await page.waitForTimeout(500);
+await shot('+ обідок хаба, тиха тінь', '3-обідок-тиха-тінь');
+
 console.log('\n' + rows.join('\n'));
+console.log(`підмінено картинок: ${nth}`);
 console.log(`\nвидима зона ${VIEW}px · знімки → ${OUT}/`);
 
 await browser.close();
