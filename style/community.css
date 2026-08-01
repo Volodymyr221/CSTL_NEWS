@@ -4569,3 +4569,295 @@ textarea.cm-board-input.bm-invalid {
      через яку 29.07 «давило на очі» на Дошці. Межу тримає один засіб — обідок. */
 }
 /* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔴 01.08.2026 — ДОШКА В ОДИН СТОВПЧИК. Прощання з корком (рішення Вови).
+
+   ЗАМОВЛЕННЯ. Вова прислав концепт (намальований ChatGPT) і сказав: «Мені
+   подобається цей вигляд. Це схоже на дошку оголошень. Те, як зараз у нас
+   реалізовано… взагалі неясно, що це таке». На питання «прощаємось із корком
+   і шпильками?» — «Попрощаємось».
+
+   ЧОМУ ДВІ КОЛОНКИ НЕ ПРАЦЮВАЛИ — арифметика, не смак. У масонрі з двох колонок
+   картці лишалось ~175px ширини. Фото, ціна, локація і час у таку ширину разом
+   не влазять, тож картка показувала лише текст і читалась як стікер. Один
+   стовпчик дає 358px: фото 76×76 ліворуч, решта праворуч.
+
+   ЩО ВЗЯТО З КОНЦЕПТУ, А ЩО СВІДОМО НІ (перевірено по ЖИВИХ даних, 17 оголошень):
+   • взято: один стовпчик · фото зліва · тип угоди міткою · локація · ціна;
+   • НЕ взято ряд «Нові/Популярні/Поруч» — це другий ряд перемикачів поспіль,
+     8 елементів до першої картки (те саме прибирали в новинах 31.07);
+   • НЕ взято ціну як окрему колонку — її має 1 оголошення з 17 (6%), тож вона
+     елемент, якого може не бути, а не сітка;
+   • НЕ взято «цукерки» на типах — плашок було б стільки ж, скільки карток.
+
+   ⚠️ SCOPED ПІД `#board-content` — інакше зламаються ТРИ сусіди, які носять той
+   самий клас `cm-board-note`: віджет Дошки в Громаді, прев'ю в модалці подачі й
+   зум-модалка оголошення (останні дві створюються в `body`, поза цим коренем).
+   ⚠️ Клас `cm-board-note` на картці ЛИШИВСЯ навмисно — за ним чіпляється
+   розгортання в зум-модалку. Прибереш — тап по оголошенню перестане працювати.
+   ═══════════════════════════════════════════════════════════════════════════ */
+#board-content .bd-ads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 12px з боків: картка на всю ширину торкалась краю екрана і читалась як
+     суцільна смуга, а не як окремі оголошення. */
+  padding: 0 12px;
+}
+/* Скидання спадку від «стікера»: поворот, три шари тіні, вертикальна розкладка
+   і padding 16px були потрібні корку, а рядку заважають. */
+#board-content .bd-ad {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 9px;
+  border-radius: 14px;
+  border: 1px solid var(--board-line, #C4C4C1);
+  box-shadow: none;
+  transform: none;
+}
+#board-content .bd-ad:hover { transform: none; }
+#board-content .bd-ad:active { background: var(--board-press, #E4E4E1); }
+
+#board-content .bd-ad-img {
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #ECECEA;
+  align-self: flex-start;
+}
+/* Монограма для оголошення без фото. Тримає ту саму висоту рядка, що й фото —
+   інакше список знову став би рваним (у новинах це коштувало розбіжності 8px). */
+#board-content .bd-ad-img--mono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.26);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+#board-content .bd-ad-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+#board-content .bd-ad-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+}
+/* Тип угоди — кольоровий ТЕКСТ, а не пігулка з підкладкою: мітка стоїть на кожній
+   картці без винятку, і плашки зробили б список строкатим. Колір бере наявні
+   класи `cat-c-*`, тобто семантика категорій лишається спільною з рештою Дошки. */
+#board-content .bd-ad-type {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+#board-content .bd-ad-time {
+  font-size: 11px;
+  color: var(--gray, #8A8A8A);
+}
+#board-content .bd-ad-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.28;
+  color: #141414;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#board-content .bd-ad-foot {
+  margin-top: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+#board-content .bd-ad-loc {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #7A7A7A;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#board-content .bd-ad-loc svg { width: 11px; height: 11px; flex: none; }
+/* Ціна праворуч у тому ж рядку, що й локація. Коли ціни немає (16 оголошень із 17)
+   — рядок не порожніє, місце просто забирає локація. */
+#board-content .bd-ad .cm-board-price {
+  flex: none;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--news-accent, #722F37);
+}
+#board-content .bd-ad .cm-board-price--word { font-size: 12px; font-weight: 700; }
+
+/* Дії (зберегти / поділитися) — у правий верхній кут, щоб не забирати рядок. */
+#board-content .bd-ad .bd-actions {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* ── ШАПКА ДОШКИ: назва + слоган + «+» і ряд типів (01.08) ──────────────────
+   Багряний «прилад» — той самий, що в таблі новин: бренд у застосунку один, і
+   два різні способи малювати фірмовий блок читались би як два різні застосунки.
+   ⚠️ Scoped під `#board-content`: класи `.bd-*` носять і Обговорення, а їхній
+   теплий беж свідомо не чіпаємо (рішення Вови 20.07).
+   📐 Заміряно: hero 84px + пошук 46px + типи 43px. Шапка виросла з 79 до ~173px,
+   і це свідома плата за те, що екран нарешті каже, ЩО він таке. Компенсується
+   наявним згортанням шапки при прокрутці (`transform`, ніколи не висота —
+   HOT_RULES №10: висота смикнула б `padding-top` тіла під пальцем). */
+#board-content .bd-titlebar {
+  margin: 0 -14px 8px;
+  padding: 10px 14px 9px;
+  background:
+    radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),
+    radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);
+  border-radius: 0 0 18px 18px;
+}
+#board-content .bd-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+#board-content .bd-hero-text { flex: 1; min-width: 0; }
+#board-content .bd-hero-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+  color: #fff;
+  text-transform: uppercase;
+}
+/* Слоган — це половина відповіді на «що це таке»: назва лише називає, дієслова
+   кажуть, що тут РОБЛЯТЬ. Саме тому підзаголовок тут не декор. */
+#board-content .bd-hero-sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: rgba(255, 236, 240, 0.78);
+}
+#board-content .bd-hero-add {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-hero-add svg { width: 22px; height: 22px; }
+#board-content .bd-hero-add:active { background: rgba(255, 255, 255, 0.26); }
+
+/* Рядок «N оголошень · локація» лишається, але вже ВСЕРЕДИНІ багряного блоку —
+   тобто світлий текст. До 01.08 він був назвою екрана; тепер це підпис під нею. */
+#board-content .bd-subrow { margin-top: 9px; }
+#board-content .bd-count { color: rgba(255, 236, 240, 0.86); }
+#board-content .bd-loc-btn { color: rgba(255, 236, 240, 0.92); }
+
+/* ── Ряд типів угоди ──────────────────────────────────────────────────────── */
+#board-content .bd-types {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 9px 0 2px;
+  margin: 0 -2px;
+}
+#board-content .bd-types::-webkit-scrollbar { display: none; }
+#board-content .bd-type {
+  flex: none;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--board-card, #FFFFFF);
+  border: 1px solid var(--board-line, #C4C4C1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1B1B1B;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-type--on {
+  background: var(--news-accent, #722F37);
+  border-color: var(--news-accent, #722F37);
+  color: #fff;
+}
+#board-content .bd-type-n { font-size: 12px; font-weight: 700; opacity: 0.5; }
+#board-content .bd-type--on .bd-type-n { opacity: 0.75; }
+
+/* Пошук усередині багряного блоку — світле поле на темному, а не біла плашка.
+   ⚠️ Тільки на Дошці: в Обговореннях рядок пошуку лишається на світлому тлі. */
+#board-content .bd-titlebar .bd-search-row { margin-top: 9px; }
+#board-content .bd-titlebar .bd-search {
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+#board-content .bd-titlebar .bd-search-input { color: #fff; }
+#board-content .bd-titlebar .bd-search-input::placeholder { color: rgba(255, 236, 240, 0.6); }
+#board-content .bd-titlebar .bd-search-icon { color: rgba(255, 236, 240, 0.7); }
+#board-content .bd-titlebar .bd-search-clear { color: rgba(255, 236, 240, 0.8); }
+
+/* Пошук і фільтр локації в одному рядку. ⚠️ Пропорція не «на око»: без стелі
+   кнопка локації з довгою назвою («Олицька громада») забирала ~45% рядка, і
+   плейсхолдер пошуку обрізався на «Пошук по дошці…». Пошук — головне поле, тож
+   він росте (`flex: 1`), а локація стискається до змісту зі стелею 132px. */
+#board-content .bd-titlebar .bd-search-row {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#board-content .bd-titlebar .bd-search { flex: 1 1 auto; min-width: 0; }
+/* ⚠️ `flex: 0 0 auto` — НЕ стискатись. З `0 1 auto` пошук забирав ширину і кнопка
+   різалась у «Гром…», хоч назва вже була скорочена. Пошук росте сам (`flex: 1`). */
+#board-content .bd-titlebar .bd-loc-filter { flex: 0 0 auto; min-width: 0; max-width: 150px; }
+#board-content .bd-titlebar .bd-loc-btn {
+  max-width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+}
+#board-content .bd-titlebar .bd-loc-label {
+  text-transform: none;   /* капс робив і без того довгу назву ще ширшою */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

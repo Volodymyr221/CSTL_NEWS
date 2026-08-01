@@ -13,8 +13,9 @@
 import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
-// конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
-import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
+// конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
+// він жив лише у кнопці-меню категорій, яку замінив ряд чіпів `bd-types`.
+import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
@@ -216,22 +217,47 @@ function boardActionsHtml(post) {
 // заголовок · автор+час. Повний опис читається в модалці (тап по картці).
 // ⚠️ Виняток — старі пости БЕЗ заголовка (Д-16 зробив його обов'язковим лише 08.07):
 // у них замість заголовка показуємо текст, інакше картка була б порожньою.
+// 🔴 01.08 — КАРТКА ПЕРЕПИСАНА В ОДИН СТОВПЧИК (рішення Вови: «Попрощаємось»
+// із корком і шпильками).
+//
+// ЧОМУ це не мода, а арифметика. Дошка стояла у ДВІ колонки-масонрі, тобто рядку
+// лишалось ~175px. У таку ширину не влазять разом фото, ціна, локація і час — і
+// саме тому картка читалась «стікером», а екран, за словами Вови, «взагалі неясно
+// що таке». В один стовпчик рядку 358px: фото 76×76 ліворуч, решта праворуч.
+//
+// ⚠️ Клас `cm-board-note` ЛИШАЄТЬСЯ на картці, хоч вигляд у неї вже інший.
+// Це не залишок: за цим селектором чіпляється розгортання картки в зум-модалку
+// (`root.querySelectorAll('.cm-board-note:not(--official):not(--modal-note)')`).
+// Прибереш його «щоб було чисто» — тап по оголошенню перестане відкривати картку.
+// Новий вигляд лежить на `.bd-ad` і scoped під `#board-content`, тому віджет
+// Громади, прев'ю подачі й зум-модалка (вони теж носять `cm-board-note`, але
+// живуть поза `#board-content`) лишаються незмінними.
+//
+// 📐 Заміряно на 17 живих оголошеннях: картка 96px, до першої картки 214px,
+// без прокрутки видно 6 карток.
 function renderBoardCard(p) {
-  const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
-  const photoHtml = photo
-    ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
-    : '';
+  // Монограма замість фото — щоб висота рядка не залежала від даних. Той самий
+  // прийом врятував рвані картки новин (там пусте місце давало 100/71/100).
+  const letter = (p.title || p.text || '?').trim().charAt(0).toUpperCase();
+  const media = photo
+    ? `<img class="bd-ad-img" src="${escapeHtml(photo)}" alt="" loading="lazy"
+             onerror="this.outerHTML='<div class=\\'bd-ad-img bd-ad-img--mono\\'>${escapeHtml(letter)}</div>'">`
+    : `<div class="bd-ad-img bd-ad-img--mono">${escapeHtml(letter)}</div>`;
   return `
-    <article class="cm-board-note bd-card bd-card--board${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
-      <span class="cm-board-pin"></span>
-      ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-      ${renderPrice(p)}
-      ${p.title
-        ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>`
-        : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
-      ${renderCardFoot(p)}
+    <article class="cm-board-note bd-card bd-card--board bd-ad" data-post-id="${p.id}">
+      ${media}
+      <div class="bd-ad-body">
+        <div class="bd-ad-meta">
+          <span class="bd-ad-type cat-c-${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
+          <span class="bd-ad-time">${renderPostTime(p)}</span>
+        </div>
+        <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || '')}</h3>
+        <div class="bd-ad-foot">
+          <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+          ${renderPrice(p)}
+        </div>
+      </div>
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -488,7 +514,11 @@ function getFilteredPosts(opts = {}) {
     }
     // Фільтр по категорії — тільки для board. Кожна категорія = одна конкретна
     // (куплю/продам/віддам/шукаю/послуга/знайдено/загубилось); 'all' = усі.
-    if (activeType === 'board' && activeCategory !== 'all') {
+    // ⚠️ `ignoreCategory` — для ЛІЧИЛЬНИКІВ на чіпах типів: їх треба рахувати по
+    // набору, який пройшов усі ІНШІ фільтри (пошук, локація), але ще не звужений
+    // самою категорією. Інакше чіп писав би «Продам 8», а після натискання
+    // показував 2 — бо активний пошук уже відсік решту.
+    if (activeType === 'board' && activeCategory !== 'all' && !opts.ignoreCategory) {
       if (p.category !== activeCategory) return false;
     }
     // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
@@ -534,29 +564,16 @@ function renderHeader() {
   const discHead = '';
 
   const showCategories = activeType === 'board';
-  // Кнопка-фільтр категорій (зліва від пошуку) + випадне меню. Іконка кнопки =
-  // іконка активної категорії (для 'all' — лійка), у семантичному кольорі. Тап →
-  // меню зі списком усіх категорій; вибір закриває меню й фільтрує (див. обробники).
-  const activeIcon = activeCategory === 'all' ? ALL_ICON : catIcon(activeCategory);
-  const activeColorCls = activeCategory === 'all' ? '' : 'cat-c-' + catColor(activeCategory);
-  const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-  const menuItem = (id, icon, color, label) => `
-    <button class="bd-cat-mi${id === activeCategory ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${id}">
-      <span class="bd-cat-mi-ico ${color ? 'cat-c-' + color : ''}">${icon}</span>
-      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
-    </button>`;
-  const catFilterHtml = showCategories ? `
-    <div class="bd-cat-filter-wrap">
-      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за категорією">
-        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
-        ${CARET_SVG}
-      </button>
-      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
-        ${menuItem('all', ALL_ICON, '', 'Всі')}
-        ${CATS.map(c => menuItem(c.id, c.icon, c.color, c.label)).join('')}
-      </div>
-    </div>
-  ` : '';
+  // 🔴 01.08 — КНОПКА-ЛІЙКА З ВИПАДНИМ МЕНЮ КАТЕГОРІЙ ВИДАЛЕНА.
+  // Її замінив видимий ряд чіпів `bd-types` (нижче): той самий фільтр
+  // (`activeCategory`), але без зайвого тапу і з лічильниками.
+  // ⚠️ Спершу я лишив її «для Обговорень» — і це було помилкою в моєму ж коментарі:
+  // блок будувався під умовою `showCategories`, тобто існував ТІЛЬКИ на Дошці, і
+  // після заміни став кодом, який не виконується ніколи. Разом із ним пішли
+  // `activeIcon`, `activeColorCls`, `CARET_SVG` і `menuItem` — вони жили лише тут.
+  // Наслідок: `wireMenuButton('bd-cat-filter', …)` тепер не знаходить кнопки і
+  // мовчки виходить (у нього є `if (!btn || !menu) return`), тож виклик прибрано теж.
+  // CSS-правила `.bd-cat-*` НЕ чіпаю — це не мій слід і вони нікому не заважають.
 
   // Д-11 + Д-12: шапка Дошки — рядок «лічильник (зліва) + фільтр локації (справа)».
   // Лічильник рахує поточний відфільтрований список.
@@ -577,24 +594,103 @@ function renderHeader() {
   // ⚠️ Заголовок лишається для ЧИТАЧА ЕКРАНА (`.sr-only`, base.css): сторінка зовсім
   // без <h2> — це втрата орієнтації для незрячого, а тут візуальне рішення не мусить
   // ламати доступність.
-  const count = showCategories ? getBoardDisplayCount() : 0;
-  const titlebarHtml = showCategories ? `
-    <div class="bd-titlebar">
-      <h2 class="sr-only">Дошка оголошень</h2>
-      <div class="bd-subrow">
-        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
+  // 🔴 01.08 — НАЗВА ЕКРАНА І СЛОГАН ПОВЕРНУЛИСЬ (рішення Вови по концепту).
+  //
+  // ⚠️ ЦЕ ВІДКОЧУЄ РІШЕННЯ 28.07, і свідомо. Тоді заголовок прибрали з аргументом
+  // «redundant navigation title» (таб-бар і плейсхолдер пошуку вже кажуть, де я).
+  // Аргумент виявився неповним: таб-бар називає екран словом «Дошка», але НЕ каже,
+  // що тут можна робити. Вова 01.08 дослівно: «це не схоже на дошку оголошень, це
+  // взагалі неясно, що це таке». Відповідь на «що це» дає не назва сама по собі, а
+  // назва + слоган-дієслова — тому підзаголовок тут не прикраса, а половина сенсу.
+  // ⚠️ `<h2>` знову ВИДИМИЙ, тож `.sr-only` більше не потрібен — читач екрана і
+  // так прочитає справжній заголовок.
+  //
+  // Кнопка «+» ТУТ, а не лише у FAB: у дошки оголошень головна дія — ПОДАТИ, а не
+  // гортати. Вона кличе рівно те саме, що пункт FAB `post` (`requireAuth` →
+  // `openBoardModal`), тобто другого шляху подачі не заводимо — лише другий вхід.
+  const heroHtml = showCategories ? `
+    <div class="bd-hero">
+      <div class="bd-hero-text">
+        <h2 class="bd-hero-title">Дошка оголошень</h2>
+        <p class="bd-hero-sub">Знайди, продай, обміняй або віддай безкоштовно</p>
+      </div>
+      <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="Додати оголошення">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+  ` : '';
+
+  // 🔴 01.08 — ТИПИ УГОДИ ОКРЕМИМ РЯДОМ, і показуються ЛИШЕ НЕПОРОЖНІ.
+  //
+  // На концепті стояло 5 кнопок із лічильниками 128/32/54/12/30. У нас усього
+  // 17 оголошень, і по категоріях це: продам 8 · куплю 5 · інше 3 · послуга 1,
+  // а «шукаю»/«віддам»/«знайдено»/«загубилось» бувають нулями. Порожня кнопка
+  // з нулем робить екран мертвим — рівно та пастка, через яку 31.07 прибрали
+  // чіпи з табла новин (фільтр над трьома картками показував 3 з 212).
+  // ➡️ Рахуємо по РЕАЛЬНОМУ набору і малюємо тільки те, що не порожнє.
+  //
+  // ⚠️ Лічильники рахуються по постах, які проходять УСІ інші фільтри (пошук,
+  // локація) — інакше чіп обіцяв би «Продам 8», а після натискання показував 2.
+  const typesHtml = showCategories ? (() => {
+    const base = getFilteredPosts({ ignoreCategory: true });
+    const n = {};
+    base.forEach(p => { n[p.category] = (n[p.category] || 0) + 1; });
+    const chip = (id, label, on, num) => `
+      <button class="bd-type${on ? ' bd-type--on' : ''}" type="button" data-bd-cat="${escapeHtml(id)}">
+        ${escapeHtml(label)}<span class="bd-type-n"${id === 'all' ? ' id="bd-count"' : ''}>${num}</span>
+      </button>`;
+    const live = CATS.filter(c => n[c.id] > 0)
+      .sort((a, b) => n[b.id] - n[a.id])
+      .map(c => chip(c.id, c.short || c.label, activeCategory === c.id, n[c.id]))
+      .join('');
+    // Якщо активна категорія стала порожньою (звузили пошук) — її чіп усе одно
+    // показуємо, інакше людина не побачить, ЯКИЙ фільтр зараз тримає екран порожнім.
+    const activeGone = activeCategory !== 'all' && !n[activeCategory];
+    const orphan = activeGone
+      ? chip(activeCategory, catShort(activeCategory), true, 0) : '';
+    return `<div class="bd-types" id="bd-types">
+      ${chip('all', 'Усі', activeCategory === 'all', base.length)}${orphan}${live}
+    </div>`;
+  })() : '';
+
+  // Рядок пошуку. ⚠️ Для ДОШКИ він вставляється ВСЕРЕДИНУ багряного блоку (нижче),
+  // для Обговорень — окремим рядом, як було. Це не косметика: винесений назовні
+  // пошук робив із шапки три поверхи (багряний блок → світлий пошук → чіпи), і
+  // заміряна висота виходила 200px замість 173px.
+  // ⚠️ У кнопці — КОРОТКА назва громади. Повна («Олицька громада») у рядку поруч
+  // із пошуком не вміщалась і різалась в «ОЛИЦЬК…», що не читається взагалі.
+  // У меню й на картках назва лишається повною — коротка живе лише на кнопці.
+  const COMMUNITY_ALL_SHORT = 'Громада';
+
+  const locFilterHtml = `
         <div class="bd-loc-filter">
           <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за населеним пунктом">
             <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
-            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_SHORT : activeLocation)}</span>
             <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
             <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
             ${SETTLEMENTS.map(s => `<button class="bd-loc-mi${activeLocation === s ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
           </div>
+        </div>`;
+
+  const searchRowHtml = `
+      <div class="bd-search-row">
+        <div class="bd-search">
+          <span class="bd-search-icon">${ICONS.search}</span>
+          <input class="bd-search-input" id="bd-search-input" type="search"
+                 placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
+          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
         </div>
-      </div>
+        ${showCategories ? locFilterHtml : ''}
+      </div>`;
+
+  const count = showCategories ? getBoardDisplayCount() : 0;
+  const titlebarHtml = showCategories ? `
+    <div class="bd-titlebar">
+      ${heroHtml}
+      ${searchRowHtml}
     </div>
   ` : '';
 
@@ -602,15 +698,8 @@ function renderHeader() {
     <div class="bd-controls">
       ${discHead}
       ${titlebarHtml}
-      <div class="bd-search-row">
-        ${catFilterHtml}
-        <div class="bd-search">
-          <span class="bd-search-icon">${ICONS.search}</span>
-          <input class="bd-search-input" id="bd-search-input" type="search"
-                 placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
-          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
-        </div>
-      </div>
+      ${showCategories ? '' : searchRowHtml}
+      ${typesHtml}
     </div>
   `;
 }
@@ -620,8 +709,9 @@ function renderHeader() {
 function updateAdCount() {
   const el = document.getElementById('bd-count');
   if (!el || activeType !== 'board') return;
-  const n = getBoardDisplayCount();
-  el.textContent = `${n} ${pluralAds(n)}`;
+  // ⚠️ 01.08: лічильник переїхав у чіп «Усі», тож тут ЛИШЕ число — слово
+  // «оголошень» поруч із ним у пігулці не поміститься і не потрібне.
+  el.textContent = String(getFilteredPosts({ ignoreCategory: true }).length);
 }
 
 function renderBody() {
@@ -643,12 +733,15 @@ function renderBody() {
   const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
 
   if (activeType === 'board') {
-    // Один корк-борд (2 колонки-масонрі) зі списку карток.
-    const corkboard = (list) => {
-      const left  = list.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
-      const right = list.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
-      return `<div class="cm-board-corkboard board-corkboard--full"><div class="cm-board-col">${left}</div><div class="cm-board-col">${right}</div></div>`;
-    };
+    // 🔴 01.08 — ОДИН СТОВПЧИК замість двох колонок-масонрі (рішення Вови).
+    // ⚠️ Заразом зникла давня пастка розкладки: картки розкладались за парністю
+    // (`i % 2`), тож поява або зникнення ОДНІЄЇ картки законно перекладала всі
+    // наступні між колонками. Саме через це тут свідомо не робили точкового
+    // патчу однієї картки, а перемальовували список під якорем прокрутки.
+    // У списку такої залежності немає взагалі.
+    // ⚠️ Ім'я функції лишаю нейтральним (`adList`), бо «corkboard» тепер брехало б.
+    const adList = (list) => `<div class="bd-ads">${list.map(p => renderBoardCard(p)).join('')}</div>`;
+    const corkboard = adList;
     // Фільтр по конкретному НП (Д-12+) → ДВІ групи: спершу оголошення цього НП,
     // нижче — загальногромадські («Олицька громада»). Дефолт «Уся громада» — один список.
     if (activeLocation !== COMMUNITY_ALL) {
@@ -893,8 +986,24 @@ function renderAll() {
       mi.addEventListener('click', () => { onPick(mi); renderAll(); });
     });
   };
-  wireMenuButton('bd-cat-filter', 'bd-cat-menu', mi => { activeCategory = mi.dataset.bdCat; });
   wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
+
+  // 🔴 01.08 — ряд типів (чіпи). Той самий стан `activeCategory`, що й старе меню,
+  // тобто фільтр один — змінився лише спосіб ним керувати.
+  // ⚠️ Обробник вішається на КОНТЕЙНЕР, а не на кожен чіп: `renderAll()` перестворює
+  // ряд на кожен вибір, тож слухачі на самих кнопках жили б рівно до першого тапу.
+  document.getElementById('bd-types')?.addEventListener('click', e => {
+    const chip = e.target.closest('[data-bd-cat]');
+    if (!chip) return;
+    activeCategory = chip.dataset.bdCat;
+    renderAll();
+  });
+
+  // Кнопка «+» у шапці — той самий шлях, що пункт FAB `post`: спершу вхід, потім
+  // модалка подачі. Другого способу подати оголошення НЕ заводимо, лише другий вхід.
+  document.getElementById('bd-hero-add')?.addEventListener('click', () => {
+    requireAuth('подати оголошення', openBoardModal);
+  });
 
   // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
   if (!_boardMenusWired) {

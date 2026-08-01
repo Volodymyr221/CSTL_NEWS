@@ -6109,14 +6109,6 @@
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
   }
-  function pluralAds(n) {
-    const d = n % 10, dd = n % 100;
-    if (d === 1 && dd !== 11)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
-  }
   var PHONE_ICON_SVG = ICONS.phone;
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
@@ -6200,17 +6192,24 @@
   `;
   }
   function renderBoardCard(p) {
-    const tilt = 0;
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
-    const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
+    const letter = (p.title || p.text || "?").trim().charAt(0).toUpperCase();
+    const media = photo ? `<img class="bd-ad-img" src="${escapeHtml(photo)}" alt="" loading="lazy"
+             onerror="this.outerHTML='<div class=\\'bd-ad-img bd-ad-img--mono\\'>${escapeHtml(letter)}</div>'">` : `<div class="bd-ad-img bd-ad-img--mono">${escapeHtml(letter)}</div>`;
     return `
-    <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
-      <span class="cm-board-pin"></span>
-      ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-      ${renderPrice(p)}
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
-      ${renderCardFoot(p)}
+    <article class="cm-board-note bd-card bd-card--board bd-ad" data-post-id="${p.id}">
+      ${media}
+      <div class="bd-ad-body">
+        <div class="bd-ad-meta">
+          <span class="bd-ad-type cat-c-${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
+          <span class="bd-ad-time">${renderPostTime(p)}</span>
+        </div>
+        <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || "")}</h3>
+        <div class="bd-ad-foot">
+          <span class="bd-ad-loc">${PIN_ICON_SVG2}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+          ${renderPrice(p)}
+        </div>
+      </div>
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -6391,7 +6390,7 @@
       } else if (p.type !== activeType) {
         return false;
       }
-      if (activeType === "board" && activeCategory !== "all") {
+      if (activeType === "board" && activeCategory !== "all" && !opts.ignoreCategory) {
         if (p.category !== activeCategory)
           return false;
       }
@@ -6422,59 +6421,70 @@
   function renderHeader() {
     const discHead = "";
     const showCategories = activeType === "board";
-    const activeIcon = activeCategory === "all" ? ALL_ICON : catIcon(activeCategory);
-    const activeColorCls = activeCategory === "all" ? "" : "cat-c-" + catColor(activeCategory);
-    const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    const menuItem = (id, icon, color, label) => `
-    <button class="bd-cat-mi${id === activeCategory ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${id}">
-      <span class="bd-cat-mi-ico ${color ? "cat-c-" + color : ""}">${icon}</span>
-      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
-    </button>`;
-    const catFilterHtml = showCategories ? `
-    <div class="bd-cat-filter-wrap">
-      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E">
-        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
-        ${CARET_SVG}
-      </button>
-      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
-        ${menuItem("all", ALL_ICON, "", "\u0412\u0441\u0456")}
-        ${BOARD_CATEGORIES.map((c) => menuItem(c.id, c.icon, c.color, c.label)).join("")}
+    const heroHtml = showCategories ? `
+    <div class="bd-hero">
+      <div class="bd-hero-text">
+        <h2 class="bd-hero-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
+        <p class="bd-hero-sub">\u0417\u043D\u0430\u0439\u0434\u0438, \u043F\u0440\u043E\u0434\u0430\u0439, \u043E\u0431\u043C\u0456\u043D\u044F\u0439 \u0430\u0431\u043E \u0432\u0456\u0434\u0434\u0430\u0439 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</p>
       </div>
+      <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="\u0414\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </div>
   ` : "";
-    const count = showCategories ? getBoardDisplayCount() : 0;
-    const titlebarHtml = showCategories ? `
-    <div class="bd-titlebar">
-      <h2 class="sr-only">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
-      <div class="bd-subrow">
-        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
+    const typesHtml = showCategories ? (() => {
+      const base = getFilteredPosts({ ignoreCategory: true });
+      const n = {};
+      base.forEach((p) => {
+        n[p.category] = (n[p.category] || 0) + 1;
+      });
+      const chip = (id, label, on, num) => `
+      <button class="bd-type${on ? " bd-type--on" : ""}" type="button" data-bd-cat="${escapeHtml(id)}">
+        ${escapeHtml(label)}<span class="bd-type-n"${id === "all" ? ' id="bd-count"' : ""}>${num}</span>
+      </button>`;
+      const live = BOARD_CATEGORIES.filter((c) => n[c.id] > 0).sort((a, b) => n[b.id] - n[a.id]).map((c) => chip(c.id, c.short || c.label, activeCategory === c.id, n[c.id])).join("");
+      const activeGone = activeCategory !== "all" && !n[activeCategory];
+      const orphan = activeGone ? chip(activeCategory, catShort(activeCategory), true, 0) : "";
+      return `<div class="bd-types" id="bd-types">
+      ${chip("all", "\u0423\u0441\u0456", activeCategory === "all", base.length)}${orphan}${live}
+    </div>`;
+    })() : "";
+    const COMMUNITY_ALL_SHORT = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
+    const locFilterHtml = `
         <div class="bd-loc-filter">
           <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
             <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG2}</span>
-            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_SHORT : activeLocation)}</span>
             <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
             <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
             ${SETTLEMENTS.map((s) => `<button class="bd-loc-mi${activeLocation === s ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
           </div>
-        </div>
-      </div>
-    </div>
-  ` : "";
-    return `
-    <div class="bd-controls">
-      ${discHead}
-      ${titlebarHtml}
+        </div>`;
+    const searchRowHtml = `
       <div class="bd-search-row">
-        ${catFilterHtml}
         <div class="bd-search">
           <span class="bd-search-icon">${ICONS.search}</span>
           <input class="bd-search-input" id="bd-search-input" type="search"
                  placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
         </div>
-      </div>
+        ${showCategories ? locFilterHtml : ""}
+      </div>`;
+    const count = showCategories ? getBoardDisplayCount() : 0;
+    const titlebarHtml = showCategories ? `
+    <div class="bd-titlebar">
+      ${heroHtml}
+      ${searchRowHtml}
+    </div>
+  ` : "";
+    return `
+    <div class="bd-controls">
+      ${discHead}
+      ${titlebarHtml}
+      ${showCategories ? "" : searchRowHtml}
+      ${typesHtml}
     </div>
   `;
   }
@@ -6482,8 +6492,7 @@
     const el = document.getElementById("bd-count");
     if (!el || activeType !== "board")
       return;
-    const n = getBoardDisplayCount();
-    el.textContent = `${n} ${pluralAds(n)}`;
+    el.textContent = String(getFilteredPosts({ ignoreCategory: true }).length);
   }
   function renderBody() {
     const filtered = getFilteredPosts();
@@ -6494,11 +6503,8 @@
     const rankTs = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
     const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
     if (activeType === "board") {
-      const corkboard = (list) => {
-        const left = list.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
-        const right = list.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");
-        return `<div class="cm-board-corkboard board-corkboard--full"><div class="cm-board-col">${left}</div><div class="cm-board-col">${right}</div></div>`;
-      };
+      const adList = (list) => `<div class="bd-ads">${list.map((p) => renderBoardCard(p)).join("")}</div>`;
+      const corkboard = adList;
       if (activeLocation !== COMMUNITY_ALL) {
         const npGroup = sorted.filter((p) => p.location === activeLocation);
         const wideGroup = npGroup.length ? sorted.filter((p) => isCommunityWide(p.location)) : [...getFilteredPosts({ ignoreLocation: true })].sort((a, b) => rankTs(b) - rankTs(a));
@@ -6699,11 +6705,18 @@
         });
       });
     };
-    wireMenuButton("bd-cat-filter", "bd-cat-menu", (mi) => {
-      activeCategory = mi.dataset.bdCat;
-    });
     wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
       activeLocation = mi.dataset.bdLoc;
+    });
+    document.getElementById("bd-types")?.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-bd-cat]");
+      if (!chip)
+        return;
+      activeCategory = chip.dataset.bdCat;
+      renderAll();
+    });
+    document.getElementById("bd-hero-add")?.addEventListener("click", () => {
+      requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
     });
     if (!_boardMenusWired) {
       _boardMenusWired = true;
