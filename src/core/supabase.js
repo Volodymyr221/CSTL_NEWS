@@ -261,16 +261,31 @@ export async function deleteComment(commentId) {
 // Потік 12) — тримає аватари окремо від фото оголошень. Дефолт '' = як раніше.
 // Шлях у бакеті: [folder]<anonId>/<timestamp>-<random>.jpg (анонімні юзери розділяються).
 // Повертає: { url, error }. url — публічний URL для <img src>.
-export async function uploadPhotoToStorage(blob, folder = '') {
-  if (!supa) return { url: null, error: 'Supabase не підключений' };
-  if (!blob) return { url: null, error: 'Порожній blob' };
+// 🔒 ДВА СХОВИЩА, А НЕ ОДНЕ (01.08.2026, аудит безпеки).
+//   `community-photos` — ПУБЛІЧНЕ: оголошення, пости Стрічки, аватари, банери.
+//                        Те, що й так бачить кожен відвідувач.
+//   `chat-photos`      — ЗАКРИТЕ: фото з приватних переписок. Читати може лише
+//                        учасник тієї розмови, і тільки за тимчасовим посиланням.
+// Чому розділили: до цього фото особистих чатів лежали в публічному бакеті —
+// текст повідомлення RLS захищала, а файл був доступний за прямим посиланням.
+export const PUBLIC_BUCKET = 'community-photos';
+export const CHAT_BUCKET   = 'chat-photos';
+
+// Скільки живе тимчасове посилання на фото чату. 12 годин — щоб відкрита
+// розмова не «згасла» серед дня, але посилання не жило вічно, якщо його
+// комусь переслали.
+const CHAT_URL_TTL = 12 * 3600;
+
+export async function uploadPhotoToStorage(blob, folder = '', bucket = PUBLIC_BUCKET) {
+  if (!supa) return { url: null, path: null, error: 'Supabase не підключений' };
+  if (!blob) return { url: null, path: null, error: 'Порожній blob' };
 
   const ext  = (blob.type && blob.type.split('/')[1]) || 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
   const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
 
   const { error: uploadError } = await supa.storage
-    .from('community-photos')
+    .from(bucket)
     .upload(path, blob, {
       contentType: blob.type || 'image/jpeg',
       cacheControl: '31536000',  // 1 рік — фото незмінне
@@ -281,11 +296,68 @@ export async function uploadPhotoToStorage(blob, folder = '') {
     console.warn('[supabase] uploadPhotoToStorage error:', uploadError.message);
     // Людський текст, а не технічний: цей рядок доходить до тоста в кабінеті й
     // у композері. Повтор тут не наш клопіт — його вже робить core/upload.js.
-    return { url: null, error: netErrorText(uploadError) };
+    return { url: null, path: null, error: netErrorText(uploadError) };
   }
 
-  const { data } = supa.storage.from('community-photos').getPublicUrl(path);
-  return { url: data?.publicUrl || null, error: null };
+  // У закритого бакета публічної адреси НЕ ІСНУЄ — назовні віддаємо шлях,
+  // а посилання підписуємо в момент показу (signChatPhotos нижче).
+  if (bucket !== PUBLIC_BUCKET) return { url: null, path, error: null };
+
+  const { data } = supa.storage.from(bucket).getPublicUrl(path);
+  return { url: data?.publicUrl || null, path, error: null };
+}
+
+// ── ФОТО ПРИВАТНИХ ЧАТІВ: шлях → тимчасове посилання ──────────────────────
+// Підписуємо в ОДНОМУ місці — шарі даних, а не в рендері. Рендер бульбашок у
+// board-chat.js синхронний (склеює HTML рядками), і робити його асинхронним
+// заради картинки означало б переписати найгарячіший екран застосунку.
+//
+// ⚠️ СТАРІ Й НОВІ ЗАПИСИ ЖИВУТЬ РАЗОМ. До 01.08 у `photo_url` лежала повна
+//    публічна адреса (`https://…`), тепер — шлях у закритому бакеті
+//    (`<thread_id>/<anon>/<час>-<rand>.jpg`). Тому ознака проста й надійна:
+//    починається з http(s) → давнє посилання, віддаємо як є; інакше — підписуємо.
+//    Завдяки цьому 23 наявні фото продовжують показуватись без міграції.
+const _chatUrlCache = new Map();   // шлях -> { url, exp }
+
+function isLegacyPhotoUrl(v) { return typeof v === 'string' && /^https?:\/\//i.test(v); }
+
+export async function signChatPhotos(rows) {
+  if (!supa || !Array.isArray(rows) || !rows.length) return rows;
+
+  const now = Date.now();
+  const need = [];
+  for (const r of rows) {
+    const p = r && r.photo_url;
+    if (!p || isLegacyPhotoUrl(p)) continue;
+    const hit = _chatUrlCache.get(p);
+    if (hit && hit.exp > now) continue;
+    if (!need.includes(p)) need.push(p);
+  }
+
+  if (need.length) {
+    try {
+      const { data, error } = await supa.storage.from(CHAT_BUCKET)
+        .createSignedUrls(need, CHAT_URL_TTL);
+      if (error) console.warn('[supabase] signChatPhotos:', error.message);
+      for (const it of (data || [])) {
+        if (it && it.signedUrl && !it.error) {
+          // Кеш на 80% строку: щоб посилання не протухло просто в руках.
+          _chatUrlCache.set(it.path, { url: it.signedUrl, exp: now + CHAT_URL_TTL * 800 });
+        }
+      }
+    } catch (e) {
+      console.warn('[supabase] signChatPhotos:', e && e.message);
+    }
+  }
+
+  // Підміняємо КОПІЮ рядка, не чіпаючи оригінал: `photo_path` лишається
+  // справжнім шляхом, бо саме його треба буде підписати наступного разу.
+  return rows.map((r) => {
+    const p = r && r.photo_url;
+    if (!p || isLegacyPhotoUrl(p)) return r;
+    const hit = _chatUrlCache.get(p);
+    return hit ? { ...r, photo_url: hit.url, photo_path: p } : r;
+  });
 }
 
 // ── АВАТАРИ КОРИСТУВАЧІВ, крос-юзер (Потік 12 Інкремент Б) ────────────────
@@ -657,7 +729,9 @@ export async function fetchMessages(threadId, sinceTs = null) {
   if (sinceTs) q = q.gt('created_at', sinceTs);   // «чистий» вид після видалення (cleared_at)
   const { data, error } = await q.order('created_at', { ascending: true });
   if (error) { console.warn('[supabase] fetchMessages:', error.message); return []; }
-  return data || [];
+  // Фото приватного чату лежать у ЗАКРИТОМУ бакеті — тут шлях стає тимчасовим
+  // посиланням. Давні записи (повна https-адреса) проходять наскрізь без змін.
+  return await signChatPhotos(data || []);
 }
 
 // cleared_at цього користувача для треда (момент «видалення») або null.
@@ -809,7 +883,11 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
   // Push отримувачу (не блокуємо UI — помилка пуша не валить відправку)
   supa.functions.invoke('send-chat-push', { body: { message_id: data.id } })
     .catch(e => console.warn('[supabase] send-chat-push:', e?.message));
-  return { ok: true, message: data };
+  // Повертаємо рядок уже з тимчасовим посиланням: board-chat.js цим рядком
+  // ЗАМІНЮЄ оптимістичну бульбашку, і без підпису щойно надіслане власне фото
+  // зникло б у порожню рамку одразу після відправки.
+  const [signed] = await signChatPhotos([data]);
+  return { ok: true, message: signed || data };
 }
 
 // Редагування свого повідомлення (текст + позначка edited_at)
@@ -906,7 +984,14 @@ export function subscribeThreadMessages(threadId, onChange) {
   const ch = supa.channel(`thread-${threadId}`)
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
-        payload => onChange({ type: payload.eventType, row: payload.new || payload.old }))
+        // Realtime приносить СИРИЙ рядок з бази, тобто у photo_url буде шлях, а
+        // не посилання. Підписуємо тут — інакше фото від співрозмовника
+        // приходило б порожньою рамкою, поки чат не перезавантажать.
+        async (payload) => {
+          const raw = payload.new || payload.old;
+          const [row] = await signChatPhotos([raw]);
+          onChange({ type: payload.eventType, row: row || raw });
+        })
     .subscribe();
   return () => supa.removeChannel(ch);
 }

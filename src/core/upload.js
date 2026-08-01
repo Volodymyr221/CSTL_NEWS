@@ -15,15 +15,19 @@ import { uploadPhotoToStorage } from './supabase.js';
 
 // Повтор лише самого upload вже стиснутого Blob (для місць, які стискають самі —
 // напр. прев'ю з локального URL перед завантаженням). retries=2 → до 3 спроб.
-export async function uploadBlobWithRetry(blob, folder = '', retries = 2) {
+// ⚠️ `bucket` (01.08.2026): фото приватних чатів ідуть у ЗАКРИТЕ сховище
+//    `chat-photos`, решта — у публічне. Успіх визначаємо по `path`, а НЕ по `url`:
+//    у закритого бакета публічної адреси не існує взагалі, тому перевірка
+//    `if (res.url)` вважала б успішне завантаження провалом і крутила б повтори.
+export async function uploadBlobWithRetry(blob, folder = '', retries = 2, bucket = undefined) {
   let lastErr = '';
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await uploadPhotoToStorage(blob, folder);
-    if (res.url) return { url: res.url, error: null };
+    const res = await uploadPhotoToStorage(blob, folder, bucket);
+    if (res.path) return { url: res.url, path: res.path, error: null };
     lastErr = res.error || 'upload';
     if (attempt < retries) await new Promise(r => setTimeout(r, 400 * (attempt + 1)));  // бекоф 0.4/0.8с
   }
-  return { url: null, error: lastErr };
+  return { url: null, path: null, error: lastErr };
 }
 
 // Повний надійний шлях для СИРОГО файлу з <input type=file>: стиснути + upload з повтором.
@@ -33,15 +37,17 @@ export async function uploadBlobWithRetry(blob, folder = '', retries = 2) {
 //   maxDim  — макс. сторона (px). Прямокутне: 1600 фото/1600 банер/800 оголошення; квадрат: розмір сторони
 //   quality — якість JPEG (0..1), лише для прямокутного
 //   retries — скільки повторів upload при збої (дефолт 2)
-// Повертає { url, error } — як uploadPhotoToStorage.
-export async function uploadImageReliable(file, { folder = '', square = false, maxDim = 1600, quality = 0.82, retries = 2 } = {}) {
-  if (!file) return { url: null, error: 'нема файлу' };
+//   bucket  — сховище: не вказано = публічне; 'chat-photos' = закрите (приватні чати)
+// Повертає { url, path, error }. Для закритого бакета `url` порожній —
+// користуйся `path`, посилання підписується в момент показу (supabase.js).
+export async function uploadImageReliable(file, { folder = '', square = false, maxDim = 1600, quality = 0.82, retries = 2, bucket = undefined } = {}) {
+  if (!file) return { url: null, path: null, error: 'нема файлу' };
   let blob;
   try {
     blob = square ? await squareImageBlob(file, maxDim) : await compressImage(file, maxDim, quality);
   } catch (e) {
     // img.onerror (напр. непідтримуваний формат) або toBlob failed
-    return { url: null, error: (e && e.message) || 'не вдалося обробити фото' };
+    return { url: null, path: null, error: (e && e.message) || 'не вдалося обробити фото' };
   }
-  return uploadBlobWithRetry(blob, folder, retries);
+  return uploadBlobWithRetry(blob, folder, retries, bucket);
 }
