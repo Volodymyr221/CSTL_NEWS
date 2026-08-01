@@ -267,7 +267,17 @@ function badgesHtml(a) {
 function renderCard(a, variant) {
   return `
     <article class="nc nc--${variant}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
-      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
+      ${a.image
+        ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">`
+        // 🔴 01.08 — МОНОГРАМА ДЖЕРЕЛА замість порожнечі. Заміряно у віджеті:
+        // картки були 100 / 71 / 100 px, і саме середня (без фото) провалювалась
+        // на третину — око читає це як збій верстки, а не як ритм. Плейсхолдер
+        // тримає ту саму клітинку, тож висоти рівні незалежно від того, чи дало
+        // джерело картинку. Літера — перша з назви джерела, тобто плейсхолдер
+        // ще й КАЖЕ щось («В» = Волинь Post), а не малює сірий прямокутник.
+        // ⚠️ Клас `nc-img` лишається — усі розміри вже описані ним; відрізняє
+        // лише модифікатор, інакше довелось би дублювати геометрію трьох варіантів.
+        : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || '?').trim().charAt(0).toUpperCase())}</div>`}
       <div class="nc-body">
         <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>

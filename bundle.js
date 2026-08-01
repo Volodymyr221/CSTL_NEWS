@@ -7453,7 +7453,7 @@
   function renderCard2(a, variant) {
     return `
     <article class="nc nc--${variant}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
-      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || "?").trim().charAt(0).toUpperCase())}</div>`}
       <div class="nc-body">
         <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
