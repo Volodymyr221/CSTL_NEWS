@@ -2129,16 +2129,6 @@ textarea.cm-board-input.bm-invalid {
    ⚠️ Геометрія дзеркалить `.board-trigger-badge` (головна кнопка FAB) — щоб два
    бейджі в одному меню виглядали одним прийомом, а не двома різними. Розмір трохи
    менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки. */
-.board-fab-msgs-badge {
-  display: none;
-  position: absolute;
-  top: -4px; right: -4px;
-  min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 8px; background: var(--red, #722F37); color: #fff;
-  font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
-  border: 2px solid var(--board-bg);   /* обідок кольором кружечка — відділяє від його рамки */
-  box-sizing: content-box;
-}
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
@@ -4861,3 +4851,88 @@ textarea.cm-board-input.bm-invalid {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── МЕНЮ ДІЙ ПІД КНОПКОЮ «+» У ШАПЦІ ДОШКИ (01.08) ─────────────────────────
+   Рішення Вови: «переносимо туди — від цієї кнопки відкриваються Подати
+   оголошення, Мої оголошення та Збережені». Унизу лишилась одна кнопка
+   «Повідомлення» (див. нижче), тобто дії й листування розведені по різних кутах
+   екрана і більше не ховаються за одним спільним меню.
+   ⚠️ `position: absolute` від `.bd-hero-actions`, а не `fixed`: шапка Дошки
+   згортається при прокрутці через `transform`, а `fixed` усередині
+   трансформованого предка позиціонується від НЬОГО, не від екрана — меню поїхало б
+   разом із шапкою і в найгіршому випадку опинилось би за краєм. */
+#board-content .bd-hero-actions { position: relative; flex: none; }
+#board-content .bd-hero-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 208px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--board-line, #C4C4C1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+#board-content .bd-hero-menu[hidden] { display: none; }
+/* 🔴 Пункти успадковують `.board-fab-item`, а той має `opacity: 0` — у FAB вони
+   проявляються каскадом лише коли контейнер дістає клас `.open`. Тут відкриття
+   інше (атрибут `hidden`), тож без цього рядка меню відкривалось ПОРОЖНЬОЮ білою
+   коробкою: три пункти в DOM є, а на екрані нічого. Знайдено знімком, не на око. */
+#board-content .bd-hero-menu .board-fab-item { opacity: 1; }
+/* Підпис у FAB-меню — «пігулка» з власною поверхнею: там пункти лежать просто на
+   затемненому екрані, і без плашки текст читався б на будь-якому фоні по-різному.
+   Тут пункти вже лежать на БІЛОМУ листі меню, тож плашка стає коробкою в коробці —
+   знімаємо її й повертаємо звичайний рядок. */
+#board-content .bd-hero-menu .board-fab-label {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #1B1B1B;
+}
+/* Пункт: підпис ліворуч, іконка праворуч — той самий порядок, що був у FAB-меню,
+   щоб рух руки не довелось переучувати. */
+#board-content .bd-hero-mi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1B1B1B;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-hero-mi:active { background: var(--board-press, #E4E4E1); }
+#board-content .bd-hero-mi .board-fab-ic {
+  flex: none;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(114, 47, 55, 0.08);
+  color: var(--news-accent, #722F37);
+}
+#board-content .bd-hero-mi .board-fab-ic svg { width: 17px; height: 17px; }
+#board-content .bd-hero-add.open { background: rgba(255, 255, 255, 0.28); }
+
+/* ── НИЖНЯ КНОПКА «ПОВІДОМЛЕННЯ» ────────────────────────────────────────────
+   Меню в неї більше немає — тап веде прямо в список розмов. Тому зникає і хрестик
+   «закрити», який був потрібен speed-dial. Сама кнопка може бути відсутня:
+   `renderFab()` не малює її, поки в людини немає ні оголошень, ні розмов. */
+.board-fab--msgs .cm-board-trigger-close,
+.board-fab--msgs .cm-board-trigger-text { display: none; }
