@@ -274,10 +274,17 @@ ON CONFLICT (id) DO UPDATE
   SET file_size_limit    = EXCLUDED.file_size_limit,
       allowed_mime_types = EXCLUDED.allowed_mime_types;
 
--- Публічне читання усіх фото у цьому bucket
-CREATE POLICY "Public read community photos"
-  ON storage.objects FOR SELECT TO public
-  USING (bucket_id = 'community-photos');
+-- 🛑 ЗАМІНЕНО 01.08.2026 — не накочувати старий варіант.
+--    Було: `"Public read community photos"` FOR SELECT TO public.
+--    Назва брехала: це не «читання картинки», а читання СПИСКУ файлів —
+--    анонім отримував усі 103 імені й міг завантажити все підряд. Серед них
+--    були 23 фото з ПРИВАТНИХ переписок і фото 2 неопублікованих оголошень.
+--    Показ картинок від цієї політики НЕ залежить: бакет `public = true`,
+--    віддача через /object/public/… з RLS не звіряється.
+--    Повний розбір → scripts/supabase_anon_lockdown.sql секція 4б.
+CREATE POLICY "Owner reads own community photos"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'community-photos' AND owner = auth.uid());
 
 -- 🛑 ЗАМІНЕНО 01.08.2026 — не накочувати старий варіант.
 --    Було: TO public, тобто анонім клав у сховище що завгодно. Коментар обіцяв
