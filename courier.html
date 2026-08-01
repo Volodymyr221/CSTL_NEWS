@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0B0B0D">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Курʼєр — тест · CSTL LIFE</title>
+  <link rel="stylesheet" href="style/market.css">
+</head>
+<body>
+
+  <!-- МАКЕТ додатка курʼєра. Тимчасовий: стоїть на місці справжнього додатка
+       Діми, поки той не підключений. Показує, ЩО саме приходить з маркета
+       (кнопка «Показати JSON» на кожній картці) — це і є контракт, який
+       має прийняти справжній додаток. -->
+
+  <header class="mk-top">
+    <div>
+      <div class="mk-top__t" style="font-size:19px">Курʼєр — вхідні</div>
+      <div class="mk-top__s">Макет додатка · тест</div>
+    </div>
+    <div class="mk-top__sp"></div>
+    <a class="mk-icon-btn" href="market.html" aria-label="Маркет" style="text-decoration:none">🛍️</a>
+  </header>
+
+  <div class="cr-toast" id="cr-toast"></div>
+
+  <main class="mk-main">
+    <div class="cr-status">
+      <span class="cr-dot"></span>
+      <span id="cr-count">очікую замовлення</span>
+    </div>
+
+    <div id="cr-list"></div>
+
+    <div class="cr-tools">
+      <button class="mk-btn mk-btn--ghost" id="cr-refresh" type="button">Оновити</button>
+      <button class="mk-btn mk-btn--ghost" id="cr-clear" type="button">Очистити</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initCourier } from './src/market/courier-page.js';
+    initCourier();
+  </script>
+</body>
+</html>
