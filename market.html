@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0B0B0D">
+  <!-- ПРИХОВАНА сторінка: не в таб-барі, не в сайдбарі, не в пошуку.
+       Потрапити можна лише за прямим посиланням. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>МАРКЕТ — тест · CSTL LIFE</title>
+  <link rel="stylesheet" href="style/market.css">
+</head>
+<body>
+
+  <!-- ТЕСТОВА сторінка МАРКЕТА для бізнесу. Лежить у тому ж репозиторії, що й
+       застосунок, тому відкривається з того ж домену — але свідомо ІЗОЛЬОВАНА:
+       не реєструє service worker, не тягне bundle.js, не змінює index.html.
+       Мета — на живому потоці показати ланцюг:
+       людина замовляє в картці бізнесу → замовлення приходить курʼєру. -->
+
+  <header class="mk-top" id="mk-head"></header>
+
+  <main class="mk-main">
+    <div class="mk-mode" id="mk-mode"></div>
+    <div id="mk-view"></div>
+  </main>
+
+  <!-- Панель кошика -->
+  <div class="mk-bar" id="mk-bar">
+    <div class="mk-bar__inner">
+      <div class="mk-bar__sum" id="mk-bar-sum"></div>
+      <button class="mk-btn" id="mk-bar-btn" type="button">Оформити</button>
+    </div>
+  </div>
+
+  <!-- Лист оформлення -->
+  <div class="mk-sheet-back" id="mk-sheet-back"></div>
+  <div class="mk-sheet" id="mk-sheet">
+    <div class="mk-sheet__grip"></div>
+    <div class="mk-sheet__title">Оформлення</div>
+    <div class="mk-sheet__sub" id="mk-sheet-sub"></div>
+
+    <div class="mk-lines" id="mk-lines"></div>
+    <div class="mk-err" id="mk-err" hidden></div>
+
+    <div class="mk-field">
+      <label for="f-name">Імʼя</label>
+      <input id="f-name" type="text" autocomplete="name" placeholder="Як до вас звертатись">
+    </div>
+    <div class="mk-field">
+      <label for="f-phone">Телефон</label>
+      <input id="f-phone" type="tel" autocomplete="tel" placeholder="+380…">
+    </div>
+    <div class="mk-field">
+      <label for="f-address">Адреса доставки</label>
+      <input id="f-address" type="text" autocomplete="street-address" placeholder="вул. Шевченка, 15, кв. 3">
+    </div>
+    <div class="mk-field">
+      <label for="f-comment">Коментар курʼєру (не обовʼязково)</label>
+      <textarea id="f-comment" placeholder="Домофон не працює, телефонуйте"></textarea>
+    </div>
+
+    <label style="display:block;font-size:12.5px;font-weight:600;color:var(--mk-tx-2);margin-bottom:5px">Оплата</label>
+    <div class="mk-pay">
+      <button type="button" data-pay="cash" aria-pressed="true">Готівкою курʼєру</button>
+      <button type="button" data-pay="card" aria-pressed="false">Карткою при отриманні</button>
+    </div>
+
+    <button class="mk-btn mk-btn--wide" id="mk-submit" type="button">Замовити</button>
+  </div>
+
+  <script type="module">
+    import { initMarket } from './src/market/market-page.js';
+    initMarket();
+  </script>
+</body>
+</html>
