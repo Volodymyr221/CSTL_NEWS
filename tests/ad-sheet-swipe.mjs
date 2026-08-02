@@ -141,6 +141,12 @@ const st = () => p.evaluate(() => {
     кнопка: rnd ? Math.round(rc(rnd).width) : null,
     зсув_модалки: modal ? getComputedStyle(modal).transform : null,
     фото_прилипає: photo ? getComputedStyle(photo).position : null,
+    чіп_від_верху: (() => { const c = q('.cm-ad-head .cm-board-cat'); return (c && sheet) ? Math.round(rc(c).top - rc(sheet).top) : null; })(),
+    чіп_до_назви: (() => { const c = q('.cm-ad-head .cm-board-cat'), t = q('.cm-ad-title'); return (c && t) ? Math.round(rc(t).top - rc(c).bottom) : null; })(),
+    капс_назви: (() => { const t = q('.cm-ad-title'); return t ? getComputedStyle(t).textTransform : null; })(),
+    розмір_назви: (() => { const t = q('.cm-ad-title'); return t ? parseFloat(getComputedStyle(t).fontSize) : null; })(),
+    капс_локації: (() => { const l = q('.cm-ad-meta-loc'); return l ? getComputedStyle(l).textTransform : null; })(),
+    межа_під_описом: (() => { const t = q('.cm-ad-text'); return t ? parseFloat(getComputedStyle(t).borderBottomWidth) : null; })(),
     аркуш_висота: sheet ? Math.round(rc(sheet).height) : null,
     рисочок: document.querySelectorAll('.cm-ad-screen .cm-board-modal-bar').length,
     шапка_фон: mini ? getComputedStyle(mini).backgroundColor : null,
@@ -156,8 +162,13 @@ ok('ФОТО від самого верху екрана і без заокру�
    s0.фото_верх === 0 && s0.фото_радіус === '0px', `top=${s0.фото_верх} radius=${s0.фото_радіус}`);
 // Замовлення Вови: «фотографія просто стоїть на місці, а блок опису наскролюється доверху».
 ok('ФОТО стоїть на місці (sticky), а не їде з текстом', s0.фото_прилипає === 'sticky', s0.фото_прилипає);
-ok('АРКУШУ є куди доїхати — він заввишки з екран', s0.аркуш_висота >= s0.екран,
-   `${s0.аркуш_висота} з ${s0.екран}`);
+// ── Полірування 02.08 (шість пунктів від Вови) ───────────────────────────────
+ok('чіп не приліплений до верхнього краю аркуша', s0.чіп_від_верху >= 14, `${s0.чіп_від_верху}px`);
+ok('чіп і назва читаються однією групою', s0.чіп_до_назви <= 12, `${s0.чіп_до_назви}px`);
+ok('назва КАПСОМ', s0.капс_назви === 'uppercase', s0.капс_назви);
+ok('назва не більша за 22px', s0.розмір_назви <= 22, `${s0.розмір_назви}px`);
+ok('населений пункт КАПСОМ', s0.капс_локації === 'uppercase', s0.капс_локації);
+ok('опис відділений від картки автора лінією', s0.межа_під_описом >= 1, `${s0.межа_під_описом}px`);
 // «Забрати рисочку» — на сторінці з фото вона вже нічого не означає.
 ok('на сторінці з фото рисочки немає', s0.рисочок === 0, `${s0.рисочок}`);
 // Баг зі скріна IMG_3811: крізь напівпрозору шапку просвічував текст, що проїжджав.
@@ -178,6 +189,11 @@ await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); s.sc
 await p.waitForTimeout(300);
 const sEnd = await st();
 ok('останній рядок тексту НЕ впирається у кнопки', sEnd.просвіт_до_кнопок > 8, `${sEnd.просвіт_до_кнопок}px`);
+// 🔴 НАЙВАЖЛИВІШИЙ ПУНКТ ПОЛІРУВАННЯ. Вова: «не повинно бути ситуації, коли після
+// „Поскаржитися“ відкривається ще кілька сотень пікселів порожнього простору».
+// Прокрутка мусить закінчуватись на останньому елементі, а не на довільній позиції.
+ok('після останнього елемента НЕМАЄ порожнечі', sEnd.просвіт_до_кнопок < 60,
+   `${sEnd.просвіт_до_кнопок}px порожнечі`);
 ok('коли назва поїхала — компактна шапка заступає її', sEnd.шапка_видно === true);
 // А поки назва на екрані — компактної шапки бути не повинно (інакше назва двічі поспіль).
 await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); s.scrollTop = 60; });
