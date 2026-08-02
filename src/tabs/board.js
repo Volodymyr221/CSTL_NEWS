@@ -10,7 +10,7 @@
 //           setDiscussionsData / подію 'cstl-posts-changed').
 // Спільне обох типів (закладки, кнопки зберегти/шер) — core/board-shared.js.
 
-import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, deepLink, avatarCircle } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
@@ -22,11 +22,12 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
   fetchAllComments,
   fetchAllReactions, getAnonId,
-  fetchSavedPostIds, hydrateNames, nameUid, liveName,
+  fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
-import { createDragTracker, finishSwipe, centeredRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, centeredRemaining, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
+import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
 import { keepScroll } from '../core/list-patch.js';
 import {
@@ -152,6 +153,11 @@ function renderContactBar(p) {
         <button class="cm-board-write-btn" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
       </div>`;
 }
+// Іконки модалки оголошення (02.08). Прості контурні, у стилі решти застосунку.
+const BACK_ICON_SVG   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+const REPORT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15V4h16l-3 4 3 4H4"/><path d="M4 22V4"/></svg>';
+const SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
 const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
 // Дата на картці/модалці: якщо оголошення підняли — показуємо СВІЖИЙ час підняття
@@ -268,41 +274,218 @@ function renderBoardCard(p) {
 // прокручуване тіло з категорією, заголовком, повним описом, контактом і діями.
 // Дії (зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
 // обробники працюють без змін.
+// 🔴 02.08 — МОДАЛКА ПЕРЕРОБЛЕНА ЗА МАКЕТОМ (два скріни від ChatGPT, схвалені Вовою).
+//
+// Структура секціями. Кожна секція — окрема функція, яка повертає ПОРОЖНІЙ РЯДОК,
+// коли даних немає. Це і є вся потрібна «модульність»: новий блок додається одним
+// рядком, а відсутні дані нічого не ламають. Каркас «незалежних секцій» із ТЗ на
+// 18 оголошеннях був би оверинжинірингом.
+//
+// ⚠️ ЧОГО В МАКЕТІ НЕ РЕАЛІЗОВАНО І ЧОМУ — щоб наступна сесія не шукала «загублене»:
+//   • «👁 324 перегляди» — колонки переглядів у базі НЕМА, подій аналітики про
+//     оголошення 0. Показувати нічого; вигадати число = збрехати людині.
+//   • «★ 4.9 (27 відгуків)» — таблиці відгуків не існує взагалі. При 18 оголошеннях
+//     від 1 автора намальований рейтинг був би імітацією життя.
+//   • «Площа 120 м² · Ділянка 25 сот. · Кімнати 4» — полів характеристик немає;
+//     потрібна схема під категорії + нові поля у формі подачі. Місце під блок
+//     лишено: `renderAdSpecs()` віддає '' і чекає на дані.
+//   • Синя галочка верифікації — поле `trusted` у профілі Є, але воно не приходить
+//     разом із постом; тягнути профіль окремим запитом на кожне відкриття не стали.
+// 🔴 02.08 — спільне дротування нової модалки: кнопки закриття, скарга, лічильник фото.
+// ⚠️ ОДНА функція на дві модалки (зум із Дошки і standalone з чату) — обидві малюються
+// тим самим `renderAdModal`, тож і поводитись мусять однаково. Дублювати цей блок
+// означало б завести дві копії, які колись розійдуться (у проєкті таке вже було).
+function wireAdModalChrome(modal, close) {
+  // Кнопки «←» (поверх фото) і «✕» (коли фото немає). Раніше закрити можна було лише
+  // свайпом або тапом у затемнення — на повноекранному аркуші затемнення майже не
+  // видно, тож явна кнопка стала обовʼязковою.
+  modal.querySelectorAll('[data-ad-close]').forEach(b => b.addEventListener('click', () => close()));
+  // «Скаржитися» поки лише підтверджує прийом: черги скарг у базі немає, а мовчазна
+  // кнопка гірша за її відсутність.
+  modal.querySelector('[data-ad-report]')?.addEventListener('click', () => {
+    showToast('Дякуємо. Ми перевіримо це оголошення.');
+  });
+  // Фото автора підтягується прогресивно (літера → фото), як у чатах і обговореннях.
+  hydrateAvatars(modal);
+  // «На платформі з …» + галочка довіри — окремим тихим запитом уже ПІСЛЯ показу.
+  // ⚠️ Свідомо не блокуємо відкриття модалки заради цього рядка: без нього картка
+  // повноцінна, а чекати на мережу, щоб показати оголошення, — гірше за його брак.
+  const sinceEl = modal.querySelector('[data-ad-since]');
+  const authorUid = modal.querySelector('.cm-ad-author')?.dataset.avUid;
+  if (sinceEl && authorUid) {
+    fetchPublicProfile(authorUid).then(pr => {
+      if (!pr || !sinceEl.isConnected) return;
+      const dt = new Date(pr.created_at);
+      if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
+        sinceEl.textContent = `На платформі з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+      }
+      if (pr.trusted) {
+        modal.querySelector('.cm-ad-author-name')
+          ?.insertAdjacentHTML('beforeend', '<span class="cm-ad-verified" title="Підтверджений житель">✓</span>');
+      }
+    }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
+  }
+
+  // Лічильник «1 / N» над фото — рахується з тієї самої прокрутки, що й крапки.
+  const counter = modal.querySelector('.cm-ad-hero-count');
+  const heroGal = modal.querySelector('.cm-ad-hero .cm-board-modal-gallery');
+  if (counter && heroGal) {
+    heroGal.addEventListener('scroll', () => {
+      const n = heroGal.clientWidth ? Math.round(heroGal.scrollLeft / heroGal.clientWidth) + 1 : 1;
+      counter.textContent = `${n} / ${heroGal.children.length}`;
+    }, { passive: true });
+  }
+}
+
 function renderAdModal(p) {
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
-  const hasPhoto = photos.length > 0;
+  return `
+    ${renderAdHero(p, photos)}
+    <div class="cm-board-modal-scrollarea">
+      ${photos.length ? '' : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
+      <div class="cm-ad-body">
+        ${renderAdHead(p, photos.length > 0)}
+        ${renderAdMeta(p)}
+        <p class="cm-ad-text">${escapeHtml(p.text || '')}</p>
+        ${renderAdSpecs(p)}
+        ${renderAdAuthor(p)}
+        ${renderAdActions(p)}
+        ${renderAdSafety()}
+      </div>
+    </div>
+    ${renderAdBottomBar(p)}
+  `;
+}
+
+// HERO: фото на всю ширину + кнопки поверх. Малюється ЛИШЕ коли фото є —
+// у 4 оголошень із 18 його немає, і порожня сіра пляма там була б гіршою за її брак.
+// ⚠️ Лічильник «1 / N» і крапки показуємо лише коли фото більше одного: у нас
+// максимум 3 фото, і «1 / 1» було б написом ні про що.
+function renderAdHero(p, photos) {
+  if (!photos.length) return '';
   const multi = photos.length > 1;
-  // Фото фіксованого розміру (4:3) + категорія/заголовок + текст — УСЕ в одному скролі (без JS-стискання).
-  // Так скрол ідеально плавний (рідний, без смикань/просвічування/застрягання). Фото гортається разом з текстом.
-  const photoHtml = hasPhoto ? `
-    <div class="cm-board-modal-photo">
+  return `
+    <div class="cm-ad-hero">
       <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
       </div>
-      ${multi ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
-    </div>` : '';
+      <div class="cm-ad-hero-top">
+        <button class="cm-ad-round" type="button" data-ad-close aria-label="Закрити">${BACK_ICON_SVG}</button>
+      </div>
+      ${multi ? `
+      <div class="cm-ad-hero-count">1 / ${photos.length}</div>
+      <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
+      <div class="cm-board-modal-bar cm-ad-bar-over"><span class="cm-board-modal-grip"></span></div>
+    </div>`;
+}
+
+// Шапка: чіп категорії + заголовок + ціна з міткою «Можливий торг».
+// ⚠️ `hasHero` приходить ПАРАМЕТРОМ, а не з `document.querySelector('.cm-ad-hero')`:
+// функція складає рядок ДО вставки в DOM, тож запит до документа читав би стан
+// попередньої модалки — класична помилка «рендер питає DOM».
+function renderAdHead(p, hasHero) {
+  const t = formatPrice(p.price, p.currency, p.price_negotiable);
+  // «Можливий торг» окремою пігулкою — лише коли ціна ЧИСЛОВА: поруч зі словом
+  // «Договірна» вона писала б те саме двічі.
+  const haggle = p.price_negotiable && p.price != null;
   return `
-    <div class="cm-board-modal-bar">
-      <span class="cm-board-modal-grip"></span>
-    </div>
-    <div class="cm-board-modal-scrollarea">
-      ${photoHtml}
-      <div class="cm-board-modal-subhead">
+    <div class="cm-ad-head">
+      <div class="cm-ad-head-top">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${renderAuthorHead(p)}
-        ${renderPrice(p)}
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+        ${hasHero ? '' : '<button class="cm-ad-x" type="button" data-ad-close aria-label="Закрити">✕</button>'}
       </div>
-      <div class="cm-board-modal-content">
-        <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      </div>
-    </div>
-    <div class="cm-board-modal-foot">
-      ${renderCardFoot(p)}
-      ${boardActionsHtml(p)}
-      ${renderContactBar(p)}
-    </div>
-  `;
+      ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ''}
+      ${t ? `<div class="cm-ad-price-row">
+        <span class="cm-ad-price">${escapeHtml(t)}</span>
+        ${haggle ? '<span class="cm-ad-haggle">Можливий торг</span>' : ''}
+      </div>` : ''}
+    </div>`;
+}
+
+// Локація + час одним тихим рядком (у макеті так само).
+function renderAdMeta(p) {
+  return `
+    <div class="cm-ad-meta">
+      <span class="cm-ad-meta-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+      <span class="cm-ad-meta-dot">·</span>
+      <span>${renderPostTime(p)}</span>
+    </div>`;
+}
+
+// ⏸ Характеристики (площа, кімнати, рік, пальне). Полів у базі ще немає — секція
+// свідомо порожня і чекає на них. Не видаляти: це місце, куди вони стануть.
+function renderAdSpecs(_p) {
+  return '';
+}
+
+// Картка автора: фото + імʼя + (асинхронно) галочка довіри й дата реєстрації.
+//
+// ⚠️ НІЧОГО СВОГО ТУТ НЕ ВИНАЙДЕНО — усе на наявних механізмах проєкту:
+//   • `avatarCircle({uid})` сам ставить `data-av-uid` + `data-av-circle`;
+//   • `hydrateAvatars(root)` прогресивно міняє літеру на фото (без блокування рендера);
+//   • делегований слухач у `core/profile-card.js` ловить клік по `[data-av-uid]`
+//     і відкриває картку профілю — тобто перехід у профіль автора зʼявляється
+//     САМ, щойно на елементі є цей атрибут.
+// Через це вся «картка автора з макета» коштує один виклик, а не новий екран.
+//
+// `data-av-uid` дублюється на всій картці (не лише на кружечку), щоб тап працював
+// по будь-якому місцю рядка — але БЕЗ `data-av-circle`: інакше гідрація спробувала б
+// вставити фото у блок без розмірів і воно розтяглося б на весь рядок
+// (баг «квадратне фото», знайдений 17.07).
+function renderAdAuthor(p) {
+  const name = liveName(p.author, p.owner_uid, 'анонімно');
+  const uid = p.owner_uid || '';
+  const av = avatarCircle({ name, url: cachedAvatar(uid), cls: 'cm-ad-avatar', uid });
+  return `
+    <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ''}>
+      ${av}
+      <span class="cm-ad-author-info">
+        <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+        <span class="cm-ad-author-since" data-ad-since></span>
+      </span>
+      ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">›</span>' : ''}
+    </div>`;
+}
+
+// Три однакові дії. У макеті вони рівні за розміром — саме тому не круглі іконки:
+// однаковий вигляд каже, що це рівноцінні варіанти, а не головна дія і дві дрібні.
+function renderAdActions(p) {
+  return `
+    <div class="cm-ad-actions">
+      <button class="cm-ad-act" type="button" data-share-board
+              data-share-title="Оголошення з Дошки громади Олики"
+              data-share-url="${escapeHtml(deepLink('board', p.id))}">${ICONS.share}<span>Поділитися</span></button>
+      <button class="cm-ad-act${isSaved(p.id) ? ' cm-ad-act--on' : ''}" type="button" data-save-id="${p.id}"
+              aria-label="${isSaved(p.id) ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
+        ${isSaved(p.id) ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}<span>Зберегти</span></button>
+      <button class="cm-ad-act cm-ad-act--warn" type="button" data-ad-report>${REPORT_ICON_SVG}<span>Скаржитися</span></button>
+    </div>`;
+}
+
+// Блок безпеки. Єдиний блок макета, який НЕ потребує жодних нових даних і при цьому
+// дає реальну користь: на дошці лежать телефони людей, і передоплата — головна схема
+// шахрайства на таких майданчиках.
+function renderAdSafety() {
+  return `
+    <div class="cm-ad-safety">
+      ${SHIELD_ICON_SVG}
+      <span class="cm-ad-safety-text">
+        <b>Будьте обережні!</b>
+        Не переходьте за сторонніми посиланнями та не здійснюйте передоплату.
+      </span>
+    </div>`;
+}
+
+// 🔴 ЛИПКА НИЖНЯ ПАНЕЛЬ — головне, чого бракувало: раніше кнопки контакту лежали
+// у скролі й при довгому описі (у нас до 1296 символів) їхали за межі екрана.
+// `env(safe-area-inset-bottom)` — щоб на iPhone панель не залазила під home-bar.
+function renderAdBottomBar(p) {
+  const tel = phoneOf(p);
+  return `
+    <div class="cm-ad-bottom">
+      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>Подзвонити</span></a>` : ''}
+      <button class="cm-ad-write${tel ? '' : ' cm-ad-write--solo'}" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
+    </div>`;
 }
 
 // 🆕 28.07 — ТІНЬ ПІД ЛИПКИМ БЛОКОМ (категорія · ціна · заголовок) З'ЯВЛЯЄТЬСЯ ПЛАВНО.
@@ -1153,6 +1336,8 @@ export function openAdModalStandalone(post) {
     }
   }
 
+  wireAdModalChrome(modal, close);
+
   // Свайп вниз → закрити (грип або скролер угорі); горизонталь = свайп галереї
   const area = modal.querySelector('.cm-board-modal-scrollarea');
   const scroller = area || modal;
@@ -1164,7 +1349,9 @@ export function openAdModalStandalone(post) {
     const onGrip = grip && (e.target === grip || grip.contains(e.target));
     canSwipe = onGrip || scroller.scrollTop <= 2;
     sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
-    travel = centeredRemaining(modal);   // шлях до нижнього краю — міряємо раз за жест
+    // ⚠️ 02.08: аркуш притиснутий до низу, тож «скільки лишилось» — це його ВЛАСНА
+    // висота (`sheetRemaining`), а не відстань від центру до краю екрана.
+    travel = sheetRemaining(modal, 0);
     drag.start(sY);
     if (canSwipe) modal.style.transition = 'none';
   }, { passive: true });
@@ -1173,8 +1360,8 @@ export function openAdModalStandalone(post) {
     const dy = e.touches[0].clientY - sY;
     const dx = e.touches[0].clientX - sX;
     if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
-    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`; fade?.track(dy / travel); }
-    else if (swiping) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; fade?.track(0); }
+    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translateY(${dy}px)`; fade?.track(dy / travel); }
+    else if (swiping) { modal.style.transform = 'translateY(0)'; fade?.track(0); }
     drag.move(e.touches[0].clientY);
   }, { passive: false });
   modal.addEventListener('touchend', e => {
@@ -1184,8 +1371,8 @@ export function openAdModalStandalone(post) {
     // (згасання), а куди їхати — домальовує інлайн transform із sheet-motion.
     finishSwipe({
       panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
-      remaining: centeredRemaining(modal),
-      dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
+      remaining: sheetRemaining(modal, dy),
+      dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
       onDismiss: () => close(),
       backdrop: fade,
     });
@@ -1209,7 +1396,16 @@ function initBoardNoteExpand(root) {
     isAnimating = true;
 
     const modal = document.createElement('article');
-    modal.className = note.className + ' cm-board-modal-note';
+    // 🔴 02.08 — ФІКСОВАНИЙ набір класів замість успадкування від картки.
+    // Було `note.className + ' cm-board-modal-note'`, тобто модалка тягнула на себе
+    // ВСІ класи картки. Після переходу Дошки на рядки це стало прямою поломкою:
+    // разом із ними приїжджав `.bd-ad`, а він `display: flex; flex-direction: row` —
+    // тобто модалка розкладалась як горизонтальний рядок. І навпаки, потрібного
+    // `cm-board-modal--sheet` (геометрія аркуша знизу) картка не має й мати не може.
+    // ⚠️ Офіційні оголошення сюди не потрапляють — селектор розгортання їх виключає,
+    // тож модифікатори картки тут і не потрібні.
+    modal.className = 'cm-board-note cm-board-modal-note cm-board-modal--sheet';
+    backdrop.classList.add('cm-ad-backdrop--over');   // затемнення теж над таб-баром
     // Будуємо модалку З ДАНИХ поста (а не клон HTML картки) — фото flush зверху,
     // повний текст, чорний колір, без обрізки фото скролом. Fallback на клон якщо
     // пост раптом не знайдено (officials виключені, тож для оголошень не трапляється).
@@ -1247,6 +1443,8 @@ function initBoardNoteExpand(root) {
     }
 
     const area = modal.querySelector('.cm-board-modal-scrollarea');
+
+    wireAdModalChrome(modal, close);
 
     // Свайп вниз → закрити (перевірений патерн як у модалці статей: рішення на touchstart).
     // Дозволяємо коли жест почався НА СМУЖЦІ-РУЧЦІ (.cm-board-modal-bar) — працює ЗАВЖДИ, навіть

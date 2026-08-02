@@ -2,8 +2,8 @@
   // src/core/layers.js
   var stack = [];
   var seq = 0;
-  function openLayer(close, opts = {}) {
-    const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
+  function openLayer(close2, opts = {}) {
+    const layer = { id: ++seq, close: close2, closed: false, animateOut: opts.animateOut || null };
     const top = stack[stack.length - 1];
     if (opts.reuseEntry && top) {
       top.closed = true;
@@ -2279,7 +2279,7 @@
     const closeBtn = wrap.querySelector(".app-modal-close");
     const onKey = (e) => {
       if (e.key === "Escape")
-        close();
+        close2();
     };
     document.addEventListener("keydown", onKey);
     let closing = false;
@@ -2300,7 +2300,7 @@
       }
       setTimeout(() => wrap.remove(), ms + 20);
     }
-    function close() {
+    function close2() {
       if (closing || _active?.el !== wrap)
         return;
       closing = true;
@@ -2312,8 +2312,8 @@
       }
       slideOut();
     }
-    backdrop?.addEventListener("click", close);
-    closeBtn?.addEventListener("click", close);
+    backdrop?.addEventListener("click", close2);
+    closeBtn?.addEventListener("click", close2);
     if (variant === "sheet" && swipeClose && panel) {
       let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
       const drag = createDragTracker();
@@ -2388,8 +2388,8 @@
       });
     }
     onMount?.(wrap);
-    _active = { el: wrap, close };
-    return { close, el: wrap };
+    _active = { el: wrap, close: close2 };
+    return { close: close2, el: wrap };
   }
   function closeModal() {
     _active?.close();
@@ -2648,7 +2648,7 @@
       <p class="cm-board-hint">${isEdit ? "\u0417\u043C\u0456\u043D\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F. \u042F\u043A\u0449\u043E \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0449\u0435 \u043D\u0435 \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F \u2014 \u043F\u0456\u0434\u0435 \u043D\u0430 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0443 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0443." : "\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456."}</p>
     </form>
   `;
-    const { close, el: wrap } = openModal({
+    const { close: close2, el: wrap } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--board-compose",
@@ -3025,7 +3025,7 @@
           showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438"), 4500);
           return;
         }
-        close();
+        close2();
         Object.assign(editPost, {
           text: payload.text,
           title: payload.title,
@@ -3056,7 +3056,7 @@
       } else {
         console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
       }
-      close();
+      close2();
       if (published) {
         window.dispatchEvent(new Event("cstl-posts-changed"));
         showToast("\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E \u2713 \u0412\u0438 \u0434\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440.", 4e3);
@@ -3124,10 +3124,10 @@
         backdrop.classList.remove("visible");
       }
     });
-    const close = () => closeLayer(api._layer, { animate: 240 });
-    backdrop.addEventListener("click", close);
-    screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
-    api.close = close;
+    const close2 = () => closeLayer(api._layer, { animate: 240 });
+    backdrop.addEventListener("click", close2);
+    screen.querySelector("[data-pm-back]")?.addEventListener("click", close2);
+    api.close = close2;
     _openScreens.push(api);
     return api;
   }
@@ -3669,15 +3669,15 @@
   }
   function openDiscSheet(opts) {
     const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
-    let close;
-    ({ close } = openModal({
+    let close2;
+    ({ close: close2 } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--disc",
-      onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+      onMount: (wrap) => opts.onMount?.(wrap, () => close2()),
       onClose: opts.onClose
     }));
-    return close;
+    return close2;
   }
   function attachSheetKeyboardFix(wrap, input) {
     const vv = window.visualViewport;
@@ -3744,7 +3744,7 @@
       // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
       // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
       // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
-      onMount: (sheet, close) => {
+      onMount: (sheet, close2) => {
         const ta = sheet.querySelector("#disc-compose-topic");
         autoGrowTextarea(ta);
         detachKb = attachSheetKeyboardFix(sheet, ta);
@@ -3782,7 +3782,7 @@
               return;
             }
           }
-          close();
+          close2();
           showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
           window.dispatchEvent(new CustomEvent("cstl-posts-changed"));
         });
@@ -4103,15 +4103,15 @@
       ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
       <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
     </div>`;
-    const close = () => sheet.remove();
+    const close2 = () => sheet.remove();
     sheet.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) {
         if (e.target === sheet)
-          close();
+          close2();
         return;
       }
-      close();
+      close2();
       const act = b.dataset.act;
       if (act === "reply")
         startDiscReply(c);
@@ -4886,15 +4886,15 @@
         ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
         <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
       </div>`;
-      const close = () => sheet.remove();
+      const close2 = () => sheet.remove();
       sheet.addEventListener("click", async (e) => {
         const b = e.target.closest("[data-act]");
         if (!b) {
           if (e.target === sheet)
-            close();
+            close2();
           return;
         }
-        close();
+        close2();
         const act = b.dataset.act;
         if (act === "reply")
           startReply(m);
@@ -6112,12 +6112,6 @@
   var PHONE_ICON_SVG = ICONS.phone;
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-  function renderLoc(loc, extraClass = "") {
-    if (!loc)
-      return "";
-    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
-    return `<span class="cm-board-loc${extraClass ? " " + extraClass : ""}">${PIN_ICON_SVG2}<span class="cm-board-loc-t">${escapeHtml(label)}</span></span>`;
-  }
   function phoneOf(p) {
     const contact = p && p.contact ? String(p.contact).trim() : "";
     const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
@@ -6130,31 +6124,9 @@
     const isWord = !/\d/.test(t);
     return `<div class="cm-board-price${isWord ? " cm-board-price--word" : ""}">${escapeHtml(t)}</div>`;
   }
-  function renderCardFoot(p, { actions = false } = {}) {
-    const tel = actions ? phoneOf(p) : "";
-    return `
-      <div class="cm-board-foot cm-board-foot--card">
-        ${actions ? `<div class="cm-board-foot-actions">
-          ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
-          <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-        </div>` : ""}
-        <div class="cm-board-foot-who">
-          ${renderLoc(p.location, "cm-board-loc--foot")}
-          <span class="cm-board-time">${renderPostTime(p)}</span>
-        </div>
-      </div>`;
-  }
-  function renderAuthorHead(p) {
-    return `<span class="cm-board-author cm-board-author--head">\u2014 <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>`;
-  }
-  function renderContactBar(p) {
-    const tel = phoneOf(p);
-    return `
-      <div class="cm-board-contact-bar">
-        ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
-        <button class="cm-board-write-btn" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
-      </div>`;
-  }
+  var BACK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  var REPORT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15V4h16l-3 4 3 4H4"/><path d="M4 22V4"/></svg>';
+  var SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
     if (!p || !p.bumped_at)
@@ -6214,39 +6186,144 @@
     </article>
   `;
   }
+  function wireAdModalChrome(modal, close2) {
+    modal.querySelectorAll("[data-ad-close]").forEach((b) => b.addEventListener("click", () => close2()));
+    modal.querySelector("[data-ad-report]")?.addEventListener("click", () => {
+      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E. \u041C\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u043C\u043E \u0446\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.");
+    });
+    hydrateAvatars(modal);
+    const sinceEl = modal.querySelector("[data-ad-since]");
+    const authorUid = modal.querySelector(".cm-ad-author")?.dataset.avUid;
+    if (sinceEl && authorUid) {
+      fetchPublicProfile(authorUid).then((pr) => {
+        if (!pr || !sinceEl.isConnected)
+          return;
+        const dt = new Date(pr.created_at);
+        if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
+          sinceEl.textContent = `\u041D\u0430 \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u0456 \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+        }
+        if (pr.trusted) {
+          modal.querySelector(".cm-ad-author-name")?.insertAdjacentHTML("beforeend", '<span class="cm-ad-verified" title="\u041F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u0438\u0439 \u0436\u0438\u0442\u0435\u043B\u044C">\u2713</span>');
+        }
+      }).catch(() => {
+      });
+    }
+    const counter = modal.querySelector(".cm-ad-hero-count");
+    const heroGal = modal.querySelector(".cm-ad-hero .cm-board-modal-gallery");
+    if (counter && heroGal) {
+      heroGal.addEventListener("scroll", () => {
+        const n = heroGal.clientWidth ? Math.round(heroGal.scrollLeft / heroGal.clientWidth) + 1 : 1;
+        counter.textContent = `${n} / ${heroGal.children.length}`;
+      }, { passive: true });
+    }
+  }
   function renderAdModal(p) {
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
-    const hasPhoto = photos.length > 0;
+    return `
+    ${renderAdHero(p, photos)}
+    <div class="cm-board-modal-scrollarea">
+      ${photos.length ? "" : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
+      <div class="cm-ad-body">
+        ${renderAdHead(p, photos.length > 0)}
+        ${renderAdMeta(p)}
+        <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
+        ${renderAdSpecs(p)}
+        ${renderAdAuthor(p)}
+        ${renderAdActions(p)}
+        ${renderAdSafety()}
+      </div>
+    </div>
+    ${renderAdBottomBar(p)}
+  `;
+  }
+  function renderAdHero(p, photos) {
+    if (!photos.length)
+      return "";
     const multi = photos.length > 1;
-    const photoHtml = hasPhoto ? `
-    <div class="cm-board-modal-photo">
+    return `
+    <div class="cm-ad-hero">
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
-      ${multi ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
-    </div>` : "";
+      <div class="cm-ad-hero-top">
+        <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${BACK_ICON_SVG}</button>
+      </div>
+      ${multi ? `
+      <div class="cm-ad-hero-count">1 / ${photos.length}</div>
+      <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
+      <div class="cm-board-modal-bar cm-ad-bar-over"><span class="cm-board-modal-grip"></span></div>
+    </div>`;
+  }
+  function renderAdHead(p, hasHero) {
+    const t = formatPrice(p.price, p.currency, p.price_negotiable);
+    const haggle = p.price_negotiable && p.price != null;
     return `
-    <div class="cm-board-modal-bar">
-      <span class="cm-board-modal-grip"></span>
-    </div>
-    <div class="cm-board-modal-scrollarea">
-      ${photoHtml}
-      <div class="cm-board-modal-subhead">
+    <div class="cm-ad-head">
+      <div class="cm-ad-head-top">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${renderAuthorHead(p)}
-        ${renderPrice(p)}
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
+        ${hasHero ? "" : '<button class="cm-ad-x" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>'}
       </div>
-      <div class="cm-board-modal-content">
-        <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      </div>
-    </div>
-    <div class="cm-board-modal-foot">
-      ${renderCardFoot(p)}
-      ${boardActionsHtml(p)}
-      ${renderContactBar(p)}
-    </div>
-  `;
+      ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ""}
+      ${t ? `<div class="cm-ad-price-row">
+        <span class="cm-ad-price">${escapeHtml(t)}</span>
+        ${haggle ? '<span class="cm-ad-haggle">\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0442\u043E\u0440\u0433</span>' : ""}
+      </div>` : ""}
+    </div>`;
+  }
+  function renderAdMeta(p) {
+    return `
+    <div class="cm-ad-meta">
+      <span class="cm-ad-meta-loc">${PIN_ICON_SVG2}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+      <span class="cm-ad-meta-dot">\xB7</span>
+      <span>${renderPostTime(p)}</span>
+    </div>`;
+  }
+  function renderAdSpecs(_p) {
+    return "";
+  }
+  function renderAdAuthor(p) {
+    const name = liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E");
+    const uid = p.owner_uid || "";
+    const av = avatarCircle({ name, url: cachedAvatar(uid), cls: "cm-ad-avatar", uid });
+    return `
+    <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ""}>
+      ${av}
+      <span class="cm-ad-author-info">
+        <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+        <span class="cm-ad-author-since" data-ad-since></span>
+      </span>
+      ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">\u203A</span>' : ""}
+    </div>`;
+  }
+  function renderAdActions(p) {
+    return `
+    <div class="cm-ad-actions">
+      <button class="cm-ad-act" type="button" data-share-board
+              data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
+              data-share-url="${escapeHtml(deepLink("board", p.id))}">${ICONS.share}<span>\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F</span></button>
+      <button class="cm-ad-act${isSaved(p.id) ? " cm-ad-act--on" : ""}" type="button" data-save-id="${p.id}"
+              aria-label="${isSaved(p.id) ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+        ${isSaved(p.id) ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}<span>\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</span></button>
+      <button class="cm-ad-act cm-ad-act--warn" type="button" data-ad-report>${REPORT_ICON_SVG}<span>\u0421\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044F</span></button>
+    </div>`;
+  }
+  function renderAdSafety() {
+    return `
+    <div class="cm-ad-safety">
+      ${SHIELD_ICON_SVG}
+      <span class="cm-ad-safety-text">
+        <b>\u0411\u0443\u0434\u044C\u0442\u0435 \u043E\u0431\u0435\u0440\u0435\u0436\u043D\u0456!</b>
+        \u041D\u0435 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044C\u0442\u0435 \u0437\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0456\u043C\u0438 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C\u0438 \u0442\u0430 \u043D\u0435 \u0437\u0434\u0456\u0439\u0441\u043D\u044E\u0439\u0442\u0435 \u043F\u0435\u0440\u0435\u0434\u043E\u043F\u043B\u0430\u0442\u0443.
+      </span>
+    </div>`;
+  }
+  function renderAdBottomBar(p) {
+    const tel = phoneOf(p);
+    return `
+    <div class="cm-ad-bottom">
+      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : ""}
+      <button class="cm-ad-write${tel ? "" : " cm-ad-write--solo"}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
+    </div>`;
   }
   function attachSubheadShadow(modal) {
     const scroller = modal.querySelector(".cm-board-modal-scrollarea");
@@ -6287,15 +6364,15 @@
       wrap.classList.add("open");
     });
     track.addEventListener("scroll", () => requestAnimationFrame(updateCount), { passive: true });
-    const close = () => {
+    const close2 = () => {
       wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       setTimeout(() => wrap.remove(), 200);
     };
-    wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close);
+    wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close2);
     wrap.addEventListener("click", (e) => {
       if (e.target === wrap)
-        close();
+        close2();
     });
   }
   function renderCard(post) {
@@ -6803,7 +6880,7 @@
     hydrateNames(modal);
     attachSubheadShadow(modal);
     let closed = false;
-    const close = () => {
+    const close2 = () => {
       if (closed)
         return;
       closed = true;
@@ -6815,7 +6892,7 @@
         backdrop.remove();
       }, 240);
     };
-    backdrop.addEventListener("click", close);
+    backdrop.addEventListener("click", close2);
     const gallery = modal.querySelector(".cm-board-modal-gallery");
     if (gallery) {
       const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
@@ -6833,6 +6910,7 @@
         }, { passive: true });
       }
     }
+    wireAdModalChrome(modal, close2);
     const area = modal.querySelector(".cm-board-modal-scrollarea");
     const scroller = area || modal;
     const grip = modal.querySelector(".cm-board-modal-bar");
@@ -6845,7 +6923,7 @@
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       swiping = false;
-      travel = centeredRemaining(modal);
+      travel = sheetRemaining(modal, 0);
       drag.start(sY);
       if (canSwipe)
         modal.style.transition = "none";
@@ -6862,10 +6940,10 @@
       if (dy > 0) {
         e.preventDefault();
         swiping = true;
-        modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
+        modal.style.transform = `translateY(${dy}px)`;
         fade?.track(dy / travel);
       } else if (swiping) {
-        modal.style.transform = "translate(-50%, -50%) scale(1)";
+        modal.style.transform = "translateY(0)";
         fade?.track(0);
       }
       drag.move(e.touches[0].clientY);
@@ -6878,9 +6956,9 @@
         panel: modal,
         dy: swiping ? dy : 0,
         velocity: drag.velocity,
-        remaining: centeredRemaining(modal),
-        dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
-        onDismiss: () => close(),
+        remaining: sheetRemaining(modal, dy),
+        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+        onDismiss: () => close2(),
         backdrop: fade
       });
       swiping = false;
@@ -6904,7 +6982,8 @@
         return;
       isAnimating = true;
       const modal = document.createElement("article");
-      modal.className = note2.className + " cm-board-modal-note";
+      modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
+      backdrop.classList.add("cm-ad-backdrop--over");
       const post = allPosts.find((x) => String(x.id) === note2.dataset.postId);
       if (note2.dataset.postId)
         modal.dataset.postId = note2.dataset.postId;
@@ -6936,6 +7015,7 @@
         }
       }
       const area = modal.querySelector(".cm-board-modal-scrollarea");
+      wireAdModalChrome(modal, close);
       const scroller = area || modal;
       const grip = modal.querySelector(".cm-board-modal-bar");
       let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
@@ -10471,7 +10551,7 @@ ${ev.description || ""}`
     const nowDateStr = nowLocal.toISOString().slice(0, 10);
     const nowHour = nowLocal.getUTCHours();
     const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
-    const { close, el } = openModal({
+    const { close: close2, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
@@ -10483,7 +10563,7 @@ ${ev.description || ""}`
         initialIdx: initialIdx >= 0 ? initialIdx : null
       })
     });
-    wireWeatherSwipe(el, close);
+    wireWeatherSwipe(el, close2);
   }
   function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
     const n = tempPts.length;
@@ -10539,7 +10619,7 @@ ${ev.description || ""}`
     if (initialIdx != null)
       place(initialIdx);
   }
-  function wireWeatherSwipe(overlay, close) {
+  function wireWeatherSwipe(overlay, close2) {
     const sheet = overlay.querySelector(".app-modal-sheet");
     if (!sheet)
       return;
@@ -10579,7 +10659,7 @@ ${ev.description || ""}`
         velocity: drag.velocity,
         remaining: sheetRemaining(sheet, dy),
         dismissTransform: "translateY(100%)",
-        onDismiss: () => close(),
+        onDismiss: () => close2(),
         backdrop: fade
       });
     });
@@ -12292,11 +12372,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       ov.remove();
       document.body.style.overflow = "";
     });
-    const close = () => closeLayer(layer);
-    ov.querySelector(".fd-viewer-close").addEventListener("click", close);
+    const close2 = () => closeLayer(layer);
+    ov.querySelector(".fd-viewer-close").addEventListener("click", close2);
     ov.addEventListener("click", (e) => {
       if (e.target === ov || e.target.classList.contains("fd-viewer-slide"))
-        close();
+        close2();
     });
     document.body.appendChild(ov);
     document.body.style.overflow = "hidden";
@@ -13336,7 +13416,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         if (el)
           el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
       });
-    const close = () => {
+    const close2 = () => {
       detachKb();
       unlockScroll();
       comSheetFull = false;
@@ -13347,7 +13427,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const vpEl = sheet.querySelector(".fd-sheet-vp");
     sheet.addEventListener("click", (e) => {
       if (e.target === sheet || e.target === vpEl)
-        close();
+        close2();
     });
     const expandThread = (rootId) => {
       const st = listEl.scrollTop;
@@ -13491,7 +13571,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       if (!isLoggedIn()) {
-        close();
+        close2();
         requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
         });
         return;
@@ -13526,7 +13606,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     const gripEl = sheet.querySelector(".fd-com-grip");
-    attachSheetSwipe(sheet, comSheet, listEl, close, {
+    attachSheetSwipe(sheet, comSheet, listEl, close2, {
       grip: gripEl,
       twoStage: true,
       onDismissStart: () => beginClose(),
@@ -13899,14 +13979,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close = () => {
+    const close2 = () => {
       detachKb();
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close();
+        close2();
     });
     const listEl = back.querySelector(".fd-team-list");
     const render2 = (rows) => {
@@ -13976,7 +14056,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     document.body.appendChild(back);
     const shellTeam = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
     detachKb = shellTeam.detach;
-    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close2, {
       grip: back.querySelector(".fd-comp-head"),
       onDismissStart: () => shellTeam.beginClose(),
       keepVisibleOnDismiss: true
@@ -14089,7 +14169,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close = () => {
+    const close2 = () => {
       detachKb();
       previewUrls.forEach((u) => URL.revokeObjectURL(u));
       back.remove();
@@ -14097,7 +14177,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close();
+        close2();
     });
     const eventBox = back.querySelector(".fd-comp-event");
     back.querySelectorAll(".fd-comp-type-btn").forEach((btn) => btn.addEventListener("click", () => {
@@ -14213,7 +14293,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           }
           if (!edit)
             clearDraft(pageId);
-          close();
+          close2();
           if (edit)
             patchPostCard(res.post.id);
           else
@@ -14287,7 +14367,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       clearTimeout(animTimer);
       animTimer = setTimeout(() => compSheet.classList.remove("fd-comp--anim"), 300);
     };
-    attachSheetSwipe(back, compSheet, bodyEl, close, {
+    attachSheetSwipe(back, compSheet, bodyEl, close2, {
       grip: headEl,
       onDismissStart: () => beginClose(),
       keepVisibleOnDismiss: true
@@ -14348,14 +14428,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close = () => {
+    const close2 = () => {
       detachKb();
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close();
+        close2();
     });
     const setPreview = (label, file) => {
       label.querySelector("img")?.remove();
@@ -14420,7 +14500,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         if (theme !== (page.theme || ""))
           patch.theme = theme;
         if (!Object.keys(patch).length) {
-          close();
+          close2();
           return;
         }
         const res = await updatePage(pageId, patch);
@@ -14432,7 +14512,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
               p.pages.name = page.name;
             }
           });
-          close();
+          close2();
           patchPageScreen(pageId);
           refreshFeedCircles();
           posts.forEach((p) => {
@@ -14452,7 +14532,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     document.body.appendChild(back);
     const shellEd = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
     detachKb = shellEd.detach;
-    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close2, {
       grip: back.querySelector(".fd-comp-head"),
       onDismissStart: () => shellEd.beginClose(),
       keepVisibleOnDismiss: true
@@ -14473,17 +14553,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>
       <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>
     </div>`;
-    const close = () => back.remove();
+    const close2 = () => back.remove();
     back.addEventListener("click", async (e) => {
       if (e.target === back) {
-        close();
+        close2();
         return;
       }
       const item = e.target.closest("[data-act]");
       if (!item)
         return;
       if (item.dataset.act === "edit") {
-        close();
+        close2();
         openComposer(post.page_id, post);
         return;
       }
@@ -14501,7 +14581,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         const i = posts.findIndex((p) => p.id === postId);
         if (i >= 0)
           posts[i] = res2.post;
-        close();
+        close2();
         showToast(isPinned ? "\u041F\u043E\u0441\u0442 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E" : "\u041F\u043E\u0441\u0442 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E \u0432\u0433\u043E\u0440\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438", 2500);
         patchPostCard(postId);
         reorderPagePosts(post.page_id, postId);
@@ -14515,13 +14595,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       posts = posts.filter((p) => p.id !== postId);
-      close();
+      close2();
       removePostCard(postId);
     });
     document.body.appendChild(back);
     const pmSheet = back.querySelector(".fd-postmenu");
     let pmClosing = false;
-    attachSheetSwipe(back, pmSheet, pmSheet, close, {
+    attachSheetSwipe(back, pmSheet, pmSheet, close2, {
       onDismissStart: () => {
         if (pmClosing)
           return;
@@ -15582,12 +15662,12 @@ END:VEVENT`
     btn.hidden = !team;
   }
   function initSidebar() {
-    const { toggle, close, overlay } = els();
+    const { toggle, close: close2, overlay } = els();
     if (!toggle)
       return;
     renderNav();
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
-    close?.addEventListener("click", closeSidebar);
+    close2?.addEventListener("click", closeSidebar);
     overlay?.addEventListener("click", closeSidebar);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && _open)
