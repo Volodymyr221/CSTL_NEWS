@@ -33,7 +33,7 @@ const PHOTO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
 const ts = Date.now() - 3 * 864e5;
 const POSTS = [
   { id: 901, type: 'board', category: 'продам', title: 'ПРОДАМ БУДИНОК В ЖОРНИЩЕ',
-    text: 'Просторий будинок у тихому місці. '.repeat(20),
+    text: 'Просторий будинок у тихому місці. '.repeat(60),   // досить довгий, щоб назва встигла поїхати за верх
     photos: [PHOTO, PHOTO], photo: PHOTO, price: 450000, currency: 'UAH', price_negotiable: true,
     location: 'Жорнище', author: 'Тест', author_name: 'Тест', owner_uid: 'u1',
     status: 'published', ts, created_at: new Date(ts).toISOString(), bumped_at: new Date(ts).toISOString() },
@@ -47,6 +47,12 @@ const { url, stop } = await serve();
 const b = await launch(chromium);
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
                                  hasTouch: true, serviceWorkers: 'block' });
+// Лічильник слухачів `resize` на window — сторож витоку, знайденого аудитом 02.08.
+await ctx.addInitScript(() => {
+  window.__lcResize = 0;
+  const orig = window.addEventListener.bind(window);
+  window.addEventListener = function (t, f, o) { if (t === 'resize') window.__lcResize++; return orig(t, f, o); };
+});
 const p = await ctx.newPage();
 const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/json',
   headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
@@ -107,252 +113,97 @@ const rest = await modalBox();
 ok('модалка на весь екран по ширині', rest && rest.left <= 1 && rest.w >= 388,
    rest ? `left=${rest.left} w=${rest.w}` : 'модалки немає');
 
-// ── 1б. КОНСТРУКЦІЯ ТРЬОХ ШАРІВ ──────────────────────────────────────────────
-// Саме на неї показував Вова по макету: «фотографія прикріплена до верху… блок опису
-// заокругленими кутами… блок подзвонити-написати теж заокруглений». Міряємо ГЕОМЕТРІЮ,
-// яку видно оку, а не наявність класів.
-const geo = await p.evaluate(() => {
-  const H = window.innerHeight;
-  const q = s => document.querySelector(s);
-  const r = el => el ? el.getBoundingClientRect() : null;
-  const cs = el => el ? getComputedStyle(el) : null;
-  const photo = q('.cm-ad-photo'), sheet = q('.cm-ad-sheet'), bar = q('.cm-ad-bottom');
-  const hdr = q('.app-header');
-  // Колір шапки застосунку: під затемненням вона мусить ПОТЕМНІТИ. Це був справжній
-  // баг — затемнення лежало всередині вкладки, і його z-index не перебивав шапку.
-  const hdrTop = hdr ? Math.round(r(hdr).top + r(hdr).height / 2) : 20;
-  const overHeader = document.elementFromPoint(Math.round(window.innerWidth / 2), hdrTop);
-  const bdEl = q('.board-backdrop.cm-ad-backdrop--over.visible');
-  return {
-    екран: H,
-    фото_верх: photo ? Math.round(r(photo).top) : null,
-    фото_радіус: photo ? cs(photo).borderTopLeftRadius : null,
-    фото_ліво: photo ? Math.round(r(photo).left) : null,
-    фото_ширина: photo ? Math.round(r(photo).width) : null,
-    аркуш_верх: sheet ? Math.round(r(sheet).top) : null,
-    аркуш_радіус: sheet ? parseFloat(cs(sheet).borderTopLeftRadius) : null,
-    аркуш_низ: sheet ? Math.round(r(sheet).bottom) : null,
-    наїжджає_на: photo && sheet ? Math.round(r(photo).bottom - r(sheet).top) : null,
-    панель_радіус: bar ? parseFloat(cs(bar).borderTopLeftRadius) : null,
-    панель_низ: bar ? Math.round(r(bar).bottom) : null,
-    затемнення_є: !!bdEl,
-    затемнення_z: bdEl ? +getComputedStyle(bdEl).zIndex : null,
-    затемнення_в_body: bdEl ? bdEl.parentElement === document.body : null,
-    над_шапкою: overHeader ? (overHeader.className || overHeader.tagName) : null,
-  };
-});
-ok('ФОТО від самого верху екрана', geo.фото_верх === 0, `top=${geo.фото_верх}`);
-ok('ФОТО без заокруглень і на всю ширину',
-   geo.фото_радіус === '0px' && geo.фото_ліво === 0 && geo.фото_ширина >= 388,
-   `radius=${geo.фото_радіус} left=${geo.фото_ліво} w=${geo.фото_ширина}`);
-ok('АРКУШ заокруглений зверху', geo.аркуш_радіус >= 20, `${geo.аркуш_радіус}px`);
-ok('АРКУШ наїжджає на фото (немає щілини)', geo.наїжджає_на > 0, `${geo.наїжджає_на}px`);
-// ⚠️ Аркуш НАВМИСНО вищий за екран: він на всю висоту і зсунутий донизу, щоб при
-// підйомі не лишити порожнечі внизу. Тож критерій — «накриває низ екрана», а не
-// «закінчується рівно на ньому» (перша версія цієї перевірки міряла старе рішення).
-ok('АРКУШ накриває низ екрана', geo.аркуш_низ >= geo.екран,
-   `${geo.аркуш_низ} з ${geo.екран}`);
-ok('ПАНЕЛЬ ДІЙ теж заокруглена зверху', geo.панель_радіус >= 16, `${geo.панель_радіус}px`);
-ok('ПАНЕЛЬ ДІЙ у межах екрана', geo.панель_низ <= geo.екран + 1,
-   `${geo.панель_низ} з ${geo.екран}`);
-// 🔴 Пастка z-index: затемнення мусить жити в `body`. Усередині вкладки будь-яке число
-// замикається її стек-контекстом і шапка застосунку лишається неприкритою.
-ok('затемнення лежить у body і накриває шапку',
-   geo.затемнення_є && geo.затемнення_в_body === true && geo.над_шапкою !== null,
-   `z=${geo.затемнення_z} у body=${geo.затемнення_в_body}`);
-
-// ── 1в. ДВІ ТОЧКИ ФІКСАЦІЇ (патерн Apple Maps) ──────────────────────────────
-// Скарга Вови: «скролиться лише текст всередині опису — відчуття маленького контейнера
-// зі своїм скролом». Тепер тягнеться ВЕСЬ аркуш, а вміст прокручується лише коли аркуш
-// доїхав угору. Міряємо саме поведінку, а не наявність класів.
-const sheetState = () => p.evaluate(() => {
+// ── 1б. ОДИН НАТИВНИЙ СКРОЛЕР ────────────────────────────────────────────────
+// Третій захід (02.08). Скарга Вови: «все дуже глючить, не плавно». Корінь був у тому,
+// що прокрутку рухав НАШ код. Тепер її веде браузер, а фото — просто перший блок вмісту.
+const st = () => p.evaluate(() => {
   const q = s => document.querySelector(s), rc = e => e ? e.getBoundingClientRect() : null;
-  const sh = q('.cm-ad-sheet'), sc = q('.cm-board-modal-scrollarea'), bar = q('.cm-ad-bottom');
-  const mini = q('.cm-ad-mini'), back = q('.cm-ad-photo .cm-ad-round');
-  const last = q('.cm-ad-report');
+  const sc = q('.cm-ad-scroll'), photo = q('.cm-ad-photo'), sheet = q('.cm-ad-sheet');
+  const bar = q('.cm-ad-bottom'), mini = q('.cm-ad-mini'), rep = q('.cm-ad-report');
+  const rnd = q('.cm-ad-top .cm-ad-round'), modal = q('.cm-ad-screen');
   return {
-    аркуш_верх: sh ? Math.round(rc(sh).top) : null,
-    піднятий: sh ? sh.classList.contains('cm-ad-sheet--up') : null,
-    прокрутка: sc ? Math.round(sc.scrollTop) : null,
-    компактна_шапка_видно: mini ? +getComputedStyle(mini).opacity > 0.5 : null,
-    компактна_шапка_накриває: mini ? getComputedStyle(mini).position === 'absolute' : null,
-    кнопка_назад_низ: back ? Math.round(rc(back).bottom) : null,
-    відступ_скролу: sc ? Math.round(parseFloat(getComputedStyle(sc).paddingBottom)) : null,
-    висота_панелі: bar ? Math.round(rc(bar).height) : null,
-    // ⚠️ Зсув беремо ЗАМІРОМ, а не з тексту змінної: `--ad-up-y` містить `max(...)`,
-    // і `getPropertyValue` віддає його НЕпорахованим рядком — `parseFloat` дав би 0.
-    // Це рівно та пастка «міряти форму запису замість наслідку», про яку каже правило.
-    просвіт_до_кнопок: (bar && last) ? Math.round(rc(bar).top - rc(last).bottom) : null,
-    затемнення_фото: q('.cm-ad-photo-dim') ? +getComputedStyle(q('.cm-ad-photo-dim')).opacity : null,
-    жест_аркуша: sh ? getComputedStyle(sh).touchAction : null,
+    екран: window.innerHeight,
+    скролерів: document.querySelectorAll('.cm-ad-screen .cm-ad-scroll').length,
     жест_скролера: sc ? getComputedStyle(sc).touchAction : null,
-    шар_назавжди: sh ? getComputedStyle(sh).willChange : null,
+    прокрутка: sc ? Math.round(sc.scrollTop) : null,
+    вміст: sc ? sc.scrollHeight : null,
+    вікно: sc ? sc.clientHeight : null,
+    фото_верх: photo ? Math.round(rc(photo).top) : null,
+    фото_радіус: photo ? getComputedStyle(photo).borderTopLeftRadius : null,
+    аркуш_радіус: sheet ? parseFloat(getComputedStyle(sheet).borderTopLeftRadius) : null,
+    наїжджає: photo && sheet ? Math.round(rc(photo).bottom - rc(sheet).top) : null,
+    панель_низ: bar ? Math.round(rc(bar).bottom) : null,
+    панель_радіус: bar ? parseFloat(getComputedStyle(bar).borderTopLeftRadius) : null,
     тінь_шарів: bar ? (getComputedStyle(bar).boxShadow.match(/rgba?\(/g) || []).length : 0,
+    просвіт_до_кнопок: (bar && rep) ? Math.round(rc(bar).top - rc(rep).bottom) : null,
+    шапка_видно: mini ? +getComputedStyle(mini).opacity > 0.5 : null,
+    шапка_поза_скролером: mini ? !sc.contains(mini) : null,
+    кнопка: rnd ? Math.round(rc(rnd).width) : null,
+    зсув_модалки: modal ? getComputedStyle(modal).transform : null,
   };
 });
-// Жест справжніми подіями дотику. Хапаємо за СЕРЕДИНУ картки, а не за ручку — ТЗ прямо
-// вимагає, щоб тягнути можна було за будь-яке місце, а ручка лишалась тільки підказкою.
-const swipe = async (x, y, dy, steps = 8) => {
-  await touch('touchStart', x, y);
-  for (let i = 1; i <= steps; i++) { await touch('touchMove', x, y + Math.round(dy * i / steps)); await p.waitForTimeout(16); }
-  await touch('touchEnd', x, y + dy);
-  await p.waitForTimeout(650);
-};
+const s0 = await st();
+// 🔴 ГОЛОВНЕ РІШЕННЯ ЗАХОДУ: прокрутка ОДНА і РІДНА.
+ok('скролер у модалці рівно один', s0.скролерів === 1, `${s0.скролерів}`);
+ok('прокрутку веде БРАУЗЕР, а не наш код', s0.жест_скролера === 'auto', s0.жест_скролера);
+ok('ФОТО від самого верху екрана і без заокруглень',
+   s0.фото_верх === 0 && s0.фото_радіус === '0px', `top=${s0.фото_верх} radius=${s0.фото_радіус}`);
+ok('АРКУШ заокруглений і наїжджає на фото',
+   s0.аркуш_радіус >= 20 && s0.наїжджає > 0, `radius=${s0.аркуш_радіус} наїзд=${s0.наїжджає}px`);
+ok('ПАНЕЛЬ ДІЙ у межах екрана, заокруглена, тінь двошарова',
+   s0.панель_низ <= s0.екран + 1 && s0.панель_радіус >= 16 && s0.тінь_шарів >= 2,
+   `низ ${s0.панель_низ}, radius ${s0.панель_радіус}, шарів ${s0.тінь_шарів}`);
+// Знайдено власним аудитом 02.08: було 36px при нормі Apple HIG 44.
+ok('кругла кнопка не менша за тап-ціль Apple HIG', s0.кнопка >= 44, `${s0.кнопка}px`);
+ok('старт: компактної шапки не видно', s0.шапка_видно === false);
+ok('компактна шапка ПОЗА скролером (не може штовхнути текст)', s0.шапка_поза_скролером === true);
+ok('вміст прокручується (є що читати)', s0.вміст > s0.вікно, `${s0.вміст} з ${s0.вікно}`);
 
-const s0 = await sheetState();
-ok('старт: аркуш у нижньому положенні', s0.піднятий === false, `top=${s0.аркуш_верх}`);
-ok('старт: компактної шапки не видно', s0.компактна_шапка_видно === false);
-// 🔴 ПРИЧИНА РИВКІВ, а не симптом. Увесь рух пальця наш, і браузеру нема чого
-// скасовувати — тобто йому не треба питати JavaScript перед кадром.
-ok('рух пальця цілком наш (touch-action: none)', s0.жест_аркуша === 'none', s0.жест_аркуша);
-// 🔴 `touch-action` НЕ УСПАДКОВУЄТЬСЯ. Без цього рядка область прокрутки лишалась `auto`
-// і їхала РІДНОЮ прокруткою паралельно з нашою трубою: заміряно аркуш −20 і текст +25
-// від одного руху на 20px. Два механізми на один палець — це й читалось як ривки.
-ok('область прокрутки теж віддає рух нам (touch-action не успадковується)',
-   s0.жест_скролера === 'none', s0.жест_скролера);
-// Постійний шар відеопамʼяті під усією областю прокрутки коштує дорожче, ніж економить.
-ok('аркуш не тримає шар назавжди (will-change)', s0.шар_назавжди === 'auto', s0.шар_назавжди);
-ok('тінь панелі має щонайменше два шари', s0.тінь_шарів >= 2, `${s0.тінь_шарів}`);
-
-// ── КОРОТКИЙ рух угору: увесь має піти в АРКУШ, тексту не дістатись ────────
-// Запас ходу аркуша тут 177px, тож рух на 100px не може дійти до тексту в принципі.
-// Міряємо ПІСЛЯ жесту: критерій «прокрутка лишилась 0» не залежить від того, в яку
-// саме мить кадру ми подивились, — на відміну від заміру посеред руху.
-await swipe(195, Math.round(s0.аркуш_верх + 140), -100, 5);
-const sShort = await sheetState();
-ok('короткий рух угору не дістається тексту', sShort.прокрутка === 0,
-   `прокрутка ${sShort.прокрутка}`);
-
-// 🔴 ГОЛОВНА ПЕРЕВІРКА ЦЬОГО ЗАХОДУ — БЕЗПЕРЕРВНІСТЬ РУХУ.
-// Скарга Вови: «тягнеш угору, блок доходить до верху, палець їде далі — і НІЧОГО не
-// відбувається; текст починає скролитись лише після другого свайпу». ОДИН довгий рух
-// без відриву мусить і підняти аркуш, і поїхати далі текстом.
-await swipe(195, 600, -300, 12);
-const s1 = await sheetState();
-ok('ОДИН рух угору піднімає аркуш І ЙДЕ ДАЛІ у текст (без мертвої зони)',
-   s1.піднятий === true && s1.прокрутка > 20,
-   `аркуш ${s1.аркуш_верх}, прокрутка ${s1.прокрутка}`);
-ok('угорі фото затемнене', s1.затемнення_фото > 0.1, `${s1.затемнення_фото}`);
-// 🔑 Моя поправка до ТЗ: верхня точка рахується від НИЗУ круглих кнопок, а не «на око».
-// Інакше на iPhone із вирізом кнопка «назад» опинилась би наполовину під аркушем.
-ok('угорі кнопка «назад» лишається видимою над аркушем',
-   s1.кнопка_назад_низ <= s1.аркуш_верх, `низ кнопки ${s1.кнопка_назад_низ} vs аркуш ${s1.аркуш_верх}`);
-// Одне число на два місця: відступ = висота панелі + зсув піднятого аркуша (його низ
-// саме на стільки виходить за екран). Розійдуться — останні рядки зникнуть під кнопками.
-ok('відступ скролу = панель + зсув аркуша (одне джерело, не два)',
-   Math.abs(s1.відступ_скролу - (s1.висота_панелі + s1.аркуш_верх)) <= 1,
-   `${s1.відступ_скролу} vs ${s1.висота_панелі}+${s1.аркуш_верх}`);
-await p.evaluate(() => { const s = document.querySelector('.cm-board-modal-scrollarea'); if (s) s.scrollTop = 9999; });
+// Прокрутка до кінця: текст не має ховатись за кнопками, а назву заступає компактна шапка.
+await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); s.scrollTop = s.scrollHeight; });
 await p.waitForTimeout(300);
-const s1b = await sheetState();
-// ⚠️ Повертаємо прокрутку в невелике значення: наступна перевірка міряє, чи ОДИН рух
-// униз встигає і відмотати текст, і опустити аркуш. З кінця довгого опису цього шляху
-// не вистачило б жодному реальному руху пальця.
-await p.evaluate(() => { const s = document.querySelector('.cm-board-modal-scrollarea'); if (s) s.scrollTop = 60; });
+const sEnd = await st();
+ok('останній рядок тексту НЕ впирається у кнопки', sEnd.просвіт_до_кнопок > 8, `${sEnd.просвіт_до_кнопок}px`);
+ok('коли назва поїхала — компактна шапка заступає її', sEnd.шапка_видно === true);
+// А поки назва на екрані — компактної шапки бути не повинно (інакше назва двічі поспіль).
+await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); s.scrollTop = 60; });
+await p.waitForTimeout(250);
+ok('поки назва видима — компактної шапки немає',
+   (await st()).шапка_видно === false);
+
+// ── 1в. ДВА БАГИ З АУДИТУ 02.08 ─────────────────────────────────────────────
+// 🔴 №1: перерваний жест лишав модалку зсунутою назавжди (заміряно translateY(60px)).
+await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); s.scrollTop = 0; });
 await p.waitForTimeout(200);
-ok('останній рядок тексту НЕ впирається у кнопки', s1b.просвіт_до_кнопок > 8, `${s1b.просвіт_до_кнопок}px`);
-// А коли велика шапка поїхала за верх — компактна мусить її замінити.
-ok('після прокрутки компактна шапка замінює велику', s1b.компактна_шапка_видно === true);
-// 🔑 Вона мусить НАКРИВАТИ вміст, а не стояти в ряд: у потоці її поява забирала 35px
-// і штовхала текст униз просто від прокрутки (заміряно).
-ok('компактна шапка накриває вміст, а не штовхає його', s1b.компактна_шапка_накриває === true);
-
-// 🔴 ГОЛОВНА ПОПРАВКА ДО ТЗ. Свайп униз із ВЕРХНЬОГО положення мусить ОПУСТИТИ аркуш,
-// а не закрити модалку. ТЗ вимагало протилежного — і це закривало б оголошення саме
-// тоді, коли людина його читає.
-// Дзеркально вниз: ОДИН рух мусить спершу відмотати текст, а потім опустити аркуш.
-const beforeDown = await sheetState();
-await swipe(195, 300, 300, 12);
-const s2 = await sheetState();
-ok('ОДИН довгий рух униз відмотує текст І опускає аркуш (без мертвої зони)',
-   s2.аркуш_верх !== null && s2.піднятий === false && s2.прокрутка === 0,
-   s2.аркуш_верх === null ? 'модалку закрито — це помилка'
-     : `прокрутка ${beforeDown.прокрутка} → ${s2.прокрутка}, аркуш ${s2.аркуш_верх}`);
-// І лише другий рух униз закриває. Тобто потрібні ДВА рухи, а не один.
-await swipe(195, Math.round(s2.аркуш_верх + 140), 240);
-ok('другий свайп униз закриває модалку',
-   await p.evaluate(() => !document.querySelector('.cm-ad-screen')));
-
-await closeAd();
-await openAd(901);
-
-// Хапаємо за ручку (grip) — вона працює завжди, навіть коли опис прокручено.
-const gripXY = await p.evaluate(() => {
-  const g = document.querySelector('.cm-board-modal-note .cm-board-modal-grip')
-         || document.querySelector('.cm-board-modal-note .cm-board-modal-bar');
-  if (!g) return null;
-  const r = g.getBoundingClientRect();
-  return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
-});
-ok('ручка свайпу існує і видима', !!gripXY, gripXY ? `${gripXY.x},${gripXY.y}` : 'немає');
-
-const DY = 120;
-if (gripXY) {
-  await touch('touchStart', gripXY.x, gripXY.y);
-  for (let s = 20; s <= DY; s += 20) { await touch('touchMove', gripXY.x, gripXY.y + s); await p.waitForTimeout(16); }
-  const mid = await modalBox();          // палець ЩЕ на екрані — міряємо живий стан
-
-  // 🔴 ГОЛОВНА ПЕРЕВІРКА. На зламаному коді тут було translate(-50%,…) → left ≈ −195.
-  ok('свайп вниз НЕ зсуває аркуш убік', mid && Math.abs(mid.left - rest.left) <= 2,
-     mid ? `left ${rest.left} → ${mid.left}` : 'модалки немає');
-  // Аркуш іде за пальцем: верх опустився приблизно на пройдений шлях.
-  // ⚠️ Допуск на один крок жесту: перші 4px руху свідомо не рахуються (це поріг
-  // «тремтіння пальця»), тож пройдений шлях завжди трохи менший за заданий.
-  ok('аркуш іде за пальцем по вертикалі',
-     mid && (mid.top - rest.top) > DY * 0.7 && (mid.top - rest.top) <= DY + 4,
-     mid ? `top ${rest.top} → ${mid.top} (задано +${DY})` : 'модалки немає');
-
-  await touch('touchEnd', gripXY.x, gripXY.y + DY);
-  await p.waitForTimeout(500);
+await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 195, y: 500, id: 1 }] });
+for (let i = 1; i <= 4; i++) {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y: 500 + i * 20, id: 1 }] });
+  await p.waitForTimeout(20);
 }
+// другий палець посеред руху — саме він і залишав модалку висіти
+await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
+  touchPoints: [{ x: 195, y: 580, id: 1 }, { x: 250, y: 580, id: 2 }] });
+await p.waitForTimeout(30);
+await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+await p.waitForTimeout(600);
+const sBroken = await st();
+ok('перерваний жест НЕ лишає модалку зсунутою',
+   sBroken.зсув_модалки === 'none' || sBroken.зсув_модалки === 'matrix(1, 0, 0, 1, 0, 0)',
+   `${sBroken.зсув_модалки}`);
 
-// ── 2. Короткий рух (нижче порогу) — аркуш мусить стати рівно на місце ───────
-await closeAd();
-await openAd(901);
-const rest2 = await modalBox();
-const grip2 = await p.evaluate(() => {
-  const g = document.querySelector('.cm-board-modal-note .cm-board-modal-grip');
-  if (!g) return null;
-  const r = g.getBoundingClientRect();
-  return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+// 🔴 №2: витік слухачів — по два на кожне відкриття, і вони не знімались ніколи.
+// Заміряно в аудиті: 24 слухачі `resize` на window замість 4 після десяти відкриттів.
+const leak = await p.evaluate(async () => {
+  const before = window.__lcResize || 0;
+  for (let i = 0; i < 6; i++) {
+    document.querySelector('.cm-ad-screen [data-ad-close]')?.click();
+    await new Promise(r => setTimeout(r, 300));
+    document.querySelector('#board-content [data-post-id="901"]')?.click();
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return (window.__lcResize || 0) - before;
 });
-if (grip2) {
-  await touch('touchStart', grip2.x, grip2.y);
-  for (let s = 10; s <= 30; s += 10) { await touch('touchMove', grip2.x, grip2.y + s); await p.waitForTimeout(16); }
-  await touch('touchEnd', grip2.x, grip2.y + 30);
-  await p.waitForTimeout(600);
-  const back = await modalBox();
-  ok('короткий рух повертає аркуш рівно на місце',
-     back && Math.abs(back.top - rest2.top) <= 2 && Math.abs(back.left - rest2.left) <= 2,
-     back ? `${rest2.left},${rest2.top} → ${back.left},${back.top}` : 'модалки немає');
-}
-
-// ── 3. Оголошення БЕЗ фото — 18% нашої Дошки, у макета такого кадру немає ────
-await closeAd();
-ok('оголошення без фото відкривається', await openAd(902));
-const noPhoto = await modalBox();
-ok('без фото аркуш теж на всю ширину і не зсунутий',
-   noPhoto && noPhoto.left <= 1 && noPhoto.w >= 388,
-   noPhoto ? `left=${noPhoto.left} w=${noPhoto.w}` : 'модалки немає');
-// 3 оголошення з 17 не мають фото — макет такого кадру не показує, тож правило наше:
-// шару фото немає взагалі, аркуш іде майже на весь екран, але смужка затемнення згори
-// лишається (без неї це вже не «аркуш» і зникає підказка «мене можна стягнути»).
-const geoNo = await p.evaluate(() => {
-  const H = window.innerHeight;
-  const s = document.querySelector('.cm-ad-sheet');
-  return {
-    екран: H,
-    шар_фото_є: !!document.querySelector('.cm-ad-photo'),
-    аркуш_верх: s ? Math.round(s.getBoundingClientRect().top) : null,
-    кнопок_у_шапці: document.querySelectorAll('.cm-ad-sheet .cm-ad-round').length,
-  };
-});
-ok('без фото шару фото немає взагалі', geoNo.шар_фото_є === false);
-ok('без фото аркуш вище, але не в стик із верхом',
-   geoNo.аркуш_верх > 20 && geoNo.аркуш_верх < geoNo.екран * 0.20,
-   `top=${geoNo.аркуш_верх} з ${geoNo.екран}`);
-ok('без фото кнопки дій переїхали в шапку аркуша', geoNo.кнопок_у_шапці === 3,
-   `${geoNo.кнопок_у_шапці} з 3`);
+ok('відкриття модалки не додає слухачів на window', leak === 0, `додано ${leak}`);
 
 // ── 4. Сторож DRY: свайп модалки оголошення описаний РІВНО ОДИН раз ──────────
 // Саме друга копія й розійшлась із першою. Рахуємо по коду, а не по поведінці:

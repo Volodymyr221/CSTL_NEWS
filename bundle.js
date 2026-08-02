@@ -6205,26 +6205,21 @@
       }).catch(() => {
       });
     }
-    const sheetEl = modal.querySelector(".cm-ad-sheet");
-    const scrollEl = modal.querySelector(".cm-board-modal-scrollarea");
+    const scrollEl = modal.querySelector(".cm-ad-scroll");
     const headEl = modal.querySelector(".cm-ad-title") || modal.querySelector(".cm-ad-head");
-    if (sheetEl && scrollEl && headEl) {
-      let threshold = 0;
-      const remeasure = () => {
-        threshold = Math.max(0, headEl.offsetTop + headEl.offsetHeight - scrollEl.offsetTop);
-      };
+    if (scrollEl && headEl) {
+      let threshold = 0, atW = 0;
       const syncMini = () => {
-        sheetEl.classList.toggle("cm-ad-sheet--mini", scrollEl.scrollTop >= threshold);
+        if (atW !== window.innerWidth) {
+          atW = window.innerWidth;
+          threshold = Math.max(0, Math.round(
+            headEl.getBoundingClientRect().bottom - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop
+          ));
+        }
+        modal.classList.toggle("cm-ad-screen--mini", scrollEl.scrollTop >= threshold);
       };
       scrollEl.addEventListener("scroll", syncMini, { passive: true });
-      window.addEventListener("resize", () => {
-        remeasure();
-        syncMini();
-      }, { passive: true });
-      requestAnimationFrame(() => {
-        remeasure();
-        syncMini();
-      });
+      requestAnimationFrame(syncMini);
     }
     const gallery = modal.querySelector(".cm-board-modal-gallery");
     if (gallery) {
@@ -6248,206 +6243,77 @@
     }
   }
   function attachAdSheetSwipe(modal, backdrop, onDismiss) {
-    const sheet = modal.querySelector(".cm-ad-sheet");
-    const scroller = modal.querySelector(".cm-board-modal-scrollarea");
-    const dim = modal.querySelector(".cm-ad-photo-dim");
-    if (!sheet || !scroller)
+    const scroller = modal.querySelector(".cm-ad-scroll");
+    if (!scroller)
       return;
-    const fixed = sheet.classList.contains("cm-ad-sheet--full");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
-    const trY = () => {
-      const t = getComputedStyle(sheet).transform;
-      if (!t || t === "none")
-        return 0;
-      const m2 = t.match(/^matrix\(([^)]+)\)/);
-      if (m2)
-        return parseFloat(m2[1].split(",")[5]) || 0;
-      const m3 = t.match(/^matrix3d\(([^)]+)\)/);
-      if (m3)
-        return parseFloat(m3[1].split(",")[13]) || 0;
-      return 0;
-    };
-    let yInit = 0, yUp = 0;
-    const measure = () => {
-      const had = sheet.classList.contains("cm-ad-sheet--up");
-      const prevTr = sheet.style.transition;
-      const prevTf = sheet.style.transform;
-      sheet.style.transition = "none";
-      sheet.style.transform = "";
-      sheet.classList.remove("cm-ad-sheet--up");
-      yInit = trY();
-      sheet.classList.add("cm-ad-sheet--up");
-      yUp = trY();
-      sheet.classList.toggle("cm-ad-sheet--up", had);
-      sheet.style.transform = prevTf;
-      sheet.style.transition = prevTr;
-    };
-    measure();
-    window.addEventListener("resize", measure, { passive: true });
-    let up = false;
-    let sheetY = 0;
-    let screenY = 0;
-    let spilled = false;
-    let scrolled = false;
-    let lastY = 0, sX = 0, sY = 0;
-    let vertical = null;
-    let inertiaId = 0;
-    const setSheetY = (y) => {
-      sheet.style.transform = `translateY(${y}px)`;
-    };
-    const setDim = (y) => {
-      if (!dim || yInit === yUp)
-        return;
-      const p = Math.min(1, Math.max(0, (yInit - y) / (yInit - yUp)));
-      dim.style.opacity = (p * 0.35).toFixed(3);
-    };
-    const snap = (toUp) => {
-      up = toUp;
-      sheetY = toUp ? yUp : yInit;
-      sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
-      sheet.style.transform = "";
-      sheet.classList.toggle("cm-ad-sheet--up", toUp);
-      if (dim) {
-        dim.style.transition = "opacity .34s ease";
-        dim.style.opacity = toUp ? "0.35" : "0";
-      }
-      if (!toUp)
-        scroller.scrollTop = 0;
-    };
-    const maxScroll = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-    const stopInertia = () => {
-      if (inertiaId) {
-        cancelAnimationFrame(inertiaId);
-        inertiaId = 0;
-      }
-    };
-    const apply = (d) => {
-      if (d < 0) {
-        if (sheetY > yUp) {
-          const use = Math.max(d, yUp - sheetY);
-          sheetY += use;
-          d -= use;
-          setSheetY(sheetY);
-          setDim(sheetY);
-        }
-        if (d < 0) {
-          scroller.scrollTop = Math.min(maxScroll(), scroller.scrollTop - d);
-          scrolled = true;
-        }
-      } else if (d > 0) {
-        if (scroller.scrollTop > 0) {
-          const use = Math.min(d, scroller.scrollTop);
-          scroller.scrollTop -= use;
-          d -= use;
-          spilled = true;
-          scrolled = true;
-        }
-        if (d > 0 && sheetY < yInit) {
-          const use = Math.min(d, yInit - sheetY);
-          sheetY += use;
-          d -= use;
-          spilled = true;
-          setSheetY(sheetY);
-          setDim(sheetY);
-        }
-        if (d > 0) {
-          screenY += d;
-          modal.style.transition = "none";
-          modal.style.transform = `translateY(${screenY}px)`;
-          fade?.track(screenY / window.innerHeight);
-        }
-      }
-    };
-    const inertia = (v0) => {
-      let v = -v0 * 16;
-      if (Math.abs(v) < 2)
-        return;
-      const step = () => {
-        const before = scroller.scrollTop;
-        scroller.scrollTop = Math.min(maxScroll(), Math.max(0, before + v));
-        v *= 0.94;
-        if (Math.abs(v) > 0.4 && scroller.scrollTop !== before)
-          inertiaId = requestAnimationFrame(step);
-        else
-          inertiaId = 0;
-      };
-      inertiaId = requestAnimationFrame(step);
+    let dy = 0;
+    const reset = () => {
+      dy = 0;
+      modal.style.transition = "";
+      modal.style.transform = "";
     };
     modal.addEventListener("touchstart", (e) => {
       if (e.touches.length > 1) {
-        vertical = false;
+        if (dy)
+          reset();
         return;
       }
-      stopInertia();
-      lastY = sY = e.touches[0].clientY;
-      sX = e.touches[0].clientX;
-      drag.start(sY);
-      sheet.style.transition = "none";
-      if (dim)
-        dim.style.transition = "none";
-      sheetY = up ? yUp : yInit;
-      screenY = 0;
-      spilled = false;
-      scrolled = false;
-      vertical = null;
+      dy = 0;
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      armed = scroller.scrollTop <= 0;
+      axis = null;
+      drag.start(startY);
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
-      if (e.touches.length > 1) {
-        vertical = false;
+      if (!armed || e.touches.length > 1)
         return;
-      }
       const y = e.touches[0].clientY;
-      if (vertical === null) {
-        const dx = e.touches[0].clientX - sX, dy = y - sY;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-          vertical = false;
+      const d = y - startY;
+      if (axis === null) {
+        const dx = e.touches[0].clientX - startX;
+        if (Math.abs(dx) > Math.abs(d) && Math.abs(dx) > 10) {
+          armed = false;
           return;
         }
-        if (Math.abs(dy) < 4)
+        if (Math.abs(d) < 6)
           return;
-        vertical = true;
-        lastY = y;
+        if (d < 0) {
+          armed = false;
+          return;
+        }
+        axis = "down";
+        modal.style.transition = "none";
       }
-      if (!vertical)
-        return;
-      apply(y - lastY);
-      lastY = y;
+      dy = Math.max(0, d);
+      modal.style.transform = `translateY(${dy}px)`;
+      fade?.track(dy / window.innerHeight);
       drag.move(y);
     }, { passive: true });
     const finish2 = () => {
-      if (!vertical) {
-        vertical = null;
-        sheet.style.transition = "";
+      if (!dy) {
+        armed = false;
+        axis = null;
+        reset();
         return;
       }
-      vertical = null;
-      const v = drag.velocity;
-      if (sheetY > yUp && sheetY < yInit) {
-        snap(Math.abs(v) > 0.45 ? v < 0 : sheetY < (yInit + yUp) / 2);
-      } else {
-        sheet.style.transition = "";
-        up = sheetY <= yUp;
-        sheet.classList.toggle("cm-ad-sheet--up", up);
-        if (!up)
-          scroller.scrollTop = 0;
-      }
-      if (screenY > 0) {
-        finishSwipe({
-          panel: modal,
-          dy: screenY,
-          velocity: spilled ? 0 : v,
-          remaining: sheetRemaining(modal, screenY),
-          dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
-          onDismiss,
-          backdrop: fade
-        });
-        screenY = 0;
-        return;
-      }
-      if (up && scrolled)
-        inertia(v);
+      const moved = dy;
+      dy = 0;
+      armed = false;
+      axis = null;
+      finishSwipe({
+        panel: modal,
+        dy: moved,
+        velocity: drag.velocity,
+        remaining: sheetRemaining(modal, moved),
+        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+        onDismiss,
+        backdrop: fade
+      });
     };
+    let startY = 0, startX = 0, armed = false, axis = null;
     modal.addEventListener("touchend", finish2, { passive: true });
     modal.addEventListener("touchcancel", finish2, { passive: true });
   }
@@ -6455,12 +6321,10 @@
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
     const hasHero = photos.length > 0;
     return `
-    ${renderAdPhotoLayer(p, photos)}
-    <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
-      <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
-      ${hasHero ? "" : renderAdTopActions(p, false)}
-      ${renderAdMiniHead(p)}
-      <div class="cm-board-modal-scrollarea">
+    <div class="cm-board-modal-scrollarea cm-ad-scroll">
+      ${renderAdPhotoLayer(p, photos)}
+      <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
+        <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
@@ -6472,6 +6336,8 @@
         </div>
       </div>
     </div>
+    ${renderAdTopActions(p, hasHero)}
+    ${renderAdMiniHead(p)}
     ${renderAdBottomBar(p)}
   `;
   }
@@ -6493,8 +6359,6 @@
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
-      <div class="cm-ad-photo-dim"></div>
-      ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
       <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
