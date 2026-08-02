@@ -107,6 +107,57 @@ const rest = await modalBox();
 ok('модалка на весь екран по ширині', rest && rest.left <= 1 && rest.w >= 388,
    rest ? `left=${rest.left} w=${rest.w}` : 'модалки немає');
 
+// ── 1б. КОНСТРУКЦІЯ ТРЬОХ ШАРІВ ──────────────────────────────────────────────
+// Саме на неї показував Вова по макету: «фотографія прикріплена до верху… блок опису
+// заокругленими кутами… блок подзвонити-написати теж заокруглений». Міряємо ГЕОМЕТРІЮ,
+// яку видно оку, а не наявність класів.
+const geo = await p.evaluate(() => {
+  const H = window.innerHeight;
+  const q = s => document.querySelector(s);
+  const r = el => el ? el.getBoundingClientRect() : null;
+  const cs = el => el ? getComputedStyle(el) : null;
+  const photo = q('.cm-ad-photo'), sheet = q('.cm-ad-sheet'), bar = q('.cm-ad-bottom');
+  const hdr = q('.app-header');
+  // Колір шапки застосунку: під затемненням вона мусить ПОТЕМНІТИ. Це був справжній
+  // баг — затемнення лежало всередині вкладки, і його z-index не перебивав шапку.
+  const hdrTop = hdr ? Math.round(r(hdr).top + r(hdr).height / 2) : 20;
+  const overHeader = document.elementFromPoint(Math.round(window.innerWidth / 2), hdrTop);
+  const bdEl = q('.board-backdrop.cm-ad-backdrop--over.visible');
+  return {
+    екран: H,
+    фото_верх: photo ? Math.round(r(photo).top) : null,
+    фото_радіус: photo ? cs(photo).borderTopLeftRadius : null,
+    фото_ліво: photo ? Math.round(r(photo).left) : null,
+    фото_ширина: photo ? Math.round(r(photo).width) : null,
+    аркуш_верх: sheet ? Math.round(r(sheet).top) : null,
+    аркуш_радіус: sheet ? parseFloat(cs(sheet).borderTopLeftRadius) : null,
+    аркуш_низ: sheet ? Math.round(r(sheet).bottom) : null,
+    наїжджає_на: photo && sheet ? Math.round(r(photo).bottom - r(sheet).top) : null,
+    панель_радіус: bar ? parseFloat(cs(bar).borderTopLeftRadius) : null,
+    панель_низ: bar ? Math.round(r(bar).bottom) : null,
+    затемнення_є: !!bdEl,
+    затемнення_z: bdEl ? +getComputedStyle(bdEl).zIndex : null,
+    затемнення_в_body: bdEl ? bdEl.parentElement === document.body : null,
+    над_шапкою: overHeader ? (overHeader.className || overHeader.tagName) : null,
+  };
+});
+ok('ФОТО від самого верху екрана', geo.фото_верх === 0, `top=${geo.фото_верх}`);
+ok('ФОТО без заокруглень і на всю ширину',
+   geo.фото_радіус === '0px' && geo.фото_ліво === 0 && geo.фото_ширина >= 388,
+   `radius=${geo.фото_радіус} left=${geo.фото_ліво} w=${geo.фото_ширина}`);
+ok('АРКУШ заокруглений зверху', geo.аркуш_радіус >= 20, `${geo.аркуш_радіус}px`);
+ok('АРКУШ наїжджає на фото (немає щілини)', geo.наїжджає_на > 0, `${geo.наїжджає_на}px`);
+ok('АРКУШ доходить до низу екрана', Math.abs(geo.аркуш_низ - geo.екран) <= 1,
+   `${geo.аркуш_низ} з ${geo.екран}`);
+ok('ПАНЕЛЬ ДІЙ теж заокруглена зверху', geo.панель_радіус >= 16, `${geo.панель_радіус}px`);
+ok('ПАНЕЛЬ ДІЙ у межах екрана', geo.панель_низ <= geo.екран + 1,
+   `${geo.панель_низ} з ${geo.екран}`);
+// 🔴 Пастка z-index: затемнення мусить жити в `body`. Усередині вкладки будь-яке число
+// замикається її стек-контекстом і шапка застосунку лишається неприкритою.
+ok('затемнення лежить у body і накриває шапку',
+   geo.затемнення_є && geo.затемнення_в_body === true && geo.над_шапкою !== null,
+   `z=${geo.затемнення_z} у body=${geo.затемнення_в_body}`);
+
 // Хапаємо за ручку (grip) — вона працює завжди, навіть коли опис прокручено.
 const gripXY = await p.evaluate(() => {
   const g = document.querySelector('.cm-board-modal-note .cm-board-modal-grip')
@@ -162,6 +213,25 @@ const noPhoto = await modalBox();
 ok('без фото аркуш теж на всю ширину і не зсунутий',
    noPhoto && noPhoto.left <= 1 && noPhoto.w >= 388,
    noPhoto ? `left=${noPhoto.left} w=${noPhoto.w}` : 'модалки немає');
+// 3 оголошення з 17 не мають фото — макет такого кадру не показує, тож правило наше:
+// шару фото немає взагалі, аркуш іде майже на весь екран, але смужка затемнення згори
+// лишається (без неї це вже не «аркуш» і зникає підказка «мене можна стягнути»).
+const geoNo = await p.evaluate(() => {
+  const H = window.innerHeight;
+  const s = document.querySelector('.cm-ad-sheet');
+  return {
+    екран: H,
+    шар_фото_є: !!document.querySelector('.cm-ad-photo'),
+    аркуш_верх: s ? Math.round(s.getBoundingClientRect().top) : null,
+    кнопок_у_шапці: document.querySelectorAll('.cm-ad-sheet .cm-ad-round').length,
+  };
+});
+ok('без фото шару фото немає взагалі', geoNo.шар_фото_є === false);
+ok('без фото аркуш вище, але не в стик із верхом',
+   geoNo.аркуш_верх > 20 && geoNo.аркуш_верх < geoNo.екран * 0.20,
+   `top=${geoNo.аркуш_верх} з ${geoNo.екран}`);
+ok('без фото кнопки дій переїхали в шапку аркуша', geoNo.кнопок_у_шапці === 3,
+   `${geoNo.кнопок_у_шапці} з 3`);
 
 // ── 4. Сторож DRY: свайп модалки оголошення описаний РІВНО ОДИН раз ──────────
 // Саме друга копія й розійшлась із першою. Рахуємо по коду, а не по поведінці:
