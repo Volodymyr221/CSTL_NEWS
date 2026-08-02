@@ -6256,86 +6256,6 @@
       }
     }
   }
-  function attachAdSheetSwipe(modal, backdrop, onDismiss) {
-    const scroller = modal.querySelector(".cm-ad-scroll");
-    if (!scroller)
-      return;
-    const drag = createDragTracker();
-    const fade = createBackdropFade(backdrop);
-    const EDGE = 32;
-    const DIST2 = 90;
-    let sX = 0, sY = 0, d = 0, axis = null, armed = false;
-    const reset = () => {
-      d = 0;
-      axis = null;
-      armed = false;
-      modal.style.transition = "";
-      modal.style.transform = "";
-    };
-    modal.addEventListener("touchstart", (e) => {
-      if (e.touches.length > 1) {
-        reset();
-        return;
-      }
-      sX = e.touches[0].clientX;
-      sY = e.touches[0].clientY;
-      d = 0;
-      axis = null;
-      armed = sX <= EDGE;
-      drag.start(sX);
-    }, { passive: true });
-    modal.addEventListener("touchmove", (e) => {
-      if (!armed || e.touches.length > 1)
-        return;
-      const x = e.touches[0].clientX, y = e.touches[0].clientY;
-      const dx = x - sX, dy = y - sY;
-      if (axis === null) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
-          return;
-        if (Math.abs(dx) <= Math.abs(dy)) {
-          armed = false;
-          return;
-        }
-        if (dx <= 0) {
-          armed = false;
-          return;
-        }
-        axis = "x";
-        modal.style.transition = "none";
-      }
-      d = Math.max(0, dx);
-      modal.style.transform = `translateX(${d}px)`;
-      fade?.track(d / window.innerWidth);
-      drag.move(x);
-    }, { passive: true });
-    const finish2 = () => {
-      if (!axis || !d) {
-        reset();
-        return;
-      }
-      const moved = d;
-      const v = drag.velocity;
-      d = 0;
-      axis = null;
-      armed = false;
-      const full = window.innerWidth;
-      finishSwipe({
-        panel: modal,
-        dy: moved,
-        velocity: v,
-        remaining: Math.max(full - moved, 1),
-        dismissTransform: `translateX(${full}px)`,
-        onDismiss,
-        backdrop: fade
-      });
-      if (moved <= DIST2 && Math.abs(v) <= 0.45)
-        setTimeout(() => {
-          modal.style.transition = "";
-        }, 260);
-    };
-    modal.addEventListener("touchend", finish2, { passive: true });
-    modal.addEventListener("touchcancel", finish2, { passive: true });
-  }
   function renderAdModal(p) {
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
     const hasHero = photos.length > 0;
@@ -6365,7 +6285,6 @@
       return "";
     return `
     <div class="cm-ad-mini" aria-hidden="true">
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
       <span class="cm-ad-mini-title">${escapeHtml(p.title)}</span>
     </div>`;
   }
@@ -7008,22 +6927,23 @@
     document.body.appendChild(modal);
     document.body.classList.add("cm-zoom-open");
     hydrateNames(modal);
-    let closed = false;
-    const close = () => {
-      if (closed)
-        return;
-      closed = true;
-      modal.classList.remove("visible");
-      backdrop.classList.remove("visible");
-      document.body.classList.remove("cm-zoom-open");
-      setTimeout(() => {
+    const layer = openLayer(
+      () => {
         modal.remove();
         backdrop.remove();
-      }, 240);
-    };
+        document.body.classList.remove("cm-zoom-open");
+      },
+      {
+        // Кнопку «←» система не анімує — анімацію виходу програємо самі.
+        animateOut: () => {
+          modal.classList.remove("visible");
+          backdrop.classList.remove("visible");
+        }
+      }
+    );
+    const close = () => closeLayer(layer, { animate: 240 });
     backdrop.addEventListener("click", close);
     wireAdModalChrome(modal, close);
-    attachAdSheetSwipe(modal, backdrop, close);
     requestAnimationFrame(() => {
       backdrop.classList.add("visible");
       modal.classList.add("visible");
@@ -7035,6 +6955,7 @@
     let activeNote = null;
     let activeModal = null;
     let activeBackdrop = null;
+    let activeLayer = null;
     let isAnimating = false;
     const DURATION = 240;
     const expand = (note2) => {
@@ -7061,7 +6982,23 @@
         }, { capture: true });
       });
       wireAdModalChrome(modal, collapse);
-      attachAdSheetSwipe(modal, backdrop, () => collapse());
+      activeLayer = openLayer(
+        () => {
+          modal.remove();
+          backdrop.remove();
+          note2.classList.remove("cm-board-note--hidden");
+          document.body.classList.remove("cm-zoom-open");
+          activeNote = null;
+          activeModal = null;
+          activeBackdrop = null;
+          activeLayer = null;
+          isAnimating = false;
+        },
+        { animateOut: () => {
+          modal.classList.remove("visible");
+          backdrop.classList.remove("visible");
+        } }
+      );
       activeNote = note2;
       activeModal = modal;
       note2.classList.add("cm-board-note--hidden");
@@ -7074,24 +7011,10 @@
       }, DURATION);
     };
     const collapse = () => {
-      if (!activeNote || !activeModal || isAnimating)
+      if (!activeLayer || isAnimating)
         return;
       isAnimating = true;
-      const note2 = activeNote;
-      const modal = activeModal;
-      const backdrop = activeBackdrop;
-      modal.classList.remove("visible");
-      backdrop?.classList.remove("visible");
-      note2.classList.remove("cm-board-note--hidden");
-      document.body.classList.remove("cm-zoom-open");
-      setTimeout(() => {
-        modal.remove();
-        backdrop?.remove();
-        activeNote = null;
-        activeModal = null;
-        activeBackdrop = null;
-        isAnimating = false;
-      }, DURATION);
+      closeLayer(activeLayer, { animate: DURATION });
     };
     root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note2) => {
       note2.addEventListener("click", (e) => {

@@ -205,24 +205,20 @@ ok('З ФОТО + довгий опис: екран суцільний (конт
    hLong.протекло === 0, `протекло ${hLong.протекло}`);
 await closeAd();
 
-// ── 4. ЖЕСТ ОДНАКОВИЙ НА ОБОХ ЕКРАНАХ ───────────────────────────────────────
-// Скарга Вови «немає різниці» стосується і жесту: до цього заходу екран без фото
-// закривався вниз, а з фото — вбік. Тепер обидва — вбік, і `asPage` як поняття зникло.
-const cdp = await ctx.newCDPSession(p);
-const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', {
-  type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
-const swipeFromEdge = async () => {
-  await touch('touchStart', 8, 420);
-  for (let x = 40; x <= 260; x += 40) { await touch('touchMove', x, 424); await p.waitForTimeout(16); }
-  await touch('touchEnd', 260, 424);
-  await p.waitForTimeout(600);
-};
+// ── 4. ЗАКРИТТЯ ОДНАКОВЕ НА ОБОХ ЕКРАНАХ ────────────────────────────────────
+// Скарга Вови «немає різниці» стосується і закриття. Але з 02.08 (шостий захід) його
+// робить не наш жест, а СИСТЕМНИЙ жест iPhone через запис в історії — той самий
+// механізм, що тримає екран спільноти у «Стрічці» (`core/layers.js`). Власний свайп
+// у тій самій смузі працював ОДНОЧАСНО із системним і давав подвійний рух («дьоргається»).
+// У Chromium системного жесту немає — його рівно замінює `history.back()`, бо весь
+// механізм тримається саме на записі в історії.
 for (const [id, назва] of [[902, 'БЕЗ ФОТО'], [903, 'З ФОТО']]) {
-  await openAd(id);
-  await swipeFromEdge();
-  ok(`свайп від лівого краю закриває ${назва}`,
-     await p.evaluate(() => !document.querySelector('.cm-board-modal-note')));
-  await closeAd();
+  ok(`${назва}: екран відкрився для перевірки закриття`, await openAd(id));
+  const hOpen = await p.evaluate(() => history.length);
+  await p.goBack();
+  await p.waitForTimeout(500);
+  ok(`${назва}: «назад» закриває — однаково на обох екранах`,
+     await p.evaluate(() => !document.querySelector('.cm-board-modal-note')), `історія ${hOpen}`);
 }
 
 // ── 5. Сторож DRY: розгалуження на «є фото / немає фото» не мусить відроджуватись ──
