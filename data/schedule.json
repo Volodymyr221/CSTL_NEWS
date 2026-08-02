@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "02.08.2026",
-  "updatedTime": "02:32",
+  "updatedTime": "06:20",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -10512,8 +10512,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -11266,7 +11266,7 @@
         }
       ],
       "fetchedAt": "02.08.2026",
-      "fetchedTime": "02:32"
+      "fetchedTime": "06:20"
     },
     "2026-08-03": {
       "routes": [
@@ -12872,7 +12872,7 @@
         }
       ],
       "fetchedAt": "02.08.2026",
-      "fetchedTime": "02:32"
+      "fetchedTime": "06:20"
     },
     "2026-08-04": {
       "routes": [
