@@ -79,11 +79,11 @@ const probe = async label => {
 };
 
 await openAd(902); await probe('БЕЗ ФОТО (КУПЛЮ МОТОЦИКЛ) — скрін IMG_3814');
-await p.screenshot({ path: '/tmp/nophoto.png' });
+await p.screenshot({ path: '/tmp/after-nophoto.png' });
 await closeAd();
 
 await openAd(903); await probe('З ФОТО, але КОРОТКИЙ опис');
-await p.screenshot({ path: '/tmp/short-photo.png' });
+await p.screenshot({ path: '/tmp/after-shortphoto.png' });
 await closeAd();
 
 await openAd(901); await probe('З ФОТО, довгий опис (те, що Вова прийняв)');
