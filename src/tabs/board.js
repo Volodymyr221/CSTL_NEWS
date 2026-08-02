@@ -25,10 +25,10 @@ import {
   fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
-// ⚠️ `centeredRemaining` більше не імпортується: модалка оголошення — аркуш знизу, і
-// відстань до краю рахується з її власної висоти (`sheetRemaining`). Саме залишений
-// імпорт центрованої математики й тримав живою другу, зламану копію свайпу.
-import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+// ⚠️ `core/sheet-motion.js` більше не імпортується ВЗАГАЛІ: у модалки оголошення немає
+// власного жесту закриття. Її закриває системний жест iPhone через історію браузера —
+// той самий механізм, що й екран спільноти у «Стрічці» (див. `core/layers.js`).
+import { openLayer, closeLayer } from '../core/layers.js';
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
@@ -432,90 +432,30 @@ function wireAdModalChrome(modal, close) {
 // і щоразу висновок був однаковий. Правка «на місці» полагодила б симптом і лишила
 // корінь: наступна зміна геометрії знову зачепила б одну копію з двох.
 //
-// 🔴 02.08 (пʼятий захід) — ЖЕСТ ОДИН НА ОБИДВА ЕКРАНИ: СВАЙП ЗЛІВА.
+// 🔴 02.08 (шостий захід) — ВЛАСНОГО ЖЕСТУ БІЛЬШЕ НЕМАЄ ВЗАГАЛІ.
 //
-// Четвертий захід робив жест різним: з фото — свайп ЗЛІВА, без фото — свайп УНИЗ, бо
-// екран без фото тоді ВИГЛЯДАВ аркушем зі смужкою-ручкою. Пʼятий захід прибрав саму
-// причину: оголошення тепер сторінка в обох випадках, смужки немає ніде. Слово Вови:
-// «немає різниці» — воно і про вигляд, і про те, як екран закривається.
+// Скарга Вови (IMG_3816): «закриття сторінки свайпом зробити таке, як вихід зі
+// спільноти на вкладці Стрічка — воно має бути як в iOS, а зараз дьоргається».
 //
-// 🔑 ЩО ЦЕ ЗАБИРАЄ РАЗОМ ІЗ СОБОЮ. Вертикальний жест поверх нативного скролера — це
-// суперечка за вертикаль із браузером, і саме з неї виросли два баги: ривки прокрутки
-// й зависла на пів екрана модалка (IMG_3810). Горизонталь браузеру не потрібна
-// (горизонтального переповнення немає), тож вона дістається нам без боротьби.
-// Тобто один жест — це не спрощення заради краси, а мінус цілий клас багів.
+// 🔑 КОРІНЬ, і він уже був описаний у проєкті ще 24.07 (`core/layers.js`, баги
+// IMG_3557 / IMG_3559): жест від лівого краю на iPhone — СИСТЕМНИЙ. Скасувати його з
+// коду неможливо, `preventDefault()` на нього не діє. Тому наш свайп у тій самій смузі
+// не замінював системний, а працював ОДНОЧАСНО з ним: iOS тягла всю сторінку й малювала
+// свою анімацію переходу, а ми тим часом тягли модалку своїм `translateX`. Два рухи на
+// один палець — це і є «дьоргається».
 //
-// ⚠️ УСІ СЛУХАЧІ ПАСИВНІ, `preventDefault()` НЕМАЄ. Вертикаль віддана браузеру через
-// `touch-action: pan-y` — саме її перехоплення й давало ривки, які Вова тричі бачив.
-function attachAdSheetSwipe(modal, backdrop, onDismiss) {
-  const scroller = modal.querySelector('.cm-ad-scroll');
-  if (!scroller) return;
-
-  const drag = createDragTracker();
-  const fade = createBackdropFade(backdrop);
-  const EDGE = 32;             // смуга від лівого краю, з якої починається жест «назад»
-  const DIST = 90;             // поріг «дотягнув повільно»
-  let sX = 0, sY = 0, d = 0, axis = null, armed = false;
-
-  // Скидання БЕЗУМОВНЕ і в одному місці: будь-який вихід — звичайний, перерваний
-  // системою, збитий другим пальцем — проходить через нього. Саме брак такого місця
-  // і лишав модалку висіти посеред екрана.
-  const reset = () => {
-    d = 0; axis = null; armed = false;
-    modal.style.transition = '';
-    modal.style.transform = '';
-  };
-
-  modal.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) { reset(); return; }
-    sX = e.touches[0].clientX; sY = e.touches[0].clientY;
-    d = 0; axis = null;
-    // Жест починається лише від ЛІВОГО КРАЮ — інакше він відбирав би горизонтальне
-    // гортання галереї фото й ловив би випадкові дотики по тексту.
-    armed = sX <= EDGE;
-    drag.start(sX);
-  }, { passive: true });
-
-  modal.addEventListener('touchmove', e => {
-    if (!armed || e.touches.length > 1) return;
-    const x = e.touches[0].clientX, y = e.touches[0].clientY;
-    const dx = x - sX, dy = y - sY;
-    if (axis === null) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;   // ще тремтіння, не рух
-      if (Math.abs(dx) <= Math.abs(dy)) { armed = false; return; }  // вертикаль — не наша
-      if (dx <= 0) { armed = false; return; }                       // не той бік
-      axis = 'x';
-      modal.style.transition = 'none';
-    }
-    d = Math.max(0, dx);
-    modal.style.transform = `translateX(${d}px)`;
-    fade?.track(d / window.innerWidth);
-    drag.move(x);
-  }, { passive: true });
-
-  const finish = () => {
-    if (!axis || !d) { reset(); return; }
-    const moved = d;
-    const v = drag.velocity;
-    d = 0; axis = null; armed = false;
-    const full = window.innerWidth;
-    // Летить далі за пальцем, а не замирає: перевірена математика з sheet-motion.
-    finishSwipe({
-      panel: modal, dy: moved, velocity: v,
-      remaining: Math.max(full - moved, 1),
-      dismissTransform: `translateX(${full}px)`,
-      onDismiss, backdrop: fade,
-    });
-    // ⚠️ Якщо не закрили — `finishSwipe` сам поверне `transform` у порожній рядок.
-    // Але прибрати `transition` після доїзду мусимо ми, інакше наступне відкриття
-    // успадкує чужу тривалість.
-    if (moved <= DIST && Math.abs(v) <= 0.45) setTimeout(() => { modal.style.transition = ''; }, 260);
-  };
-  modal.addEventListener('touchend', finish, { passive: true });
-  // ⚠️ `touchcancel` теж завершує жест. Без нього системне переривання (вхідний дзвінок,
-  // жест «назад» iOS, шторка сповіщень) лишало б модалку ЗАВИСЛОЮ посеред екрана.
-  modal.addEventListener('touchcancel', finish, { passive: true });
-}
+// Екран спільноти у «Стрічці» цієї хвороби не має саме тому, що ВЛАСНОГО СВАЙПУ ТАМ
+// НЕМАЄ: шар кладе запис в історію, системний жест зʼїдає цей запис, `popstate`
+// закриває верхній шар. Один рух — одна дія.
+//
+// Тобто це пʼятий у проєкті випадок «двох копій»: готове рішення лежало поруч, а я
+// написав своє. Лікування — не правка жесту, а його видалення: `openLayer`/`closeLayer`
+// з `core/layers.js` роблять усе, і поводиться екран оголошення тепер рівно так само,
+// як екран спільноти.
+//
+// ⚠️ НЕ ПОВЕРТАТИ сюди `touchstart/touchmove` заради «плавнішого» закриття — саме це
+// вже двічі коштувало регресу. Анімація виходу лишається тільки для КНОПКИ «←»
+// (`animateOut`), бо натискання кнопки система не анімує.
 
 // 🔴 02.08 — ТРИ ШАРИ ЗАМІСТЬ ОДНОГО (макет, схвалений Вовою).
 //
@@ -585,11 +525,16 @@ function renderAdModal(p) {
 // ⚠️ Кнопок сюди НЕ дублюємо: круглі кнопки над фото лишаються видимими навіть у
 // піднятому стані — саме тому верхня точка фіксації рахується від їхнього низу, а не
 // «на око» (див. `--ad-up-y` у CSS).
+// ⚠️ 02.08 — ЧІП ЗВІДСИ ПРИБРАНО. Скарга Вови (IMG_3816): «назва повністю не влазить,
+// чіп знаходиться там і іконки повернення назад». Арифметика: смуга 390px мінус 96px
+// відступу зліва і 108px справа = 186px, з них чіп забирав ще ~70 — назві лишалось
+// ~116px, тобто «ПРОДАМ БУДИН…». Компактна шапка існує рівно для однієї відповіді —
+// «що я зараз читаю», і цю відповідь дає НАЗВА. Категорію людина щойно бачила у великій
+// шапці, повторювати її ціною обрізаної назви — обмін навпаки.
 function renderAdMiniHead(p) {
   if (!p.title) return '';
   return `
     <div class="cm-ad-mini" aria-hidden="true">
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
       <span class="cm-ad-mini-title">${escapeHtml(p.title)}</span>
     </div>`;
 }
@@ -1576,19 +1521,23 @@ export function openAdModalStandalone(post) {
   document.body.classList.add('cm-zoom-open');
   hydrateNames(modal);   // живе імʼя автора оголошення за uid
 
-  let closed = false;
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    modal.classList.remove('visible');
-    backdrop.classList.remove('visible');
-    document.body.classList.remove('cm-zoom-open');
-    setTimeout(() => { modal.remove(); backdrop.remove(); }, 240);
-  };
+  // Шар в історії: системний жест «назад» зʼїдає саме цей запис і закриває САМЕ цей
+  // екран. Той самий механізм, що тримає екран спільноти у «Стрічці».
+  const layer = openLayer(
+    () => {
+      modal.remove();
+      backdrop.remove();
+      document.body.classList.remove('cm-zoom-open');
+    },
+    {
+      // Кнопку «←» система не анімує — анімацію виходу програємо самі.
+      animateOut: () => { modal.classList.remove('visible'); backdrop.classList.remove('visible'); },
+    },
+  );
+  const close = () => closeLayer(layer, { animate: 240 });
   backdrop.addEventListener('click', close);
 
   wireAdModalChrome(modal, close);        // кнопки, скарга, автор, галерея, лічильник фото
-  attachAdSheetSwipe(modal, backdrop, close);   // свайп вниз → закрити (спільний з зумом Дошки)
 
   requestAnimationFrame(() => { backdrop.classList.add('visible'); modal.classList.add('visible'); });
 }
@@ -1599,6 +1548,7 @@ function initBoardNoteExpand(root) {
   let activeNote = null;
   let activeModal = null;
   let activeBackdrop = null;
+  let activeLayer = null;
   let isAnimating = false;
   const DURATION = 240;
 
@@ -1657,10 +1607,22 @@ function initBoardNoteExpand(root) {
     // ⚠️ Урок на майбутнє: у JS «неоголошена змінна» не завжди помилка — глобальні імена
     // вікна (`close`, `name`, `status`, `origin`, `length`) мовчки підміняють собою опечатку.
     wireAdModalChrome(modal, collapse);     // кнопки, скарга, автор, галерея, лічильник фото
-    // 🔴 02.08 — ТОЙ САМИЙ свайп, що й у `openAdModalStandalone`. До цього тут жила
-    // ДРУГА копія жесту з математикою центрованої картки (`translate(-50%, …)`) —
-    // саме вона й давала «скаче в різні боки». Історія і числа — у шапці функції.
-    attachAdSheetSwipe(modal, backdrop, () => collapse());
+
+    // 🔴 02.08 — ВЛАСНОГО СВАЙПУ ТУТ БІЛЬШЕ НЕМАЄ. Замість нього шар в історії: системний
+    // жест iPhone зʼїдає цей запис і сам закриває екран, як у спільноті на «Стрічці».
+    // Наш свайп у тій самій смузі працював ОДНОЧАСНО з системним — це і було
+    // «дьоргається» (IMG_3816). Скасувати системний жест із коду неможливо.
+    activeLayer = openLayer(
+      () => {
+        modal.remove();
+        backdrop.remove();
+        note.classList.remove('cm-board-note--hidden');
+        document.body.classList.remove('cm-zoom-open');
+        activeNote = null; activeModal = null; activeBackdrop = null; activeLayer = null;
+        isAnimating = false;
+      },
+      { animateOut: () => { modal.classList.remove('visible'); backdrop.classList.remove('visible'); } },
+    );
 
     activeNote = note;
     activeModal = modal;
@@ -1675,27 +1637,15 @@ function initBoardNoteExpand(root) {
     setTimeout(() => { isAnimating = false; }, DURATION);
   };
 
+  // Закриття З ІНТЕРФЕЙСУ (кнопка «←», тап у затемнення, зміна вкладки). Іде через
+  // `closeLayer`, а не напряму: інакше в історії лишився б порожній запис і наступний
+  // системний жест «назад» зʼїв би його вхолосту.
+  // ⚠️ Саме прибирання з DOM — в `openLayer(...)` вище, В ОДНОМУ місці: туди приходить
+  // і кнопка, і системний жест. Двох шляхів прибирання бути не повинно.
   const collapse = () => {
-    if (!activeNote || !activeModal || isAnimating) return;
+    if (!activeLayer || isAnimating) return;
     isAnimating = true;
-
-    const note = activeNote;
-    const modal = activeModal;
-    const backdrop = activeBackdrop;
-
-    modal.classList.remove('visible');
-    backdrop?.classList.remove('visible');
-    note.classList.remove('cm-board-note--hidden');
-    document.body.classList.remove('cm-zoom-open');   // розблоковуємо скрол фону
-
-    setTimeout(() => {
-      modal.remove();
-      backdrop?.remove();          // затемнення тепер наше — прибираємо разом із модалкою
-      activeNote = null;
-      activeModal = null;
-      activeBackdrop = null;
-      isAnimating = false;
-    }, DURATION);
+    closeLayer(activeLayer, { animate: DURATION });
   };
 
   // Тільки cm-board-note (стікери) розгортаються — chat/greeting не клонуються

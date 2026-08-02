@@ -89,4 +89,29 @@ await closeAd();
 await openAd(901); await probe('З ФОТО, довгий опис (те, що Вова прийняв)');
 await closeAd();
 
+
+// ── Компактна шапка: чи кнопки в межах смуги і чи влазить назва (IMG_3816) ───
+await openAd(901);
+await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); if (s) s.scrollTop = 600; });
+await p.waitForTimeout(400);
+const mini = await p.evaluate(() => {
+  const q = s => document.querySelector(s), rc = e => e ? e.getBoundingClientRect() : null;
+  const bar = q('.cm-ad-mini'), t = q('.cm-ad-mini-title');
+  const btns = [...document.querySelectorAll('.cm-ad-top .cm-ad-round')].map(b => rc(b));
+  const br = rc(bar);
+  return {
+    смуга_низ: br ? Math.round(br.bottom) : null,
+    кнопки_низ: btns.length ? Math.round(Math.max(...btns.map(r => r.bottom))) : null,
+    вилазять_на: (br && btns.length) ? Math.round(Math.max(...btns.map(r => r.bottom)) - br.bottom) : null,
+    ширина_назви: t ? Math.round(rc(t).width) : null,
+    назва_обрізана: t ? t.scrollWidth > t.clientWidth + 1 : null,
+    видимий_кружечок: btns.length ? Math.round(btns[0].width) : null,
+
+  };
+});
+console.log('\n### КОМПАКТНА ШАПКА');
+for (const [k, v] of Object.entries(mini)) console.log('  ' + k.padEnd(20), v);
+await p.screenshot({ path: '/tmp/after-mini.png' });
+await closeAd();
+
 await b.close(); stop();
