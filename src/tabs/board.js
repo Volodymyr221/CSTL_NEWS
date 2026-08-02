@@ -344,12 +344,24 @@ function wireAdModalChrome(modal, close) {
   // на «що це», тому компактна шапка заступає саме її.
   const headEl = modal.querySelector('.cm-ad-title') || modal.querySelector('.cm-ad-head');
   if (sheetEl && scrollEl && headEl) {
-    const syncMini = () => {
-      const gone = headEl.getBoundingClientRect().bottom <= scrollEl.getBoundingClientRect().top + 4;
-      sheetEl.classList.toggle('cm-ad-sheet--mini', gone);
+    // 🔴 ПОРІГ РАХУЄМО ОДИН РАЗ, а не щокадру (друга причина ривків).
+    // Було: два `getBoundingClientRect()` на КОЖНУ подію прокрутки. Читання геометрії
+    // під час прокрутки змушує браузер перерахувати розкладку негайно — тобто найдорожча
+    // операція виконувалась саме тоді, коли треба малювати кадри. Тепер під час прокрутки
+    // читається лише `scrollTop` (просте число, розкладку не чіпає).
+    let threshold = 0;
+    const remeasure = () => {
+      // Обидва зсуви — від того самого предка (`.cm-ad-sheet`, він єдиний позиційований),
+      // тому різниця і є «скільки треба прокрутити, щоб назва пішла за верх».
+      threshold = Math.max(0, headEl.offsetTop + headEl.offsetHeight - scrollEl.offsetTop);
     };
-    scrollEl.addEventListener('scroll', () => requestAnimationFrame(syncMini), { passive: true });
-    syncMini();
+    const syncMini = () => {
+      sheetEl.classList.toggle('cm-ad-sheet--mini', scrollEl.scrollTop >= threshold);
+    };
+    scrollEl.addEventListener('scroll', syncMini, { passive: true });
+    window.addEventListener('resize', () => { remeasure(); syncMini(); }, { passive: true });
+    // Після вставки в документ: до неї `offsetTop` порожній (урок 28.07 про `wireClamps`).
+    requestAnimationFrame(() => { remeasure(); syncMini(); });
   }
 
   // ── Галерея фото: тап → повний екран, крапки й лічильник «1 / N» при гортанні ──
@@ -432,27 +444,32 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   // Положення беремо з ЖИВИХ стилів, а не з копії чисел у JS: обидва пороги описані
   // в CSS (`--ad-init-y` / `--ad-up-y`) і залежать від safe-area, тобто від пристрою.
   // Друга копія тут неминуче б колись розійшлась із першою — у проєкті це вже було тричі.
-  const yOf = name => {
-    const v = getComputedStyle(sheet).getPropertyValue(name).trim();
-    if (v.endsWith('px')) return parseFloat(v);
-    if (v.endsWith('dvh') || v.endsWith('vh')) return parseFloat(v) / 100 * window.innerHeight;
-    return parseFloat(v) || 0;
-  };
+  //
+  // 🔴 МІРЯЄМО ОДИН РАЗ, а не на кожен дотик (скарга Вови «все ривками»).
+  // Було: `measure()` стояв у `touchstart` — і кожен дотик двічі перемикав клас та двічі
+  // читав `getBoundingClientRect()`. Кожне таке читання після зміни класу змушує браузер
+  // ПЕРЕРАХУВАТИ РОЗКЛАДКУ негайно (forced synchronous layout). Тобто найдорожча
+  // операція виконувалась рівно в мить, коли палець торкається екрана.
   let yInit = 0, yUp = 0;
   const measure = () => {
-    // `--ad-up-y` містить `max(...)`, який `getComputedStyle` віддає вже порахованим
-    // числом лише на самому елементі — тому міряємо фактичний зсув у кожному стані.
     const had = sheet.classList.contains('cm-ad-sheet--up');
+    const prevTr = sheet.style.transition;
+    sheet.style.transition = 'none';
     sheet.classList.remove('cm-ad-sheet--up');
-    yInit = yOf('--ad-init-y') || sheet.getBoundingClientRect().top;
+    yInit = sheet.getBoundingClientRect().top;
     sheet.classList.add('cm-ad-sheet--up');
     yUp = sheet.getBoundingClientRect().top;
     sheet.classList.toggle('cm-ad-sheet--up', had);
+    sheet.style.transition = prevTr;
   };
+  measure();
+  // Поворот екрана / зміна висоти вікна — єдиний привід переміряти.
+  window.addEventListener('resize', measure, { passive: true });
 
   let up = false;                        // поточне положення аркуша
-  let sY = 0, sX = 0, mode = null;       // mode: 'sheet' | 'screen' | null
+  let sY = 0, sX = 0, mode = null;       // mode: 'sheet' | 'screen' | 'scroll' | 'gallery'
   let base = 0;                          // зсув аркуша на момент початку жесту
+  let atTop = true;                      // чи був вміст на початку, коли палець торкнувся
 
   const setSheetY = y => { sheet.style.transform = `translateY(${y}px)`; };
   // Затемнення фото наростає в міру того, як аркуш його накриває. Одна прозорість на
@@ -473,16 +490,32 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
     if (!toUp) scroller.scrollTop = 0;
   };
 
+  // 🔴 ЖОДЕН СЛУХАЧ ТУТ НЕ `passive: false` І НІДЕ НЕМАЄ `preventDefault()`.
+  //
+  // ЦЕ Й БУЛА ПРИЧИНА РИВКІВ (скарга Вови «все ривками, блок опису скролиться ривками»).
+  // Було: `touchmove` на всій модалці з `{ passive: false }`. Такий слухач стоїть НАД
+  // областю прокрутки, і браузер через нього ЗОБОВʼЯЗАНИЙ спитати JavaScript перед
+  // кожним кадром прокрутки — чи не скасують її. Тобто швидка прокрутка окремим потоком
+  // (та сама, що дає «айфонну» плавність) вимикається ЦІЛКОМ, навіть коли ми нічого не
+  // скасовуємо. Саме для цього у браузерах і завели `passive`.
+  //
+  // ЗАМІСТЬ ЦЬОГО — `touch-action` у CSS. Він каже браузеру наперед, що робити з рухом
+  // пальця, і робить це БЕЗ участі JavaScript:
+  //   нижнє положення → `touch-action: none` — прокручувати нема чого, увесь рух наш;
+  //   верхнє          → `touch-action: pan-y` — вміст прокручується РІДНОЮ прокруткою,
+  //                     а ми лише спостерігаємо і втручаємось, коли скрол у нулі.
+  // Наслідок: у стані читання між пальцем і текстом немає жодного рядка нашого коду.
   modal.addEventListener('touchstart', e => {
     if (e.touches.length > 1) { mode = null; return; }
     sY = e.touches[0].clientY; sX = e.touches[0].clientX;
     drag.start(sY);
-    // ⚠️ Плавність ВИМИКАЄМО ДО заміру: `measure()` на мить перемикає клас положення,
-    // і з увімкненим переходом це запустило б анімацію просто від дотику пальцем.
     sheet.style.transition = 'none';
     if (dim) dim.style.transition = 'none';
-    measure();
+    // ⚠️ `measure()` тут БІЛЬШЕ НЕМАЄ — він змушував браузер перерахувати розкладку
+    // рівно в мить дотику. Міряємо при відкритті й на поворот екрана.
     base = up ? yUp : yInit;
+    // Прокрутку читаємо ОДИН раз за жест: під час руху це дало б зайве читання щокадру.
+    atTop = scroller.scrollTop <= 0;
     mode = null;                          // напрямок ще не відомий — вирішимо на першому русі
   }, { passive: true });
 
@@ -496,20 +529,19 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { mode = 'gallery'; return; }
       if (Math.abs(dy) < 4) return;       // ще не рух, а тремтіння пальця
       if (fixed) {
-        // Без фото положення одне: униз — закриття, угору — звичайний скрол.
-        mode = dy > 0 && scroller.scrollTop <= 0 ? 'screen' : 'scroll';
+        // Без фото положення одне: униз від початку списку — закриття, решта — прокрутка.
+        mode = (dy > 0 && atTop) ? 'screen' : 'scroll';
       } else if (up) {
         // Аркуш угорі: униз ведемо його назад, але ЛИШЕ якщо вміст на початку —
         // інакше палець мусить прокручувати текст, а не складати картку.
-        mode = (dy > 0 && scroller.scrollTop <= 0) ? 'sheet' : 'scroll';
+        mode = (dy > 0 && atTop) ? 'sheet' : 'scroll';
       } else {
         // Аркуш унизу: угору — піднімаємо його, униз — закриваємо всю модалку.
         mode = dy < 0 ? 'sheet' : 'screen';
       }
     }
-    if (mode === 'gallery' || mode === 'scroll') return;
+    if (mode === 'gallery' || mode === 'scroll') return;   // рідна прокрутка, не заважаємо
 
-    e.preventDefault();
     if (mode === 'sheet') {
       // Межі жорсткі: вище верхнього і нижче стартового аркуш не йде.
       const y = Math.min(yInit, Math.max(yUp, base + dy));
@@ -520,7 +552,7 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
       else { modal.style.transform = 'translateY(0)'; fade?.track(0); }
     }
     drag.move(e.touches[0].clientY);
-  }, { passive: false });
+  }, { passive: true });
 
   const finish = e => {
     const m = mode; mode = null;

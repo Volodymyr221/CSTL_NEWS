@@ -6209,12 +6209,22 @@
     const scrollEl = modal.querySelector(".cm-board-modal-scrollarea");
     const headEl = modal.querySelector(".cm-ad-title") || modal.querySelector(".cm-ad-head");
     if (sheetEl && scrollEl && headEl) {
-      const syncMini = () => {
-        const gone = headEl.getBoundingClientRect().bottom <= scrollEl.getBoundingClientRect().top + 4;
-        sheetEl.classList.toggle("cm-ad-sheet--mini", gone);
+      let threshold = 0;
+      const remeasure = () => {
+        threshold = Math.max(0, headEl.offsetTop + headEl.offsetHeight - scrollEl.offsetTop);
       };
-      scrollEl.addEventListener("scroll", () => requestAnimationFrame(syncMini), { passive: true });
-      syncMini();
+      const syncMini = () => {
+        sheetEl.classList.toggle("cm-ad-sheet--mini", scrollEl.scrollTop >= threshold);
+      };
+      scrollEl.addEventListener("scroll", syncMini, { passive: true });
+      window.addEventListener("resize", () => {
+        remeasure();
+        syncMini();
+      }, { passive: true });
+      requestAnimationFrame(() => {
+        remeasure();
+        syncMini();
+      });
     }
     const gallery = modal.querySelector(".cm-board-modal-gallery");
     if (gallery) {
@@ -6246,26 +6256,24 @@
     const fixed = sheet.classList.contains("cm-ad-sheet--full");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
-    const yOf = (name) => {
-      const v = getComputedStyle(sheet).getPropertyValue(name).trim();
-      if (v.endsWith("px"))
-        return parseFloat(v);
-      if (v.endsWith("dvh") || v.endsWith("vh"))
-        return parseFloat(v) / 100 * window.innerHeight;
-      return parseFloat(v) || 0;
-    };
     let yInit = 0, yUp = 0;
     const measure = () => {
       const had = sheet.classList.contains("cm-ad-sheet--up");
+      const prevTr = sheet.style.transition;
+      sheet.style.transition = "none";
       sheet.classList.remove("cm-ad-sheet--up");
-      yInit = yOf("--ad-init-y") || sheet.getBoundingClientRect().top;
+      yInit = sheet.getBoundingClientRect().top;
       sheet.classList.add("cm-ad-sheet--up");
       yUp = sheet.getBoundingClientRect().top;
       sheet.classList.toggle("cm-ad-sheet--up", had);
+      sheet.style.transition = prevTr;
     };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
     let up = false;
     let sY = 0, sX = 0, mode = null;
     let base = 0;
+    let atTop = true;
     const setSheetY = (y) => {
       sheet.style.transform = `translateY(${y}px)`;
     };
@@ -6298,8 +6306,8 @@
       sheet.style.transition = "none";
       if (dim)
         dim.style.transition = "none";
-      measure();
       base = up ? yUp : yInit;
+      atTop = scroller.scrollTop <= 0;
       mode = null;
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
@@ -6317,16 +6325,15 @@
         if (Math.abs(dy) < 4)
           return;
         if (fixed) {
-          mode = dy > 0 && scroller.scrollTop <= 0 ? "screen" : "scroll";
+          mode = dy > 0 && atTop ? "screen" : "scroll";
         } else if (up) {
-          mode = dy > 0 && scroller.scrollTop <= 0 ? "sheet" : "scroll";
+          mode = dy > 0 && atTop ? "sheet" : "scroll";
         } else {
           mode = dy < 0 ? "sheet" : "screen";
         }
       }
       if (mode === "gallery" || mode === "scroll")
         return;
-      e.preventDefault();
       if (mode === "sheet") {
         const y = Math.min(yInit, Math.max(yUp, base + dy));
         setSheetY(y);
@@ -6342,7 +6349,7 @@
         }
       }
       drag.move(e.touches[0].clientY);
-    }, { passive: false });
+    }, { passive: true });
     const finish2 = (e) => {
       const m = mode;
       mode = null;
