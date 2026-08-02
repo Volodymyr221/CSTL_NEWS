@@ -6294,42 +6294,59 @@
   }
   function renderAdModal(p) {
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
+    const hasHero2 = photos.length > 0;
     return `
-    ${renderAdHero(p, photos)}
-    <div class="cm-board-modal-scrollarea">
-      ${photos.length ? "" : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
-      <div class="cm-ad-body">
-        ${renderAdHead(p, photos.length > 0)}
-        ${renderAdMeta(p)}
-        <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
-        ${renderAdSpecs(p)}
-        ${renderAdAuthor(p)}
-        ${renderAdActions(p)}
-        ${renderAdSafety()}
+    ${renderAdPhotoLayer(p, photos)}
+    <div class="cm-ad-sheet${hasHero2 ? "" : " cm-ad-sheet--full"}">
+      <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
+      ${hasHero2 ? "" : renderAdTopActions(p, false)}
+      <div class="cm-board-modal-scrollarea">
+        <div class="cm-ad-body">
+          ${renderAdHead(p)}
+          ${renderAdMeta(p)}
+          <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
+          ${renderAdSpecs(p)}
+          ${renderAdAuthor(p)}
+          ${renderAdSafety()}
+          ${renderAdReport()}
+        </div>
       </div>
+      ${renderAdBottomBar(p)}
     </div>
-    ${renderAdBottomBar(p)}
   `;
   }
-  function renderAdHero(p, photos) {
+  function renderAdPhotoLayer(p, photos) {
     if (!photos.length)
       return "";
     const multi = photos.length > 1;
     return `
-    <div class="cm-ad-hero">
+    <div class="cm-ad-photo">
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
-      <div class="cm-ad-hero-top">
-        <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${BACK_ICON_SVG}</button>
-      </div>
+      ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
       <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
-      <div class="cm-board-modal-bar cm-ad-bar-over"><span class="cm-board-modal-grip"></span></div>
     </div>`;
   }
-  function renderAdHead(p, hasHero) {
+  function renderAdTopActions(p, overPhoto) {
+    const saved = isSaved(p.id);
+    return `
+    <div class="cm-ad-top${overPhoto ? " cm-ad-top--over" : ""}">
+      <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${overPhoto ? BACK_ICON_SVG : "\u2715"}</button>
+      <div class="cm-ad-top-right">
+        <button class="cm-ad-round" type="button" data-share-board
+                data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
+                data-share-url="${escapeHtml(deepLink("board", p.id))}"
+                aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${ICONS.share}</button>
+        <button class="cm-ad-round${saved ? " cm-ad-round--on" : ""}" type="button" data-save-id="${p.id}"
+                aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}</button>
+      </div>
+    </div>`;
+  }
+  function renderAdHead(p) {
     const t = formatPrice(p.price, p.currency, p.price_negotiable);
     const haggle = p.price_negotiable && p.price != null;
     return `
@@ -6370,17 +6387,11 @@
       ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">\u203A</span>' : ""}
     </div>`;
   }
-  function renderAdActions(p) {
+  function renderAdReport() {
     return `
-    <div class="cm-ad-actions">
-      <button class="cm-ad-act" type="button" data-share-board
-              data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
-              data-share-url="${escapeHtml(deepLink("board", p.id))}">${ICONS.share}<span>\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F</span></button>
-      <button class="cm-ad-act${isSaved(p.id) ? " cm-ad-act--on" : ""}" type="button" data-save-id="${p.id}"
-              aria-label="${isSaved(p.id) ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-        ${isSaved(p.id) ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}<span>\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</span></button>
-      <button class="cm-ad-act cm-ad-act--warn" type="button" data-ad-report>${REPORT_ICON_SVG}<span>\u0421\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044F</span></button>
-    </div>`;
+    <button class="cm-ad-report" type="button" data-ad-report>
+      ${REPORT_ICON_SVG}<span>\u041F\u043E\u0441\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044F \u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+    </button>`;
   }
   function renderAdSafety() {
     return `
@@ -6399,18 +6410,6 @@
       ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : ""}
       <button class="cm-ad-write${tel ? "" : " cm-ad-write--solo"}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
     </div>`;
-  }
-  function attachSubheadShadow(modal) {
-    const scroller = modal.querySelector(".cm-board-modal-scrollarea");
-    const head = modal.querySelector(".cm-board-modal-subhead");
-    if (!scroller || !head)
-      return;
-    const sync = () => {
-      const reachedTop = head.getBoundingClientRect().top - scroller.getBoundingClientRect().top <= 1;
-      head.classList.toggle("is-stuck", scroller.scrollTop > 2 && reachedTop);
-    };
-    sync();
-    scroller.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
   }
   function openPhotoLightbox2(photos, startIdx) {
     if (!photos || !photos.length)
@@ -6953,7 +6952,6 @@
     document.body.appendChild(modal);
     document.body.classList.add("cm-zoom-open");
     hydrateNames(modal);
-    attachSubheadShadow(modal);
     let closed = false;
     const close = () => {
       if (closed)
@@ -6997,7 +6995,6 @@
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
       hydrateNames(modal);
-      attachSubheadShadow(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();

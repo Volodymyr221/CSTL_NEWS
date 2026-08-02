@@ -117,8 +117,7 @@ function renderPrice(p) {
 //     перемістити на місце імені, а імʼя забрати з картки, залишити тільки в модалці».
 //     Причина продуктова: у стрічці оголошень людині важливо ДЕ, а не ХТО.
 //   • МОДАЛКА — імʼя автора, як було. Локацію там НЕ повторюємо: у модалці вона вже
-//     стоїть у липкій шапці (`renderAdModal` → `.cm-board-modal-subhead`), і другий
-//     такий самий рядок був би дублем.
+//     стоїть окремим рядком (`renderAdMeta`), і другий такий самий був би дублем.
 function renderCardFoot(p, { actions = false } = {}) {
   const tel = actions ? phoneOf(p) : '';
   return `
@@ -445,53 +444,109 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   modal.addEventListener('touchcancel', finish, { passive: true });
 }
 
+// 🔴 02.08 — ТРИ ШАРИ ЗАМІСТЬ ОДНОГО (макет, схвалений Вовою).
+//
+// ЩО БУЛО. Усе лежало в ОДНОМУ аркуші: фото було просто його першим блоком. Через це
+// аркуш обрізав фото своїми верхніми кутами, і фото починалось не з верху екрана, а
+// там, де починався аркуш. Вова: «фотографія прикріплена до верху… блок опису
+// заокругленими кутами… блок подзвонити-написати теж заокруглений» — це три наслідки
+// однієї різниці, а не три окремі зауваження.
+//
+// ЯК СТАЛО:
+//   шар 1 `.cm-ad-photo` — фото від САМОГО верху екрана, на всю ширину, БЕЗ заокруглень;
+//   шар 2 `.cm-ad-sheet` — білий аркуш НАЇЖДЖАЄ на фото, радіус лише верхніх кутів;
+//   шар 3 `.cm-ad-bottom` — панель дій окремим блоком із власним заокругленням і тінню.
+//
+// 🔑 ЧОМУ ВСЕ ЛЕЖИТЬ В ОДНОМУ КОНТЕЙНЕРІ НА ВЕСЬ ЕКРАН, А НЕ ДВОМА ЕЛЕМЕНТАМИ:
+// свайп рухає КОНТЕЙНЕР, тож фото й аркуш їдуть як одне ціле. Якби вони були двома
+// незалежними елементами, кожен потребував би власної анімації — і будь-яка розбіжність
+// між ними читалась би оком як «розʼїжджається». Заразом «скільки лишилось до
+// зникнення» стає просто висотою екрана, і переплутати геометрію (з чого й виріс баг
+// «скаче в різні боки») більше нема де.
+//
+// ⚠️ Фото НЕ прокручується разом з описом — воно лишається на місці, прокручується
+// тільки аркуш. Скрол фото «під аркуш» додав би третій жест поверх свайпу-закриття й
+// горизонтального гортання галереї; конфлікт жестів у цьому проєкті вже коштував
+// регресу (HOT_RULES №10).
 function renderAdModal(p) {
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
+  const hasHero = photos.length > 0;
   return `
-    ${renderAdHero(p, photos)}
-    <div class="cm-board-modal-scrollarea">
-      ${photos.length ? '' : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
-      <div class="cm-ad-body">
-        ${renderAdHead(p, photos.length > 0)}
-        ${renderAdMeta(p)}
-        <p class="cm-ad-text">${escapeHtml(p.text || '')}</p>
-        ${renderAdSpecs(p)}
-        ${renderAdAuthor(p)}
-        ${renderAdActions(p)}
-        ${renderAdSafety()}
+    ${renderAdPhotoLayer(p, photos)}
+    <div class="cm-ad-sheet${hasHero ? '' : ' cm-ad-sheet--full'}">
+      <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
+      ${hasHero ? '' : renderAdTopActions(p, false)}
+      <div class="cm-board-modal-scrollarea">
+        <div class="cm-ad-body">
+          ${renderAdHead(p)}
+          ${renderAdMeta(p)}
+          <p class="cm-ad-text">${escapeHtml(p.text || '')}</p>
+          ${renderAdSpecs(p)}
+          ${renderAdAuthor(p)}
+          ${renderAdSafety()}
+          ${renderAdReport()}
+        </div>
       </div>
+      ${renderAdBottomBar(p)}
     </div>
-    ${renderAdBottomBar(p)}
   `;
 }
 
-// HERO: фото на всю ширину + кнопки поверх. Малюється ЛИШЕ коли фото є —
-// у 4 оголошень із 18 його немає, і порожня сіра пляма там була б гіршою за її брак.
+// ШАР 1 — ФОТО. На всю ширину, від самого верху екрана, БЕЗ заокруглень.
+// Малюється ЛИШЕ коли фото є: у 3 оголошень із 17 його немає (заміряно), і порожня
+// сіра пляма там була б гіршою за її брак — тоді аркуш просто йде майже на весь екран.
 // ⚠️ Лічильник «1 / N» і крапки показуємо лише коли фото більше одного: у нас
 // максимум 3 фото, і «1 / 1» було б написом ні про що.
-function renderAdHero(p, photos) {
+// ⚠️ Крапки й лічильник стоять НАД нижнім краєм шару, тобто над краєм аркуша —
+// інакше аркуш їх накриє (він починається вище за низ фото, це і є «наїжджає»).
+function renderAdPhotoLayer(p, photos) {
   if (!photos.length) return '';
   const multi = photos.length > 1;
   return `
-    <div class="cm-ad-hero">
+    <div class="cm-ad-photo">
       <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
       </div>
-      <div class="cm-ad-hero-top">
-        <button class="cm-ad-round" type="button" data-ad-close aria-label="Закрити">${BACK_ICON_SVG}</button>
-      </div>
+      ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
       <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
-      <div class="cm-board-modal-bar cm-ad-bar-over"><span class="cm-board-modal-grip"></span></div>
+    </div>`;
+}
+
+// Ряд круглих кнопок: «назад» ліворуч, «поділитися» і «зберегти» праворуч.
+//
+// 🔴 02.08 — ПЕРЕЇХАЛИ СЮДИ З ТІЛА ОПИСУ (було три широкі кнопки з підписами всередині
+// скролу). Причина не мода, а те, що робить макет і всі сучасні майданчики: дії над
+// оголошенням — це «хром» екрана, а не частина його змісту. Лежачи в скролі, вони
+// відʼїжджали разом з описом і зникали з очей рівно тоді, коли людина дочитала й
+// вирішує, що робити далі.
+// ⚠️ `overPhoto` — де саме ряд лежить: поверх фото (темне скло, читається на будь-якому
+// кадрі) чи у світлій шапці аркуша, коли фото немає. Це різні фони, тому й класи різні.
+// «Поскаржитися» сюди НЕ додаємо: це рідкісна й неприємна дія, у макета її в цьому
+// ряду теж немає — вона тихим рядком унизу опису (`renderAdReport`).
+function renderAdTopActions(p, overPhoto) {
+  const saved = isSaved(p.id);
+  return `
+    <div class="cm-ad-top${overPhoto ? ' cm-ad-top--over' : ''}">
+      <button class="cm-ad-round" type="button" data-ad-close aria-label="Закрити">${overPhoto ? BACK_ICON_SVG : '✕'}</button>
+      <div class="cm-ad-top-right">
+        <button class="cm-ad-round" type="button" data-share-board
+                data-share-title="Оголошення з Дошки громади Олики"
+                data-share-url="${escapeHtml(deepLink('board', p.id))}"
+                aria-label="Поділитися">${ICONS.share}</button>
+        <button class="cm-ad-round${saved ? ' cm-ad-round--on' : ''}" type="button" data-save-id="${p.id}"
+                aria-label="${saved ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
+          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}</button>
+      </div>
     </div>`;
 }
 
 // Шапка: чіп категорії + заголовок + ціна з міткою «Можливий торг».
-// ⚠️ `hasHero` приходить ПАРАМЕТРОМ, а не з `document.querySelector('.cm-ad-hero')`:
-// функція складає рядок ДО вставки в DOM, тож запит до документа читав би стан
-// попередньої модалки — класична помилка «рендер питає DOM».
-function renderAdHead(p, hasHero) {
+// ⚠️ Кнопки закриття тут більше немає — вона переїхала у `renderAdTopActions`, який
+// малюється або поверх фото, або у шапці аркуша. Це прибрало параметр `hasHero`, через
+// який ця функція раніше мусила знати про сусідній блок.
+function renderAdHead(p) {
   const t = formatPrice(p.price, p.currency, p.price_negotiable);
   // «Можливий торг» окремою пігулкою — лише коли ціна ЧИСЛОВА: поруч зі словом
   // «Договірна» вона писала б те саме двічі.
@@ -555,19 +610,18 @@ function renderAdAuthor(p) {
     </div>`;
 }
 
-// Три однакові дії. У макеті вони рівні за розміром — саме тому не круглі іконки:
-// однаковий вигляд каже, що це рівноцінні варіанти, а не головна дія і дві дрібні.
-function renderAdActions(p) {
+// «Поскаржитися» — останнім тихим рядком, а не рівноправною кнопкою.
+//
+// 🔴 02.08 — БУЛО три однакові широкі кнопки (поділитися · зберегти · скаржитися).
+// Однаковий розмір каже «це рівноцінні варіанти» — а вони не рівноцінні: поділитися й
+// зберегти людина робить часто, скаржиться — раз на сотні переглядів. Тепер перші дві
+// стали круглими кнопками поверх фото (як у макеті й на всіх майданчиках), а скарга
+// лишилась там, де її й шукають — у самому низу, тихим текстом.
+function renderAdReport() {
   return `
-    <div class="cm-ad-actions">
-      <button class="cm-ad-act" type="button" data-share-board
-              data-share-title="Оголошення з Дошки громади Олики"
-              data-share-url="${escapeHtml(deepLink('board', p.id))}">${ICONS.share}<span>Поділитися</span></button>
-      <button class="cm-ad-act${isSaved(p.id) ? ' cm-ad-act--on' : ''}" type="button" data-save-id="${p.id}"
-              aria-label="${isSaved(p.id) ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
-        ${isSaved(p.id) ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}<span>Зберегти</span></button>
-      <button class="cm-ad-act cm-ad-act--warn" type="button" data-ad-report>${REPORT_ICON_SVG}<span>Скаржитися</span></button>
-    </div>`;
+    <button class="cm-ad-report" type="button" data-ad-report>
+      ${REPORT_ICON_SVG}<span>Поскаржитися на оголошення</span>
+    </button>`;
 }
 
 // Блок безпеки. Єдиний блок макета, який НЕ потребує жодних нових даних і при цьому
@@ -594,31 +648,6 @@ function renderAdBottomBar(p) {
       ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>Подзвонити</span></a>` : ''}
       <button class="cm-ad-write${tel ? '' : ' cm-ad-write--solo'}" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
     </div>`;
-}
-
-// 🆕 28.07 — ТІНЬ ПІД ЛИПКИМ БЛОКОМ (категорія · ціна · заголовок) З'ЯВЛЯЄТЬСЯ ПЛАВНО.
-// Скарга Вови: «зараз вона виглядає негарно» — тінь малювалась ЗАВЖДИ, навіть коли під
-// блоком нічого не проїжджає і відділяти нема чого. Має наростати рівно тоді, коли блок
-// уперся у верх і текст поїхав під нього.
-// Той самий висновок, що й Д-17 для шапки форми подачі («лінія зайва, поки не скролили»),
-// тільки з плавним згасанням: сам перехід робить CSS (`transition` на `.is-stuck`),
-// JS лише каже «блок прилип» / «відлип».
-//
-// ⚠️ ДВІ умови, а не одна. Перевірка «блок уперся у верх скролера» сама по собі бреше,
-// коли у оголошення НЕМА фото: тоді блок стоїть угорі від самого початку, тобто «прилип»
-// уже при нульовій прокрутці — і тінь показалась би одразу, тобто рівно той баг, який
-// лагодимо. Тому додаємо scrollTop > 2: тінь є лише коли реально прокрутили.
-function attachSubheadShadow(modal) {
-  const scroller = modal.querySelector('.cm-board-modal-scrollarea');
-  const head = modal.querySelector('.cm-board-modal-subhead');
-  if (!scroller || !head) return;
-  const sync = () => {
-    // top:-1px у sticky → у прилиплому стані різниця ≈ −1, тому поріг 1, а не 0.
-    const reachedTop = head.getBoundingClientRect().top - scroller.getBoundingClientRect().top <= 1;
-    head.classList.toggle('is-stuck', scroller.scrollTop > 2 && reachedTop);
-  };
-  sync();
-  scroller.addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
 }
 
 // Повноекранний перегляд фото зі свайпом між кадрами. Відкривається тапом по фото
@@ -1415,7 +1444,6 @@ export function openAdModalStandalone(post) {
   document.body.appendChild(modal);
   document.body.classList.add('cm-zoom-open');
   hydrateNames(modal);   // живе імʼя автора оголошення за uid
-  attachSubheadShadow(modal);   // тінь під липким блоком — лише коли текст пішов під нього
 
   let closed = false;
   const close = () => {
@@ -1469,8 +1497,7 @@ function initBoardNoteExpand(root) {
     document.body.appendChild(modal);
     document.body.classList.add('cm-zoom-open');   // блокуємо скрол фону (.app-main)
     hydrateNames(modal);   // живе імʼя автора оголошення за uid
-    attachSubheadShadow(modal);   // тінь під липким блоком — лише коли текст пішов під нього
-
+  
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });

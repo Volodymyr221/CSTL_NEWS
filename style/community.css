@@ -1675,7 +1675,6 @@
 .app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
 /* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
 .cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
-.cm-board-modal-subhead .cm-board-price--word { font-size: 17px; }
 
 .cm-board-form-title {
   font-size: 14px;
@@ -2454,48 +2453,11 @@ textarea.cm-board-input.bm-invalid {
    а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними.
    top:-1px + padding компенсація — прибирає субпіксельну щілину на стику з грабером (там просвічував текст).
    box-shadow вниз — тінь прилипає разом з під-шапкою, видно її поки гортаєш опис. */
-.cm-board-modal-subhead {
-  background: inherit;
-  padding: 11px 20px 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
-  position: sticky;
-  top: -1px;
-  z-index: 2;
-  display: flow-root;   /* контейнер для float:right (пін НП) нижче — інакше висота збігається */
-  /* 🆕 28.07 — тінь і лінія З'ЯВЛЯЮТЬСЯ ПЛАВНО, а не висять завжди (скарга Вови:
-     «зараз вона виглядає негарно»). Сенс тіні — показати, що під блоком щось проїжджає;
-     поки нічого не проїжджає, вона просто бруднить чистий блок.
-     Стан «щось проїжджає» ставить JS класом `.is-stuck` (`attachSubheadShadow` у board.js),
-     плавність — цей `transition`. Розмір тіні НЕ змінено (0 3px 5px -3px / 12%,
-     підібрано Вовою 11.07) — змінюється лише її наявність. */
-  border-bottom-color: transparent;
-  box-shadow: 0 3px 5px -3px rgba(0,0,0,0);
-  transition: box-shadow 0.22s ease, border-bottom-color 0.22s ease;
-}
-.cm-board-modal-subhead.is-stuck {
-  border-bottom-color: rgba(0,0,0,0.06);
-  box-shadow: 0 3px 5px -3px rgba(0,0,0,0.12);
-}
-.cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 /* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
-.cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; font-size: 13px; }
 /* 🆕 29.07 — ІМ'Я АВТОРА стало на місце населеного пункту у шапці модалки
    (Вова: «поміщай місцями»). Ті самі правила, що були в НП: праворуч від пігулки
    категорії, той самий рядок, той самий кегль — тобто перестановка НЕ ламає ритм шапки. */
-.cm-board-modal-subhead .cm-board-author--head {
-  float: right;
-  margin-bottom: 0;
-  font-size: 13px;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
 /* У модалці ціна більша — там місця вдосталь і це головна цифра екрана */
-.cm-board-modal-subhead .cm-board-price { clear: both; font-size: 22px; margin-bottom: 4px; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
