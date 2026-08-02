@@ -5846,6 +5846,10 @@
   }
   var _readThreads = /* @__PURE__ */ new Set();
   var _unreadChats = 0;
+  var _hasThreads = false;
+  function hasThreadsCached() {
+    return _hasThreads;
+  }
   function paintTabDot(tab, on) {
     const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
     if (!dot)
@@ -5869,17 +5873,12 @@
   function paintUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
-    const msgBadge = document.getElementById("board-fab-msgs-badge");
     const chats = isLoggedIn() ? _unreadChats : 0;
     if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
         fabBadge.textContent = "";
         fabBadge.style.display = "none";
-      }
-      if (msgBadge) {
-        msgBadge.textContent = "";
-        msgBadge.style.display = "none";
       }
       paintTabDots();
       return;
@@ -5898,15 +5897,12 @@
       fabBadge.textContent = label;
       fabBadge.style.display = "block";
     }
-    if (msgBadge) {
-      msgBadge.textContent = label;
-      msgBadge.style.display = "inline-block";
-    }
     paintTabDots();
   }
   async function refreshUnreadBadge() {
     if (!isLoggedIn()) {
       _unreadChats = 0;
+      _hasThreads = false;
       paintUnreadBadge();
       return;
     }
@@ -5919,7 +5915,11 @@
     for (const id of map.keys())
       people.add(keyOf.get(id) || `t:${id}`);
     _unreadChats = people.size;
+    const hadThreads = _hasThreads;
+    _hasThreads = pairs.length > 0;
     paintUnreadBadge();
+    if (hadThreads !== _hasThreads)
+      window.dispatchEvent(new CustomEvent("cstl-threads-changed"));
   }
   async function registerChatPushDevice() {
     try {
@@ -6309,11 +6309,24 @@
       return 0;
     return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== "chat" ? 1 : 0), 0);
   }
-  function syncFabIcon() {
-    const box = document.getElementById("board-trigger-icon");
-    if (!box || discOpen)
+  function syncMsgFab() {
+    if (discOpen)
       return;
-    box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2;
+    const box = document.querySelector("#board-content .bd-hero-actions");
+    if (!box)
+      return;
+    const have = document.getElementById("bd-hero-msgs");
+    const need = canSeeMessages();
+    if (need && !have) {
+      box.insertAdjacentHTML(
+        "beforeend",
+        `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`
+      );
+      document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
+      paintUnreadBadge();
+    } else if (!need && have) {
+      have.remove();
+    }
   }
   function renderFab() {
     if (discOpen) {
@@ -6352,33 +6365,22 @@
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
-          <!-- 30.07 (\u0412\u043E\u0432\u0430): \u0447\u0438\u0441\u043B\u043E \u041D\u0415 \u0432 \u043F\u043B\u0430\u0448\u0446\u0456, \u0430 \u041D\u0410\u041A\u041B\u0410\u0414\u041A\u041E\u042E \u043D\u0430 \u043A\u0443\u0442\u043E\u043A \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430.
-               \u0411\u0443\u043B\u043E \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 .board-fab-label \u0437 margin-left 6px, \u0430 \u0432 \u043F\u043B\u0430\u0448\u043A\u0438
-               white-space: nowrap \u2014 \u0442\u043E\u043C\u0443 \u0432\u043E\u043D\u0430 \u0428\u0418\u0420\u0428\u0410\u041B\u0410 \u0449\u043E\u0440\u0430\u0437\u0443, \u044F\u043A \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u043B\u043E
-               \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F, \u0456 \u043F\u0443\u043D\u043A\u0442 \u043C\u0435\u043D\u044E \u0441\u0442\u0440\u0438\u0431\u0430\u0432 \u0443 \u0440\u043E\u0437\u043C\u0456\u0440\u0456. \u0412\u0437\u0456\u0440\u0435\u0446\u044C \u043D\u0430\u043A\u043B\u0430\u0434\u043A\u0438 \u0432\u0436\u0435
-               \u0431\u0443\u0432 \u0443 \u043F\u0440\u043E\u0454\u043A\u0442\u0456: .board-trigger-badge \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u0456\u0439 \u043A\u043D\u043E\u043F\u0446\u0456.
-               \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0442\u0443\u0442 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u2014 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E \u0440\u044F\u0434\u043A\u0430. -->
-          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">${MSG_ICON_SVG}<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
-        </button>
         <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <!-- aria-label \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0421\u0422\u0410\u0411\u0406\u041B\u042C\u041D\u0418\u041C (\xAB\u0414\u0456\u0457\xBB), \u0445\u043E\u0447 \u0456\u043A\u043E\u043D\u043A\u0430 \u0439 \u043C\u043E\u0440\u0444\u0438\u0442\u044C\u0441\u044F: \u043A\u043D\u043E\u043F\u043A\u0430
-           \u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E \u0434\u0456\u0439, \u0456 \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0435\u0437\u043C\u0456\u043D\u043D\u0430 \u043D\u0430\u0437\u0432\u0430, \u0430 \u043D\u0435
-           \u0442\u0430, \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u0441\u0430\u043C\u0430. \u0421\u0442\u0430\u043D \u0432\u0456\u043D \u0456 \u0442\u0430\u043A \u043F\u043E\u0447\u0443\u0454 \u0437 \u0431\u0435\u0439\u0434\u0436\u0430 \u043D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0438\u0445 \u2014
-           \u0442\u043E\u0439 \u043B\u0435\u0436\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u043A\u043D\u043E\u043F\u043A\u0438.
-           \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0442\u0443\u0442 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u2014 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E \u0440\u044F\u0434\u043A\u0430. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2}</span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
+  }
+  function canSeeMessages() {
+    if (!isLoggedIn())
+      return false;
+    return myActiveAdsCount() > 0 || hasThreadsCached();
   }
   function getFilteredPosts(opts = {}) {
     const q = searchQuery.trim().toLowerCase();
@@ -6427,9 +6429,13 @@
         <h2 class="bd-hero-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
         <p class="bd-hero-sub">\u0417\u043D\u0430\u0439\u0434\u0438, \u043F\u0440\u043E\u0434\u0430\u0439, \u043E\u0431\u043C\u0456\u043D\u044F\u0439 \u0430\u0431\u043E \u0432\u0456\u0434\u0434\u0430\u0439 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</p>
       </div>
-      <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="\u0414\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
+      <div class="bd-hero-actions">
+        ${canSeeMessages() ? `
+        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
+          ${MSG_ICON_SVG}
+          <span class="board-trigger-badge" id="board-trigger-badge"></span>
+        </button>` : ""}
+      </div>
     </div>
   ` : "";
     const typesHtml = showCategories ? (() => {
@@ -6554,7 +6560,7 @@
       return;
     }
     keepScroll(document.querySelector(".app-main"), () => renderBodyOnly(), null, "data-post-id");
-    syncFabIcon();
+    syncMsgFab();
   }
   async function renderBoard() {
     const el = getBoardRoot();
@@ -6616,8 +6622,12 @@
     };
     fabBtn?.addEventListener("click", toggleFab);
     fabBack?.addEventListener("click", closeFab);
+    if (!_threadsEvtWired) {
+      _threadsEvtWired = true;
+      window.addEventListener("cstl-threads-changed", () => syncMsgFab());
+    }
     paintUnreadBadge();
-    fab?.querySelectorAll(".board-fab-item").forEach((item) => {
+    el.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
         closeFab();
@@ -6708,6 +6718,7 @@
     wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
       activeLocation = mi.dataset.bdLoc;
     });
+    document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
     document.getElementById("bd-types")?.addEventListener("click", (e) => {
       const chip = e.target.closest("[data-bd-cat]");
       if (!chip)
@@ -6715,13 +6726,10 @@
       activeCategory = chip.dataset.bdCat;
       renderAll();
     });
-    document.getElementById("bd-hero-add")?.addEventListener("click", () => {
-      requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
-    });
     if (!_boardMenusWired) {
       _boardMenusWired = true;
       document.addEventListener("click", (e) => {
-        if (e.target.closest(".bd-cat-filter-wrap") || e.target.closest(".bd-loc-filter"))
+        if (e.target.closest(".bd-loc-filter") || e.target.closest(".bd-hero-actions"))
           return;
         closeBoardMenus();
       });
@@ -7200,9 +7208,10 @@
       }
     });
   }
+  var _threadsEvtWired = false;
   var _boardMenusWired = false;
   function closeBoardMenus() {
-    [["bd-cat-menu", "bd-cat-filter"], ["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
+    [["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
       document.getElementById(menuId)?.setAttribute("hidden", "");
       const b = document.getElementById(btnId);
       if (b) {

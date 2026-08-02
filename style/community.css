@@ -2129,16 +2129,6 @@ textarea.cm-board-input.bm-invalid {
    ⚠️ Геометрія дзеркалить `.board-trigger-badge` (головна кнопка FAB) — щоб два
    бейджі в одному меню виглядали одним прийомом, а не двома різними. Розмір трохи
    менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки. */
-.board-fab-msgs-badge {
-  display: none;
-  position: absolute;
-  top: -4px; right: -4px;
-  min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 8px; background: var(--red, #722F37); color: #fff;
-  font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
-  border: 2px solid var(--board-bg);   /* обідок кольором кружечка — відділяє від його рамки */
-  box-sizing: content-box;
-}
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
@@ -4861,3 +4851,37 @@ textarea.cm-board-input.bm-invalid {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── КОНВЕРТ У ШАПЦІ ДОШКИ (02.08) ──────────────────────────────────────────
+   Дії й листування помінялись місцями. Причина не смак, а зона досяжності: подати
+   оголошення — найчастіша дія екрана, і тримати її у ВЕРХНЬОМУ ПРАВОМУ куті означало
+   ставити найпотрібніше найдалі від великого пальця. Тепер дії внизу (FAB), а вхід у
+   листування — тут, іконкою на постійному місці. Той самий розподіл, що у Facebook:
+   продаж великою кнопкою, Messenger — іконкою у верхній панелі.
+   ⚠️ Конверта може не бути зовсім: `canSeeMessages()` = «є оголошення АБО є розмова».
+   Поява/зникнення на льоту — `syncMsgFab()`. */
+#board-content .bd-hero-actions { position: relative; flex: none; }
+#board-content .bd-hero-msgs {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-hero-msgs svg { width: 21px; height: 21px; }
+#board-content .bd-hero-msgs:active { background: rgba(255, 255, 255, 0.28); }
+/* Бейдж непрочитаних — накладка на кут, а не текст усередині: інакше кнопка
+   ширшала б із кожним новим повідомленням (урок 30.07 про плашку в FAB-меню). */
+#board-content .bd-hero-msgs .board-trigger-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+}
+

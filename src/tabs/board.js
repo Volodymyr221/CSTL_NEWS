@@ -16,7 +16,7 @@ import { openBoardModal } from './community-modal.js';
 // конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
 // він жив лише у кнопці-меню категорій, яку замінив ряд чіпів `bd-types`.
 import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
@@ -417,15 +417,36 @@ function myActiveAdsCount() {
   return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== 'chat' ? 1 : 0), 0);
 }
 
-// Оновити ІКОНКУ на місці, без перебудови FAB. Потрібно тому, що після публікації
-// оголошення список освіжається через `refreshBoardKeepingPlace()` — а він свідомо
-// перемальовує ЛИШЕ картки (щоб не смикнути прокрутку), тож кнопка лишилась би зі
-// старою іконкою до наступного повного рендеру.
-function syncFabIcon() {
-  const box = document.getElementById('board-trigger-icon');
-  if (!box || discOpen) return;
-  box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG;
+// 🔴 Синхронізація ІСНУВАННЯ конверта в шапці (02.08 — він переїхав туди з низу).
+//
+// Було (30.07): кнопка стояла завжди, а `myActiveAdsCount()` лише морфив картинку
+// між «олівцем» і «конвертом». Тепер конверта може не бути зовсім, тож синхронізувати
+// треба саму його наявність.
+//
+// Навіщо це окремо від рендера: після публікації оголошення список освіжається через
+// `refreshBoardKeepingPlace()`, який СВІДОМО перемальовує лише картки (щоб не смикнути
+// прокрутку). Без цього виклику людина подала б перше оголошення — і не побачила б
+// кнопку листування до наступного повного рендеру, тобто рівно тоді, коли їй уперше
+// можуть написати.
+// ⚠️ Гард `discOpen` лишається: в Обговорень своя шапка й свій FAB, і ця логіка їх
+// не стосується (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
+function syncMsgFab() {
+  if (discOpen) return;
+  const box = document.querySelector('#board-content .bd-hero-actions');
+  if (!box) return;
+  const have = document.getElementById('bd-hero-msgs');
+  const need = canSeeMessages();
+  if (need && !have) {
+    box.insertAdjacentHTML('beforeend',
+      `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`);
+    document.getElementById('bd-hero-msgs')
+      ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
+    paintUnreadBadge();   // щойно створений конверт ще порожній — заповнити з кешу
+  } else if (!need && have) {
+    have.remove();
+  }
 }
+
 
 function renderFab() {
   if (discOpen) {
@@ -453,7 +474,21 @@ function renderFab() {
       </button>
     </div>`;
   }
-  // Дошка (без змін — оголошення/мої/повідомлення/збережені).
+  // 🔴 02.08 — ДІЇ ВНИЗУ, ЛИСТУВАННЯ ВГОРІ (помінялись місцями).
+  //
+  // Історія за одну добу: спершу все жило в нижньому speed-dial (Подати · Мої ·
+  // Повідомлення · Збережені) → 01.08 дії переїхали під «+» у шапці, а внизу лишився
+  // конверт → 02.08 поміняли назад, але не в те саме положення.
+  //
+  // ЧОМУ САМЕ ТАК. Подати оголошення — головна дія екрана, заради неї дошка існує.
+  // У попередньому варіанті шлях до неї вів у ВЕРХНІЙ ПРАВИЙ КУТ — найважчу зону
+  // для великого пальця на великому телефоні, тоді як низ — найлегша. Тобто
+  // найчастішу дію ми поставили найдалі. Тому: дії — вниз, а листування (його
+  // відкривають рідше) — іконкою в шапку, де воно ще й завжди на постійному місці.
+  // Той самий розподіл у Facebook: Marketplace має велику кнопку продажу, а
+  // Messenger — іконку у верхній панелі.
+  //
+  // ⚠️ Пункт «Повідомлення» сюди НЕ повертається — тепер це конверт у шапці.
   return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
@@ -466,33 +501,25 @@ function renderFab() {
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
-          <!-- 30.07 (Вова): число НЕ в плашці, а НАКЛАДКОЮ на куток кружечка.
-               Було всередині .board-fab-label з margin-left 6px, а в плашки
-               white-space: nowrap — тому вона ШИРШАЛА щоразу, як приходило
-               повідомлення, і пункт меню стрибав у розмірі. Взірець накладки вже
-               був у проєкті: .board-trigger-badge на головній кнопці.
-               ⚠️ Зворотних лапок тут НЕ ставити — коментар усередині шаблонного рядка. -->
-          <span class="board-fab-label">Повідомлення</span>
-          <span class="board-fab-ic">${MSG_ICON_SVG}<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
-        </button>
         <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <!-- aria-label лишається СТАБІЛЬНИМ («Дії»), хоч іконка й морфиться: кнопка
-           справді відкриває меню дій, і читачу екрана потрібна незмінна назва, а не
-           та, що змінюється сама. Стан він і так почує з бейджа непрочитаних —
-           той лежить текстом усередині кнопки.
-           ⚠️ Зворотних лапок тут НЕ ставити — коментар усередині шаблонного рядка. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG}</span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
+}
+
+// «Чи показувати кнопку повідомлень». Обидві половинки — без мережі: оголошення
+// рахуються по вже завантажених `allPosts`, наявність розмов бере кеш із
+// `board-chat.js`, який наповнює той самий запит, що й бейдж непрочитаних.
+function canSeeMessages() {
+  if (!isLoggedIn()) return false;
+  return myActiveAdsCount() > 0 || hasThreadsCached();
 }
 
 // ── Фільтрація і пошук ───────────────────────────────────────────────────────
@@ -614,9 +641,13 @@ function renderHeader() {
         <h2 class="bd-hero-title">Дошка оголошень</h2>
         <p class="bd-hero-sub">Знайди, продай, обміняй або віддай безкоштовно</p>
       </div>
-      <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="Додати оголошення">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
+      <div class="bd-hero-actions">
+        ${canSeeMessages() ? `
+        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">
+          ${MSG_ICON_SVG}
+          <span class="board-trigger-badge" id="board-trigger-badge"></span>
+        </button>` : ''}
+      </div>
     </div>
   ` : '';
 
@@ -822,7 +853,7 @@ async function refreshBoardKeepingPlace() {
   const ok = await loadBoardData();
   if (!ok || !el || !body) { renderBoard(); return; }   // не змогли мʼяко — звичайним шляхом
   keepScroll(document.querySelector('.app-main'), () => renderBodyOnly(), null, 'data-post-id');
-  syncFabIcon();   // 30.07: опублікував/завершив своє → іконка FAB могла змінитись
+  syncMsgFab();   // опублікував/завершив своє → кнопка листування могла зʼявитись або зникнути
 }
 
 export async function renderBoard() {
@@ -897,13 +928,22 @@ function renderAll() {
   };
   fabBtn?.addEventListener('click', toggleFab);
   fabBack?.addEventListener('click', closeFab);
+  // Наявність розмов приходить асинхронно (див. `cstl-threads-changed` у board-chat.js) —
+  // тоді кнопку листування треба домалювати або прибрати. Слухач ставимо ОДИН раз на
+  // вікно, а не на кожен `renderAll()`, інакше за кілька фільтрів їх стало б десятки.
+  if (!_threadsEvtWired) {
+    _threadsEvtWired = true;
+    window.addEventListener('cstl-threads-changed', () => syncMsgFab());
+  }
   // 🔴 30.07 (аудит Д-Б1) — МАЛЮЄМО з уже відомого числа, а не питаємо базу.
   // Було `refreshUnreadBadge()` = два запити в Supabase на КОЖЕН renderAll, тобто на
   // кожен тап по фільтру категорії/НП. Кількість непрочитаних від зміни категорії не
   // змінюється, тож мережа тут була дарма. Свіжість тримають подієві виклики
   // `refreshUnreadBadge` (вхід, push, realtime, прочитання чату) у board-chat.js.
   paintUnreadBadge();     // новий FAB щойно створено рендером — заповнити бейдж
-  fab?.querySelectorAll('.board-fab-item').forEach(item => {
+  // Пункти шукаємо по всьому кореню: розмітка FAB у Дошки й Обговорень різна,
+  // а обробник один — інакше довелось би тримати дві копії тих самих дій.
+  el.querySelectorAll('.board-fab-item').forEach(item => {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
       closeFab();
@@ -988,6 +1028,11 @@ function renderAll() {
   };
   wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
 
+  // 🔴 02.08 — КОНВЕРТ У ШАПЦІ: прямий вхід у листування, без меню й без зайвого
+  // тапу. Показується за `canSeeMessages()`, бейдж непрочитаних лежить на ньому.
+  document.getElementById('bd-hero-msgs')
+    ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
+
   // 🔴 01.08 — ряд типів (чіпи). Той самий стан `activeCategory`, що й старе меню,
   // тобто фільтр один — змінився лише спосіб ним керувати.
   // ⚠️ Обробник вішається на КОНТЕЙНЕР, а не на кожен чіп: `renderAll()` перестворює
@@ -999,17 +1044,12 @@ function renderAll() {
     renderAll();
   });
 
-  // Кнопка «+» у шапці — той самий шлях, що пункт FAB `post`: спершу вхід, потім
-  // модалка подачі. Другого способу подати оголошення НЕ заводимо, лише другий вхід.
-  document.getElementById('bd-hero-add')?.addEventListener('click', () => {
-    requireAuth('подати оголошення', openBoardModal);
-  });
 
   // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
   if (!_boardMenusWired) {
     _boardMenusWired = true;
     document.addEventListener('click', e => {
-      if (e.target.closest('.bd-cat-filter-wrap') || e.target.closest('.bd-loc-filter')) return;
+      if (e.target.closest('.bd-loc-filter') || e.target.closest('.bd-hero-actions')) return;
       closeBoardMenus();
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBoardMenus(); });
@@ -1529,15 +1569,21 @@ function fitBoardAuthors() {
   });
 }
 
-// Закрити обидва меню-фільтри Дошки (категорії + локація).
+let _threadsEvtWired = false;
+
+// Закрити всі випадні меню Дошки: фільтр локації + меню дій під кнопкою «+».
+// ⚠️ 01.08: `bd-cat-menu` зі списку прибрано — кнопку-лійку категорій замінив
+// видимий ряд чіпів, і меню з таким id більше не існує.
 let _boardMenusWired = false;
 function closeBoardMenus() {
-  [['bd-cat-menu', 'bd-cat-filter'], ['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
+  [['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
     document.getElementById(menuId)?.setAttribute('hidden', '');
     const b = document.getElementById(btnId);
     if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
   });
 }
+
+
 
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли

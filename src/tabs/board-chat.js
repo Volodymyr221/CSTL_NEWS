@@ -1451,6 +1451,17 @@ const _readThreads = new Set();
 // вхід/вихід, push, realtime, прочитання чату (ці виклики вже були на місці).
 let _unreadChats = 0;
 
+// 🔴 01.08 — «ЧИ Є В МЕНЕ ХОЧ ОДНА РОЗМОВА». Потрібно, щоб вирішити, показувати
+// кнопку «Повідомлення» на Дошці чи ні (рішення Вови: новачок бачить чистий екран).
+// ⚠️ Умова саме «оголошення АБО розмова», а не «оголошення» — заміряно по базі:
+// людей з оголошеннями **1**, з розмовами **8**, і **7 із них не мають жодного
+// оголошення**. Правило «лише автори» відрізало б цих сімох від їхніх же 218
+// повідомлень — розмову ж починає ПОКУПЕЦЬ, у якого свого оголошення нема.
+// ⚠️ Живе поруч із `_unreadChats` і оновлюється в ТОМУ САМОМУ запиті
+// (`fetchThreadPairs` уже віддає всі мої треди) — жодного додаткового походу в мережу.
+let _hasThreads = false;
+export function hasThreadsCached() { return _hasThreads; }
+
 // ── КРАПКА «Є НОВЕ» НА ІКОНЦІ ВКЛАДКИ (30.07) ────────────────────────────────
 // Вова: «треба легеньку позначку біля іконки вкладки, якщо є якесь повідомлення,
 // персональне звернення, відповідь на коментар і тд… бо важко замітити що тобі
@@ -1481,13 +1492,11 @@ export function paintTabDots() {
 export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
   const fabBadge = document.getElementById('board-trigger-badge');
-  const msgBadge = document.getElementById('board-fab-msgs-badge');
 
   const chats = isLoggedIn() ? _unreadChats : 0;
   if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
-    if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
     paintTabDots();   // 30.07: і в гілці «нема непрочитаних» — інакше крапка Дошки застигла б
     return;
   }
@@ -1502,14 +1511,13 @@ export function paintUnreadBadge() {
     badge.textContent = label;
   }
   if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
-  if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
   paintTabDots();   // 30.07: крапки в таб-барі йдуть тим самим кроком, що й бейджі
 }
 
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
 export async function refreshUnreadBadge() {
-  if (!isLoggedIn()) { _unreadChats = 0; paintUnreadBadge(); return; }
+  if (!isLoggedIn()) { _unreadChats = 0; _hasThreads = false; paintUnreadBadge(); return; }
 
   // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
   // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
@@ -1521,7 +1529,17 @@ export async function refreshUnreadBadge() {
   const people = new Set();
   for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
   _unreadChats = people.size;
+  const hadThreads = _hasThreads;
+  _hasThreads = pairs.length > 0;
   paintUnreadBadge();
+  // 🔴 Кнопка «Повідомлення» на Дошці малюється за `canSeeMessages()`, а та питає
+  // `hasThreadsCached()`. Відповідь приходить АСИНХРОННО — на момент першого рендера
+  // Дошки її ще немає. Без цієї події кнопка не зʼявилась би до наступного повного
+  // рендеру, тобто покупець із розмовами, але без своїх оголошень, відкрив би Дошку
+  // і не побачив входу в листування — рівно та дірка, від якої ми боронились умовою
+  // «оголошення АБО розмова». Подія, а не прямий виклик, — щоб не заводити коло
+  // імпортів між `board.js` і `board-chat.js`.
+  if (hadThreads !== _hasThreads) window.dispatchEvent(new CustomEvent('cstl-threads-changed'));
 }
 
 // ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──
