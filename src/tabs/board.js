@@ -618,25 +618,40 @@ function renderAdHead(p) {
 // ніколи не змінює місце — інакше око щоразу шукало б її заново.
 function renderAdPrice(p) {
   const t = formatPrice(p.price, p.currency, p.price_negotiable);
-  if (!t) return '';
-  const quiet = t === 'Договірна';
+  // «Договірна» малюється в рядку фактів (`renderAdMeta`) — окремого рядка вона не варта.
+  if (!t || t === 'Договірна') return '';
   // «Можливий торг» окремою пігулкою — лише коли ціна ЧИСЛОВА: поруч зі словом
   // «Договірна» вона писала б те саме двічі.
   const haggle = p.price_negotiable && p.price != null;
   return `
     <div class="cm-ad-price-row">
-      <span class="cm-ad-price${quiet ? ' cm-ad-price--quiet' : ''}">${quiet ? 'Ціна договірна' : escapeHtml(t)}</span>
+      <span class="cm-ad-price">${escapeHtml(t)}</span>
       ${haggle ? '<span class="cm-ad-haggle">Можливий торг</span>' : ''}
     </div>`;
 }
 
-// Локація + час одним тихим рядком (у макеті так само).
+// 🔴 02.08 — ОДИН РЯДОК ФАКТІВ: місце · час · «Ціна договірна».
+//
+// Скарга Вови (IMG_3819): «блок із тегом, заголовком, локацією, датою та описом
+// візуально зливається в одну площину». Заміряно було: сім різних типів вмісту стояли
+// з відступами 10 · 12 · 10 · 16 · 18 · 14 · 18 — тобто інтервал не ніс ЖОДНОЇ
+// інформації про те, де закінчується одна думка й починається інша.
+//
+// «Ціна договірна» переїхала сюди з власного рядка, бо це такий самий факт про
+// оголошення, як місце й дата, — а не подія, заради якої варто ламати рядок. Мінус один
+// рядок у шапці й заразом менше порожнечі внизу на коротких оголошеннях.
+// ⚠️ Ціна-ЧИСЛО сюди НЕ йде: вона лишається окремим гучним рядком (`renderAdPrice`) —
+// це головний факт після назви, і губити його в переліку не можна.
 function renderAdMeta(p) {
+  const t = formatPrice(p.price, p.currency, p.price_negotiable);
+  const quiet = t === 'Договірна';
   return `
     <div class="cm-ad-meta">
       <span class="cm-ad-meta-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
       <span class="cm-ad-meta-dot">·</span>
       <span>${renderPostTime(p)}</span>
+      ${quiet ? `<span class="cm-ad-meta-dot">·</span>
+      <span class="cm-ad-price cm-ad-price--quiet">Ціна договірна</span>` : ''}
     </div>`;
 }
 
