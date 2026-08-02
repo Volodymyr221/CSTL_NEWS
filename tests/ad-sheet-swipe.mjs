@@ -158,6 +158,39 @@ ok('затемнення лежить у body і накриває шапку',
    geo.затемнення_є && geo.затемнення_в_body === true && geo.над_шапкою !== null,
    `z=${geo.затемнення_z} у body=${geo.затемнення_в_body}`);
 
+// ── 1в. ШОВ МІЖ ОПИСОМ І ПАНЕЛЛЮ ДІЙ ────────────────────────────────────────
+// Вова, скрін IMG_3807: «блок опису і блок з кнопками неправильно трошки зʼєднані…
+// блок опису має йти до самого низу сторінки, але сам текст має бути розташований
+// вище блоку». До 02.08 скрол обривався РІВНО об верх панелі, і останній рядок опису
+// різався об кнопки без відступу.
+await p.evaluate(() => { const s = document.querySelector('.cm-board-modal-scrollarea'); if (s) s.scrollTop = 9999; });
+await p.waitForTimeout(350);
+const seam = await p.evaluate(() => {
+  const q = s => document.querySelector(s), rc = e => e ? e.getBoundingClientRect() : null;
+  const sc = q('.cm-board-modal-scrollarea'), bar = q('.cm-ad-bottom'), last = q('.cm-ad-report');
+  const shadow = bar ? getComputedStyle(bar).boxShadow : '';
+  return {
+    скрол_низ: sc ? Math.round(rc(sc).bottom) : null,
+    екран: window.innerHeight,
+    відступ_скролу: sc ? Math.round(parseFloat(getComputedStyle(sc).paddingBottom)) : null,
+    висота_панелі: bar ? Math.round(rc(bar).height) : null,
+    просвіт_до_кнопок: (bar && last) ? Math.round(rc(bar).top - rc(last).bottom) : null,
+    шарів_тіні: (shadow.match(/rgba?\(/g) || []).length,
+  };
+});
+ok('скрол опису доходить до САМОГО низу аркуша',
+   seam.скрол_низ === seam.екран, `${seam.скрол_низ} з ${seam.екран}`);
+// 🔑 Одне число на два місця. Розійдуться — текст або сховається під кнопками, або
+// лишить порожню діру; жодне з цього не видно у звичайному прогоні.
+ok('відступ скролу дорівнює висоті панелі (одне число, не два)',
+   seam.відступ_скролу === seam.висота_панелі,
+   `відступ ${seam.відступ_скролу} vs панель ${seam.висота_панелі}`);
+ok('останній рядок тексту НЕ впирається у кнопки',
+   seam.просвіт_до_кнопок > 8, `${seam.просвіт_до_кнопок}px`);
+// Один широкий розмитий шар при цій щільності дає сіру пляму замість краю —
+// урок шапки Дошки 28.07, і саме на це показав Вова.
+ok('тінь панелі має щонайменше два шари', seam.шарів_тіні >= 2, `${seam.шарів_тіні}`);
+
 // Хапаємо за ручку (grip) — вона працює завжди, навіть коли опис прокручено.
 const gripXY = await p.evaluate(() => {
   const g = document.querySelector('.cm-board-modal-note .cm-board-modal-grip')
