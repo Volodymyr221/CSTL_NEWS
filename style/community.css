@@ -4914,6 +4914,7 @@ textarea.cm-board-input.bm-invalid {
   right: -3px;
 }
 
+<<<<<<< HEAD
 
 /* ═══════════════════════════════════════════════════════════════════════════
    🔴 02.08 — МОДАЛКА ОГОЛОШЕННЯ ЗА МАКЕТОМ (два скріни, схвалені Вовою).
@@ -5157,3 +5158,5 @@ textarea.cm-board-input.bm-invalid {
   vertical-align: middle;
 }
 .cm-ad-author-go { flex: none; font-size: 22px; color: #9A9A9A; line-height: 1; }
+=======
+>>>>>>> origin/main
