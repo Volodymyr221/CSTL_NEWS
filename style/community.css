@@ -1675,7 +1675,6 @@
 .app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
 /* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
 .cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
-.cm-board-modal-subhead .cm-board-price--word { font-size: 17px; }
 
 .cm-board-form-title {
   font-size: 14px;
@@ -2387,29 +2386,34 @@ textarea.cm-board-input.bm-invalid {
    тому разом із нею ОБОВʼЯЗКОВО міняється математика свайпу в `board.js`
    (`centeredRemaining` → `sheetRemaining`, `translate(-50%,…)` → `translateY`).
    Лишити старий свайп означало б зсув на пів ширини при кожному дотику. */
-.cm-board-modal-note.cm-board-modal--sheet {
-  background: #fff;
+.cm-board-modal-note.cm-ad-screen {
+  /* Контейнер на ВЕСЬ екран і прозорий: він нічого не малює, він лише ВЕЗЕ три шари.
+     Саме тому свайп рухає його — фото й аркуш їдуть як одне ціле, і «розʼїхатись»
+     їм нема як. Заразом «скільки лишилось до зникнення» дорівнює висоті екрана,
+     тобто геометрію жесту більше нема де переплутати (з чого й виріс баг 02.08
+     «скаче в різні боки» — там аркуш рухали математикою центрованої картки). */
   left: 0;
   right: 0;
-  top: auto;
+  top: 0;
   bottom: 0;
   width: 100%;
-  height: 92dvh;
-  max-height: 92dvh;
-  border-radius: 22px 22px 0 0;
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.28);
+  height: 100dvh;
+  max-height: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  opacity: 1;
   transform: translateY(100%);
-  /* 🔴 ВИЩЕ ТАБ-БАРА (він z-index: 1000/1001). Аркуш займає весь екран, і таб-бар
-     поверх нього накривав би саме липку панель «Подзвонити / Написати» — тобто
-     головні дії. На макеті таб-бару під модалкою теж немає: це «окремий екран».
-     Затемнення піднято разом із ним, інакше воно лягло б ПІД таб-бар і той світив
-     би крізь напівпрозорий шар. */
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  /* 🔴 ВИЩЕ ТАБ-БАРА (він z-index: 1000/1001). Модалка займає весь екран, і таб-бар
+     поверх неї накривав би саме панель «Подзвонити / Написати» — тобто головні дії.
+     На макеті таб-бару під модалкою теж немає: це «окремий екран». Затемнення
+     піднято разом із нею, інакше воно лягло б ПІД таб-бар і той світив би крізь. */
   z-index: 1100;
 }
 .board-backdrop.cm-ad-backdrop--over { z-index: 1099; }
-.cm-board-modal-note.cm-board-modal--sheet.visible { transform: translateY(0); }
-/* Тіло аркуша прокручується, нижня панель дій — ні (вона поза цим блоком). */
-.cm-board-modal--sheet .cm-board-modal-scrollarea { flex: 1; min-height: 0; }
+.cm-board-modal-note.cm-ad-screen.visible { transform: translateY(0); }
 /* Шапка модалки над фото: смужка-ручка для свайпу (по центру) + кнопка ✕ (справа).
    Липка (sticky) — лишається зверху при скролі, тож ✕ завжди доступний.
    Фон успадковує колір картки (background: inherit), радіус — під верхні кути модалки. */
@@ -2454,48 +2458,11 @@ textarea.cm-board-input.bm-invalid {
    а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними.
    top:-1px + padding компенсація — прибирає субпіксельну щілину на стику з грабером (там просвічував текст).
    box-shadow вниз — тінь прилипає разом з під-шапкою, видно її поки гортаєш опис. */
-.cm-board-modal-subhead {
-  background: inherit;
-  padding: 11px 20px 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
-  position: sticky;
-  top: -1px;
-  z-index: 2;
-  display: flow-root;   /* контейнер для float:right (пін НП) нижче — інакше висота збігається */
-  /* 🆕 28.07 — тінь і лінія З'ЯВЛЯЮТЬСЯ ПЛАВНО, а не висять завжди (скарга Вови:
-     «зараз вона виглядає негарно»). Сенс тіні — показати, що під блоком щось проїжджає;
-     поки нічого не проїжджає, вона просто бруднить чистий блок.
-     Стан «щось проїжджає» ставить JS класом `.is-stuck` (`attachSubheadShadow` у board.js),
-     плавність — цей `transition`. Розмір тіні НЕ змінено (0 3px 5px -3px / 12%,
-     підібрано Вовою 11.07) — змінюється лише її наявність. */
-  border-bottom-color: transparent;
-  box-shadow: 0 3px 5px -3px rgba(0,0,0,0);
-  transition: box-shadow 0.22s ease, border-bottom-color 0.22s ease;
-}
-.cm-board-modal-subhead.is-stuck {
-  border-bottom-color: rgba(0,0,0,0.06);
-  box-shadow: 0 3px 5px -3px rgba(0,0,0,0.12);
-}
-.cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 /* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
-.cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; font-size: 13px; }
 /* 🆕 29.07 — ІМ'Я АВТОРА стало на місце населеного пункту у шапці модалки
    (Вова: «поміщай місцями»). Ті самі правила, що були в НП: праворуч від пігулки
    категорії, той самий рядок, той самий кегль — тобто перестановка НЕ ламає ритм шапки. */
-.cm-board-modal-subhead .cm-board-author--head {
-  float: right;
-  margin-bottom: 0;
-  font-size: 13px;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
 /* У модалці ціна більша — там місця вдосталь і це головна цифра екрана */
-.cm-board-modal-subhead .cm-board-price { clear: both; font-size: 22px; margin-bottom: 4px; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
@@ -4926,24 +4893,71 @@ textarea.cm-board-input.bm-invalid {
    Токени беремо з проєкту; «магічних» кольорів не вводимо.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── HERO: фото на всю ширину ─────────────────────────────────────────────── */
-/* 38% висоти екрана — середина вилки 35-40% із ТЗ. Фіксована частка, а не
-   пропорція картинки: інакше вертикальне фото займало б пів аркуша, і до тексту
-   довелось би скролити. */
-.cm-ad-hero {
-  position: relative;
-  flex: none;
-  height: 38dvh;
-  background: #ECECEA;
-  overflow: hidden;   /* без цього високе фото могло вилізти за межі блоку */
-}
-.cm-ad-hero .cm-board-modal-gallery { height: 100%; }
-.cm-ad-hero .cm-board-modal-slide img { width: 100%; height: 100%; object-fit: cover; }
-.cm-ad-hero-top {
+/* ── ШАР 1: ФОТО ──────────────────────────────────────────────────────────────
+   Від САМОГО верху екрана, на всю ширину, БЕЗ заокруглень. До 02.08 фото було
+   першим блоком усередині аркуша — і аркуш обрізав його своїми верхніми кутами.
+   Саме на це й показував Вова: «фотографія прикріплена до верху» (у макеті), тобто
+   у нас вона такою не була.
+
+   📐 ЧОМУ 42dvh, А ВИДНО 34dvh. Аркуш починається на 34dvh, тобто НАЇЖДЖАЄ на фото
+   на 8dvh. Ці 8dvh — не запас «про всяк випадок»: без них під заокругленим краєм
+   аркуша прозирала б смуга затемнення, і «наїжджання» читалось би як щілина.
+   34% — заміряно з макета (597 з 1901 = 31.4%) з поправкою на нашу вищу панель дій.
+
+   ⚠️ Частка екрана, а НЕ пропорція картинки: у нас 82% фото зняті телефоном
+   вертикально, і за пропорцією вони з'їдали б весь екран до самого опису. */
+.cm-ad-photo {
   position: absolute;
-  top: 10px; left: 12px; right: 12px;
-  display: flex; align-items: center; justify-content: space-between;
+  top: 0; left: 0; right: 0;
+  height: 42dvh;
+  background: #ECECEA;
+  overflow: hidden;   /* без цього високе фото вилазило за межі шару (баг 02.08) */
+  z-index: 1;
+}
+.cm-ad-photo .cm-board-modal-gallery { height: 100%; }
+.cm-ad-photo .cm-board-modal-slide img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── ШАР 2: АРКУШ ─────────────────────────────────────────────────────────────
+   Наїжджає на фото, радіус лише ВЕРХНІХ кутів — метафора «аркуш знизу».
+   Прокручується тільки він; фото лишається на місці. Скрол фото «під аркуш» додав
+   би третій жест поверх свайпу-закриття й горизонтального гортання галереї, а
+   конфлікт жестів у цьому проєкті вже коштував регресу (HOT_RULES №10). */
+.cm-ad-sheet {
+  position: absolute;
+  left: 0; right: 0;
+  top: 34dvh;
+  bottom: 0;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
+  overflow: hidden;   /* щоб вміст не вилазив за заокруглені кути */
+}
+/* Оголошення БЕЗ ФОТО — 3 з 17 (заміряно). Шару фото немає взагалі, аркуш іде майже
+   на весь екран. Смужка затемнення згори лишається навмисно: без неї це вже не
+   «аркуш», а просто екран, і зникає підказка «мене можна стягнути вниз». */
+.cm-ad-sheet--full { top: 7dvh; }
+/* Тіло прокручується; ручка згори і панель дій знизу — ні. */
+.cm-ad-sheet .cm-board-modal-scrollarea { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.cm-ad-sheet .cm-board-modal-bar { flex: none; position: static; background: transparent; }
+
+/* ── Ряд круглих кнопок (назад · поділитися · зберегти) ───────────────────── */
+.cm-ad-top {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: 12px; right: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 3;
+}
+.cm-ad-top-right { display: flex; gap: 8px; }
+/* ⚠️ Поверх ФОТО ряд абсолютний (лежить на кадрі), а в аркуші — звичайним рядком:
+   там під ним білий фон, і «плавати» йому нема над чим. */
+.cm-ad-sheet > .cm-ad-top {
+  position: static;
+  padding: 2px 6px 6px;
+  left: auto; right: auto;
 }
 /* Кругла кнопка поверх фото: напівпрозоре темне скло — читається і на світлому,
    і на темному кадрі, тобто не залежить від того, що саме сфотографували. */
@@ -4963,10 +4977,20 @@ textarea.cm-board-input.bm-invalid {
   -webkit-tap-highlight-color: transparent;
 }
 .cm-ad-round svg { width: 20px; height: 20px; }
+.cm-ad-round--on { color: var(--news-accent, #722F37); background: rgba(255, 255, 255, 0.92); }
+.cm-ad-round:active { opacity: 0.8; }
+/* У світлій шапці аркуша (коли фото немає) те саме темне скло було б плямою —
+   там кнопка стає світло-сірою з темним знаком. Форма й розмір ті самі. */
+.cm-ad-sheet .cm-ad-round { background: var(--board-press, #E4E4E1); color: #1C1C1E; font-size: 17px; }
+.cm-ad-sheet .cm-ad-round--on { color: var(--news-accent, #722F37); }
+
+/* Лічильник «1 / N» і крапки стоять НАД краєм аркуша: аркуш починається на 34dvh,
+   а шар фото тягнеться до 42dvh — тобто нижні 8dvh кадру аркуш накриває. Прив'язка
+   до низу шару сховала б їх під аркушем, тому рахуємо від ЙОГО краю. */
 .cm-ad-hero-count {
   position: absolute;
   left: 50%; transform: translateX(-50%);
-  bottom: 30px;
+  bottom: calc(8dvh + 26px);
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.45);
@@ -4974,31 +4998,15 @@ textarea.cm-board-input.bm-invalid {
   font-size: 12px; font-weight: 700;
   z-index: 2;
 }
-.cm-ad-hero .cm-board-modal-dots { position: absolute; bottom: 12px; left: 0; right: 0; z-index: 2; }
-/* Ручка свайпу лежить ПОВЕРХ низу фото — аркуш ніби наїжджає на кадр (як у макеті). */
-.cm-ad-bar-over {
+.cm-ad-photo .cm-board-modal-dots {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 22px;
-  background: transparent;
-  border-radius: 0;
-  z-index: 3;
+  bottom: calc(8dvh + 8px);
+  left: 0; right: 0;
+  z-index: 2;
 }
-.cm-ad-bar-over .cm-board-modal-grip { background: rgba(255, 255, 255, 0.85); }
 
 /* ── Тіло ─────────────────────────────────────────────────────────────────── */
 .cm-ad-body { padding: 4px 18px 18px; }
-.cm-ad-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.cm-ad-x {
-  flex: none;
-  width: 32px; height: 32px;
-  border: 0; border-radius: 50%;
-  background: var(--board-press, #E4E4E1);
-  color: #444;
-  font-size: 15px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
 .cm-ad-title {
   margin: 10px 0 0;
   font-size: 24px;
@@ -5060,27 +5068,26 @@ textarea.cm-board-input.bm-invalid {
 }
 .cm-ad-author-name { font-size: 16px; font-weight: 700; color: #111; }
 
-/* ── Три рівні дії ────────────────────────────────────────────────────────── */
-/* Однаковий розмір — це повідомлення: жодна з трьох не головніша. Головні дії
-   (подзвонити/написати) живуть у липкій панелі знизу. */
-.cm-ad-actions { display: flex; gap: 8px; margin-top: 14px; }
-.cm-ad-act {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 12px 6px;
-  border: 1px solid var(--board-line, #C4C4C1);
-  border-radius: 14px;
-  background: #fff;
-  color: #333;
-  font-size: 12.5px; font-weight: 600;
+/* ── Скарга ───────────────────────────────────────────────────────────────── */
+/* 🔴 02.08 — БУЛО три однакові широкі кнопки (поділитися · зберегти · скаржитися).
+   Однаковий розмір — це повідомлення «вони рівноцінні», а вони не рівноцінні:
+   перші дві людина робить часто, скаржиться — раз на сотні переглядів. Перші дві
+   стали круглими кнопками поверх фото, скарга лишилась там, де її й шукають:
+   останнім рядком, тихим текстом, без рамки. */
+.cm-ad-report {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: #8A8A8A;
+  font-size: 13px; font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cm-ad-act svg { width: 19px; height: 19px; }
-.cm-ad-act:active { background: var(--board-press, #E4E4E1); }
-.cm-ad-act--on { color: var(--news-accent, #722F37); border-color: var(--news-accent, #722F37); }
-.cm-ad-act--warn { color: #B3261E; }
+.cm-ad-report svg { width: 15px; height: 15px; }
+.cm-ad-report:active { color: #B3261E; }
 
 /* ── Блок безпеки ─────────────────────────────────────────────────────────── */
 .cm-ad-safety {
@@ -5094,17 +5101,24 @@ textarea.cm-board-input.bm-invalid {
 .cm-ad-safety-text { font-size: 13px; line-height: 1.45; color: #5A5A5A; }
 .cm-ad-safety-text b { display: block; font-size: 14px; color: #111; margin-bottom: 2px; }
 
-/* ── Липка нижня панель ───────────────────────────────────────────────────── */
-/* Поза скролом — це головне, чого бракувало: при описі до 1296 символів кнопки
+/* ── ШАР 3: ПАНЕЛЬ ДІЙ ────────────────────────────────────────────────────────
+   Поза скролом — це головне, чого бракувало: при описі до 1296 символів кнопки
    контакту раніше їхали за межі екрана саме тоді, коли людина дочитала й хоче
-   написати. `env(safe-area-inset-bottom)` — щоб не залізти під home-bar iPhone. */
+   написати. `env(safe-area-inset-bottom)` — щоб не залізти під home-bar iPhone.
+
+   🔴 02.08 — ОКРЕМИЙ ЗАОКРУГЛЕНИЙ БЛОК, а не смуга з лінією зверху (зауваження Вови
+   по макету: «блок подзвонити, написати теж заокруглений»). Відділяє його ТІНЬ, а не
+   колір: обидві поверхні білі, і будь-який сірий тут читався б як «неактивно».
+   Той самий висновок, що для шапки Дошки 28.07 — «D відділялось формою, B світлом»;
+   тут світло, бо форма вже зайнята заокругленням самого аркуша. */
 .cm-ad-bottom {
   flex: none;
   display: flex;
   gap: 10px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   background: #fff;
-  border-top: 1px solid var(--board-line, #C4C4C1);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -5px 18px rgba(0, 0, 0, 0.09);
 }
 .cm-ad-call,
 .cm-ad-write {

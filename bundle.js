@@ -2,8 +2,8 @@
   // src/core/layers.js
   var stack = [];
   var seq = 0;
-  function openLayer(close2, opts = {}) {
-    const layer = { id: ++seq, close: close2, closed: false, animateOut: opts.animateOut || null };
+  function openLayer(close, opts = {}) {
+    const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
     const top = stack[stack.length - 1];
     if (opts.reuseEntry && top) {
       top.closed = true;
@@ -2279,7 +2279,7 @@
     const closeBtn = wrap.querySelector(".app-modal-close");
     const onKey = (e) => {
       if (e.key === "Escape")
-        close2();
+        close();
     };
     document.addEventListener("keydown", onKey);
     let closing = false;
@@ -2300,7 +2300,7 @@
       }
       setTimeout(() => wrap.remove(), ms + 20);
     }
-    function close2() {
+    function close() {
       if (closing || _active?.el !== wrap)
         return;
       closing = true;
@@ -2312,8 +2312,8 @@
       }
       slideOut();
     }
-    backdrop?.addEventListener("click", close2);
-    closeBtn?.addEventListener("click", close2);
+    backdrop?.addEventListener("click", close);
+    closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
       let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
       const drag = createDragTracker();
@@ -2388,8 +2388,8 @@
       });
     }
     onMount?.(wrap);
-    _active = { el: wrap, close: close2 };
-    return { close: close2, el: wrap };
+    _active = { el: wrap, close };
+    return { close, el: wrap };
   }
   function closeModal() {
     _active?.close();
@@ -2648,7 +2648,7 @@
       <p class="cm-board-hint">${isEdit ? "\u0417\u043C\u0456\u043D\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0443\u0442\u044C\u0441\u044F. \u042F\u043A\u0449\u043E \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0449\u0435 \u043D\u0435 \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F \u2014 \u043F\u0456\u0434\u0435 \u043D\u0430 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0443 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0443." : "\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456."}</p>
     </form>
   `;
-    const { close: close2, el: wrap } = openModal({
+    const { close, el: wrap } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--board-compose",
@@ -3025,7 +3025,7 @@
           showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438"), 4500);
           return;
         }
-        close2();
+        close();
         Object.assign(editPost, {
           text: payload.text,
           title: payload.title,
@@ -3056,7 +3056,7 @@
       } else {
         console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
       }
-      close2();
+      close();
       if (published) {
         window.dispatchEvent(new Event("cstl-posts-changed"));
         showToast("\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E \u2713 \u0412\u0438 \u0434\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440.", 4e3);
@@ -3124,10 +3124,10 @@
         backdrop.classList.remove("visible");
       }
     });
-    const close2 = () => closeLayer(api._layer, { animate: 240 });
-    backdrop.addEventListener("click", close2);
-    screen.querySelector("[data-pm-back]")?.addEventListener("click", close2);
-    api.close = close2;
+    const close = () => closeLayer(api._layer, { animate: 240 });
+    backdrop.addEventListener("click", close);
+    screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
+    api.close = close;
     _openScreens.push(api);
     return api;
   }
@@ -3669,15 +3669,15 @@
   }
   function openDiscSheet(opts) {
     const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
-    let close2;
-    ({ close: close2 } = openModal({
+    let close;
+    ({ close } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--disc",
-      onMount: (wrap) => opts.onMount?.(wrap, () => close2()),
+      onMount: (wrap) => opts.onMount?.(wrap, () => close()),
       onClose: opts.onClose
     }));
-    return close2;
+    return close;
   }
   function attachSheetKeyboardFix(wrap, input) {
     const vv = window.visualViewport;
@@ -3744,7 +3744,7 @@
       // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
       // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
       // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
-      onMount: (sheet, close2) => {
+      onMount: (sheet, close) => {
         const ta = sheet.querySelector("#disc-compose-topic");
         autoGrowTextarea(ta);
         detachKb = attachSheetKeyboardFix(sheet, ta);
@@ -3782,7 +3782,7 @@
               return;
             }
           }
-          close2();
+          close();
           showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
           window.dispatchEvent(new CustomEvent("cstl-posts-changed"));
         });
@@ -4103,15 +4103,15 @@
       ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
       <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
     </div>`;
-    const close2 = () => sheet.remove();
+    const close = () => sheet.remove();
     sheet.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) {
         if (e.target === sheet)
-          close2();
+          close();
         return;
       }
-      close2();
+      close();
       const act = b.dataset.act;
       if (act === "reply")
         startDiscReply(c);
@@ -4886,15 +4886,15 @@
         ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
         <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
       </div>`;
-      const close2 = () => sheet.remove();
+      const close = () => sheet.remove();
       sheet.addEventListener("click", async (e) => {
         const b = e.target.closest("[data-act]");
         if (!b) {
           if (e.target === sheet)
-            close2();
+            close();
           return;
         }
-        close2();
+        close();
         const act = b.dataset.act;
         if (act === "reply")
           startReply(m);
@@ -6186,8 +6186,8 @@
     </article>
   `;
   }
-  function wireAdModalChrome(modal, close2) {
-    modal.querySelectorAll("[data-ad-close]").forEach((b) => b.addEventListener("click", () => close2()));
+  function wireAdModalChrome(modal, close) {
+    modal.querySelectorAll("[data-ad-close]").forEach((b) => b.addEventListener("click", () => close()));
     modal.querySelector("[data-ad-report]")?.addEventListener("click", () => {
       showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E. \u041C\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u043C\u043E \u0446\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.");
     });
@@ -6205,61 +6205,153 @@
       }).catch(() => {
       });
     }
-    const counter = modal.querySelector(".cm-ad-hero-count");
-    const heroGal = modal.querySelector(".cm-ad-hero .cm-board-modal-gallery");
-    if (counter && heroGal) {
-      heroGal.addEventListener("scroll", () => {
-        const n = heroGal.clientWidth ? Math.round(heroGal.scrollLeft / heroGal.clientWidth) + 1 : 1;
-        counter.textContent = `${n} / ${heroGal.children.length}`;
-      }, { passive: true });
+    const gallery = modal.querySelector(".cm-board-modal-gallery");
+    if (gallery) {
+      const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
+      gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
+        im.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openPhotoLightbox2(photoUrls, Number(im.dataset.photoIdx) || 0);
+        });
+      });
+      const dots = modal.querySelectorAll(".cm-board-modal-dot");
+      const counter = modal.querySelector(".cm-ad-hero-count");
+      if (dots.length || counter) {
+        gallery.addEventListener("scroll", () => {
+          const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
+          dots.forEach((d, di) => d.classList.toggle("active", di === i));
+          if (counter)
+            counter.textContent = `${i + 1} / ${gallery.children.length}`;
+        }, { passive: true });
+      }
     }
+  }
+  function attachAdSheetSwipe(modal, backdrop, onDismiss) {
+    const scroller = modal.querySelector(".cm-board-modal-scrollarea") || modal;
+    const grip = modal.querySelector(".cm-board-modal-bar");
+    const drag = createDragTracker();
+    const fade = createBackdropFade(backdrop);
+    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
+    modal.addEventListener("touchstart", (e) => {
+      if (e.touches.length > 1) {
+        canSwipe = false;
+        swiping = false;
+        return;
+      }
+      const onGrip = grip && (e.target === grip || grip.contains(e.target));
+      canSwipe = onGrip || scroller.scrollTop <= 2;
+      sY = e.touches[0].clientY;
+      sX = e.touches[0].clientX;
+      swiping = false;
+      travel = sheetRemaining(modal, 0);
+      drag.start(sY);
+      if (canSwipe)
+        modal.style.transition = "none";
+    }, { passive: true });
+    modal.addEventListener("touchmove", (e) => {
+      if (!canSwipe)
+        return;
+      if (e.touches.length > 1) {
+        canSwipe = false;
+        return;
+      }
+      const dy = e.touches[0].clientY - sY;
+      const dx = e.touches[0].clientX - sX;
+      if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+        canSwipe = false;
+        return;
+      }
+      if (dy > 0) {
+        e.preventDefault();
+        swiping = true;
+        modal.style.transform = `translateY(${dy}px)`;
+        fade?.track(dy / travel);
+      } else if (swiping) {
+        modal.style.transform = "translateY(0)";
+        fade?.track(0);
+      }
+      drag.move(e.touches[0].clientY);
+    }, { passive: false });
+    const finish2 = (e) => {
+      if (!canSwipe)
+        return;
+      const pt = e.changedTouches && e.changedTouches[0];
+      const dy = (pt ? pt.clientY : sY) - sY;
+      finishSwipe({
+        panel: modal,
+        dy: swiping ? dy : 0,
+        velocity: drag.velocity,
+        remaining: sheetRemaining(modal, dy),
+        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+        onDismiss,
+        backdrop: fade
+      });
+      swiping = false;
+      canSwipe = false;
+    };
+    modal.addEventListener("touchend", finish2, { passive: true });
+    modal.addEventListener("touchcancel", finish2, { passive: true });
   }
   function renderAdModal(p) {
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
+    const hasHero = photos.length > 0;
     return `
-    ${renderAdHero(p, photos)}
-    <div class="cm-board-modal-scrollarea">
-      ${photos.length ? "" : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
-      <div class="cm-ad-body">
-        ${renderAdHead(p, photos.length > 0)}
-        ${renderAdMeta(p)}
-        <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
-        ${renderAdSpecs(p)}
-        ${renderAdAuthor(p)}
-        ${renderAdActions(p)}
-        ${renderAdSafety()}
+    ${renderAdPhotoLayer(p, photos)}
+    <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
+      <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
+      ${hasHero ? "" : renderAdTopActions(p, false)}
+      <div class="cm-board-modal-scrollarea">
+        <div class="cm-ad-body">
+          ${renderAdHead(p)}
+          ${renderAdMeta(p)}
+          <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
+          ${renderAdSpecs(p)}
+          ${renderAdAuthor(p)}
+          ${renderAdSafety()}
+          ${renderAdReport()}
+        </div>
       </div>
+      ${renderAdBottomBar(p)}
     </div>
-    ${renderAdBottomBar(p)}
   `;
   }
-  function renderAdHero(p, photos) {
+  function renderAdPhotoLayer(p, photos) {
     if (!photos.length)
       return "";
     const multi = photos.length > 1;
     return `
-    <div class="cm-ad-hero">
+    <div class="cm-ad-photo">
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
-      <div class="cm-ad-hero-top">
-        <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${BACK_ICON_SVG}</button>
-      </div>
+      ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
       <div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
-      <div class="cm-board-modal-bar cm-ad-bar-over"><span class="cm-board-modal-grip"></span></div>
     </div>`;
   }
-  function renderAdHead(p, hasHero) {
+  function renderAdTopActions(p, overPhoto) {
+    const saved = isSaved(p.id);
+    return `
+    <div class="cm-ad-top${overPhoto ? " cm-ad-top--over" : ""}">
+      <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${overPhoto ? BACK_ICON_SVG : "\u2715"}</button>
+      <div class="cm-ad-top-right">
+        <button class="cm-ad-round" type="button" data-share-board
+                data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
+                data-share-url="${escapeHtml(deepLink("board", p.id))}"
+                aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${ICONS.share}</button>
+        <button class="cm-ad-round${saved ? " cm-ad-round--on" : ""}" type="button" data-save-id="${p.id}"
+                aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}</button>
+      </div>
+    </div>`;
+  }
+  function renderAdHead(p) {
     const t = formatPrice(p.price, p.currency, p.price_negotiable);
     const haggle = p.price_negotiable && p.price != null;
     return `
     <div class="cm-ad-head">
-      <div class="cm-ad-head-top">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${hasHero ? "" : '<button class="cm-ad-x" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>'}
-      </div>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ""}
       ${t ? `<div class="cm-ad-price-row">
         <span class="cm-ad-price">${escapeHtml(t)}</span>
@@ -6292,17 +6384,11 @@
       ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">\u203A</span>' : ""}
     </div>`;
   }
-  function renderAdActions(p) {
+  function renderAdReport() {
     return `
-    <div class="cm-ad-actions">
-      <button class="cm-ad-act" type="button" data-share-board
-              data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
-              data-share-url="${escapeHtml(deepLink("board", p.id))}">${ICONS.share}<span>\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F</span></button>
-      <button class="cm-ad-act${isSaved(p.id) ? " cm-ad-act--on" : ""}" type="button" data-save-id="${p.id}"
-              aria-label="${isSaved(p.id) ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-        ${isSaved(p.id) ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}<span>\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</span></button>
-      <button class="cm-ad-act cm-ad-act--warn" type="button" data-ad-report>${REPORT_ICON_SVG}<span>\u0421\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044F</span></button>
-    </div>`;
+    <button class="cm-ad-report" type="button" data-ad-report>
+      ${REPORT_ICON_SVG}<span>\u041F\u043E\u0441\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044F \u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+    </button>`;
   }
   function renderAdSafety() {
     return `
@@ -6321,18 +6407,6 @@
       ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : ""}
       <button class="cm-ad-write${tel ? "" : " cm-ad-write--solo"}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
     </div>`;
-  }
-  function attachSubheadShadow(modal) {
-    const scroller = modal.querySelector(".cm-board-modal-scrollarea");
-    const head = modal.querySelector(".cm-board-modal-subhead");
-    if (!scroller || !head)
-      return;
-    const sync = () => {
-      const reachedTop = head.getBoundingClientRect().top - scroller.getBoundingClientRect().top <= 1;
-      head.classList.toggle("is-stuck", scroller.scrollTop > 2 && reachedTop);
-    };
-    sync();
-    scroller.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
   }
   function openPhotoLightbox2(photos, startIdx) {
     if (!photos || !photos.length)
@@ -6361,15 +6435,15 @@
       wrap.classList.add("open");
     });
     track.addEventListener("scroll", () => requestAnimationFrame(updateCount), { passive: true });
-    const close2 = () => {
+    const close = () => {
       wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       setTimeout(() => wrap.remove(), 200);
     };
-    wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close2);
+    wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close);
     wrap.addEventListener("click", (e) => {
       if (e.target === wrap)
-        close2();
+        close();
     });
   }
   function renderCard(post) {
@@ -6866,7 +6940,7 @@
     backdrop.className = "board-backdrop";
     backdrop.style.zIndex = "2599";
     const modal = document.createElement("article");
-    modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
+    modal.className = "cm-board-modal-note cm-ad-screen";
     modal.style.zIndex = "2600";
     if (post.id != null)
       modal.dataset.postId = post.id;
@@ -6875,9 +6949,8 @@
     document.body.appendChild(modal);
     document.body.classList.add("cm-zoom-open");
     hydrateNames(modal);
-    attachSubheadShadow(modal);
     let closed = false;
-    const close2 = () => {
+    const close = () => {
       if (closed)
         return;
       closed = true;
@@ -6889,98 +6962,33 @@
         backdrop.remove();
       }, 240);
     };
-    backdrop.addEventListener("click", close2);
-    const gallery = modal.querySelector(".cm-board-modal-gallery");
-    if (gallery) {
-      const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
-      gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
-        im.addEventListener("click", (e) => {
-          e.stopPropagation();
-          openPhotoLightbox2(photoUrls, Number(im.dataset.photoIdx) || 0);
-        });
-      });
-      const dots = modal.querySelectorAll(".cm-board-modal-dot");
-      if (dots.length) {
-        gallery.addEventListener("scroll", () => {
-          const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
-          dots.forEach((d, di) => d.classList.toggle("active", di === i));
-        }, { passive: true });
-      }
-    }
-    wireAdModalChrome(modal, close2);
-    const area = modal.querySelector(".cm-board-modal-scrollarea");
-    const scroller = area || modal;
-    const grip = modal.querySelector(".cm-board-modal-bar");
-    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
-    const drag = createDragTracker();
-    const fade = createBackdropFade(backdrop);
-    modal.addEventListener("touchstart", (e) => {
-      const onGrip = grip && (e.target === grip || grip.contains(e.target));
-      canSwipe = onGrip || scroller.scrollTop <= 2;
-      sY = e.touches[0].clientY;
-      sX = e.touches[0].clientX;
-      swiping = false;
-      travel = sheetRemaining(modal, 0);
-      drag.start(sY);
-      if (canSwipe)
-        modal.style.transition = "none";
-    }, { passive: true });
-    modal.addEventListener("touchmove", (e) => {
-      if (!canSwipe)
-        return;
-      const dy = e.touches[0].clientY - sY;
-      const dx = e.touches[0].clientX - sX;
-      if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-        canSwipe = false;
-        return;
-      }
-      if (dy > 0) {
-        e.preventDefault();
-        swiping = true;
-        modal.style.transform = `translateY(${dy}px)`;
-        fade?.track(dy / travel);
-      } else if (swiping) {
-        modal.style.transform = "translateY(0)";
-        fade?.track(0);
-      }
-      drag.move(e.touches[0].clientY);
-    }, { passive: false });
-    modal.addEventListener("touchend", (e) => {
-      if (!canSwipe)
-        return;
-      const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-      finishSwipe({
-        panel: modal,
-        dy: swiping ? dy : 0,
-        velocity: drag.velocity,
-        remaining: sheetRemaining(modal, dy),
-        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
-        onDismiss: () => close2(),
-        backdrop: fade
-      });
-      swiping = false;
-      canSwipe = false;
-    }, { passive: true });
+    backdrop.addEventListener("click", close);
+    wireAdModalChrome(modal, close);
+    attachAdSheetSwipe(modal, backdrop, close);
     requestAnimationFrame(() => {
       backdrop.classList.add("visible");
       modal.classList.add("visible");
     });
   }
   function initBoardNoteExpand(root) {
-    const backdrop = root.querySelector("#board-backdrop");
-    if (!backdrop)
+    if (!root.querySelector("#board-backdrop"))
       return;
     let activeNote = null;
     let activeModal = null;
+    let activeBackdrop = null;
     let isAnimating = false;
     const DURATION = 240;
     const expand = (note2) => {
       if (isAnimating || activeNote)
         return;
       isAnimating = true;
+      const backdrop = document.createElement("div");
+      backdrop.className = "board-backdrop cm-ad-backdrop--over";
+      document.body.appendChild(backdrop);
+      activeBackdrop = backdrop;
       const modal = document.createElement("article");
-      modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
-      backdrop.classList.add("cm-ad-backdrop--over");
+      modal.className = "cm-board-modal-note cm-ad-screen";
+      backdrop.addEventListener("click", () => collapse());
       const post = allPosts.find((x) => String(x.id) === note2.dataset.postId);
       if (note2.dataset.postId)
         modal.dataset.postId = note2.dataset.postId;
@@ -6988,83 +6996,13 @@
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
       hydrateNames(modal);
-      attachSubheadShadow(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
         }, { capture: true });
       });
-      const gallery = modal.querySelector(".cm-board-modal-gallery");
-      if (gallery) {
-        const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
-        gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
-          im.addEventListener("click", (e) => {
-            e.stopPropagation();
-            openPhotoLightbox2(photoUrls, Number(im.dataset.photoIdx) || 0);
-          });
-        });
-        const dots = modal.querySelectorAll(".cm-board-modal-dot");
-        if (dots.length) {
-          gallery.addEventListener("scroll", () => {
-            const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
-            dots.forEach((d, di) => d.classList.toggle("active", di === i));
-          }, { passive: true });
-        }
-      }
-      const area = modal.querySelector(".cm-board-modal-scrollarea");
-      wireAdModalChrome(modal, close);
-      const scroller = area || modal;
-      const grip = modal.querySelector(".cm-board-modal-bar");
-      let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
-      const drag = createDragTracker();
-      const fade = createBackdropFade(backdrop);
-      modal.addEventListener("touchstart", (e) => {
-        const onGrip = grip && (e.target === grip || grip.contains(e.target));
-        canSwipe = onGrip || scroller.scrollTop <= 2;
-        sY = e.touches[0].clientY;
-        sX = e.touches[0].clientX;
-        swiping = false;
-        travel = centeredRemaining(modal);
-        drag.start(sY);
-        if (canSwipe)
-          modal.style.transition = "none";
-      }, { passive: true });
-      modal.addEventListener("touchmove", (e) => {
-        if (!canSwipe)
-          return;
-        const dy = e.touches[0].clientY - sY;
-        const dx = e.touches[0].clientX - sX;
-        if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-          canSwipe = false;
-          return;
-        }
-        if (dy > 0) {
-          e.preventDefault();
-          swiping = true;
-          modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
-          fade?.track(dy / travel);
-        } else if (swiping) {
-          modal.style.transform = "translate(-50%, -50%) scale(1)";
-          fade?.track(0);
-        }
-        drag.move(e.touches[0].clientY);
-      }, { passive: false });
-      modal.addEventListener("touchend", (e) => {
-        if (!canSwipe)
-          return;
-        const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-        finishSwipe({
-          panel: modal,
-          dy: swiping ? dy : 0,
-          velocity: drag.velocity,
-          remaining: centeredRemaining(modal),
-          dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
-          onDismiss: () => collapse(),
-          backdrop: fade
-        });
-        swiping = false;
-        canSwipe = false;
-      }, { passive: true });
+      wireAdModalChrome(modal, collapse);
+      attachAdSheetSwipe(modal, backdrop, () => collapse());
       activeNote = note2;
       activeModal = modal;
       note2.classList.add("cm-board-note--hidden");
@@ -7082,14 +7020,17 @@
       isAnimating = true;
       const note2 = activeNote;
       const modal = activeModal;
+      const backdrop = activeBackdrop;
       modal.classList.remove("visible");
-      backdrop.classList.remove("visible");
+      backdrop?.classList.remove("visible");
       note2.classList.remove("cm-board-note--hidden");
       document.body.classList.remove("cm-zoom-open");
       setTimeout(() => {
         modal.remove();
+        backdrop?.remove();
         activeNote = null;
         activeModal = null;
+        activeBackdrop = null;
         isAnimating = false;
       }, DURATION);
     };
@@ -7102,7 +7043,6 @@
           expand(note2);
       });
     });
-    backdrop.addEventListener("click", collapse);
     _boardCollapseRef = collapse;
     if (!_boardTabHookSet) {
       _boardTabHookSet = true;
@@ -7155,9 +7095,10 @@
         const nowSaved = isSaved(id);
         saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
         saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
+        saveBtn.classList.toggle("cm-ad-round--on", nowSaved && saveBtn.classList.contains("cm-ad-round"));
         saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
         if (activeType === "saved" && !nowSaved) {
-          document.querySelector("#board-backdrop.visible")?.click();
+          document.querySelector(".board-backdrop.cm-ad-backdrop--over.visible")?.click();
           renderBodyOnly();
         }
         return;
@@ -10548,7 +10489,7 @@ ${ev.description || ""}`
     const nowDateStr = nowLocal.toISOString().slice(0, 10);
     const nowHour = nowLocal.getUTCHours();
     const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
-    const { close: close2, el } = openModal({
+    const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
@@ -10560,7 +10501,7 @@ ${ev.description || ""}`
         initialIdx: initialIdx >= 0 ? initialIdx : null
       })
     });
-    wireWeatherSwipe(el, close2);
+    wireWeatherSwipe(el, close);
   }
   function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
     const n = tempPts.length;
@@ -10616,7 +10557,7 @@ ${ev.description || ""}`
     if (initialIdx != null)
       place(initialIdx);
   }
-  function wireWeatherSwipe(overlay, close2) {
+  function wireWeatherSwipe(overlay, close) {
     const sheet = overlay.querySelector(".app-modal-sheet");
     if (!sheet)
       return;
@@ -10656,7 +10597,7 @@ ${ev.description || ""}`
         velocity: drag.velocity,
         remaining: sheetRemaining(sheet, dy),
         dismissTransform: "translateY(100%)",
-        onDismiss: () => close2(),
+        onDismiss: () => close(),
         backdrop: fade
       });
     });
@@ -12369,11 +12310,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       ov.remove();
       document.body.style.overflow = "";
     });
-    const close2 = () => closeLayer(layer);
-    ov.querySelector(".fd-viewer-close").addEventListener("click", close2);
+    const close = () => closeLayer(layer);
+    ov.querySelector(".fd-viewer-close").addEventListener("click", close);
     ov.addEventListener("click", (e) => {
       if (e.target === ov || e.target.classList.contains("fd-viewer-slide"))
-        close2();
+        close();
     });
     document.body.appendChild(ov);
     document.body.style.overflow = "hidden";
@@ -13413,7 +13354,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         if (el)
           el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
       });
-    const close2 = () => {
+    const close = () => {
       detachKb();
       unlockScroll();
       comSheetFull = false;
@@ -13424,7 +13365,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const vpEl = sheet.querySelector(".fd-sheet-vp");
     sheet.addEventListener("click", (e) => {
       if (e.target === sheet || e.target === vpEl)
-        close2();
+        close();
     });
     const expandThread = (rootId) => {
       const st = listEl.scrollTop;
@@ -13568,7 +13509,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       if (!isLoggedIn()) {
-        close2();
+        close();
         requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
         });
         return;
@@ -13603,7 +13544,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     const gripEl = sheet.querySelector(".fd-com-grip");
-    attachSheetSwipe(sheet, comSheet, listEl, close2, {
+    attachSheetSwipe(sheet, comSheet, listEl, close, {
       grip: gripEl,
       twoStage: true,
       onDismissStart: () => beginClose(),
@@ -13976,14 +13917,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close2 = () => {
+    const close = () => {
       detachKb();
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close2();
+        close();
     });
     const listEl = back.querySelector(".fd-team-list");
     const render2 = (rows) => {
@@ -14053,7 +13994,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     document.body.appendChild(back);
     const shellTeam = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
     detachKb = shellTeam.detach;
-    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close2, {
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
       grip: back.querySelector(".fd-comp-head"),
       onDismissStart: () => shellTeam.beginClose(),
       keepVisibleOnDismiss: true
@@ -14166,7 +14107,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close2 = () => {
+    const close = () => {
       detachKb();
       previewUrls.forEach((u) => URL.revokeObjectURL(u));
       back.remove();
@@ -14174,7 +14115,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close2();
+        close();
     });
     const eventBox = back.querySelector(".fd-comp-event");
     back.querySelectorAll(".fd-comp-type-btn").forEach((btn) => btn.addEventListener("click", () => {
@@ -14290,7 +14231,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           }
           if (!edit)
             clearDraft(pageId);
-          close2();
+          close();
           if (edit)
             patchPostCard(res.post.id);
           else
@@ -14364,7 +14305,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       clearTimeout(animTimer);
       animTimer = setTimeout(() => compSheet.classList.remove("fd-comp--anim"), 300);
     };
-    attachSheetSwipe(back, compSheet, bodyEl, close2, {
+    attachSheetSwipe(back, compSheet, bodyEl, close, {
       grip: headEl,
       onDismissStart: () => beginClose(),
       keepVisibleOnDismiss: true
@@ -14425,14 +14366,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     </div>`;
     let detachKb = () => {
     };
-    const close2 = () => {
+    const close = () => {
       detachKb();
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
       if (e.target === back || e.target === vpEl)
-        close2();
+        close();
     });
     const setPreview = (label, file) => {
       label.querySelector("img")?.remove();
@@ -14497,7 +14438,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         if (theme !== (page.theme || ""))
           patch.theme = theme;
         if (!Object.keys(patch).length) {
-          close2();
+          close();
           return;
         }
         const res = await updatePage(pageId, patch);
@@ -14509,7 +14450,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
               p.pages.name = page.name;
             }
           });
-          close2();
+          close();
           patchPageScreen(pageId);
           refreshFeedCircles();
           posts.forEach((p) => {
@@ -14529,7 +14470,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     document.body.appendChild(back);
     const shellEd = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
     detachKb = shellEd.detach;
-    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close2, {
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
       grip: back.querySelector(".fd-comp-head"),
       onDismissStart: () => shellEd.beginClose(),
       keepVisibleOnDismiss: true
@@ -14550,17 +14491,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>
       <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>
     </div>`;
-    const close2 = () => back.remove();
+    const close = () => back.remove();
     back.addEventListener("click", async (e) => {
       if (e.target === back) {
-        close2();
+        close();
         return;
       }
       const item = e.target.closest("[data-act]");
       if (!item)
         return;
       if (item.dataset.act === "edit") {
-        close2();
+        close();
         openComposer(post.page_id, post);
         return;
       }
@@ -14578,7 +14519,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         const i = posts.findIndex((p) => p.id === postId);
         if (i >= 0)
           posts[i] = res2.post;
-        close2();
+        close();
         showToast(isPinned ? "\u041F\u043E\u0441\u0442 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E" : "\u041F\u043E\u0441\u0442 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E \u0432\u0433\u043E\u0440\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438", 2500);
         patchPostCard(postId);
         reorderPagePosts(post.page_id, postId);
@@ -14592,13 +14533,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       posts = posts.filter((p) => p.id !== postId);
-      close2();
+      close();
       removePostCard(postId);
     });
     document.body.appendChild(back);
     const pmSheet = back.querySelector(".fd-postmenu");
     let pmClosing = false;
-    attachSheetSwipe(back, pmSheet, pmSheet, close2, {
+    attachSheetSwipe(back, pmSheet, pmSheet, close, {
       onDismissStart: () => {
         if (pmClosing)
           return;
@@ -15659,12 +15600,12 @@ END:VEVENT`
     btn.hidden = !team;
   }
   function initSidebar() {
-    const { toggle, close: close2, overlay } = els();
+    const { toggle, close, overlay } = els();
     if (!toggle)
       return;
     renderNav();
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
-    close2?.addEventListener("click", closeSidebar);
+    close?.addEventListener("click", closeSidebar);
     overlay?.addEventListener("click", closeSidebar);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && _open)
