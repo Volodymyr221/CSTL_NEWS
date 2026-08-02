@@ -2377,10 +2377,39 @@ textarea.cm-board-input.bm-invalid {
 }
 /* Модалка оголошення, відкрита з чату — білий фон + чиста тінь (виділяється на фоні).
    Внутрішні блоки (бар/під-шапка/футер) мають background:inherit → теж білі. */
+/* 🔴 02.08 — МОДАЛКА ОГОЛОШЕННЯ СТАЛА ПОВНОЕКРАННИМ АРКУШЕМ ЗНИЗУ.
+   Було: центрована картка, заміряно **300px висоти з 844** — вона й «не читалась як
+   окрема сторінка», на що скаржився Вова. Плюс футер із кнопками «Подзвонити/Написати»
+   був `position: relative`, тобто при описі до 1296 символів (наш максимум) головна
+   дія їхала за межі екрана.
+   Стало: аркуш від нижнього краю на 92% висоти, радіус лише ВЕРХНІХ кутів.
+   ⚠️ Геометрія змінилась із центрованої (`translate(-50%,-50%)`) на притиснуту знизу,
+   тому разом із нею ОБОВʼЯЗКОВО міняється математика свайпу в `board.js`
+   (`centeredRemaining` → `sheetRemaining`, `translate(-50%,…)` → `translateY`).
+   Лишити старий свайп означало б зсув на пів ширини при кожному дотику. */
 .cm-board-modal-note.cm-board-modal--sheet {
   background: #fff;
-  box-shadow: 0 20px 48px rgba(0,0,0,0.30), 0 4px 14px rgba(0,0,0,0.18);
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  width: 100%;
+  height: 92dvh;
+  max-height: 92dvh;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.28);
+  transform: translateY(100%);
+  /* 🔴 ВИЩЕ ТАБ-БАРА (він z-index: 1000/1001). Аркуш займає весь екран, і таб-бар
+     поверх нього накривав би саме липку панель «Подзвонити / Написати» — тобто
+     головні дії. На макеті таб-бару під модалкою теж немає: це «окремий екран».
+     Затемнення піднято разом із ним, інакше воно лягло б ПІД таб-бар і той світив
+     би крізь напівпрозорий шар. */
+  z-index: 1100;
 }
+.board-backdrop.cm-ad-backdrop--over { z-index: 1099; }
+.cm-board-modal-note.cm-board-modal--sheet.visible { transform: translateY(0); }
+/* Тіло аркуша прокручується, нижня панель дій — ні (вона поза цим блоком). */
+.cm-board-modal--sheet .cm-board-modal-scrollarea { flex: 1; min-height: 0; }
 /* Шапка модалки над фото: смужка-ручка для свайпу (по центру) + кнопка ✕ (справа).
    Липка (sticky) — лишається зверху при скролі, тож ✕ завжди доступний.
    Фон успадковує колір картки (background: inherit), радіус — під верхні кути модалки. */
@@ -4885,3 +4914,211 @@ textarea.cm-board-input.bm-invalid {
   right: -3px;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔴 02.08 — МОДАЛКА ОГОЛОШЕННЯ ЗА МАКЕТОМ (два скріни, схвалені Вовою).
+   Геометрію аркуша задано вище (`.cm-board-modal--sheet`), тут — начинка.
+   Токени беремо з проєкту; «магічних» кольорів не вводимо.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── HERO: фото на всю ширину ─────────────────────────────────────────────── */
+/* 38% висоти екрана — середина вилки 35-40% із ТЗ. Фіксована частка, а не
+   пропорція картинки: інакше вертикальне фото займало б пів аркуша, і до тексту
+   довелось би скролити. */
+.cm-ad-hero {
+  position: relative;
+  flex: none;
+  height: 38dvh;
+  background: #ECECEA;
+}
+.cm-ad-hero .cm-board-modal-gallery { height: 100%; }
+.cm-ad-hero .cm-board-modal-slide img { width: 100%; height: 100%; object-fit: cover; }
+.cm-ad-hero-top {
+  position: absolute;
+  top: 10px; left: 12px; right: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 2;
+}
+/* Кругла кнопка поверх фото: напівпрозоре темне скло — читається і на світлому,
+   і на темному кадрі, тобто не залежить від того, що саме сфотографували. */
+.cm-ad-round {
+  width: 36px; height: 36px;
+  border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-ad-round svg { width: 20px; height: 20px; }
+.cm-ad-hero-count {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: 30px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  z-index: 2;
+}
+.cm-ad-hero .cm-board-modal-dots { position: absolute; bottom: 12px; left: 0; right: 0; z-index: 2; }
+/* Ручка свайпу лежить ПОВЕРХ низу фото — аркуш ніби наїжджає на кадр (як у макеті). */
+.cm-ad-bar-over {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 22px;
+  background: transparent;
+  border-radius: 0;
+  z-index: 3;
+}
+.cm-ad-bar-over .cm-board-modal-grip { background: rgba(255, 255, 255, 0.85); }
+
+/* ── Тіло ─────────────────────────────────────────────────────────────────── */
+.cm-ad-body { padding: 4px 18px 18px; }
+.cm-ad-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cm-ad-x {
+  flex: none;
+  width: 32px; height: 32px;
+  border: 0; border-radius: 50%;
+  background: var(--board-press, #E4E4E1);
+  color: #444;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-ad-title {
+  margin: 10px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.18;
+  color: #111;
+}
+.cm-ad-price-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.cm-ad-price {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--news-accent, #722F37);
+  letter-spacing: -0.5px;
+}
+/* «Можливий торг» — тиха пігулка поруч із сумою, а не другий акцент: інакше два
+   темні плями в рядку сперечались би за увагу. */
+.cm-ad-haggle {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--board-press, #E4E4E1);
+  color: #555;
+  font-size: 13px; font-weight: 600;
+}
+.cm-ad-meta {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: #6C6C6C;
+}
+.cm-ad-meta-loc { display: inline-flex; align-items: center; gap: 4px; }
+.cm-ad-meta-loc svg { width: 13px; height: 13px; }
+.cm-ad-meta-dot { opacity: 0.5; }
+/* Опис — головний текст екрана, тож інтервал більший за звичайний 1.4. */
+.cm-ad-text {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.62;
+  color: #1A1A1A;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Автор ────────────────────────────────────────────────────────────────── */
+.cm-ad-author {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--board-press, #E4E4E1);
+}
+.cm-ad-avatar {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  color: #6C6C6C;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+}
+.cm-ad-author-name { font-size: 16px; font-weight: 700; color: #111; }
+
+/* ── Три рівні дії ────────────────────────────────────────────────────────── */
+/* Однаковий розмір — це повідомлення: жодна з трьох не головніша. Головні дії
+   (подзвонити/написати) живуть у липкій панелі знизу. */
+.cm-ad-actions { display: flex; gap: 8px; margin-top: 14px; }
+.cm-ad-act {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px;
+  border: 1px solid var(--board-line, #C4C4C1);
+  border-radius: 14px;
+  background: #fff;
+  color: #333;
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-ad-act svg { width: 19px; height: 19px; }
+.cm-ad-act:active { background: var(--board-press, #E4E4E1); }
+.cm-ad-act--on { color: var(--news-accent, #722F37); border-color: var(--news-accent, #722F37); }
+.cm-ad-act--warn { color: #B3261E; }
+
+/* ── Блок безпеки ─────────────────────────────────────────────────────────── */
+.cm-ad-safety {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(114, 47, 55, 0.06);
+}
+.cm-ad-safety-ic { flex: none; width: 24px; height: 24px; color: var(--news-accent, #722F37); }
+.cm-ad-safety-text { font-size: 13px; line-height: 1.45; color: #5A5A5A; }
+.cm-ad-safety-text b { display: block; font-size: 14px; color: #111; margin-bottom: 2px; }
+
+/* ── Липка нижня панель ───────────────────────────────────────────────────── */
+/* Поза скролом — це головне, чого бракувало: при описі до 1296 символів кнопки
+   контакту раніше їхали за межі екрана саме тоді, коли людина дочитала й хоче
+   написати. `env(safe-area-inset-bottom)` — щоб не залізти під home-bar iPhone. */
+.cm-ad-bottom {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid var(--board-line, #C4C4C1);
+}
+.cm-ad-call,
+.cm-ad-write {
+  flex: 1 1 0;
+  height: 50px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 14px;
+  font-size: 16px; font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Дзвінок — другорядна дія (контурна), листування — головна (залита).
+   ⚠️ Обидві 50px: мінімальна тап-ціль Apple HIG 44px, з запасом. */
+.cm-ad-call {
+  border: 1.5px solid var(--news-accent, #722F37);
+  background: #fff;
+  color: var(--news-accent, #722F37);
+}
+.cm-ad-write {
+  border: 0;
+  background: var(--news-accent, #722F37);
+  color: #fff;
+}
+.cm-ad-write--solo { flex: 1 1 100%; }
+.cm-ad-call svg, .cm-ad-write svg { width: 19px; height: 19px; }
+.cm-ad-call:active, .cm-ad-write:active { opacity: 0.85; }
