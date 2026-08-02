@@ -561,6 +561,7 @@ function renderAdModal(p) {
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
+          ${renderAdPrice(p)}
           <p class="cm-ad-text">${escapeHtml(p.text || '')}</p>
           ${renderAdSpecs(p)}
           ${renderAdAuthor(p)}
@@ -649,18 +650,38 @@ function renderAdTopActions(p, overPhoto) {
 // ⚠️ Кнопки закриття тут більше немає — вона переїхала у `renderAdTopActions`. Завдяки
 // цьому шапка більше не мусить знати, чи є фото: про сусідній блок вона не питає взагалі.
 function renderAdHead(p) {
-  const t = formatPrice(p.price, p.currency, p.price_negotiable);
-  // «Можливий торг» окремою пігулкою — лише коли ціна ЧИСЛОВА: поруч зі словом
-  // «Договірна» вона писала б те саме двічі.
-  const haggle = p.price_negotiable && p.price != null;
   return `
     <div class="cm-ad-head">
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ''}
-      ${t ? `<div class="cm-ad-price-row">
-        <span class="cm-ad-price">${escapeHtml(t)}</span>
-        ${haggle ? '<span class="cm-ad-haggle">Можливий торг</span>' : ''}
-      </div>` : ''}
+    </div>`;
+}
+
+// 🔴 02.08 — ЦІНА ГУЧНА ЛИШЕ ТОДІ, КОЛИ ВОНА ЧИСЛО. Скарга Вови: «заголовок такий
+// великий, ціна така велика „Договірна“ — все накидано, незрозуміло що до чого».
+//
+// Заміряно: заголовок 21px, а «Договірна» 28px багряним — тобто на **33% більша** за
+// назву оголошення і ще й кольорова. Але «Договірна» це не ціна, а її ВІДСУТНІСТЬ, і
+// числову ціну має приблизно одне оголошення з сімнадцяти. Виходило, що на 94% екранів
+// найгучніше написано «я не знаю ціни».
+//
+// Правило одним рядком: **заголовок — найбільше на екрані завжди**; ціна переростає
+// решту тільки коли вона щось повідомляє. «Безкоштовно» теж гучне — нуль це число і
+// це справжня новина для читача, на відміну від «домовимось».
+//
+// ⚠️ Порядок ОДИН на всі випадки: назва → локація й час → ціна. Ціна змінює вагу, але
+// ніколи не змінює місце — інакше око щоразу шукало б її заново.
+function renderAdPrice(p) {
+  const t = formatPrice(p.price, p.currency, p.price_negotiable);
+  if (!t) return '';
+  const quiet = t === 'Договірна';
+  // «Можливий торг» окремою пігулкою — лише коли ціна ЧИСЛОВА: поруч зі словом
+  // «Договірна» вона писала б те саме двічі.
+  const haggle = p.price_negotiable && p.price != null;
+  return `
+    <div class="cm-ad-price-row">
+      <span class="cm-ad-price${quiet ? ' cm-ad-price--quiet' : ''}">${quiet ? 'Ціна договірна' : escapeHtml(t)}</span>
+      ${haggle ? '<span class="cm-ad-haggle">Можливий торг</span>' : ''}
     </div>`;
 }
 

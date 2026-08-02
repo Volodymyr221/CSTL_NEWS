@@ -37,8 +37,11 @@ const POSTS = [
     photos: [PHOTO, PHOTO], photo: PHOTO, price: 450000, currency: 'UAH', price_negotiable: true,
     location: 'Жорнище', author: 'Тест', author_name: 'Тест', owner_uid: 'u1',
     status: 'published', ts, created_at: new Date(ts).toISOString(), bumped_at: new Date(ts).toISOString() },
+  // ⚠️ `price_negotiable: true` при `price: null` — це і є «Договірна», найчастіший
+  // випадок у наших даних (числову ціну має ~1 оголошення з 17). Без цього прапорця
+  // рядка ціни не було б узагалі, і тихий варіант лишився б неперевіреним.
   { id: 902, type: 'board', category: 'куплю', title: 'КУПЛЮ МОТОЦИКЛ',
-    text: 'Куплю мотоцикл у робочому стані.', photos: [], price: null, currency: 'UAH',
+    text: 'Куплю мотоцикл у робочому стані.', photos: [], price: null, price_negotiable: true, currency: 'UAH',
     location: 'Вся Олицька громада', author: 'Тест', author_name: 'Тест', owner_uid: 'u1',
     status: 'published', ts, created_at: new Date(ts).toISOString(), bumped_at: new Date(ts).toISOString() },
 ];
@@ -145,6 +148,12 @@ const st = () => p.evaluate(() => {
     чіп_до_назви: (() => { const c = q('.cm-ad-head .cm-board-cat'), t = q('.cm-ad-title'); return (c && t) ? Math.round(rc(t).top - rc(c).bottom) : null; })(),
     капс_назви: (() => { const t = q('.cm-ad-title'); return t ? getComputedStyle(t).textTransform : null; })(),
     розмір_назви: (() => { const t = q('.cm-ad-title'); return t ? parseFloat(getComputedStyle(t).fontSize) : null; })(),
+    розмір_ціни: (() => { const t = q('.cm-ad-price'); return t ? parseFloat(getComputedStyle(t).fontSize) : null; })(),
+    розмір_чіпа: (() => { const c = q('.cm-ad-head .cm-board-cat'); return c ? parseFloat(getComputedStyle(c).fontSize) : null; })(),
+    ціна_після_локації: (() => {
+      const m = q('.cm-ad-meta'), pr = q('.cm-ad-price-row');
+      return (m && pr) ? (m.compareDocumentPosition(pr) & Node.DOCUMENT_POSITION_FOLLOWING) > 0 : null;
+    })(),
     капс_локації: (() => { const l = q('.cm-ad-meta-loc'); return l ? getComputedStyle(l).textTransform : null; })(),
     межа_під_описом: (() => { const t = q('.cm-ad-text'); return t ? parseFloat(getComputedStyle(t).borderBottomWidth) : null; })(),
     аркуш_висота: sheet ? Math.round(rc(sheet).height) : null,
@@ -166,7 +175,22 @@ ok('ФОТО стоїть на місці (sticky), а не їде з текст
 ok('чіп не приліплений до верхнього краю аркуша', s0.чіп_від_верху >= 14, `${s0.чіп_від_верху}px`);
 ok('чіп і назва читаються однією групою', s0.чіп_до_назви <= 12, `${s0.чіп_до_назви}px`);
 ok('назва КАПСОМ', s0.капс_назви === 'uppercase', s0.капс_назви);
-ok('назва не більша за 22px', s0.розмір_назви <= 22, `${s0.розмір_назви}px`);
+// 🔴 ПРАВИЛО ЗМІНИЛОСЬ 02.08 (скарга Вови: «заголовок такий великий, ціна така велика
+// „Договірна“ — все накидано, незрозуміло що до чого»). Було «назва ≤ 22px» — стеля,
+// узята з попередньої задачі, де назва була завелика сама по собі. Тепер питання інше й
+// важливіше: назва мусить бути ГОЛОВНОЮ. Заміряно було: назва 21px, «Договірна» 28px —
+// ціна переростала назву на 33%, при тому що числову ціну має ~1 оголошення з 17.
+// Тому сторож тепер порівнює ДВА розміри між собою, а не звіряє одне число зі стелею:
+// стеля старіє з кожним рішенням, співвідношення — ні.
+ok('назва — найбільше на екрані (більша за ціну)',
+   s0.розмір_назви > s0.розмір_ціни, `назва ${s0.розмір_назви}px проти ціни ${s0.розмір_ціни}px`);
+ok('назва не роздулась понад 25px', s0.розмір_назви <= 25, `${s0.розмір_назви}px`);
+// «Чіп хай буде, але не такий великий» — мітка категорії, а не другий заголовок.
+ok('чіп помітно дрібніший за назву', s0.розмір_чіпа <= s0.розмір_назви / 1.6,
+   `чіп ${s0.розмір_чіпа}px проти назви ${s0.розмір_назви}px`);
+// Порядок один на всі випадки: назва → локація й час → ціна. Ціна змінює вагу,
+// але не місце — інакше око щоразу шукало б її заново.
+ok('ціна стоїть ПІСЛЯ рядка локації', s0.ціна_після_локації === true, String(s0.ціна_після_локації));
 ok('населений пункт КАПСОМ', s0.капс_локації === 'uppercase', s0.капс_локації);
 ok('опис відділений від картки автора лінією', s0.межа_під_описом >= 1, `${s0.межа_під_описом}px`);
 // «Забрати рисочку» — на сторінці з фото вона вже нічого не означає.

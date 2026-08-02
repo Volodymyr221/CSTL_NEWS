@@ -11,7 +11,7 @@ const POSTS = [
     location: 'Жорнище', author: 'Тест', owner_uid: 'u1', status: 'published', ts,
     created_at: new Date(ts).toISOString(), bumped_at: new Date(ts).toISOString() },
   { id: 902, type: 'board', category: 'куплю', title: 'КУПЛЮ МОТОЦИКЛ',
-    text: 'Куплю мотоцикл.', photos: [], price: null, currency: 'UAH',
+    text: 'Куплю мотоцикл.', photos: [], price: null, price_negotiable: true, currency: 'UAH',
     location: 'Вся Олицька громада', author: 'Тест', owner_uid: 'u1', status: 'published', ts,
     created_at: new Date(ts).toISOString(), bumped_at: new Date(ts).toISOString() },
   { id: 903, type: 'board', category: 'продам', title: 'КОРОТКЕ З ФОТО',

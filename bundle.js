@@ -6346,6 +6346,7 @@
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
+          ${renderAdPrice(p)}
           <p class="cm-ad-text">${escapeHtml(p.text || "")}</p>
           ${renderAdSpecs(p)}
           ${renderAdAuthor(p)}
@@ -6399,16 +6400,22 @@
     </div>`;
   }
   function renderAdHead(p) {
-    const t = formatPrice(p.price, p.currency, p.price_negotiable);
-    const haggle = p.price_negotiable && p.price != null;
     return `
     <div class="cm-ad-head">
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${t ? `<div class="cm-ad-price-row">
-        <span class="cm-ad-price">${escapeHtml(t)}</span>
-        ${haggle ? '<span class="cm-ad-haggle">\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0442\u043E\u0440\u0433</span>' : ""}
-      </div>` : ""}
+    </div>`;
+  }
+  function renderAdPrice(p) {
+    const t = formatPrice(p.price, p.currency, p.price_negotiable);
+    if (!t)
+      return "";
+    const quiet = t === "\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430";
+    const haggle = p.price_negotiable && p.price != null;
+    return `
+    <div class="cm-ad-price-row">
+      <span class="cm-ad-price${quiet ? " cm-ad-price--quiet" : ""}">${quiet ? "\u0426\u0456\u043D\u0430 \u0434\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430" : escapeHtml(t)}</span>
+      ${haggle ? '<span class="cm-ad-haggle">\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0442\u043E\u0440\u0433</span>' : ""}
     </div>`;
   }
   function renderAdMeta(p) {
