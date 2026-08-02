@@ -5122,3 +5122,38 @@ textarea.cm-board-input.bm-invalid {
 .cm-ad-write--solo { flex: 1 1 100%; }
 .cm-ad-call svg, .cm-ad-write svg { width: 19px; height: 19px; }
 .cm-ad-call:active, .cm-ad-write:active { opacity: 0.85; }
+
+/* ── Картка автора: фото · імʼя · «на платформі з …» · стрілка в профіль ──── */
+/* Уся картка клікабельна (`data-av-uid` на контейнері) — тап відкриває профіль
+   через делегований слухач `core/profile-card.js`. Стрілка «›» тут не декор, а
+   єдина ознака, що рядок кудись веде. */
+.cm-ad-author { cursor: pointer; }
+.cm-ad-author:active { opacity: 0.85; }
+.cm-ad-avatar {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  color: #6C6C6C;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800;
+  overflow: hidden;   /* фото має лягти під круг, а не вилізти квадратом */
+}
+.cm-ad-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cm-ad-author-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cm-ad-author-name { font-size: 16px; font-weight: 700; color: #111; }
+/* Порожній, поки профіль не приїхав, — і саме тому без `min-height`: інакше під
+   іменем зяяла б порожня смуга в оголошеннях, де профілю немає взагалі. */
+.cm-ad-author-since:empty { display: none; }
+.cm-ad-author-since { font-size: 12.5px; color: #6C6C6C; }
+.cm-ad-verified {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: #1D74E8;
+  color: #fff;
+  font-size: 10px; font-weight: 800;
+  vertical-align: middle;
+}
+.cm-ad-author-go { flex: none; font-size: 22px; color: #9A9A9A; line-height: 1; }

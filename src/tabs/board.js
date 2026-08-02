@@ -10,7 +10,7 @@
 //           setDiscussionsData / подію 'cstl-posts-changed').
 // Спільне обох типів (закладки, кнопки зберегти/шер) — core/board-shared.js.
 
-import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, deepLink } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, deepLink, avatarCircle } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
@@ -22,11 +22,12 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
   fetchAllComments,
   fetchAllReactions, getAnonId,
-  fetchSavedPostIds, hydrateNames, nameUid, liveName,
+  fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { createDragTracker, finishSwipe, centeredRemaining, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
+import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
 import { keepScroll } from '../core/list-patch.js';
 import {
@@ -304,6 +305,27 @@ function wireAdModalChrome(modal, close) {
   modal.querySelector('[data-ad-report]')?.addEventListener('click', () => {
     showToast('Дякуємо. Ми перевіримо це оголошення.');
   });
+  // Фото автора підтягується прогресивно (літера → фото), як у чатах і обговореннях.
+  hydrateAvatars(modal);
+  // «На платформі з …» + галочка довіри — окремим тихим запитом уже ПІСЛЯ показу.
+  // ⚠️ Свідомо не блокуємо відкриття модалки заради цього рядка: без нього картка
+  // повноцінна, а чекати на мережу, щоб показати оголошення, — гірше за його брак.
+  const sinceEl = modal.querySelector('[data-ad-since]');
+  const authorUid = modal.querySelector('.cm-ad-author')?.dataset.avUid;
+  if (sinceEl && authorUid) {
+    fetchPublicProfile(authorUid).then(pr => {
+      if (!pr || !sinceEl.isConnected) return;
+      const dt = new Date(pr.created_at);
+      if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
+        sinceEl.textContent = `На платформі з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+      }
+      if (pr.trusted) {
+        modal.querySelector('.cm-ad-author-name')
+          ?.insertAdjacentHTML('beforeend', '<span class="cm-ad-verified" title="Підтверджений житель">✓</span>');
+      }
+    }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
+  }
+
   // Лічильник «1 / N» над фото — рахується з тієї самої прокрутки, що й крапки.
   const counter = modal.querySelector('.cm-ad-hero-count');
   const heroGal = modal.querySelector('.cm-ad-hero .cm-board-modal-gallery');
@@ -396,15 +418,32 @@ function renderAdSpecs(_p) {
   return '';
 }
 
-// Картка автора. Аватар — ініціали (фото профілю не приходить разом із постом,
-// а окремий запит на кожне відкриття модалки не вартий однієї картинки).
+// Картка автора: фото + імʼя + (асинхронно) галочка довіри й дата реєстрації.
+//
+// ⚠️ НІЧОГО СВОГО ТУТ НЕ ВИНАЙДЕНО — усе на наявних механізмах проєкту:
+//   • `avatarCircle({uid})` сам ставить `data-av-uid` + `data-av-circle`;
+//   • `hydrateAvatars(root)` прогресивно міняє літеру на фото (без блокування рендера);
+//   • делегований слухач у `core/profile-card.js` ловить клік по `[data-av-uid]`
+//     і відкриває картку профілю — тобто перехід у профіль автора зʼявляється
+//     САМ, щойно на елементі є цей атрибут.
+// Через це вся «картка автора з макета» коштує один виклик, а не новий екран.
+//
+// `data-av-uid` дублюється на всій картці (не лише на кружечку), щоб тап працював
+// по будь-якому місцю рядка — але БЕЗ `data-av-circle`: інакше гідрація спробувала б
+// вставити фото у блок без розмірів і воно розтяглося б на весь рядок
+// (баг «квадратне фото», знайдений 17.07).
 function renderAdAuthor(p) {
   const name = liveName(p.author, p.owner_uid, 'анонімно');
-  const initials = name.trim().split(/\s+/).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('') || '?';
+  const uid = p.owner_uid || '';
+  const av = avatarCircle({ name, url: cachedAvatar(uid), cls: 'cm-ad-avatar', uid });
   return `
-    <div class="cm-ad-author">
-      <span class="cm-ad-avatar">${escapeHtml(initials)}</span>
-      <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+    <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ''}>
+      ${av}
+      <span class="cm-ad-author-info">
+        <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+        <span class="cm-ad-author-since" data-ad-since></span>
+      </span>
+      ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">›</span>' : ''}
     </div>`;
 }
 
