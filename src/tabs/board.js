@@ -417,34 +417,36 @@ function myActiveAdsCount() {
   return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== 'chat' ? 1 : 0), 0);
 }
 
-// 🔴 01.08 — синхронізація ІСНУВАННЯ кнопки «Повідомлення», а не її іконки.
+// 🔴 Синхронізація ІСНУВАННЯ конверта в шапці (02.08 — він переїхав туди з низу).
 //
 // Було (30.07): кнопка стояла завжди, а `myActiveAdsCount()` лише морфив картинку
-// між «олівцем» і «конвертом». Тепер кнопки може не бути зовсім, тож синхронізувати
-// треба саму її наявність.
+// між «олівцем» і «конвертом». Тепер конверта може не бути зовсім, тож синхронізувати
+// треба саму його наявність.
 //
 // Навіщо це окремо від рендера: після публікації оголошення список освіжається через
 // `refreshBoardKeepingPlace()`, який СВІДОМО перемальовує лише картки (щоб не смикнути
 // прокрутку). Без цього виклику людина подала б перше оголошення — і не побачила б
 // кнопку листування до наступного повного рендеру, тобто рівно тоді, коли їй уперше
 // можуть написати.
-// ⚠️ Гард `discOpen` лишається: в Обговорень свій FAB, і його ця логіка не стосується
-// (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
+// ⚠️ Гард `discOpen` лишається: в Обговорень своя шапка й свій FAB, і ця логіка їх
+// не стосується (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
 function syncMsgFab() {
   if (discOpen) return;
-  const root = getBoardRoot();
-  if (!root) return;
-  const have = document.getElementById('board-fab');
+  const box = document.querySelector('#board-content .bd-hero-actions');
+  if (!box) return;
+  const have = document.getElementById('bd-hero-msgs');
   const need = canSeeMessages();
   if (need && !have) {
-    root.insertAdjacentHTML('beforeend', renderFab());
-    document.getElementById('board-trigger')
+    box.insertAdjacentHTML('beforeend',
+      `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`);
+    document.getElementById('bd-hero-msgs')
       ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
-    paintUnreadBadge();   // щойно створена кнопка ще порожня — заповнити з кешу
+    paintUnreadBadge();   // щойно створений конверт ще порожній — заповнити з кешу
   } else if (!need && have) {
     have.remove();
   }
 }
+
 
 function renderFab() {
   if (discOpen) {
@@ -472,25 +474,42 @@ function renderFab() {
       </button>
     </div>`;
   }
-  // 🔴 01.08 — ДОШКА: ВНИЗУ ЛИШИЛАСЬ ОДНА КНОПКА «ПОВІДОМЛЕННЯ» (рішення Вови).
+  // 🔴 02.08 — ДІЇ ВНИЗУ, ЛИСТУВАННЯ ВГОРІ (помінялись місцями).
   //
-  // Було: speed-dial із чотирма пунктами (Подати · Мої · Повідомлення · Збережені),
-  // а головна кнопка ще й морфила іконку між «олівцем» і «конвертом» залежно від
-  // того, чи є в людини оголошення. Тепер дії переїхали під кнопку «+» у ШАПЦІ
-  // (`bd-hero-add`), а внизу лишився один вхід — у листування, без меню й без
-  // зайвого тапу: тап одразу відкриває список розмов.
+  // Історія за одну добу: спершу все жило в нижньому speed-dial (Подати · Мої ·
+  // Повідомлення · Збережені) → 01.08 дії переїхали під «+» у шапці, а внизу лишився
+  // конверт → 02.08 поміняли назад, але не в те саме положення.
   //
-  // 🔴 КНОПКИ МОЖЕ НЕ БУТИ ВЗАГАЛІ. Умова показу — `canSeeMessages()`:
-  // «є моє оголошення АБО є хоч одна розмова». Вова хотів «немає оголошень —
-  // немає кнопки»; я додав другу половину умови, бо замір показав, що правило
-  // лише про оголошення відрізало б **7 із 8** людей від їхнього ж листування
-  // (розмову починає покупець, у якого свого оголошення немає) — 218 повідомлень.
-  if (!canSeeMessages()) return '';
+  // ЧОМУ САМЕ ТАК. Подати оголошення — головна дія екрана, заради неї дошка існує.
+  // У попередньому варіанті шлях до неї вів у ВЕРХНІЙ ПРАВИЙ КУТ — найважчу зону
+  // для великого пальця на великому телефоні, тоді як низ — найлегша. Тобто
+  // найчастішу дію ми поставили найдалі. Тому: дії — вниз, а листування (його
+  // відкривають рідше) — іконкою в шапку, де воно ще й завжди на постійному місці.
+  // Той самий розподіл у Facebook: Marketplace має велику кнопку продажу, а
+  // Messenger — іконку у верхній панелі.
+  //
+  // ⚠️ Пункт «Повідомлення» сюди НЕ повертається — тепер це конверт у шапці.
   return `
-    <div class="board-fab board-fab--msgs" id="board-fab">
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Повідомлення">
-        <span class="cm-board-trigger-icon" id="board-trigger-icon">${MSG_ICON_SVG}</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">Подати оголошення</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">Мої оголошення</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">Збережені</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="cm-board-trigger-text">Подати оголошення</span>
       </button>
     </div>`;
 }
@@ -623,23 +642,11 @@ function renderHeader() {
         <p class="bd-hero-sub">Знайди, продай, обміняй або віддай безкоштовно</p>
       </div>
       <div class="bd-hero-actions">
-        <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="Дії" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-        <div class="bd-hero-menu" id="bd-hero-menu" role="menu" aria-label="Дії" hidden>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="post" type="button">
-            <span class="board-fab-label">Подати оголошення</span>
-            <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
-          </button>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="mine" type="button">
-            <span class="board-fab-label">Мої оголошення</span>
-            <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
-          </button>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="saved" type="button">
-            <span class="board-fab-label">Збережені</span>
-            <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
-          </button>
-        </div>
+        ${canSeeMessages() ? `
+        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">
+          ${MSG_ICON_SVG}
+          <span class="board-trigger-badge" id="board-trigger-badge"></span>
+        </button>` : ''}
       </div>
     </div>
   ` : '';
@@ -919,15 +926,8 @@ function renderAll() {
     const open = fab.classList.toggle('open');
     fabBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
-  // 🔴 01.08 — на ДОШЦІ нижня кнопка більше не відкриває меню: вона веде прямо в
-  // список розмов. Меню лишилось тільки в Обговореннях (там FAB не чіпали, пряме
-  // рішення Вови: «Ні, обговорення не чіпаємо»).
-  if (discOpen) {
-    fabBtn?.addEventListener('click', toggleFab);
-    fabBack?.addEventListener('click', closeFab);
-  } else {
-    fabBtn?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
-  }
+  fabBtn?.addEventListener('click', toggleFab);
+  fabBack?.addEventListener('click', closeFab);
   // Наявність розмов приходить асинхронно (див. `cstl-threads-changed` у board-chat.js) —
   // тоді кнопку листування треба домалювати або прибрати. Слухач ставимо ОДИН раз на
   // вікно, а не на кожен `renderAll()`, інакше за кілька фільтрів їх стало б десятки.
@@ -941,14 +941,12 @@ function renderAll() {
   // змінюється, тож мережа тут була дарма. Свіжість тримають подієві виклики
   // `refreshUnreadBadge` (вхід, push, realtime, прочитання чату) у board-chat.js.
   paintUnreadBadge();     // новий FAB щойно створено рендером — заповнити бейдж
-  // ⚠️ Пункти беремо з УСЬОГО кореня, а не з `#board-fab`: на Дошці вони тепер
-  // живуть у меню під кнопкою «+» у шапці, в Обговореннях — у FAB. Розмітка різна,
-  // обробник один — інакше довелось би тримати дві копії тих самих дій.
+  // Пункти шукаємо по всьому кореню: розмітка FAB у Дошки й Обговорень різна,
+  // а обробник один — інакше довелось би тримати дві копії тих самих дій.
   el.querySelectorAll('.board-fab-item').forEach(item => {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
       closeFab();
-      closeHeroMenu();
       // ── Дії ОБГОВОРЕНЬ (окремий FAB, лише коли discOpen) ──
       if (act === 'disc-create') { requireAuth('створити обговорення', openDiscussionCompose); return; }
       if (act === 'disc-mine')   { requireAuth('мої обговорення', openMyDiscussions); return; }
@@ -1030,23 +1028,10 @@ function renderAll() {
   };
   wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
 
-  // 🔴 01.08 — МЕНЮ ДІЙ ПІД КНОПКОЮ «+» У ШАПЦІ (рішення Вови: «переносимо туди…
-  // від цієї кнопки відкриваються Подати оголошення, Мої оголошення та Збережені»).
-  // ⚠️ Закриття по кліку повз / Escape вішається ОДИН раз на документ разом із
-  // рештою меню Дошки (`_boardMenusWired` нижче) — інакше кожен `renderAll()`
-  // додавав би ще один слухач, і за кілька фільтрів їх стало б десятки.
-  const heroBtn  = document.getElementById('bd-hero-add');
-  const heroMenu = document.getElementById('bd-hero-menu');
-  heroBtn?.addEventListener('click', e => {
-    e.stopPropagation();          // щоб document-слухач не закрив меню тієї ж миті
-    const willOpen = heroMenu?.hasAttribute('hidden');
-    closeBoardMenus();            // взаємовиключність із фільтрами локації
-    if (willOpen) {
-      heroMenu.removeAttribute('hidden');
-      heroBtn.setAttribute('aria-expanded', 'true');
-      heroBtn.classList.add('open');
-    }
-  });
+  // 🔴 02.08 — КОНВЕРТ У ШАПЦІ: прямий вхід у листування, без меню й без зайвого
+  // тапу. Показується за `canSeeMessages()`, бейдж непрочитаних лежить на ньому.
+  document.getElementById('bd-hero-msgs')
+    ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
 
   // 🔴 01.08 — ряд типів (чіпи). Той самий стан `activeCategory`, що й старе меню,
   // тобто фільтр один — змінився лише спосіб ним керувати.
@@ -1591,19 +1576,14 @@ let _threadsEvtWired = false;
 // видимий ряд чіпів, і меню з таким id більше не існує.
 let _boardMenusWired = false;
 function closeBoardMenus() {
-  [['bd-loc-menu', 'bd-loc-btn'], ['bd-hero-menu', 'bd-hero-add']].forEach(([menuId, btnId]) => {
+  [['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
     document.getElementById(menuId)?.setAttribute('hidden', '');
     const b = document.getElementById(btnId);
     if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
   });
 }
 
-// Закрити лише меню дій — потрібне після вибору пункту, коли решту чіпати нема сенсу.
-function closeHeroMenu() {
-  document.getElementById('bd-hero-menu')?.setAttribute('hidden', '');
-  const b = document.getElementById('bd-hero-add');
-  if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
-}
+
 
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли

@@ -6312,14 +6312,17 @@
   function syncMsgFab() {
     if (discOpen)
       return;
-    const root = getBoardRoot();
-    if (!root)
+    const box = document.querySelector("#board-content .bd-hero-actions");
+    if (!box)
       return;
-    const have = document.getElementById("board-fab");
+    const have = document.getElementById("bd-hero-msgs");
     const need = canSeeMessages();
     if (need && !have) {
-      root.insertAdjacentHTML("beforeend", renderFab());
-      document.getElementById("board-trigger")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
+      box.insertAdjacentHTML(
+        "beforeend",
+        `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`
+      );
+      document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
       paintUnreadBadge();
     } else if (!need && have) {
       have.remove();
@@ -6350,13 +6353,27 @@
       </button>
     </div>`;
     }
-    if (!canSeeMessages())
-      return "";
     return `
-    <div class="board-fab board-fab--msgs" id="board-fab">
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
-        <span class="cm-board-trigger-icon" id="board-trigger-icon">${MSG_ICON_SVG}</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
+        </button>
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>`;
   }
@@ -6413,23 +6430,11 @@
         <p class="bd-hero-sub">\u0417\u043D\u0430\u0439\u0434\u0438, \u043F\u0440\u043E\u0434\u0430\u0439, \u043E\u0431\u043C\u0456\u043D\u044F\u0439 \u0430\u0431\u043E \u0432\u0456\u0434\u0434\u0430\u0439 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</p>
       </div>
       <div class="bd-hero-actions">
-        <button class="bd-hero-add" id="bd-hero-add" type="button" aria-label="\u0414\u0456\u0457" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-        <div class="bd-hero-menu" id="bd-hero-menu" role="menu" aria-label="\u0414\u0456\u0457" hidden>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="post" type="button">
-            <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-            <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
-          </button>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="mine" type="button">
-            <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-            <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
-          </button>
-          <button role="menuitem" class="board-fab-item bd-hero-mi" data-fab="saved" type="button">
-            <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
-            <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
-          </button>
-        </div>
+        ${canSeeMessages() ? `
+        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
+          ${MSG_ICON_SVG}
+          <span class="board-trigger-badge" id="board-trigger-badge"></span>
+        </button>` : ""}
       </div>
     </div>
   ` : "";
@@ -6615,12 +6620,8 @@
       const open = fab.classList.toggle("open");
       fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
     };
-    if (discOpen) {
-      fabBtn?.addEventListener("click", toggleFab);
-      fabBack?.addEventListener("click", closeFab);
-    } else {
-      fabBtn?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
-    }
+    fabBtn?.addEventListener("click", toggleFab);
+    fabBack?.addEventListener("click", closeFab);
     if (!_threadsEvtWired) {
       _threadsEvtWired = true;
       window.addEventListener("cstl-threads-changed", () => syncMsgFab());
@@ -6630,7 +6631,6 @@
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
         closeFab();
-        closeHeroMenu();
         if (act === "disc-create") {
           requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
           return;
@@ -6718,18 +6718,7 @@
     wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
       activeLocation = mi.dataset.bdLoc;
     });
-    const heroBtn = document.getElementById("bd-hero-add");
-    const heroMenu = document.getElementById("bd-hero-menu");
-    heroBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = heroMenu?.hasAttribute("hidden");
-      closeBoardMenus();
-      if (willOpen) {
-        heroMenu.removeAttribute("hidden");
-        heroBtn.setAttribute("aria-expanded", "true");
-        heroBtn.classList.add("open");
-      }
-    });
+    document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
     document.getElementById("bd-types")?.addEventListener("click", (e) => {
       const chip = e.target.closest("[data-bd-cat]");
       if (!chip)
@@ -7222,7 +7211,7 @@
   var _threadsEvtWired = false;
   var _boardMenusWired = false;
   function closeBoardMenus() {
-    [["bd-loc-menu", "bd-loc-btn"], ["bd-hero-menu", "bd-hero-add"]].forEach(([menuId, btnId]) => {
+    [["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
       document.getElementById(menuId)?.setAttribute("hidden", "");
       const b = document.getElementById(btnId);
       if (b) {
@@ -7230,14 +7219,6 @@
         b.setAttribute("aria-expanded", "false");
       }
     });
-  }
-  function closeHeroMenu() {
-    document.getElementById("bd-hero-menu")?.setAttribute("hidden", "");
-    const b = document.getElementById("bd-hero-add");
-    if (b) {
-      b.classList.remove("open");
-      b.setAttribute("aria-expanded", "false");
-    }
   }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
