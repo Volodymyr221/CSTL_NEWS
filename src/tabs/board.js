@@ -412,85 +412,92 @@ function wireAdModalChrome(modal, close) {
 // і щоразу висновок був однаковий. Правка «на місці» полагодила б симптом і лишила
 // корінь: наступна зміна геометрії знову зачепила б одну копію з двох.
 //
-// 🔴 02.08 (третій захід) — ЖЕСТ ЗМЕНШЕНО ДО ОДНОГО: «ПОТЯГНУТИ ВНИЗ, ЩОБ ЗАКРИТИ».
+// 🔴 02.08 (четвертий захід) — ЖЕСТ ЗАЛЕЖИТЬ ВІД ТОГО, ЩО ЦЕ ЗА ЕКРАН.
 //
-// ЧОМУ ТАК МАЛО КОДУ. Попередні дві версії керували прокруткою самі: вимикали рідну
-// (`touch-action: none`), рухали `scrollTop` з обробника дотику й малювали власну
-// інерцію. Це головний потік і ~60 подій на секунду проти композитора на 120 Гц —
-// тобто ми власноруч забирали ту саму плавність, заради якої все й робилось
-// («все дуже глючить, не плавно» — Вова, третя скарга поспіль).
+// Рішення Вови після живої перевірки: «це якби сторінка, а не модалка». Звідси:
+//   • оголошення З ФОТО  → це СТОРІНКА: закривається свайпом ЗЛІВА (як «назад» в iOS),
+//                          вертикального закриття немає взагалі, рисочки теж;
+//   • оголошення БЕЗ ФОТО → це АРКУШ із видимою смужкою згори: закривається свайпом
+//                          УНИЗ, бічного немає, рисочка лишається як підказка.
+// Тобто жест завжди РІВНО ОДИН, і він відповідає тому, чим екран виглядає.
 //
-// Тепер прокрутку веде БРАУЗЕР, а нам лишається рівно одна річ: коли вміст уже вгорі
-// і палець тягне вниз — везти всю модалку за пальцем. Одна змінна стану замість шести,
-// один вихід замість чотирьох. Саме з тих шести й бралися зависання: одну комбінацію
-// на виході я не врахував, і модалка лишалась зсунутою (заміряно: `translateY(60px)`
-// після перерваного другим пальцем жесту).
+// 🔑 ЧОМУ ЦЕ ЗАРАЗОМ ЛІКУЄ ЗАВИСАННЯ. На скріні IMG_3810 модалка лишилась зсунутою на
+// пів екрана після невдалого свайпу вниз. Вертикальний жест на сторінці з фото прибрано
+// цілком — разом із ним зникає і його клас багів. Це не обхід: жест був зайвий за суттю.
 //
-// ⚠️ СЛУХАЧІ ЛИШЕ НА САМІЙ МОДАЛЦІ І ЛИШЕ ПАСИВНІ. Жодного `window.addEventListener`:
-// попередня версія вішала два слухачі `resize` на КОЖНЕ відкриття і не знімала їх —
-// заміряно 24 слухачі замість 4 після десяти відкриттів. Кожен робив примусовий
-// перерахунок розкладки, а на iPhone `resize` сипле від адресного рядка й клавіатури.
-// Це й було «з часом усе гірше».
+// ⚠️ УСІ СЛУХАЧІ ПАСИВНІ, `preventDefault()` НЕМАЄ. Вертикаль віддана браузеру через
+// `touch-action: pan-y` — саме її перехоплення й давало ривки, які Вова тричі бачив.
+// Горизонталь браузеру не потрібна (горизонтального переповнення немає), тож вона
+// дістається нам без жодної боротьби.
 function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   const scroller = modal.querySelector('.cm-ad-scroll');
   if (!scroller) return;
+  // Чим є цей екран, вирішує наявність фото — рівно так само, як і його вигляд.
+  const asPage = !!modal.querySelector('.cm-ad-photo');
 
   const drag = createDragTracker();
   const fade = createBackdropFade(backdrop);
-  let dy = 0;                       // ЄДИНА змінна стану: наскільки модалку відтягнули
+  const EDGE = 32;             // смуга від лівого краю, з якої починається жест «назад»
+  const DIST = 90;             // поріг «дотягнув повільно»
+  let sX = 0, sY = 0, d = 0, axis = null, armed = false;
 
-  // Скидання БЕЗУМОВНЕ і в одному місці. Будь-який вихід із жесту — звичайний,
-  // перерваний системою, збитий другим пальцем — проходить через нього.
+  // Скидання БЕЗУМОВНЕ і в одному місці: будь-який вихід — звичайний, перерваний
+  // системою, збитий другим пальцем — проходить через нього. Саме брак такого місця
+  // і лишав модалку висіти посеред екрана.
   const reset = () => {
-    dy = 0;
+    d = 0; axis = null; armed = false;
     modal.style.transition = '';
     modal.style.transform = '';
   };
 
   modal.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) { if (dy) reset(); return; }
-    // Тягнути вниз можна лише коли вміст на початку — інакше палець читає текст.
-    // Читаємо прокрутку ОДИН раз за жест: під час руху це було б зайве читання щокадру.
-    dy = 0;
-    startY = e.touches[0].clientY;
-    startX = e.touches[0].clientX;
-    armed = scroller.scrollTop <= 0;
-    axis = null;
-    drag.start(startY);
+    if (e.touches.length > 1) { reset(); return; }
+    sX = e.touches[0].clientX; sY = e.touches[0].clientY;
+    d = 0; axis = null;
+    // Сторінка: жест починається лише від ЛІВОГО КРАЮ — інакше він відбирав би
+    // горизонтальне гортання галереї фото й випадкові дотики по тексту.
+    // Аркуш: тягнути вниз можна лише коли вміст на початку, інакше палець читає текст.
+    armed = asPage ? sX <= EDGE : scroller.scrollTop <= 0;
+    drag.start(asPage ? sX : sY);
   }, { passive: true });
 
   modal.addEventListener('touchmove', e => {
     if (!armed || e.touches.length > 1) return;
-    const y = e.touches[0].clientY;
-    const d = y - startY;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+    const dx = x - sX, dy = y - sY;
     if (axis === null) {
-      const dx = e.touches[0].clientX - startX;
-      // Горизонталь — це гортання галереї фото. Вгору — звичайна прокрутка тексту.
-      if (Math.abs(dx) > Math.abs(d) && Math.abs(dx) > 10) { armed = false; return; }
-      if (Math.abs(d) < 6) return;
-      if (d < 0) { armed = false; return; }
-      axis = 'down';
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;   // ще тремтіння, не рух
+      const wantX = asPage;
+      const isX = Math.abs(dx) > Math.abs(dy);
+      if (isX !== wantX) { armed = false; return; }       // не наша вісь — не заважаємо
+      if (wantX ? dx <= 0 : dy <= 0) { armed = false; return; }   // не той бік
+      axis = wantX ? 'x' : 'y';
       modal.style.transition = 'none';
     }
-    dy = Math.max(0, d);
-    modal.style.transform = `translateY(${dy}px)`;
-    fade?.track(dy / window.innerHeight);
-    drag.move(y);
+    d = Math.max(0, axis === 'x' ? dx : dy);
+    modal.style.transform = axis === 'x' ? `translateX(${d}px)` : `translateY(${d}px)`;
+    fade?.track(d / (axis === 'x' ? window.innerWidth : window.innerHeight));
+    drag.move(axis === 'x' ? x : y);
   }, { passive: true });
 
   const finish = () => {
-    if (!dy) { armed = false; axis = null; reset(); return; }
-    const moved = dy;
-    dy = 0; armed = false; axis = null;
-    // Летить донизу за пальцем, а не замирає: перевірена математика з sheet-motion.
+    if (!axis || !d) { reset(); return; }
+    const moved = d, ax = axis;
+    const v = drag.velocity;
+    d = 0; axis = null; armed = false;
+    const full = ax === 'x' ? window.innerWidth : Math.round(modal.offsetHeight);
+    // Летить далі за пальцем, а не замирає: перевірена математика з sheet-motion.
     finishSwipe({
-      panel: modal, dy: moved, velocity: drag.velocity,
-      remaining: sheetRemaining(modal, moved),
-      dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+      panel: modal, dy: moved, velocity: v,
+      remaining: Math.max(full - moved, 1),
+      dismissTransform: ax === 'x' ? `translateX(${full}px)` : `translateY(${full}px)`,
       onDismiss, backdrop: fade,
     });
+    // ⚠️ Якщо не закрили — `finishSwipe` сам поверне `transform` у порожній рядок.
+    // Але прибрати `transition` після доїзду мусимо ми, інакше наступне відкриття
+    // успадкує чужу тривалість.
+    if (moved <= DIST && Math.abs(v) <= 0.45) setTimeout(() => { modal.style.transition = ''; }, 260);
   };
-  let startY = 0, startX = 0, armed = false, axis = null;
   modal.addEventListener('touchend', finish, { passive: true });
   // ⚠️ `touchcancel` теж завершує жест. Без нього системне переривання (вхідний дзвінок,
   // жест «назад» iOS, шторка сповіщень) лишало б модалку ЗАВИСЛОЮ посеред екрана.
@@ -528,7 +535,7 @@ function renderAdModal(p) {
     <div class="cm-board-modal-scrollarea cm-ad-scroll">
       ${renderAdPhotoLayer(p, photos)}
       <div class="cm-ad-sheet${hasHero ? '' : ' cm-ad-sheet--full'}">
-        <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
+        ${hasHero ? '' : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
