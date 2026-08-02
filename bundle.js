@@ -6202,9 +6202,6 @@
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
           sinceEl.textContent = `\u041D\u0430 \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u0456 \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
         }
-        if (pr.trusted) {
-          modal.querySelector(".cm-ad-author-name")?.insertAdjacentHTML("beforeend", '<span class="cm-ad-verified" title="\u041F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u0438\u0439 \u0436\u0438\u0442\u0435\u043B\u044C">\u2713</span>');
-        }
       }).catch(() => {
       });
     }

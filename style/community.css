@@ -2744,7 +2744,12 @@ textarea.cm-board-input.bm-invalid {
 .cm-photo-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  /* 🔴 02.08 — 300 → 1200. Модалку оголошення підняли на 1100 (щоб вона перекривала
+     таб-бар), і повноекранний перегляд фото раптом опинився ПІД нею: тап по фото
+     нібито «нічого не робив», а насправді картинка на весь екран малювалась позаду
+     аркуша і визирала збоку. Саме це Вова побачив як «фото в повний розмір».
+     ⚠️ Міняєш z-index модалки — перевір і цей: вони пов'язані. */
+  z-index: 1200;
   background: rgba(0,0,0,0.93);
   display: flex;
   opacity: 0;
@@ -4914,7 +4919,6 @@ textarea.cm-board-input.bm-invalid {
   right: -3px;
 }
 
-<<<<<<< HEAD
 
 /* ═══════════════════════════════════════════════════════════════════════════
    🔴 02.08 — МОДАЛКА ОГОЛОШЕННЯ ЗА МАКЕТОМ (два скріни, схвалені Вовою).
@@ -4931,6 +4935,7 @@ textarea.cm-board-input.bm-invalid {
   flex: none;
   height: 38dvh;
   background: #ECECEA;
+  overflow: hidden;   /* без цього високе фото могло вилізти за межі блоку */
 }
 .cm-ad-hero .cm-board-modal-gallery { height: 100%; }
 .cm-ad-hero .cm-board-modal-slide img { width: 100%; height: 100%; object-fit: cover; }
@@ -4945,9 +4950,13 @@ textarea.cm-board-input.bm-invalid {
 .cm-ad-round {
   width: 36px; height: 36px;
   border: 0; border-radius: 50%;
-  background: rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* 🔴 БЕЗ `backdrop-filter`. Він тут коштував дорого: розмиття рахується щокадру
+     по площі ПІД кнопкою, а під нею — фото, яке ще й їде при свайпі аркуша. На
+     iPhone це давало помітні ривки («модалка лагає страшно»). Щільніша заливка
+     дає ту саму читабельність на будь-якому кадрі й коштує нуль.
+     ⚠️ У проєкті вже є урок про `backdrop-filter` у Safari (застиглий blur разом
+     із `will-change`) — не повертати його сюди без заміру. */
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
@@ -5158,5 +5167,3 @@ textarea.cm-board-input.bm-invalid {
   vertical-align: middle;
 }
 .cm-ad-author-go { flex: none; font-size: 22px; color: #9A9A9A; line-height: 1; }
-=======
->>>>>>> origin/main
