@@ -6188,6 +6188,20 @@
   }
   function wireAdModalChrome(modal, close) {
     modal.querySelectorAll("[data-ad-close]").forEach((b) => b.addEventListener("click", () => close()));
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", modal.querySelector(".cm-ad-title")?.textContent || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+    modal.tabIndex = -1;
+    modal.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    });
+    try {
+      modal.focus({ preventScroll: true });
+    } catch (_) {
+    }
     modal.querySelector("[data-ad-report]")?.addEventListener("click", () => {
       showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E. \u041C\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u043C\u043E \u0446\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.");
     });
@@ -6246,7 +6260,6 @@
     const scroller = modal.querySelector(".cm-ad-scroll");
     if (!scroller)
       return;
-    const asPage = !!modal.querySelector(".cm-ad-photo");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
     const EDGE = 32;
@@ -6268,8 +6281,8 @@
       sY = e.touches[0].clientY;
       d = 0;
       axis = null;
-      armed = asPage ? sX <= EDGE : scroller.scrollTop <= 0;
-      drag.start(asPage ? sX : sY);
+      armed = sX <= EDGE;
+      drag.start(sX);
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
       if (!armed || e.touches.length > 1)
@@ -6279,41 +6292,39 @@
       if (axis === null) {
         if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
           return;
-        const wantX = asPage;
-        const isX = Math.abs(dx) > Math.abs(dy);
-        if (isX !== wantX) {
+        if (Math.abs(dx) <= Math.abs(dy)) {
           armed = false;
           return;
         }
-        if (wantX ? dx <= 0 : dy <= 0) {
+        if (dx <= 0) {
           armed = false;
           return;
         }
-        axis = wantX ? "x" : "y";
+        axis = "x";
         modal.style.transition = "none";
       }
-      d = Math.max(0, axis === "x" ? dx : dy);
-      modal.style.transform = axis === "x" ? `translateX(${d}px)` : `translateY(${d}px)`;
-      fade?.track(d / (axis === "x" ? window.innerWidth : window.innerHeight));
-      drag.move(axis === "x" ? x : y);
+      d = Math.max(0, dx);
+      modal.style.transform = `translateX(${d}px)`;
+      fade?.track(d / window.innerWidth);
+      drag.move(x);
     }, { passive: true });
     const finish2 = () => {
       if (!axis || !d) {
         reset();
         return;
       }
-      const moved = d, ax = axis;
+      const moved = d;
       const v = drag.velocity;
       d = 0;
       axis = null;
       armed = false;
-      const full = ax === "x" ? window.innerWidth : Math.round(modal.offsetHeight);
+      const full = window.innerWidth;
       finishSwipe({
         panel: modal,
         dy: moved,
         velocity: v,
         remaining: Math.max(full - moved, 1),
-        dismissTransform: ax === "x" ? `translateX(${full}px)` : `translateY(${full}px)`,
+        dismissTransform: `translateX(${full}px)`,
         onDismiss,
         backdrop: fade
       });
@@ -6331,8 +6342,7 @@
     return `
     <div class="cm-board-modal-scrollarea cm-ad-scroll">
       ${renderAdPhotoLayer(p, photos)}
-      <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
-        ${hasHero ? "" : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
+      <div class="cm-ad-sheet">
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
@@ -6376,7 +6386,7 @@
     const saved = isSaved(p.id);
     return `
     <div class="cm-ad-top${overPhoto ? " cm-ad-top--over" : ""}">
-      <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${overPhoto ? BACK_ICON_SVG : "\u2715"}</button>
+      <button class="cm-ad-round" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${BACK_ICON_SVG}</button>
       <div class="cm-ad-top-right">
         <button class="cm-ad-round" type="button" data-share-board
                 data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
@@ -6421,7 +6431,7 @@
       ${av}
       <span class="cm-ad-author-info">
         <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
-        <span class="cm-ad-author-since" data-ad-since></span>
+        ${uid ? '<span class="cm-ad-author-since" data-ad-since>\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438</span>' : ""}
       </span>
       ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">\u203A</span>' : ""}
     </div>`;
