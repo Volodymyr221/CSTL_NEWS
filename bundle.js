@@ -6294,12 +6294,12 @@
   }
   function renderAdModal(p) {
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
-    const hasHero2 = photos.length > 0;
+    const hasHero = photos.length > 0;
     return `
     ${renderAdPhotoLayer(p, photos)}
-    <div class="cm-ad-sheet${hasHero2 ? "" : " cm-ad-sheet--full"}">
+    <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
       <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
-      ${hasHero2 ? "" : renderAdTopActions(p, false)}
+      ${hasHero ? "" : renderAdTopActions(p, false)}
       <div class="cm-board-modal-scrollarea">
         <div class="cm-ad-body">
           ${renderAdHead(p)}
@@ -6351,10 +6351,7 @@
     const haggle = p.price_negotiable && p.price != null;
     return `
     <div class="cm-ad-head">
-      <div class="cm-ad-head-top">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${hasHero ? "" : '<button class="cm-ad-x" type="button" data-ad-close aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>'}
-      </div>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ""}
       ${t ? `<div class="cm-ad-price-row">
         <span class="cm-ad-price">${escapeHtml(t)}</span>
@@ -6943,7 +6940,7 @@
     backdrop.className = "board-backdrop";
     backdrop.style.zIndex = "2599";
     const modal = document.createElement("article");
-    modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
+    modal.className = "cm-board-modal-note cm-ad-screen";
     modal.style.zIndex = "2600";
     if (post.id != null)
       modal.dataset.postId = post.id;
@@ -6974,20 +6971,24 @@
     });
   }
   function initBoardNoteExpand(root) {
-    const backdrop = root.querySelector("#board-backdrop");
-    if (!backdrop)
+    if (!root.querySelector("#board-backdrop"))
       return;
     let activeNote = null;
     let activeModal = null;
+    let activeBackdrop = null;
     let isAnimating = false;
     const DURATION = 240;
     const expand = (note2) => {
       if (isAnimating || activeNote)
         return;
       isAnimating = true;
+      const backdrop = document.createElement("div");
+      backdrop.className = "board-backdrop cm-ad-backdrop--over";
+      document.body.appendChild(backdrop);
+      activeBackdrop = backdrop;
       const modal = document.createElement("article");
-      modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
-      backdrop.classList.add("cm-ad-backdrop--over");
+      modal.className = "cm-board-modal-note cm-ad-screen";
+      backdrop.addEventListener("click", () => collapse());
       const post = allPosts.find((x) => String(x.id) === note2.dataset.postId);
       if (note2.dataset.postId)
         modal.dataset.postId = note2.dataset.postId;
@@ -7019,14 +7020,17 @@
       isAnimating = true;
       const note2 = activeNote;
       const modal = activeModal;
+      const backdrop = activeBackdrop;
       modal.classList.remove("visible");
-      backdrop.classList.remove("visible");
+      backdrop?.classList.remove("visible");
       note2.classList.remove("cm-board-note--hidden");
       document.body.classList.remove("cm-zoom-open");
       setTimeout(() => {
         modal.remove();
+        backdrop?.remove();
         activeNote = null;
         activeModal = null;
+        activeBackdrop = null;
         isAnimating = false;
       }, DURATION);
     };
@@ -7039,7 +7043,6 @@
           expand(note2);
       });
     });
-    backdrop.addEventListener("click", collapse);
     _boardCollapseRef = collapse;
     if (!_boardTabHookSet) {
       _boardTabHookSet = true;
@@ -7092,9 +7095,10 @@
         const nowSaved = isSaved(id);
         saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
         saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
+        saveBtn.classList.toggle("cm-ad-round--on", nowSaved && saveBtn.classList.contains("cm-ad-round"));
         saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
         if (activeType === "saved" && !nowSaved) {
-          document.querySelector("#board-backdrop.visible")?.click();
+          document.querySelector(".board-backdrop.cm-ad-backdrop--over.visible")?.click();
           renderBodyOnly();
         }
         return;

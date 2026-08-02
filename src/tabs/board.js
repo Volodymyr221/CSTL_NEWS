@@ -382,7 +382,7 @@ function wireAdModalChrome(modal, close) {
 // Повертає нічого: усе тримається на слухачах самого елемента, який і так буде знесений.
 function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   const scroller = modal.querySelector('.cm-board-modal-scrollarea') || modal;
-  // Ручка є завжди рівно одна: над фото (`.cm-ad-bar-over`) або вгорі тіла, коли фото немає.
+  // Ручка одна на модалку — вона живе вгорі аркуша (`.cm-ad-sheet > .cm-board-modal-bar`).
   const grip = modal.querySelector('.cm-board-modal-bar');
   const drag = createDragTracker();              // швидкість пальця → нативне завершення
   const fade = createBackdropFade(backdrop);     // затемнення світлішає разом з рухом
@@ -553,10 +553,7 @@ function renderAdHead(p) {
   const haggle = p.price_negotiable && p.price != null;
   return `
     <div class="cm-ad-head">
-      <div class="cm-ad-head-top">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${hasHero ? '' : '<button class="cm-ad-x" type="button" data-ad-close aria-label="Закрити">✕</button>'}
-      </div>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${p.title ? `<h3 class="cm-ad-title">${escapeHtml(p.title)}</h3>` : ''}
       ${t ? `<div class="cm-ad-price-row">
         <span class="cm-ad-price">${escapeHtml(t)}</span>
@@ -1436,7 +1433,7 @@ export function openAdModalStandalone(post) {
   backdrop.className = 'board-backdrop';
   backdrop.style.zIndex = '2599';
   const modal = document.createElement('article');
-  modal.className = 'cm-board-note cm-board-modal-note cm-board-modal--sheet';
+  modal.className = 'cm-board-modal-note cm-ad-screen';
   modal.style.zIndex = '2600';
   if (post.id != null) modal.dataset.postId = post.id;
   modal.innerHTML = renderAdModal(post);
@@ -1463,17 +1460,33 @@ export function openAdModalStandalone(post) {
 }
 
 function initBoardNoteExpand(root) {
-  const backdrop = root.querySelector('#board-backdrop');
-  if (!backdrop) return;
+  if (!root.querySelector('#board-backdrop')) return;   // Дошка ще не намальована
 
   let activeNote = null;
   let activeModal = null;
+  let activeBackdrop = null;
   let isAnimating = false;
   const DURATION = 240;
 
   const expand = (note) => {
     if (isAnimating || activeNote) return;
     isAnimating = true;
+
+    // 🔴 02.08 — ВЛАСНЕ ЗАТЕМНЕННЯ В `body`, а не спільний `#board-backdrop`.
+    //
+    // ЧОМУ. `#board-backdrop` лежить УСЕРЕДИНІ `#board-content`, а вкладка утворює
+    // власний стек-контекст (stacking context — «шар», усередині якого z-index рахується
+    // заново). Через це `z-index: 1099` затемнення діяв лише в межах вкладки й НЕ міг
+    // перебити шапку застосунку (z-index: 100), яка живе поверхом вище. Заміряно: у
+    // модалці без фото шапка лишалась чисто білою `255,255,255` — тобто «окремий екран»
+    // розсипався рівно там, де його найкраще видно.
+    // ⚠️ Класичний пастка z-index: велике число нічого не гарантує, якщо предок уже
+    // замкнув шар. Лікується не більшим числом, а виносом елемента на рівень `body` —
+    // саме так це вже зроблено в `openAdModalStandalone`, тепер обидва шляхи однакові.
+    const backdrop = document.createElement('div');
+    backdrop.className = 'board-backdrop cm-ad-backdrop--over';
+    document.body.appendChild(backdrop);
+    activeBackdrop = backdrop;
 
     const modal = document.createElement('article');
     // 🔴 02.08 — ФІКСОВАНИЙ набір класів замість успадкування від картки.
@@ -1484,8 +1497,8 @@ function initBoardNoteExpand(root) {
     // `cm-board-modal--sheet` (геометрія аркуша знизу) картка не має й мати не може.
     // ⚠️ Офіційні оголошення сюди не потрапляють — селектор розгортання їх виключає,
     // тож модифікатори картки тут і не потрібні.
-    modal.className = 'cm-board-note cm-board-modal-note cm-board-modal--sheet';
-    backdrop.classList.add('cm-ad-backdrop--over');   // затемнення теж над таб-баром
+    modal.className = 'cm-board-modal-note cm-ad-screen';
+    backdrop.addEventListener('click', () => collapse());   // тап у затемнення закриває
     // Будуємо модалку З ДАНИХ поста (а не клон HTML картки) — фото flush зверху,
     // повний текст, чорний колір, без обрізки фото скролом. Fallback на клон якщо
     // пост раптом не знайдено (officials виключені, тож для оголошень не трапляється).
@@ -1534,16 +1547,19 @@ function initBoardNoteExpand(root) {
 
     const note = activeNote;
     const modal = activeModal;
+    const backdrop = activeBackdrop;
 
     modal.classList.remove('visible');
-    backdrop.classList.remove('visible');
+    backdrop?.classList.remove('visible');
     note.classList.remove('cm-board-note--hidden');
     document.body.classList.remove('cm-zoom-open');   // розблоковуємо скрол фону
 
     setTimeout(() => {
       modal.remove();
+      backdrop?.remove();          // затемнення тепер наше — прибираємо разом із модалкою
       activeNote = null;
       activeModal = null;
+      activeBackdrop = null;
       isAnimating = false;
     }, DURATION);
   };
@@ -1557,7 +1573,10 @@ function initBoardNoteExpand(root) {
     });
   });
 
-  backdrop.addEventListener('click', collapse);
+  // ⚠️ Слухача на затемнення тут БІЛЬШЕ НЕМАЄ: затемнення народжується разом із модалкою
+  // всередині `expand()` і там-таки отримує свій `click`. Рядок `backdrop.addEventListener`
+  // лишався тут після виносу затемнення в `body` і падав `ReferenceError` — спіймав його
+  // стенд `live-close` перевіркою «без помилок JS». Дошка через це не дротувалась узагалі.
 
   // Перемикання на будь-яку іншу вкладку меню → закрити модалку (вона лише для Дошки).
   _boardCollapseRef = collapse;
@@ -1618,11 +1637,16 @@ function attachBoardDelegation() {
       const nowSaved = isSaved(id);
       saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
       saveBtn.classList.toggle('bd-bookmark--active', nowSaved);
+      // ⚠️ 02.08: у модалці оголошення закладка стала КРУГЛОЮ кнопкою поверх фото зі
+      // своїм класом стану. Без цього рядка іконка мінялась, а колір «збережено» — ні.
+      saveBtn.classList.toggle('cm-ad-round--on', nowSaved && saveBtn.classList.contains('cm-ad-round'));
       saveBtn.setAttribute('aria-label', nowSaved ? 'Прибрати зі збережених' : 'Зберегти у Мої');
-      // Якщо у табі «Мої» прибираємо — закрити відкриту зум-модалку (клік по backdrop
-      // → collapse) і перерендерити стрічку (картка зникає)
+      // Якщо у табі «Мої» прибираємо — закрити відкриту зум-модалку (клік по затемненню
+      // → collapse) і перерендерити стрічку (картка зникає).
+      // ⚠️ Затемнення модалки оголошення живе в `body` (свій вузол), а не `#board-backdrop`:
+      // усередині вкладки його z-index не міг перебити шапку застосунку.
       if (activeType === 'saved' && !nowSaved) {
-        document.querySelector('#board-backdrop.visible')?.click();
+        document.querySelector('.board-backdrop.cm-ad-backdrop--over.visible')?.click();
         renderBodyOnly();
       }
       return;
