@@ -25,7 +25,10 @@ import {
   fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
-import { createDragTracker, finishSwipe, centeredRemaining, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+// ⚠️ `centeredRemaining` більше не імпортується: модалка оголошення — аркуш знизу, і
+// відстань до краю рахується з її власної висоти (`sheetRemaining`). Саме залишений
+// імпорт центрованої математики й тримав живою другу, зламану копію свайпу.
+import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
@@ -330,15 +333,116 @@ function wireAdModalChrome(modal, close) {
     }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
   }
 
-  // Лічильник «1 / N» над фото — рахується з тієї самої прокрутки, що й крапки.
-  const counter = modal.querySelector('.cm-ad-hero-count');
-  const heroGal = modal.querySelector('.cm-ad-hero .cm-board-modal-gallery');
-  if (counter && heroGal) {
-    heroGal.addEventListener('scroll', () => {
-      const n = heroGal.clientWidth ? Math.round(heroGal.scrollLeft / heroGal.clientWidth) + 1 : 1;
-      counter.textContent = `${n} / ${heroGal.children.length}`;
-    }, { passive: true });
+  // ── Галерея фото: тап → повний екран, крапки й лічильник «1 / N» при гортанні ──
+  // ⚠️ Переїхало сюди 02.08 з ДВОХ call-site'ів: блок був скопійований слово в слово
+  // в `openAdModalStandalone` і в `expand()`. Рівно таке дублювання й дало баг свайпу
+  // (дві копії розійшлись), тож усе спільне дротування модалки живе в одному місці.
+  const gallery = modal.querySelector('.cm-board-modal-gallery');
+  if (gallery) {
+    const photoUrls = [...gallery.querySelectorAll('[data-photo-full]')].map(im => im.dataset.photoFull);
+    gallery.querySelectorAll('img[data-photo-idx]').forEach(im => {
+      im.addEventListener('click', e => {
+        e.stopPropagation();
+        openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
+      });
+    });
+    const dots = modal.querySelectorAll('.cm-board-modal-dot');
+    const counter = modal.querySelector('.cm-ad-hero-count');
+    if (dots.length || counter) {
+      gallery.addEventListener('scroll', () => {
+        const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
+        dots.forEach((d, di) => d.classList.toggle('active', di === i));
+        if (counter) counter.textContent = `${i + 1} / ${gallery.children.length}`;
+      }, { passive: true });
+    }
   }
+}
+
+// 🔴 02.08 — ОДИН СВАЙП-ЗАКРИТТЯ НА ОБИДВА ШЛЯХИ МОДАЛКИ ОГОЛОШЕННЯ.
+//
+// ЩО БУЛО. Той самий жест був описаний ДВІЧІ: у `openAdModalStandalone` (вхід із чату)
+// і в `expand()` (зум із Дошки). 02.08 модалка стала аркушем знизу, і я переписав
+// математику ЛИШЕ в першій копії. Друга — головний шлях, яким користується Вова —
+// лишилась на математиці ЦЕНТРОВАНОЇ картки:
+//     transform: translate(-50%, calc(-50% + dy))
+// А CSS уже давно `left:0; right:0; width:100%`. Тобто при першому ж дотику аркуш
+// зсувався на ПІВ ШИРИНИ екрана вліво (−195px із 390) і ПІВ ВИСОТИ вгору (−388px).
+// Скарга Вови «скаче в різні боки» — це буквально ці два зсуви. Заміряно стендом
+// `tests/ad-sheet-swipe.mjs`: `left 0 → −195`, `top 68 → −201` замість `+120`.
+//
+// ЧОМУ ФУНКЦІЯ, А НЕ ЩЕ ОДНА ПРАВКА НА МІСЦІ. Це вже ТРЕТІЙ випадок у проєкті, коли
+// дві копії одного коду розійшлись (перші два — списки антиспаму й тригери коментарів),
+// і щоразу висновок був однаковий. Правка «на місці» полагодила б симптом і лишила
+// корінь: наступна зміна геометрії знову зачепила б одну копію з двох.
+//
+// 🔑 РІШЕННЯ ПРО ГЕОМЕТРІЮ: рухаємо аркуш ТІЛЬКИ `translateY`, а «скільки лишилось»
+// беремо з його ВЛАСНОЇ висоти. Тоді функція не знає й не має знати, як саме елемент
+// позиціонований — тобто вона переживе перехід на конструкцію з фото-шаром (крок 3),
+// де рухатись буде контейнер на весь екран.
+//
+// Повертає нічого: усе тримається на слухачах самого елемента, який і так буде знесений.
+function attachAdSheetSwipe(modal, backdrop, onDismiss) {
+  const scroller = modal.querySelector('.cm-board-modal-scrollarea') || modal;
+  // Ручка є завжди рівно одна: над фото (`.cm-ad-bar-over`) або вгорі тіла, коли фото немає.
+  const grip = modal.querySelector('.cm-board-modal-bar');
+  const drag = createDragTracker();              // швидкість пальця → нативне завершення
+  const fade = createBackdropFade(backdrop);     // затемнення світлішає разом з рухом
+  let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
+
+  modal.addEventListener('touchstart', e => {
+    // Другий палець посеред жесту (щипок, випадковий дотик долонею) — виходимо.
+    // Без цього `e.touches[0]` міг раптом стати іншим пальцем і аркуш смикався.
+    if (e.touches.length > 1) { canSwipe = false; swiping = false; return; }
+    const onGrip = grip && (e.target === grip || grip.contains(e.target));
+    // Хапати можна за ручку (працює завжди) або будь-де, коли тіло не прокручене:
+    // інакше жест закриття перебивав би звичайний скрол опису.
+    canSwipe = onGrip || scroller.scrollTop <= 2;
+    sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
+    travel = sheetRemaining(modal, 0);           // шлях до повного зникнення — міряємо раз за жест
+    drag.start(sY);
+    if (canSwipe) modal.style.transition = 'none';
+  }, { passive: true });
+
+  modal.addEventListener('touchmove', e => {
+    if (!canSwipe) return;
+    if (e.touches.length > 1) { canSwipe = false; return; }
+    const dy = e.touches[0].clientY - sY;
+    const dx = e.touches[0].clientX - sX;
+    // Перший рух горизонтальний → це гортання галереї фото, не закриття.
+    if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
+    if (dy > 0) {
+      e.preventDefault();
+      swiping = true;
+      modal.style.transform = `translateY(${dy}px)`;
+      fade?.track(dy / travel);
+    } else if (swiping) {
+      // Потягнули назад угору — аркуш не піднімається вище за своє місце.
+      modal.style.transform = 'translateY(0)';
+      fade?.track(0);
+    }
+    drag.move(e.touches[0].clientY);
+  }, { passive: false });
+
+  const finish = e => {
+    if (!canSwipe) return;
+    const pt = e.changedTouches && e.changedTouches[0];
+    const dy = (pt ? pt.clientY : sY) - sY;
+    // Летить донизу за пальцем, а не замирає: `onDismiss` лише знімає `.visible`
+    // (згасання), а куди саме їхати — домальовує інлайн transform із sheet-motion.
+    finishSwipe({
+      panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
+      remaining: sheetRemaining(modal, dy),
+      dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+      onDismiss,
+      backdrop: fade,
+    });
+    swiping = false; canSwipe = false;
+  };
+  modal.addEventListener('touchend', finish, { passive: true });
+  // ⚠️ `touchcancel` теж завершує жест. Без нього системне переривання (вхідний дзвінок,
+  // жест «назад» iOS, шторка сповіщень) лишало б аркуш ЗАВИСЛИМ посеред екрана з
+  // інлайновим transform — і закрити його потім можна було б лише кнопкою.
+  modal.addEventListener('touchcancel', finish, { passive: true });
 }
 
 function renderAdModal(p) {
@@ -1324,64 +1428,8 @@ export function openAdModalStandalone(post) {
   };
   backdrop.addEventListener('click', close);
 
-  // Галерея фото: тап → повний екран; крапки оновлюються при свайпі
-  const gallery = modal.querySelector('.cm-board-modal-gallery');
-  if (gallery) {
-    const photoUrls = [...gallery.querySelectorAll('[data-photo-full]')].map(im => im.dataset.photoFull);
-    gallery.querySelectorAll('img[data-photo-idx]').forEach(im => {
-      im.addEventListener('click', e => { e.stopPropagation(); openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0); });
-    });
-    const dots = modal.querySelectorAll('.cm-board-modal-dot');
-    if (dots.length) {
-      gallery.addEventListener('scroll', () => {
-        const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
-        dots.forEach((d, di) => d.classList.toggle('active', di === i));
-      }, { passive: true });
-    }
-  }
-
-  wireAdModalChrome(modal, close);
-
-  // Свайп вниз → закрити (грип або скролер угорі); горизонталь = свайп галереї
-  const area = modal.querySelector('.cm-board-modal-scrollarea');
-  const scroller = area || modal;
-  const grip = modal.querySelector('.cm-board-modal-bar');
-  let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
-  const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
-  const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
-  modal.addEventListener('touchstart', e => {
-    const onGrip = grip && (e.target === grip || grip.contains(e.target));
-    canSwipe = onGrip || scroller.scrollTop <= 2;
-    sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
-    // ⚠️ 02.08: аркуш притиснутий до низу, тож «скільки лишилось» — це його ВЛАСНА
-    // висота (`sheetRemaining`), а не відстань від центру до краю екрана.
-    travel = sheetRemaining(modal, 0);
-    drag.start(sY);
-    if (canSwipe) modal.style.transition = 'none';
-  }, { passive: true });
-  modal.addEventListener('touchmove', e => {
-    if (!canSwipe) return;
-    const dy = e.touches[0].clientY - sY;
-    const dx = e.touches[0].clientX - sX;
-    if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
-    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translateY(${dy}px)`; fade?.track(dy / travel); }
-    else if (swiping) { modal.style.transform = 'translateY(0)'; fade?.track(0); }
-    drag.move(e.touches[0].clientY);
-  }, { passive: false });
-  modal.addEventListener('touchend', e => {
-    if (!canSwipe) return;
-    const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-    // Летить донизу за пальцем, а не замирає на місці: close() лише знімає .visible
-    // (згасання), а куди їхати — домальовує інлайн transform із sheet-motion.
-    finishSwipe({
-      panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
-      remaining: sheetRemaining(modal, dy),
-      dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
-      onDismiss: () => close(),
-      backdrop: fade,
-    });
-    swiping = false; canSwipe = false;
-  }, { passive: true });
+  wireAdModalChrome(modal, close);        // кнопки, скарга, автор, галерея, лічильник фото
+  attachAdSheetSwipe(modal, backdrop, close);   // свайп вниз → закрити (спільний з зумом Дошки)
 
   requestAnimationFrame(() => { backdrop.classList.add('visible'); modal.classList.add('visible'); });
 }
@@ -1427,78 +1475,18 @@ function initBoardNoteExpand(root) {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
 
-    // Галерея фото: тап по фото → повноекранний перегляд; крапки+лічильник оновлюються при свайпі
-    const gallery = modal.querySelector('.cm-board-modal-gallery');
-    if (gallery) {
-      const photoUrls = [...gallery.querySelectorAll('[data-photo-full]')].map(im => im.dataset.photoFull);
-      gallery.querySelectorAll('img[data-photo-idx]').forEach(im => {
-        im.addEventListener('click', e => {
-          e.stopPropagation();
-          openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
-        });
-      });
-      const dots = modal.querySelectorAll('.cm-board-modal-dot');
-      if (dots.length) {
-        gallery.addEventListener('scroll', () => {
-          const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
-          dots.forEach((d, di) => d.classList.toggle('active', di === i));
-        }, { passive: true });
-      }
-    }
-
-    const area = modal.querySelector('.cm-board-modal-scrollarea');
-
-    wireAdModalChrome(modal, close);
-
-    // Свайп вниз → закрити (перевірений патерн як у модалці статей: рішення на touchstart).
-    // Дозволяємо коли жест почався НА СМУЖЦІ-РУЧЦІ (.cm-board-modal-bar) — працює ЗАВЖДИ, навіть
-    // коли опис прокручено; АБО коли скролер угорі (scrollTop<=2). Горизонталь = свайп галереї.
-    const scroller = area || modal;
-    const grip = modal.querySelector('.cm-board-modal-bar');
-    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
-    const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
-    const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
-    modal.addEventListener('touchstart', e => {
-      const onGrip = grip && (e.target === grip || grip.contains(e.target));
-      canSwipe = onGrip || scroller.scrollTop <= 2;
-      sY = e.touches[0].clientY;
-      sX = e.touches[0].clientX;
-      swiping = false;
-      travel = centeredRemaining(modal);   // шлях до нижнього краю — міряємо раз за жест
-      drag.start(sY);
-      if (canSwipe) modal.style.transition = 'none';
-    }, { passive: true });
-    modal.addEventListener('touchmove', e => {
-      if (!canSwipe) return;
-      const dy = e.touches[0].clientY - sY;
-      const dx = e.touches[0].clientX - sX;
-      // Перший рух горизонтальний → це свайп галереї, не закриття
-      if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
-      if (dy > 0) {
-        e.preventDefault();
-        swiping = true;
-        modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
-        fade?.track(dy / travel);            // фон світлішає разом з рухом
-      } else if (swiping) {
-        modal.style.transform = 'translate(-50%, -50%) scale(1)';
-        fade?.track(0);
-      }
-      drag.move(e.touches[0].clientY);
-    }, { passive: false });
-    modal.addEventListener('touchend', e => {
-      if (!canSwipe) return;
-      const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-      // Летить донизу за пальцем, а не замирає на місці: collapse() лише знімає
-      // .visible (згасання), а куди їхати — домальовує інлайн transform.
-      finishSwipe({
-        panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
-        remaining: centeredRemaining(modal),
-        dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
-        onDismiss: () => collapse(),
-        backdrop: fade,
-      });
-      swiping = false; canSwipe = false;
-    }, { passive: true });
+    // 🔴 02.08 — БУЛО `wireAdModalChrome(modal, close)`, і це мовчазна поломка: змінної
+    // `close` у цій області НЕМАЄ. Ім'я не падало лише тому, що в браузера є глобальний
+    // `window.close` — тобто кнопка «←» поверх фото викликала його, а він для звичайної
+    // вкладки не робить НІЧОГО. Закрити модалку з Дошки можна було тільки свайпом
+    // (який теж був зламаний) або тапом у затемнення. Правильний закривач тут — `collapse`.
+    // ⚠️ Урок на майбутнє: у JS «неоголошена змінна» не завжди помилка — глобальні імена
+    // вікна (`close`, `name`, `status`, `origin`, `length`) мовчки підміняють собою опечатку.
+    wireAdModalChrome(modal, collapse);     // кнопки, скарга, автор, галерея, лічильник фото
+    // 🔴 02.08 — ТОЙ САМИЙ свайп, що й у `openAdModalStandalone`. До цього тут жила
+    // ДРУГА копія жесту з математикою центрованої картки (`translate(-50%, …)`) —
+    // саме вона й давала «скаче в різні боки». Історія і числа — у шапці функції.
+    attachAdSheetSwipe(modal, backdrop, () => collapse());
 
     activeNote = note;
     activeModal = modal;
