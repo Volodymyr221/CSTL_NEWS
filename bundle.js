@@ -5915,8 +5915,11 @@
     for (const id of map.keys())
       people.add(keyOf.get(id) || `t:${id}`);
     _unreadChats = people.size;
+    const hadThreads = _hasThreads;
     _hasThreads = pairs.length > 0;
     paintUnreadBadge();
+    if (hadThreads !== _hasThreads)
+      window.dispatchEvent(new CustomEvent("cstl-threads-changed"));
   }
   async function registerChatPushDevice() {
     try {
@@ -6618,6 +6621,10 @@
     } else {
       fabBtn?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
     }
+    if (!_threadsEvtWired) {
+      _threadsEvtWired = true;
+      window.addEventListener("cstl-threads-changed", () => syncMsgFab());
+    }
     paintUnreadBadge();
     el.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
@@ -7212,6 +7219,7 @@
       }
     });
   }
+  var _threadsEvtWired = false;
   var _boardMenusWired = false;
   function closeBoardMenus() {
     [["bd-loc-menu", "bd-loc-btn"], ["bd-hero-menu", "bd-hero-add"]].forEach(([menuId, btnId]) => {

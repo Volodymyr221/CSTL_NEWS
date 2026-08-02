@@ -1529,8 +1529,17 @@ export async function refreshUnreadBadge() {
   const people = new Set();
   for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
   _unreadChats = people.size;
+  const hadThreads = _hasThreads;
   _hasThreads = pairs.length > 0;
   paintUnreadBadge();
+  // 🔴 Кнопка «Повідомлення» на Дошці малюється за `canSeeMessages()`, а та питає
+  // `hasThreadsCached()`. Відповідь приходить АСИНХРОННО — на момент першого рендера
+  // Дошки її ще немає. Без цієї події кнопка не зʼявилась би до наступного повного
+  // рендеру, тобто покупець із розмовами, але без своїх оголошень, відкрив би Дошку
+  // і не побачив входу в листування — рівно та дірка, від якої ми боронились умовою
+  // «оголошення АБО розмова». Подія, а не прямий виклик, — щоб не заводити коло
+  // імпортів між `board.js` і `board-chat.js`.
+  if (hadThreads !== _hasThreads) window.dispatchEvent(new CustomEvent('cstl-threads-changed'));
 }
 
 // ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──

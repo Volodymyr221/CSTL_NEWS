@@ -928,6 +928,13 @@ function renderAll() {
   } else {
     fabBtn?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
   }
+  // Наявність розмов приходить асинхронно (див. `cstl-threads-changed` у board-chat.js) —
+  // тоді кнопку листування треба домалювати або прибрати. Слухач ставимо ОДИН раз на
+  // вікно, а не на кожен `renderAll()`, інакше за кілька фільтрів їх стало б десятки.
+  if (!_threadsEvtWired) {
+    _threadsEvtWired = true;
+    window.addEventListener('cstl-threads-changed', () => syncMsgFab());
+  }
   // 🔴 30.07 (аудит Д-Б1) — МАЛЮЄМО з уже відомого числа, а не питаємо базу.
   // Було `refreshUnreadBadge()` = два запити в Supabase на КОЖЕН renderAll, тобто на
   // кожен тап по фільтру категорії/НП. Кількість непрочитаних від зміни категорії не
@@ -1576,6 +1583,8 @@ function fitBoardAuthors() {
     }
   });
 }
+
+let _threadsEvtWired = false;
 
 // Закрити всі випадні меню Дошки: фільтр локації + меню дій під кнопкою «+».
 // ⚠️ 01.08: `bd-cat-menu` зі списку прибрано — кнопку-лійку категорій замінив
