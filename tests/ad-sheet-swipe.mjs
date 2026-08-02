@@ -140,14 +140,28 @@ const st = () => p.evaluate(() => {
     шапка_поза_скролером: mini ? !sc.contains(mini) : null,
     кнопка: rnd ? Math.round(rc(rnd).width) : null,
     зсув_модалки: modal ? getComputedStyle(modal).transform : null,
+    фото_прилипає: photo ? getComputedStyle(photo).position : null,
+    аркуш_висота: sheet ? Math.round(rc(sheet).height) : null,
+    рисочок: document.querySelectorAll('.cm-ad-screen .cm-board-modal-bar').length,
+    шапка_фон: mini ? getComputedStyle(mini).backgroundColor : null,
   };
 });
 const s0 = await st();
 // 🔴 ГОЛОВНЕ РІШЕННЯ ЗАХОДУ: прокрутка ОДНА і РІДНА.
 ok('скролер у модалці рівно один', s0.скролерів === 1, `${s0.скролерів}`);
-ok('прокрутку веде БРАУЗЕР, а не наш код', s0.жест_скролера === 'auto', s0.жест_скролера);
+// `pan-y` — це НЕ перехоплення: вертикаль явно віддана браузеру (лишається рідною),
+// а горизонталь забрана під жест «назад». Перехоплення вертикалі (`none`) і давало ривки.
+ok('вертикаль веде БРАУЗЕР (touch-action: pan-y)', s0.жест_скролера === 'pan-y', s0.жест_скролера);
 ok('ФОТО від самого верху екрана і без заокруглень',
    s0.фото_верх === 0 && s0.фото_радіус === '0px', `top=${s0.фото_верх} radius=${s0.фото_радіус}`);
+// Замовлення Вови: «фотографія просто стоїть на місці, а блок опису наскролюється доверху».
+ok('ФОТО стоїть на місці (sticky), а не їде з текстом', s0.фото_прилипає === 'sticky', s0.фото_прилипає);
+ok('АРКУШУ є куди доїхати — він заввишки з екран', s0.аркуш_висота >= s0.екран,
+   `${s0.аркуш_висота} з ${s0.екран}`);
+// «Забрати рисочку» — на сторінці з фото вона вже нічого не означає.
+ok('на сторінці з фото рисочки немає', s0.рисочок === 0, `${s0.рисочок}`);
+// Баг зі скріна IMG_3811: крізь напівпрозору шапку просвічував текст, що проїжджав.
+ok('компактна шапка НЕпрозора', s0.шапка_фон === 'rgb(255, 255, 255)', s0.шапка_фон);
 ok('АРКУШ заокруглений і наїжджає на фото',
    s0.аркуш_радіус >= 20 && s0.наїжджає > 0, `radius=${s0.аркуш_радіус} наїзд=${s0.наїжджає}px`);
 ok('ПАНЕЛЬ ДІЙ у межах екрана, заокруглена, тінь двошарова',
@@ -204,6 +218,50 @@ const leak = await p.evaluate(async () => {
   return (window.__lcResize || 0) - before;
 });
 ok('відкриття модалки не додає слухачів на window', leak === 0, `додано ${leak}`);
+
+// ── 1г. ЖЕСТ ВІДПОВІДАЄ ТОМУ, ЧИМ ЕКРАН ВИГЛЯДАЄ ────────────────────────────
+// Рішення Вови після живої перевірки: «це якби сторінка, а не модалка».
+//   з фото  → закриває свайп ЗЛІВА, вертикального закриття немає;
+//   без фото→ закриває свайп УНИЗ, бічного немає.
+const swipeFrom = async (x, y, dx, dy, steps = 8) => {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+  for (let i = 1; i <= steps; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
+      touchPoints: [{ x: x + Math.round(dx * i / steps), y: y + Math.round(dy * i / steps), id: 1 }] });
+    await p.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await p.waitForTimeout(700);
+};
+const isOpen = () => p.evaluate(() => !!document.querySelector('.cm-ad-screen'));
+
+// Сторінка з фото: свайп УНИЗ від верху вмісту НЕ повинен закривати.
+await p.evaluate(() => { const s = document.querySelector('.cm-ad-scroll'); if (s) s.scrollTop = 0; });
+await p.waitForTimeout(200);
+await swipeFrom(195, 400, 0, 260);
+ok('сторінка з фото НЕ закривається свайпом униз', await isOpen() === true);
+const afterDown = await st();
+ok('невдалий свайп униз не лишає слідів', 
+   afterDown.зсув_модалки === 'none' || afterDown.зсув_модалки === 'matrix(1, 0, 0, 1, 0, 0)',
+   `${afterDown.зсув_модалки}`);
+// Свайп ЗЛІВА (від краю вправо) — закриває.
+await swipeFrom(8, 420, 260, 0);
+ok('сторінка з фото закривається свайпом ЗЛІВА', await isOpen() === false);
+
+// Оголошення БЕЗ ФОТО: дзеркально.
+await p.waitForTimeout(300);
+ok('оголошення без фото відкрилось', await openAd(902));
+await swipeFrom(8, 420, 260, 0);
+ok('аркуш без фото НЕ закривається свайпом зліва', await isOpen() === true);
+const noPhoto = await p.evaluate(() => ({
+  рисочок: document.querySelectorAll('.cm-ad-screen .cm-board-modal-bar').length,
+  фото: !!document.querySelector('.cm-ad-photo'),
+}));
+ok('без фото шару фото немає, а рисочка є',
+   noPhoto.фото === false && noPhoto.рисочок === 1, JSON.stringify(noPhoto));
+await swipeFrom(195, 400, 0, 260);
+ok('аркуш без фото закривається свайпом УНИЗ', await isOpen() === false);
+
 
 // ── 4. Сторож DRY: свайп модалки оголошення описаний РІВНО ОДИН раз ──────────
 // Саме друга копія й розійшлась із першою. Рахуємо по коду, а не по поведінці:

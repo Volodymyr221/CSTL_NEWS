@@ -6246,74 +6246,82 @@
     const scroller = modal.querySelector(".cm-ad-scroll");
     if (!scroller)
       return;
+    const asPage = !!modal.querySelector(".cm-ad-photo");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
-    let dy = 0;
+    const EDGE = 32;
+    const DIST2 = 90;
+    let sX = 0, sY = 0, d = 0, axis = null, armed = false;
     const reset = () => {
-      dy = 0;
+      d = 0;
+      axis = null;
+      armed = false;
       modal.style.transition = "";
       modal.style.transform = "";
     };
     modal.addEventListener("touchstart", (e) => {
       if (e.touches.length > 1) {
-        if (dy)
-          reset();
+        reset();
         return;
       }
-      dy = 0;
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      armed = scroller.scrollTop <= 0;
+      sX = e.touches[0].clientX;
+      sY = e.touches[0].clientY;
+      d = 0;
       axis = null;
-      drag.start(startY);
+      armed = asPage ? sX <= EDGE : scroller.scrollTop <= 0;
+      drag.start(asPage ? sX : sY);
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
       if (!armed || e.touches.length > 1)
         return;
-      const y = e.touches[0].clientY;
-      const d = y - startY;
+      const x = e.touches[0].clientX, y = e.touches[0].clientY;
+      const dx = x - sX, dy = y - sY;
       if (axis === null) {
-        const dx = e.touches[0].clientX - startX;
-        if (Math.abs(dx) > Math.abs(d) && Math.abs(dx) > 10) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6)
+          return;
+        const wantX = asPage;
+        const isX = Math.abs(dx) > Math.abs(dy);
+        if (isX !== wantX) {
           armed = false;
           return;
         }
-        if (Math.abs(d) < 6)
-          return;
-        if (d < 0) {
+        if (wantX ? dx <= 0 : dy <= 0) {
           armed = false;
           return;
         }
-        axis = "down";
+        axis = wantX ? "x" : "y";
         modal.style.transition = "none";
       }
-      dy = Math.max(0, d);
-      modal.style.transform = `translateY(${dy}px)`;
-      fade?.track(dy / window.innerHeight);
-      drag.move(y);
+      d = Math.max(0, axis === "x" ? dx : dy);
+      modal.style.transform = axis === "x" ? `translateX(${d}px)` : `translateY(${d}px)`;
+      fade?.track(d / (axis === "x" ? window.innerWidth : window.innerHeight));
+      drag.move(axis === "x" ? x : y);
     }, { passive: true });
     const finish2 = () => {
-      if (!dy) {
-        armed = false;
-        axis = null;
+      if (!axis || !d) {
         reset();
         return;
       }
-      const moved = dy;
-      dy = 0;
-      armed = false;
+      const moved = d, ax = axis;
+      const v = drag.velocity;
+      d = 0;
       axis = null;
+      armed = false;
+      const full = ax === "x" ? window.innerWidth : Math.round(modal.offsetHeight);
       finishSwipe({
         panel: modal,
         dy: moved,
-        velocity: drag.velocity,
-        remaining: sheetRemaining(modal, moved),
-        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+        velocity: v,
+        remaining: Math.max(full - moved, 1),
+        dismissTransform: ax === "x" ? `translateX(${full}px)` : `translateY(${full}px)`,
         onDismiss,
         backdrop: fade
       });
+      if (moved <= DIST2 && Math.abs(v) <= 0.45)
+        setTimeout(() => {
+          modal.style.transition = "";
+        }, 260);
     };
-    let startY = 0, startX = 0, armed = false, axis = null;
     modal.addEventListener("touchend", finish2, { passive: true });
     modal.addEventListener("touchcancel", finish2, { passive: true });
   }
@@ -6324,7 +6332,7 @@
     <div class="cm-board-modal-scrollarea cm-ad-scroll">
       ${renderAdPhotoLayer(p, photos)}
       <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
-        <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
+        ${hasHero ? "" : '<div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>'}
         <div class="cm-ad-body">
           ${renderAdHead(p)}
           ${renderAdMeta(p)}
