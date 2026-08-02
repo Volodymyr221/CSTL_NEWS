@@ -6209,12 +6209,22 @@
     const scrollEl = modal.querySelector(".cm-board-modal-scrollarea");
     const headEl = modal.querySelector(".cm-ad-title") || modal.querySelector(".cm-ad-head");
     if (sheetEl && scrollEl && headEl) {
-      const syncMini = () => {
-        const gone = headEl.getBoundingClientRect().bottom <= scrollEl.getBoundingClientRect().top + 4;
-        sheetEl.classList.toggle("cm-ad-sheet--mini", gone);
+      let threshold = 0;
+      const remeasure = () => {
+        threshold = Math.max(0, headEl.offsetTop + headEl.offsetHeight - scrollEl.offsetTop);
       };
-      scrollEl.addEventListener("scroll", () => requestAnimationFrame(syncMini), { passive: true });
-      syncMini();
+      const syncMini = () => {
+        sheetEl.classList.toggle("cm-ad-sheet--mini", scrollEl.scrollTop >= threshold);
+      };
+      scrollEl.addEventListener("scroll", syncMini, { passive: true });
+      window.addEventListener("resize", () => {
+        remeasure();
+        syncMini();
+      }, { passive: true });
+      requestAnimationFrame(() => {
+        remeasure();
+        syncMini();
+      });
     }
     const gallery = modal.querySelector(".cm-board-modal-gallery");
     if (gallery) {
@@ -6246,26 +6256,43 @@
     const fixed = sheet.classList.contains("cm-ad-sheet--full");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
-    const yOf = (name) => {
-      const v = getComputedStyle(sheet).getPropertyValue(name).trim();
-      if (v.endsWith("px"))
-        return parseFloat(v);
-      if (v.endsWith("dvh") || v.endsWith("vh"))
-        return parseFloat(v) / 100 * window.innerHeight;
-      return parseFloat(v) || 0;
+    const trY = () => {
+      const t = getComputedStyle(sheet).transform;
+      if (!t || t === "none")
+        return 0;
+      const m2 = t.match(/^matrix\(([^)]+)\)/);
+      if (m2)
+        return parseFloat(m2[1].split(",")[5]) || 0;
+      const m3 = t.match(/^matrix3d\(([^)]+)\)/);
+      if (m3)
+        return parseFloat(m3[1].split(",")[13]) || 0;
+      return 0;
     };
     let yInit = 0, yUp = 0;
     const measure = () => {
       const had = sheet.classList.contains("cm-ad-sheet--up");
+      const prevTr = sheet.style.transition;
+      const prevTf = sheet.style.transform;
+      sheet.style.transition = "none";
+      sheet.style.transform = "";
       sheet.classList.remove("cm-ad-sheet--up");
-      yInit = yOf("--ad-init-y") || sheet.getBoundingClientRect().top;
+      yInit = trY();
       sheet.classList.add("cm-ad-sheet--up");
-      yUp = sheet.getBoundingClientRect().top;
+      yUp = trY();
       sheet.classList.toggle("cm-ad-sheet--up", had);
+      sheet.style.transform = prevTf;
+      sheet.style.transition = prevTr;
     };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
     let up = false;
-    let sY = 0, sX = 0, mode = null;
-    let base = 0;
+    let sheetY = 0;
+    let screenY = 0;
+    let spilled = false;
+    let scrolled = false;
+    let lastY = 0, sX = 0, sY = 0;
+    let vertical = null;
+    let inertiaId = 0;
     const setSheetY = (y) => {
       sheet.style.transform = `translateY(${y}px)`;
     };
@@ -6277,99 +6304,149 @@
     };
     const snap = (toUp) => {
       up = toUp;
-      sheet.style.transition = "";
+      sheetY = toUp ? yUp : yInit;
+      sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
       sheet.style.transform = "";
       sheet.classList.toggle("cm-ad-sheet--up", toUp);
       if (dim) {
-        dim.style.transition = "opacity .38s ease";
+        dim.style.transition = "opacity .34s ease";
         dim.style.opacity = toUp ? "0.35" : "0";
       }
       if (!toUp)
         scroller.scrollTop = 0;
     };
+    const maxScroll = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const stopInertia = () => {
+      if (inertiaId) {
+        cancelAnimationFrame(inertiaId);
+        inertiaId = 0;
+      }
+    };
+    const apply = (d) => {
+      if (d < 0) {
+        if (sheetY > yUp) {
+          const use = Math.max(d, yUp - sheetY);
+          sheetY += use;
+          d -= use;
+          setSheetY(sheetY);
+          setDim(sheetY);
+        }
+        if (d < 0) {
+          scroller.scrollTop = Math.min(maxScroll(), scroller.scrollTop - d);
+          scrolled = true;
+        }
+      } else if (d > 0) {
+        if (scroller.scrollTop > 0) {
+          const use = Math.min(d, scroller.scrollTop);
+          scroller.scrollTop -= use;
+          d -= use;
+          spilled = true;
+          scrolled = true;
+        }
+        if (d > 0 && sheetY < yInit) {
+          const use = Math.min(d, yInit - sheetY);
+          sheetY += use;
+          d -= use;
+          spilled = true;
+          setSheetY(sheetY);
+          setDim(sheetY);
+        }
+        if (d > 0) {
+          screenY += d;
+          modal.style.transition = "none";
+          modal.style.transform = `translateY(${screenY}px)`;
+          fade?.track(screenY / window.innerHeight);
+        }
+      }
+    };
+    const inertia = (v0) => {
+      let v = -v0 * 16;
+      if (Math.abs(v) < 2)
+        return;
+      const step = () => {
+        const before = scroller.scrollTop;
+        scroller.scrollTop = Math.min(maxScroll(), Math.max(0, before + v));
+        v *= 0.94;
+        if (Math.abs(v) > 0.4 && scroller.scrollTop !== before)
+          inertiaId = requestAnimationFrame(step);
+        else
+          inertiaId = 0;
+      };
+      inertiaId = requestAnimationFrame(step);
+    };
     modal.addEventListener("touchstart", (e) => {
       if (e.touches.length > 1) {
-        mode = null;
+        vertical = false;
         return;
       }
-      sY = e.touches[0].clientY;
+      stopInertia();
+      lastY = sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       drag.start(sY);
       sheet.style.transition = "none";
       if (dim)
         dim.style.transition = "none";
-      measure();
-      base = up ? yUp : yInit;
-      mode = null;
+      sheetY = up ? yUp : yInit;
+      screenY = 0;
+      spilled = false;
+      scrolled = false;
+      vertical = null;
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
       if (e.touches.length > 1) {
-        mode = null;
+        vertical = false;
         return;
       }
-      const dy = e.touches[0].clientY - sY;
-      const dx = e.touches[0].clientX - sX;
-      if (mode === null) {
+      const y = e.touches[0].clientY;
+      if (vertical === null) {
+        const dx = e.touches[0].clientX - sX, dy = y - sY;
         if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-          mode = "gallery";
+          vertical = false;
           return;
         }
         if (Math.abs(dy) < 4)
           return;
-        if (fixed) {
-          mode = dy > 0 && scroller.scrollTop <= 0 ? "screen" : "scroll";
-        } else if (up) {
-          mode = dy > 0 && scroller.scrollTop <= 0 ? "sheet" : "scroll";
-        } else {
-          mode = dy < 0 ? "sheet" : "screen";
-        }
+        vertical = true;
+        lastY = y;
       }
-      if (mode === "gallery" || mode === "scroll")
+      if (!vertical)
         return;
-      e.preventDefault();
-      if (mode === "sheet") {
-        const y = Math.min(yInit, Math.max(yUp, base + dy));
-        setSheetY(y);
-        setDim(y);
-      } else {
-        if (dy > 0) {
-          modal.style.transition = "none";
-          modal.style.transform = `translateY(${dy}px)`;
-          fade?.track(dy / window.innerHeight);
-        } else {
-          modal.style.transform = "translateY(0)";
-          fade?.track(0);
-        }
-      }
-      drag.move(e.touches[0].clientY);
-    }, { passive: false });
-    const finish2 = (e) => {
-      const m = mode;
-      mode = null;
-      if (!m || m === "gallery" || m === "scroll") {
+      apply(y - lastY);
+      lastY = y;
+      drag.move(y);
+    }, { passive: true });
+    const finish2 = () => {
+      if (!vertical) {
+        vertical = null;
         sheet.style.transition = "";
         return;
       }
-      const pt = e.changedTouches && e.changedTouches[0];
-      const dy = (pt ? pt.clientY : sY) - sY;
+      vertical = null;
       const v = drag.velocity;
-      if (m === "sheet") {
-        const y = Math.min(yInit, Math.max(yUp, base + dy));
-        const flick = Math.abs(v) > 0.45 && Math.abs(dy) > 8;
-        const toUp = flick ? v < 0 : y < (yInit + yUp) / 2;
-        sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
-        requestAnimationFrame(() => snap(toUp));
+      if (sheetY > yUp && sheetY < yInit) {
+        snap(Math.abs(v) > 0.45 ? v < 0 : sheetY < (yInit + yUp) / 2);
+      } else {
+        sheet.style.transition = "";
+        up = sheetY <= yUp;
+        sheet.classList.toggle("cm-ad-sheet--up", up);
+        if (!up)
+          scroller.scrollTop = 0;
+      }
+      if (screenY > 0) {
+        finishSwipe({
+          panel: modal,
+          dy: screenY,
+          velocity: spilled ? 0 : v,
+          remaining: sheetRemaining(modal, screenY),
+          dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+          onDismiss,
+          backdrop: fade
+        });
+        screenY = 0;
         return;
       }
-      finishSwipe({
-        panel: modal,
-        dy: dy > 0 ? dy : 0,
-        velocity: v,
-        remaining: sheetRemaining(modal, dy),
-        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
-        onDismiss,
-        backdrop: fade
-      });
+      if (up && scrolled)
+        inertia(v);
     };
     modal.addEventListener("touchend", finish2, { passive: true });
     modal.addEventListener("touchcancel", finish2, { passive: true });
