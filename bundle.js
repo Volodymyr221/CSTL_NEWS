@@ -6205,6 +6205,17 @@
       }).catch(() => {
       });
     }
+    const sheetEl = modal.querySelector(".cm-ad-sheet");
+    const scrollEl = modal.querySelector(".cm-board-modal-scrollarea");
+    const headEl = modal.querySelector(".cm-ad-title") || modal.querySelector(".cm-ad-head");
+    if (sheetEl && scrollEl && headEl) {
+      const syncMini = () => {
+        const gone = headEl.getBoundingClientRect().bottom <= scrollEl.getBoundingClientRect().top + 4;
+        sheetEl.classList.toggle("cm-ad-sheet--mini", gone);
+      };
+      scrollEl.addEventListener("scroll", () => requestAnimationFrame(syncMini), { passive: true });
+      syncMini();
+    }
     const gallery = modal.querySelector(".cm-board-modal-gallery");
     if (gallery) {
       const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
@@ -6227,67 +6238,138 @@
     }
   }
   function attachAdSheetSwipe(modal, backdrop, onDismiss) {
-    const scroller = modal.querySelector(".cm-board-modal-scrollarea") || modal;
-    const grip = modal.querySelector(".cm-board-modal-bar");
+    const sheet = modal.querySelector(".cm-ad-sheet");
+    const scroller = modal.querySelector(".cm-board-modal-scrollarea");
+    const dim = modal.querySelector(".cm-ad-photo-dim");
+    if (!sheet || !scroller)
+      return;
+    const fixed = sheet.classList.contains("cm-ad-sheet--full");
     const drag = createDragTracker();
     const fade = createBackdropFade(backdrop);
-    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
+    const yOf = (name) => {
+      const v = getComputedStyle(sheet).getPropertyValue(name).trim();
+      if (v.endsWith("px"))
+        return parseFloat(v);
+      if (v.endsWith("dvh") || v.endsWith("vh"))
+        return parseFloat(v) / 100 * window.innerHeight;
+      return parseFloat(v) || 0;
+    };
+    let yInit = 0, yUp = 0;
+    const measure = () => {
+      const had = sheet.classList.contains("cm-ad-sheet--up");
+      sheet.classList.remove("cm-ad-sheet--up");
+      yInit = yOf("--ad-init-y") || sheet.getBoundingClientRect().top;
+      sheet.classList.add("cm-ad-sheet--up");
+      yUp = sheet.getBoundingClientRect().top;
+      sheet.classList.toggle("cm-ad-sheet--up", had);
+    };
+    let up = false;
+    let sY = 0, sX = 0, mode = null;
+    let base = 0;
+    const setSheetY = (y) => {
+      sheet.style.transform = `translateY(${y}px)`;
+    };
+    const setDim = (y) => {
+      if (!dim || yInit === yUp)
+        return;
+      const p = Math.min(1, Math.max(0, (yInit - y) / (yInit - yUp)));
+      dim.style.opacity = (p * 0.35).toFixed(3);
+    };
+    const snap = (toUp) => {
+      up = toUp;
+      sheet.style.transition = "";
+      sheet.style.transform = "";
+      sheet.classList.toggle("cm-ad-sheet--up", toUp);
+      if (dim) {
+        dim.style.transition = "opacity .38s ease";
+        dim.style.opacity = toUp ? "0.35" : "0";
+      }
+      if (!toUp)
+        scroller.scrollTop = 0;
+    };
     modal.addEventListener("touchstart", (e) => {
       if (e.touches.length > 1) {
-        canSwipe = false;
-        swiping = false;
+        mode = null;
         return;
       }
-      const onGrip = grip && (e.target === grip || grip.contains(e.target));
-      canSwipe = onGrip || scroller.scrollTop <= 2;
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
-      swiping = false;
-      travel = sheetRemaining(modal, 0);
       drag.start(sY);
-      if (canSwipe)
-        modal.style.transition = "none";
+      sheet.style.transition = "none";
+      if (dim)
+        dim.style.transition = "none";
+      measure();
+      base = up ? yUp : yInit;
+      mode = null;
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
-      if (!canSwipe)
-        return;
       if (e.touches.length > 1) {
-        canSwipe = false;
+        mode = null;
         return;
       }
       const dy = e.touches[0].clientY - sY;
       const dx = e.touches[0].clientX - sX;
-      if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-        canSwipe = false;
-        return;
+      if (mode === null) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+          mode = "gallery";
+          return;
+        }
+        if (Math.abs(dy) < 4)
+          return;
+        if (fixed) {
+          mode = dy > 0 && scroller.scrollTop <= 0 ? "screen" : "scroll";
+        } else if (up) {
+          mode = dy > 0 && scroller.scrollTop <= 0 ? "sheet" : "scroll";
+        } else {
+          mode = dy < 0 ? "sheet" : "screen";
+        }
       }
-      if (dy > 0) {
-        e.preventDefault();
-        swiping = true;
-        modal.style.transform = `translateY(${dy}px)`;
-        fade?.track(dy / travel);
-      } else if (swiping) {
-        modal.style.transform = "translateY(0)";
-        fade?.track(0);
+      if (mode === "gallery" || mode === "scroll")
+        return;
+      e.preventDefault();
+      if (mode === "sheet") {
+        const y = Math.min(yInit, Math.max(yUp, base + dy));
+        setSheetY(y);
+        setDim(y);
+      } else {
+        if (dy > 0) {
+          modal.style.transition = "none";
+          modal.style.transform = `translateY(${dy}px)`;
+          fade?.track(dy / window.innerHeight);
+        } else {
+          modal.style.transform = "translateY(0)";
+          fade?.track(0);
+        }
       }
       drag.move(e.touches[0].clientY);
     }, { passive: false });
     const finish2 = (e) => {
-      if (!canSwipe)
+      const m = mode;
+      mode = null;
+      if (!m || m === "gallery" || m === "scroll") {
+        sheet.style.transition = "";
         return;
+      }
       const pt = e.changedTouches && e.changedTouches[0];
       const dy = (pt ? pt.clientY : sY) - sY;
+      const v = drag.velocity;
+      if (m === "sheet") {
+        const y = Math.min(yInit, Math.max(yUp, base + dy));
+        const flick = Math.abs(v) > 0.45 && Math.abs(dy) > 8;
+        const toUp = flick ? v < 0 : y < (yInit + yUp) / 2;
+        sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
+        requestAnimationFrame(() => snap(toUp));
+        return;
+      }
       finishSwipe({
         panel: modal,
-        dy: swiping ? dy : 0,
-        velocity: drag.velocity,
+        dy: dy > 0 ? dy : 0,
+        velocity: v,
         remaining: sheetRemaining(modal, dy),
         dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
         onDismiss,
         backdrop: fade
       });
-      swiping = false;
-      canSwipe = false;
     };
     modal.addEventListener("touchend", finish2, { passive: true });
     modal.addEventListener("touchcancel", finish2, { passive: true });
@@ -6300,6 +6382,7 @@
     <div class="cm-ad-sheet${hasHero ? "" : " cm-ad-sheet--full"}">
       <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
       ${hasHero ? "" : renderAdTopActions(p, false)}
+      ${renderAdMiniHead(p)}
       <div class="cm-board-modal-scrollarea">
         <div class="cm-ad-body">
           ${renderAdHead(p)}
@@ -6311,9 +6394,18 @@
           ${renderAdReport()}
         </div>
       </div>
-      ${renderAdBottomBar(p)}
     </div>
+    ${renderAdBottomBar(p)}
   `;
+  }
+  function renderAdMiniHead(p) {
+    if (!p.title)
+      return "";
+    return `
+    <div class="cm-ad-mini" aria-hidden="true">
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
+      <span class="cm-ad-mini-title">${escapeHtml(p.title)}</span>
+    </div>`;
   }
   function renderAdPhotoLayer(p, photos) {
     if (!photos.length)
@@ -6324,6 +6416,7 @@
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
+      <div class="cm-ad-photo-dim"></div>
       ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
