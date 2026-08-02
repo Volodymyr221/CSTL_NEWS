@@ -28,7 +28,7 @@ import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlem
 // ⚠️ `centeredRemaining` більше не імпортується: модалка оголошення — аркуш знизу, і
 // відстань до краю рахується з її власної висоти (`sheetRemaining`). Саме залишений
 // імпорт центрованої математики й тримав живою другу, зламану копію свайпу.
-import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, SHEET_EASE } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
@@ -332,6 +332,26 @@ function wireAdModalChrome(modal, close) {
     }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
   }
 
+  // ── Компактна шапка зʼявляється, коли велика поїхала за верх ────────────────
+  // ⚠️ Перша версія показувала її за СТАНОМ АРКУША (піднятий → показати). На знімку
+  // одразу стало видно дурницю: у піднятому стані велика шапка ще на екрані, і назва
+  // писалась ДВІЧІ поспіль. Правильний привід — не положення аркуша, а те, що заголовок
+  // реально зник із очей. Той самий прийом, що в App Store і Apple Music.
+  const sheetEl = modal.querySelector('.cm-ad-sheet');
+  const scrollEl = modal.querySelector('.cm-board-modal-scrollarea');
+  // ⚠️ Стежимо саме за НАЗВОЮ, а не за всією шапкою: шапка містить ще й ціну, і поки
+  // вона доїде за край, людина вже давно не бачить, ЩО читає. Назва — це і є відповідь
+  // на «що це», тому компактна шапка заступає саме її.
+  const headEl = modal.querySelector('.cm-ad-title') || modal.querySelector('.cm-ad-head');
+  if (sheetEl && scrollEl && headEl) {
+    const syncMini = () => {
+      const gone = headEl.getBoundingClientRect().bottom <= scrollEl.getBoundingClientRect().top + 4;
+      sheetEl.classList.toggle('cm-ad-sheet--mini', gone);
+    };
+    scrollEl.addEventListener('scroll', () => requestAnimationFrame(syncMini), { passive: true });
+    syncMini();
+  }
+
   // ── Галерея фото: тап → повний екран, крапки й лічильник «1 / N» при гортанні ──
   // ⚠️ Переїхало сюди 02.08 з ДВОХ call-site'ів: блок був скопійований слово в слово
   // в `openAdModalStandalone` і в `expand()`. Рівно таке дублювання й дало баг свайпу
@@ -374,73 +394,162 @@ function wireAdModalChrome(modal, close) {
 // і щоразу висновок був однаковий. Правка «на місці» полагодила б симптом і лишила
 // корінь: наступна зміна геометрії знову зачепила б одну копію з двох.
 //
-// 🔑 РІШЕННЯ ПРО ГЕОМЕТРІЮ: рухаємо аркуш ТІЛЬКИ `translateY`, а «скільки лишилось»
-// беремо з його ВЛАСНОЇ висоти. Тоді функція не знає й не має знати, як саме елемент
-// позиціонований — тобто вона переживе перехід на конструкцію з фото-шаром (крок 3),
-// де рухатись буде контейнер на весь екран.
+// 🔴 02.08 (другий захід) — ДВІ ТОЧКИ ФІКСАЦІЇ, ЯК В APPLE MAPS.
 //
-// Повертає нічого: усе тримається на слухачах самого елемента, який і так буде знесений.
+// Скарга Вови: «скролиться лише текст всередині опису — відчуття маленького контейнера
+// зі своїм скролом, виглядає застаріло». Так і було: аркуш стояв, їхав лише текст.
+//
+// СТАЛО — машина з двох положень:
+//   `нижнє`  — стартове, фото займає верхню третину;
+//   `верхнє` — аркуш піднятий, від фото лишається смуга, і ЛИШЕ ТУТ прокручується вміст.
+//
+// 🔴 ГОЛОВНА ПОПРАВКА ДО ТЗ, УЗГОДЖЕНА З ВОВОЮ. ТЗ вимагало закривати свайпом «коли
+// аркуш угорі і скрол у нулі». Це дало б протилежне до задуманого: найлегше закрити
+// стало б саме тоді, коли людина читає, а зі стартового стану свайпом не закрити взагалі.
+// В Apple Maps свайп униз НЕ закриває, а ОПУСКАЄ на попереднє положення:
+//     верхнє --вниз--> нижнє --вниз--> закрити
+// Тобто щоб закрити, потрібні ДВА рухи, а не один — саме це й «виключає випадкове
+// закриття під час читання», якого просило ТЗ.
+//
+// 🔑 ХТО САМЕ РУХАЄТЬСЯ — залежить від напрямку й стану, і це не дрібниця:
+//   • тягнемо вгору (нижнє→верхнє) або вниз (верхнє→нижнє) — їде АРКУШ, фото стоїть;
+//   • тягнемо вниз із нижнього — їде ВЕСЬ КОНТЕЙНЕР (фото + аркуш), як і до цього.
+// Друге лишає закриття рівно таким, яким його вже перевірено стендом.
+//
+// ⚠️ Ручка (сіра рисочка) більше НЕ окрема зона захоплення — тягнути можна за будь-яке
+// місце картки (вимога ТЗ). Ручка лишається тільки підказкою «мене можна тягнути».
 function attachAdSheetSwipe(modal, backdrop, onDismiss) {
-  const scroller = modal.querySelector('.cm-board-modal-scrollarea') || modal;
-  // Ручка одна на модалку — вона живе вгорі аркуша (`.cm-ad-sheet > .cm-board-modal-bar`).
-  const grip = modal.querySelector('.cm-board-modal-bar');
-  const drag = createDragTracker();              // швидкість пальця → нативне завершення
-  const fade = createBackdropFade(backdrop);     // затемнення світлішає разом з рухом
-  let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
+  const sheet    = modal.querySelector('.cm-ad-sheet');
+  const scroller = modal.querySelector('.cm-board-modal-scrollarea');
+  const dim      = modal.querySelector('.cm-ad-photo-dim');
+  if (!sheet || !scroller) return;
+
+  // Аркуш без фото не їздить: ховати нема чого, він одразу вгорі.
+  const fixed = sheet.classList.contains('cm-ad-sheet--full');
+  const drag  = createDragTracker();
+  const fade  = createBackdropFade(backdrop);
+
+  // Положення беремо з ЖИВИХ стилів, а не з копії чисел у JS: обидва пороги описані
+  // в CSS (`--ad-init-y` / `--ad-up-y`) і залежать від safe-area, тобто від пристрою.
+  // Друга копія тут неминуче б колись розійшлась із першою — у проєкті це вже було тричі.
+  const yOf = name => {
+    const v = getComputedStyle(sheet).getPropertyValue(name).trim();
+    if (v.endsWith('px')) return parseFloat(v);
+    if (v.endsWith('dvh') || v.endsWith('vh')) return parseFloat(v) / 100 * window.innerHeight;
+    return parseFloat(v) || 0;
+  };
+  let yInit = 0, yUp = 0;
+  const measure = () => {
+    // `--ad-up-y` містить `max(...)`, який `getComputedStyle` віддає вже порахованим
+    // числом лише на самому елементі — тому міряємо фактичний зсув у кожному стані.
+    const had = sheet.classList.contains('cm-ad-sheet--up');
+    sheet.classList.remove('cm-ad-sheet--up');
+    yInit = yOf('--ad-init-y') || sheet.getBoundingClientRect().top;
+    sheet.classList.add('cm-ad-sheet--up');
+    yUp = sheet.getBoundingClientRect().top;
+    sheet.classList.toggle('cm-ad-sheet--up', had);
+  };
+
+  let up = false;                        // поточне положення аркуша
+  let sY = 0, sX = 0, mode = null;       // mode: 'sheet' | 'screen' | null
+  let base = 0;                          // зсув аркуша на момент початку жесту
+
+  const setSheetY = y => { sheet.style.transform = `translateY(${y}px)`; };
+  // Затемнення фото наростає в міру того, як аркуш його накриває. Одна прозорість на
+  // одному шарі — найдешевше, що можна анімувати; розкладка не перераховується.
+  const setDim = y => {
+    if (!dim || yInit === yUp) return;
+    const p = Math.min(1, Math.max(0, (yInit - y) / (yInit - yUp)));
+    dim.style.opacity = (p * 0.35).toFixed(3);
+  };
+  const snap = toUp => {
+    up = toUp;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    sheet.classList.toggle('cm-ad-sheet--up', toUp);
+    if (dim) { dim.style.transition = 'opacity .38s ease'; dim.style.opacity = toUp ? '0.35' : '0'; }
+    // Опустили аркуш — повертаємо вміст на початок, інакше при наступному підйомі
+    // людина побачила б середину опису замість його початку.
+    if (!toUp) scroller.scrollTop = 0;
+  };
 
   modal.addEventListener('touchstart', e => {
-    // Другий палець посеред жесту (щипок, випадковий дотик долонею) — виходимо.
-    // Без цього `e.touches[0]` міг раптом стати іншим пальцем і аркуш смикався.
-    if (e.touches.length > 1) { canSwipe = false; swiping = false; return; }
-    const onGrip = grip && (e.target === grip || grip.contains(e.target));
-    // Хапати можна за ручку (працює завжди) або будь-де, коли тіло не прокручене:
-    // інакше жест закриття перебивав би звичайний скрол опису.
-    canSwipe = onGrip || scroller.scrollTop <= 2;
-    sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
-    travel = sheetRemaining(modal, 0);           // шлях до повного зникнення — міряємо раз за жест
+    if (e.touches.length > 1) { mode = null; return; }
+    sY = e.touches[0].clientY; sX = e.touches[0].clientX;
     drag.start(sY);
-    if (canSwipe) modal.style.transition = 'none';
+    // ⚠️ Плавність ВИМИКАЄМО ДО заміру: `measure()` на мить перемикає клас положення,
+    // і з увімкненим переходом це запустило б анімацію просто від дотику пальцем.
+    sheet.style.transition = 'none';
+    if (dim) dim.style.transition = 'none';
+    measure();
+    base = up ? yUp : yInit;
+    mode = null;                          // напрямок ще не відомий — вирішимо на першому русі
   }, { passive: true });
 
   modal.addEventListener('touchmove', e => {
-    if (!canSwipe) return;
-    if (e.touches.length > 1) { canSwipe = false; return; }
+    if (e.touches.length > 1) { mode = null; return; }
     const dy = e.touches[0].clientY - sY;
     const dx = e.touches[0].clientX - sX;
-    // Перший рух горизонтальний → це гортання галереї фото, не закриття.
-    if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
-    if (dy > 0) {
-      e.preventDefault();
-      swiping = true;
-      modal.style.transform = `translateY(${dy}px)`;
-      fade?.track(dy / travel);
-    } else if (swiping) {
-      // Потягнули назад угору — аркуш не піднімається вище за своє місце.
-      modal.style.transform = 'translateY(0)';
-      fade?.track(0);
+
+    if (mode === null) {
+      // Перший рух горизонтальний → це гортання галереї фото, жест не наш.
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { mode = 'gallery'; return; }
+      if (Math.abs(dy) < 4) return;       // ще не рух, а тремтіння пальця
+      if (fixed) {
+        // Без фото положення одне: униз — закриття, угору — звичайний скрол.
+        mode = dy > 0 && scroller.scrollTop <= 0 ? 'screen' : 'scroll';
+      } else if (up) {
+        // Аркуш угорі: униз ведемо його назад, але ЛИШЕ якщо вміст на початку —
+        // інакше палець мусить прокручувати текст, а не складати картку.
+        mode = (dy > 0 && scroller.scrollTop <= 0) ? 'sheet' : 'scroll';
+      } else {
+        // Аркуш унизу: угору — піднімаємо його, униз — закриваємо всю модалку.
+        mode = dy < 0 ? 'sheet' : 'screen';
+      }
+    }
+    if (mode === 'gallery' || mode === 'scroll') return;
+
+    e.preventDefault();
+    if (mode === 'sheet') {
+      // Межі жорсткі: вище верхнього і нижче стартового аркуш не йде.
+      const y = Math.min(yInit, Math.max(yUp, base + dy));
+      setSheetY(y); setDim(y);
+    } else {
+      // Закриття: рухаємо ВЕСЬ контейнер, як і раніше.
+      if (dy > 0) { modal.style.transition = 'none'; modal.style.transform = `translateY(${dy}px)`; fade?.track(dy / window.innerHeight); }
+      else { modal.style.transform = 'translateY(0)'; fade?.track(0); }
     }
     drag.move(e.touches[0].clientY);
   }, { passive: false });
 
   const finish = e => {
-    if (!canSwipe) return;
+    const m = mode; mode = null;
+    if (!m || m === 'gallery' || m === 'scroll') { sheet.style.transition = ''; return; }
     const pt = e.changedTouches && e.changedTouches[0];
     const dy = (pt ? pt.clientY : sY) - sY;
-    // Летить донизу за пальцем, а не замирає: `onDismiss` лише знімає `.visible`
-    // (згасання), а куди саме їхати — домальовує інлайн transform із sheet-motion.
+    const v  = drag.velocity;             // px/мс, додатна = вниз
+
+    if (m === 'sheet') {
+      // Кидок вирішує сам, повільний рух — за пройденою половиною шляху.
+      const y = Math.min(yInit, Math.max(yUp, base + dy));
+      const flick = Math.abs(v) > 0.45 && Math.abs(dy) > 8;
+      const toUp = flick ? v < 0 : (y < (yInit + yUp) / 2);
+      sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
+      requestAnimationFrame(() => snap(toUp));
+      return;
+    }
+    // 'screen' — те саме закриття, що й було: перевірене стендом, не чіпаємо.
     finishSwipe({
-      panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
+      panel: modal, dy: dy > 0 ? dy : 0, velocity: v,
       remaining: sheetRemaining(modal, dy),
       dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
       onDismiss,
       backdrop: fade,
     });
-    swiping = false; canSwipe = false;
   };
   modal.addEventListener('touchend', finish, { passive: true });
   // ⚠️ `touchcancel` теж завершує жест. Без нього системне переривання (вхідний дзвінок,
-  // жест «назад» iOS, шторка сповіщень) лишало б аркуш ЗАВИСЛИМ посеред екрана з
-  // інлайновим transform — і закрити його потім можна було б лише кнопкою.
+  // жест «назад» iOS, шторка сповіщень) лишало б аркуш ЗАВИСЛИМ посеред екрана.
   modal.addEventListener('touchcancel', finish, { passive: true });
 }
 
@@ -476,6 +585,7 @@ function renderAdModal(p) {
     <div class="cm-ad-sheet${hasHero ? '' : ' cm-ad-sheet--full'}">
       <div class="cm-board-modal-bar"><span class="cm-board-modal-grip"></span></div>
       ${hasHero ? '' : renderAdTopActions(p, false)}
+      ${renderAdMiniHead(p)}
       <div class="cm-board-modal-scrollarea">
         <div class="cm-ad-body">
           ${renderAdHead(p)}
@@ -487,9 +597,27 @@ function renderAdModal(p) {
           ${renderAdReport()}
         </div>
       </div>
-      ${renderAdBottomBar(p)}
     </div>
+    ${renderAdBottomBar(p)}
   `;
+}
+
+// Компактна шапка — видно ЛИШЕ коли аркуш піднятий на всю висоту.
+//
+// 🔴 Чого не було в ТЗ від ChatGPT, а треба (знайдено власною оцінкою 02.08): коли
+// аркуш угорі, чіп категорії й назва оголошення їдуть за верхній край, і людина читає
+// опис, уже не бачачи, ЩО саме вона читає й за скільки. Ціна лишається у великій шапці
+// (вона поруч у скролі), а тут — тільки категорія й назва в один рядок.
+// ⚠️ Кнопок сюди НЕ дублюємо: круглі кнопки над фото лишаються видимими навіть у
+// піднятому стані — саме тому верхня точка фіксації рахується від їхнього низу, а не
+// «на око» (див. `--ad-up-y` у CSS).
+function renderAdMiniHead(p) {
+  if (!p.title) return '';
+  return `
+    <div class="cm-ad-mini" aria-hidden="true">
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
+      <span class="cm-ad-mini-title">${escapeHtml(p.title)}</span>
+    </div>`;
 }
 
 // ШАР 1 — ФОТО. На всю ширину, від самого верху екрана, БЕЗ заокруглень.
@@ -507,6 +635,7 @@ function renderAdPhotoLayer(p, photos) {
       <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
       </div>
+      <div class="cm-ad-photo-dim"></div>
       ${renderAdTopActions(p, true)}
       ${multi ? `
       <div class="cm-ad-hero-count">1 / ${photos.length}</div>
