@@ -450,16 +450,33 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   // читав `getBoundingClientRect()`. Кожне таке читання після зміни класу змушує браузер
   // ПЕРЕРАХУВАТИ РОЗКЛАДКУ негайно (forced synchronous layout). Тобто найдорожча
   // операція виконувалась рівно в мить, коли палець торкається екрана.
+  // ⚠️ Читаємо ВЛАСНИЙ зсув аркуша з матриці перетворення, а НЕ його місце на екрані.
+  // Перша версія брала `getBoundingClientRect().top` — і давала нісенітницю, бо замір
+  // стається ще ДО того, як модалка виїхала знизу: контейнер тоді зсунутий на цілий
+  // екран, і обидві межі виходили більші на 844px. Зсув самого аркуша від положення
+  // контейнера не залежить узагалі.
+  const trY = () => {
+    const t = getComputedStyle(sheet).transform;
+    if (!t || t === 'none') return 0;
+    const m2 = t.match(/^matrix\(([^)]+)\)/);
+    if (m2) return parseFloat(m2[1].split(',')[5]) || 0;
+    const m3 = t.match(/^matrix3d\(([^)]+)\)/);
+    if (m3) return parseFloat(m3[1].split(',')[13]) || 0;
+    return 0;
+  };
   let yInit = 0, yUp = 0;
   const measure = () => {
     const had = sheet.classList.contains('cm-ad-sheet--up');
     const prevTr = sheet.style.transition;
+    const prevTf = sheet.style.transform;
     sheet.style.transition = 'none';
+    sheet.style.transform = '';          // інакше прочитали б інлайн, а не межу з CSS
     sheet.classList.remove('cm-ad-sheet--up');
-    yInit = sheet.getBoundingClientRect().top;
+    yInit = trY();
     sheet.classList.add('cm-ad-sheet--up');
-    yUp = sheet.getBoundingClientRect().top;
+    yUp = trY();
     sheet.classList.toggle('cm-ad-sheet--up', had);
+    sheet.style.transform = prevTf;
     sheet.style.transition = prevTr;
   };
   measure();
@@ -467,9 +484,13 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   window.addEventListener('resize', measure, { passive: true });
 
   let up = false;                        // поточне положення аркуша
-  let sY = 0, sX = 0, mode = null;       // mode: 'sheet' | 'screen' | 'scroll' | 'gallery'
-  let base = 0;                          // зсув аркуша на момент початку жесту
-  let atTop = true;                      // чи був вміст на початку, коли палець торкнувся
+  let sheetY = 0;                        // ЖИВИЙ зсув аркуша (px від верху екрана)
+  let screenY = 0;                       // зсув усього контейнера (жест закриття)
+  let spilled = false;                   // чи витратився рух на текст/аркуш ДО закриття
+  let scrolled = false;                  // чи дістався рух ТЕКСТУ (лише тоді є інерція)
+  let lastY = 0, sX = 0, sY = 0;
+  let vertical = null;                   // null — ще не вирішили; false — гортання галереї
+  let inertiaId = 0;
 
   const setSheetY = y => { sheet.style.transform = `translateY(${y}px)`; };
   // Затемнення фото наростає в міру того, як аркуш його накриває. Одна прозорість на
@@ -481,103 +502,158 @@ function attachAdSheetSwipe(modal, backdrop, onDismiss) {
   };
   const snap = toUp => {
     up = toUp;
-    sheet.style.transition = '';
+    sheetY = toUp ? yUp : yInit;
+    sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
     sheet.style.transform = '';
     sheet.classList.toggle('cm-ad-sheet--up', toUp);
-    if (dim) { dim.style.transition = 'opacity .38s ease'; dim.style.opacity = toUp ? '0.35' : '0'; }
+    if (dim) { dim.style.transition = 'opacity .34s ease'; dim.style.opacity = toUp ? '0.35' : '0'; }
     // Опустили аркуш — повертаємо вміст на початок, інакше при наступному підйомі
     // людина побачила б середину опису замість його початку.
     if (!toUp) scroller.scrollTop = 0;
   };
 
-  // 🔴 ЖОДЕН СЛУХАЧ ТУТ НЕ `passive: false` І НІДЕ НЕМАЄ `preventDefault()`.
+  const maxScroll = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+  const stopInertia = () => { if (inertiaId) { cancelAnimationFrame(inertiaId); inertiaId = 0; } };
+
+  // 🔴 ОДНА ТРУБА НА ВЕСЬ РУХ — саме це прибирає «мертву зону».
   //
-  // ЦЕ Й БУЛА ПРИЧИНА РИВКІВ (скарга Вови «все ривками, блок опису скролиться ривками»).
-  // Було: `touchmove` на всій модалці з `{ passive: false }`. Такий слухач стоїть НАД
-  // областю прокрутки, і браузер через нього ЗОБОВʼЯЗАНИЙ спитати JavaScript перед
-  // кожним кадром прокрутки — чи не скасують її. Тобто швидка прокрутка окремим потоком
-  // (та сама, що дає «айфонну» плавність) вимикається ЦІЛКОМ, навіть коли ми нічого не
-  // скасовуємо. Саме для цього у браузерах і завели `passive`.
+  // Скарга Вови: «тягнеш угору, блок доходить до верху, палець їде далі — і нічого не
+  // відбувається; текст починає скролитись лише після другого свайпу». Так і було:
+  // на початку жесту код обирав ОДИН режим («рухаю аркуш» АБО «скролю текст») і тримався
+  // його до кінця. Тобто щойно аркуш упирався, решта руху пальця йшла в нікуди.
   //
-  // ЗАМІСТЬ ЦЬОГО — `touch-action` у CSS. Він каже браузеру наперед, що робити з рухом
-  // пальця, і робить це БЕЗ участі JavaScript:
-  //   нижнє положення → `touch-action: none` — прокручувати нема чого, увесь рух наш;
-  //   верхнє          → `touch-action: pan-y` — вміст прокручується РІДНОЮ прокруткою,
-  //                     а ми лише спостерігаємо і втручаємось, коли скрол у нулі.
-  // Наслідок: у стані читання між пальцем і текстом немає жодного рядка нашого коду.
+  // Тепер режиму немає взагалі. Є `apply(d)` — прирістна порція руху, яка ПЕРЕЛИВАЄТЬСЯ
+  // між трьома споживачами, доки не витратиться:
+  //     палець угору : аркуш ↑ (доки не впреться) → далі текст ↑
+  //     палець униз  : текст ↓ (доки не дійде до початку) → аркуш ↓ → далі закриття
+  // Порція, яку один споживач не «зʼїв» цілком, тим самим кадром переходить наступному.
+  // Через це стик між аркушем і текстом фізично не може мати паузи: це не два жести,
+  // а один потік. Рівно так поводяться аркуші Apple Maps і Apple Music.
+  //
+  // ⚠️ Рахуємо ПРИРІСТ (`y - lastY`), а не «скільки пройшли від початку». Різниця
+  // принципова: від початкової точки не можна коректно розподілити рух між двома
+  // споживачами, бо в кожного своя система відліку — саме звідси й бралися стрибки.
+  const apply = d => {
+    if (d < 0) {                                   // ── палець угору ──
+      if (sheetY > yUp) {
+        const use = Math.max(d, yUp - sheetY);     // не вище за верхню межу
+        sheetY += use; d -= use;
+        setSheetY(sheetY); setDim(sheetY);
+      }
+      if (d < 0) { scroller.scrollTop = Math.min(maxScroll(), scroller.scrollTop - d); scrolled = true; }
+    } else if (d > 0) {                            // ── палець униз ──
+      if (scroller.scrollTop > 0) {
+        const use = Math.min(d, scroller.scrollTop);
+        scroller.scrollTop -= use; d -= use;
+        spilled = true;                            // рух уже витратився на текст
+        scrolled = true;
+      }
+      if (d > 0 && sheetY < yInit) {
+        const use = Math.min(d, yInit - sheetY);   // не нижче за стартову межу
+        sheetY += use; d -= use;
+        spilled = true;                            // рух уже витратився на аркуш
+        setSheetY(sheetY); setDim(sheetY);
+      }
+      if (d > 0) {                                 // аркуш уже внизу — це вже закриття
+        screenY += d;
+        modal.style.transition = 'none';
+        modal.style.transform = `translateY(${screenY}px)`;
+        fade?.track(screenY / window.innerHeight);
+      }
+    }
+  };
+
+  // Інерція прокрутки — своя, бо рідної тут немає за визначенням: `touch-action: none`
+  // віддає нам увесь рух пальця, і браузеру нема чого продовжувати після відпускання.
+  // Загасання 0.94 за кадр підібране під відчуття iOS; зупиняємось, коли рух став
+  // непомітним або список упер­ся в межу.
+  const inertia = v0 => {
+    let v = -v0 * 16;                              // px/кадр; палець угору → текст униз
+    if (Math.abs(v) < 2) return;
+    const step = () => {
+      const before = scroller.scrollTop;
+      scroller.scrollTop = Math.min(maxScroll(), Math.max(0, before + v));
+      v *= 0.94;
+      if (Math.abs(v) > 0.4 && scroller.scrollTop !== before) inertiaId = requestAnimationFrame(step);
+      else inertiaId = 0;
+    };
+    inertiaId = requestAnimationFrame(step);
+  };
+
+  // 🔴 УСІ СЛУХАЧІ ПАСИВНІ, `preventDefault()` НЕМАЄ ЖОДНОГО.
+  // Рідну прокрутку вимикає `touch-action: none` у CSS — тобто браузеру нема чого
+  // скасовувати, і йому не треба питати JavaScript перед кадром. Саме непасивний
+  // слухач над областю прокрутки й давав ривки 02.08; повертати його не можна.
   modal.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) { mode = null; return; }
-    sY = e.touches[0].clientY; sX = e.touches[0].clientX;
+    if (e.touches.length > 1) { vertical = false; return; }
+    stopInertia();
+    lastY = sY = e.touches[0].clientY; sX = e.touches[0].clientX;
     drag.start(sY);
     sheet.style.transition = 'none';
     if (dim) dim.style.transition = 'none';
-    // ⚠️ `measure()` тут БІЛЬШЕ НЕМАЄ — він змушував браузер перерахувати розкладку
-    // рівно в мить дотику. Міряємо при відкритті й на поворот екрана.
-    base = up ? yUp : yInit;
-    // Прокрутку читаємо ОДИН раз за жест: під час руху це дало б зайве читання щокадру.
-    atTop = scroller.scrollTop <= 0;
-    mode = null;                          // напрямок ще не відомий — вирішимо на першому русі
+    sheetY = up ? yUp : yInit;
+    screenY = 0;
+    spilled = false;
+    scrolled = false;
+    vertical = null;
   }, { passive: true });
 
   modal.addEventListener('touchmove', e => {
-    if (e.touches.length > 1) { mode = null; return; }
-    const dy = e.touches[0].clientY - sY;
-    const dx = e.touches[0].clientX - sX;
-
-    if (mode === null) {
+    if (e.touches.length > 1) { vertical = false; return; }
+    const y = e.touches[0].clientY;
+    if (vertical === null) {
+      const dx = e.touches[0].clientX - sX, dy = y - sY;
       // Перший рух горизонтальний → це гортання галереї фото, жест не наш.
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { mode = 'gallery'; return; }
-      if (Math.abs(dy) < 4) return;       // ще не рух, а тремтіння пальця
-      if (fixed) {
-        // Без фото положення одне: униз від початку списку — закриття, решта — прокрутка.
-        mode = (dy > 0 && atTop) ? 'screen' : 'scroll';
-      } else if (up) {
-        // Аркуш угорі: униз ведемо його назад, але ЛИШЕ якщо вміст на початку —
-        // інакше палець мусить прокручувати текст, а не складати картку.
-        mode = (dy > 0 && atTop) ? 'sheet' : 'scroll';
-      } else {
-        // Аркуш унизу: угору — піднімаємо його, униз — закриваємо всю модалку.
-        mode = dy < 0 ? 'sheet' : 'screen';
-      }
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { vertical = false; return; }
+      if (Math.abs(dy) < 4) return;                // ще не рух, а тремтіння пальця
+      vertical = true;
+      lastY = y;                                   // відлік порцій починаємо звідси
     }
-    if (mode === 'gallery' || mode === 'scroll') return;   // рідна прокрутка, не заважаємо
-
-    if (mode === 'sheet') {
-      // Межі жорсткі: вище верхнього і нижче стартового аркуш не йде.
-      const y = Math.min(yInit, Math.max(yUp, base + dy));
-      setSheetY(y); setDim(y);
-    } else {
-      // Закриття: рухаємо ВЕСЬ контейнер, як і раніше.
-      if (dy > 0) { modal.style.transition = 'none'; modal.style.transform = `translateY(${dy}px)`; fade?.track(dy / window.innerHeight); }
-      else { modal.style.transform = 'translateY(0)'; fade?.track(0); }
-    }
-    drag.move(e.touches[0].clientY);
+    if (!vertical) return;
+    apply(y - lastY);
+    lastY = y;
+    drag.move(y);
   }, { passive: true });
 
-  const finish = e => {
-    const m = mode; mode = null;
-    if (!m || m === 'gallery' || m === 'scroll') { sheet.style.transition = ''; return; }
-    const pt = e.changedTouches && e.changedTouches[0];
-    const dy = (pt ? pt.clientY : sY) - sY;
-    const v  = drag.velocity;             // px/мс, додатна = вниз
+  const finish = () => {
+    if (!vertical) { vertical = null; sheet.style.transition = ''; return; }
+    vertical = null;
+    const v = drag.velocity;                       // px/мс, додатна = вниз
 
-    if (m === 'sheet') {
-      // Кидок вирішує сам, повільний рух — за пройденою половиною шляху.
-      const y = Math.min(yInit, Math.max(yUp, base + dy));
-      const flick = Math.abs(v) > 0.45 && Math.abs(dy) > 8;
-      const toUp = flick ? v < 0 : (y < (yInit + yUp) / 2);
-      sheet.style.transition = `transform 0.34s ${SHEET_EASE}`;
-      requestAnimationFrame(() => snap(toUp));
+    // ⚠️ ПОРЯДОК ВАЖЛИВИЙ: спершу приводимо АРКУШ у визначений стан, і лише потім
+    // вирішуємо долю закриття. Перша версія робила навпаки — і після «переливу»
+    // (текст → аркуш → закриття) аркуш стояв унизу, а клас стану лишався «піднятий».
+    // Наслідок був тихий: наступний рух рахувався від хибної межі.
+    if (sheetY > yUp && sheetY < yInit) {
+      // Аркуш завис між положеннями — доводимо до найближчого (кидок вирішує сам).
+      snap(Math.abs(v) > 0.45 ? v < 0 : sheetY < (yInit + yUp) / 2);
+    } else {
+      sheet.style.transition = '';
+      up = sheetY <= yUp;
+      sheet.classList.toggle('cm-ad-sheet--up', up);
+      if (!up) scroller.scrollTop = 0;
+    }
+
+    // Контейнер зрушили — це жест закриття, вирішує перевірена математика.
+    if (screenY > 0) {
+      // ⚠️ Якщо рух ДО цього вже витратився на текст або на опускання аркуша, швидкість
+      // у рішенні не враховуємо. Інакше один довгий рух через увесь екран закривав би
+      // оголошення «кидком» навіть тоді, коли на саме закриття лишилось кілька пікселів —
+      // а Вова просив, щоб закриття вимагало окремого свідомого руху.
+      finishSwipe({
+        panel: modal, dy: screenY, velocity: spilled ? 0 : v,
+        remaining: sheetRemaining(modal, screenY),
+        dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
+        onDismiss, backdrop: fade,
+      });
+      screenY = 0;
       return;
     }
-    // 'screen' — те саме закриття, що й було: перевірене стендом, не чіпаємо.
-    finishSwipe({
-      panel: modal, dy: dy > 0 ? dy : 0, velocity: v,
-      remaining: sheetRemaining(modal, dy),
-      dismissTransform: `translateY(${Math.round(modal.offsetHeight)}px)`,
-      onDismiss,
-      backdrop: fade,
-    });
+    // Інерція — ЛИШЕ якщо рух реально дійшов до тексту.
+    // ⚠️ Перша версія запускала її за самим фактом «аркуш угорі» — і короткий рух, який
+    // цілком пішов у підйом аркуша, розганяв текст до самого кінця. Заміряно: рух на
+    // 100px давав прокрутку 238 (це весь доступний хід) — тобто текст їхав сам собою.
+    if (up && scrolled) inertia(v);
   };
   modal.addEventListener('touchend', finish, { passive: true });
   // ⚠️ `touchcancel` теж завершує жест. Без нього системне переривання (вхідний дзвінок,
