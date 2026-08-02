@@ -54,7 +54,7 @@ const mk = (id, extra) => ({
 const POSTS = [
   mk(901, { category: 'продам', title: 'ПРОДАМ БУДИНОК', photos: [PHOTO, PHOTO], photo: PHOTO,
             text: 'Просторий будинок у тихому місці. '.repeat(60), price: 450000, location: 'Жорнище' }),
-  mk(902, {}),                                              // без фото, короткий — сам баг
+  mk(902, { price_negotiable: true }),                      // без фото, короткий — сам баг
   mk(903, { photos: [PHOTO], photo: PHOTO, price: 100 }),    // з фото, короткий
 ];
 
@@ -144,6 +144,10 @@ const shape = () => p.evaluate(() => {
     роль: modal ? modal.getAttribute('role') : null,
     модальність: modal ? modal.getAttribute('aria-modal') : null,
     фон_автора: author ? getComputedStyle(author).backgroundColor : null,
+    ціна_текст: (() => { const e = q('.cm-ad-price'); return e ? e.textContent.trim() : null; })(),
+    ціна_тиха: !!q('.cm-ad-price--quiet'),
+    розмір_ціни: (() => { const e = q('.cm-ad-price'); return e ? parseFloat(getComputedStyle(e).fontSize) : null; })(),
+    розмір_назви: (() => { const e = q('.cm-ad-title'); return e ? parseFloat(getComputedStyle(e).fontSize) : null; })(),
     підпис_автора: since ? (since.textContent || '').trim() : null,
     скролер_є: !!sc,
   };
@@ -166,6 +170,13 @@ ok('картка автора БЕЗ сірого боксу',
    sNo.фон_автора === 'rgba(0, 0, 0, 0)' || sNo.фон_автора === 'transparent', sNo.фон_автора);
 ok('підпис автора є ЗАВЖДИ (не порожній рядок)',
    !!sNo.підпис_автора && sNo.підпис_автора.length > 3, JSON.stringify(sNo.підпис_автора));
+
+// «Договірна» — це ВІДСУТНІСТЬ ціни. Заміряно було: назва 21px, «Договірна» 28px
+// багряним, тобто найгучніше на 94% екранів написано «я не знаю ціни» (скарга Вови:
+// «все накидано, незрозуміло що до чого»).
+ok('«Договірна» подана тихо, а не як заголовок', sNo.ціна_тиха === true, sNo.ціна_текст);
+ok('тиха ціна щонайменше в півтора раза дрібніша за назву',
+   sNo.розмір_ціни <= sNo.розмір_назви / 1.4, `ціна ${sNo.розмір_ціни}px проти назви ${sNo.розмір_назви}px`);
 
 // Доступність — знахідки власного аудиту, що лишались відкритими.
 ok('модалка представлена як діалог', sNo.роль === 'dialog', String(sNo.роль));
