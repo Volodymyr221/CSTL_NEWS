@@ -22,7 +22,7 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .chip.active {
-  background: var(--red);
+  background: var(--brand-grad-sm);
   border-color: var(--red);
   color: white;
   font-weight: 600;
