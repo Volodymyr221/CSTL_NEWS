@@ -26,6 +26,7 @@
 import { escapeHtml, sunTimes } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
+import { ICONS } from '../core/icons.js';   // спільні векторні іконки (шеврон у посиланнях секцій)
 import {
   renderWeatherBlock,
   renderBusBlock,
@@ -221,7 +222,7 @@ function renderSkeleton() {
       <section class="hm-sec" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Головне</h3>
-          <button class="hm-sec-link" type="button" data-cm-news-all>Усі новини</button>
+          <button class="hm-sec-link" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>
         </div>
         <div id="cm-news-content"></div>
       </section>
@@ -229,7 +230,7 @@ function renderSkeleton() {
       <section class="hm-sec" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Найближчі події</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша</button>
+          <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша${ICONS.chevronRight}</button>
         </div>
         <div id="cm-event-content"></div>
       </section>
@@ -237,7 +238,7 @@ function renderSkeleton() {
       <section class="hm-sec" id="hm-board">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Оголошення громади</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="board">Уся дошка</button>
+          <button class="hm-sec-link" type="button" data-switch-tab="board">Уся дошка${ICONS.chevronRight}</button>
         </div>
         <div id="cm-board-content"></div>
       </section>

@@ -114,7 +114,7 @@ function cardHtml(it) {
         <div class="hm-fund-head">
           <!-- Векторна іконка, а не емодзі 🎗: емодзі малює ШРИФТ ПРИСТРОЮ, і
                на частині систем стрічка виходить монохромним контуром або не
-               виходить зовсім. Проєкт уже переводив емодзі на `ICONS` з тієї
+               виходить зовсім. Проєкт уже переводив емодзі на ICONS з тієї
                самої причини. -->
           <span class="hm-fund-mark" aria-hidden="true">${ICONS.community}</span>
           <h4 class="hm-fund-title">${escapeHtml(it.title)}</h4>

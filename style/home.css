@@ -101,6 +101,22 @@
   text-transform: uppercase;
   color: var(--hm-ink-mute);
 }
+/* «N нових» біля назви секції. Стоїть ОДРАЗУ за назвою, а не праворуч біля
+   посилання: це властивість секції («тут є свіже»), а не окрема дія. Малюється,
+   лише коли число > 0 — нуль поруч із назвою читався б як «нічого нового»
+   щодня і швидко перестав би привертати увагу. */
+.hm-new-badge {
+  margin-right: auto;
+  padding: 2px 7px;
+  border-radius: var(--hm-r-pill);
+  background: var(--hm-accent-soft);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--hm-accent);
+  white-space: nowrap;
+}
+
 /* «Усі новини →» — тиха дія, а не кнопка. Гучною її робити не можна: на екрані
    таких посилань кілька, і всі разом вони перетягнули б увагу з самого контенту. */
 .hm-sec-link {

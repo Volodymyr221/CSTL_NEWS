@@ -11514,28 +11514,24 @@ ${ev.description || ""}`
           b.textContent = geoGroupOf(top[i]) || b.textContent;
       });
     }
-    const controls = document.getElementById("cm-news-controls");
-    if (controls) {
-      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
-    }
     paintNewsBadge(arts);
   }
   function paintNewsBadge(arts) {
-    const bar = document.querySelector(".cm-news-board-bar");
-    if (!bar)
+    const head = document.querySelector("#hm-news .hm-sec-title");
+    if (!head)
       return;
     const n = countNewCommunity(arts);
-    const old = bar.querySelector(".cm-news-new");
+    const old = head.parentElement.querySelector(".hm-new-badge");
     if (!n) {
       if (old)
         old.remove();
       return;
     }
-    const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+    const html = `<span class="hm-new-badge">${n} ${pluralNew(n)}</span>`;
     if (old)
       old.outerHTML = html;
     else
-      bar.insertAdjacentHTML("beforeend", html);
+      head.insertAdjacentHTML("afterend", html);
   }
   function pluralNew(n) {
     const t = n % 100, o = n % 10;
@@ -11553,7 +11549,7 @@ ${ev.description || ""}`
       return;
     const arts = await ensureNewsLoaded();
     paintCmNews(el, arts);
-    const section = document.querySelector(".cm-block--news");
+    const section = document.getElementById("hm-news");
     if (!section || section.dataset.wired)
       return;
     section.dataset.wired = "1";
@@ -11762,7 +11758,11 @@ ${ev.description || ""}`
     <article class="hm-card hm-fund" data-fund="${escapeHtml(String(it.id || it.title))}">
       <div class="hm-fund-in">
         <div class="hm-fund-head">
-          <span class="hm-fund-mark" aria-hidden="true">\u{1F397}</span>
+          <!-- \u0412\u0435\u043A\u0442\u043E\u0440\u043D\u0430 \u0456\u043A\u043E\u043D\u043A\u0430, \u0430 \u043D\u0435 \u0435\u043C\u043E\u0434\u0437\u0456 \u{1F397}: \u0435\u043C\u043E\u0434\u0437\u0456 \u043C\u0430\u043B\u044E\u0454 \u0428\u0420\u0418\u0424\u0422 \u041F\u0420\u0418\u0421\u0422\u0420\u041E\u042E, \u0456
+               \u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0456 \u0441\u0438\u0441\u0442\u0435\u043C \u0441\u0442\u0440\u0456\u0447\u043A\u0430 \u0432\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043C\u043E\u043D\u043E\u0445\u0440\u043E\u043C\u043D\u0438\u043C \u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C \u0430\u0431\u043E \u043D\u0435
+               \u0432\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u0437\u043E\u0432\u0441\u0456\u043C. \u041F\u0440\u043E\u0454\u043A\u0442 \u0443\u0436\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0432 \u0435\u043C\u043E\u0434\u0437\u0456 \u043D\u0430 ICONS \u0437 \u0442\u0456\u0454\u0457
+               \u0441\u0430\u043C\u043E\u0457 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. -->
+          <span class="hm-fund-mark" aria-hidden="true">${ICONS.community}</span>
           <h4 class="hm-fund-title">${escapeHtml(it.title)}</h4>
         </div>
 
@@ -11956,7 +11956,7 @@ ${ev.description || ""}`
       <section class="hm-sec" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u0413\u043E\u043B\u043E\u0432\u043D\u0435</h3>
-          <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</button>
+          <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>
         </div>
         <div id="cm-news-content"></div>
       </section>
@@ -11964,7 +11964,7 @@ ${ev.description || ""}`
       <section class="hm-sec" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430</button>
+          <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
         </div>
         <div id="cm-event-content"></div>
       </section>
@@ -11972,7 +11972,7 @@ ${ev.description || ""}`
       <section class="hm-sec" id="hm-board">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="board">\u0423\u0441\u044F \u0434\u043E\u0448\u043A\u0430</button>
+          <button class="hm-sec-link" type="button" data-switch-tab="board">\u0423\u0441\u044F \u0434\u043E\u0448\u043A\u0430${ICONS.chevronRight}</button>
         </div>
         <div id="cm-board-content"></div>
       </section>

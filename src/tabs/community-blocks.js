@@ -1262,27 +1262,27 @@ function paintCmNews(el, arts) {
       if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
     });
   }
-  // Нижня панель: замість трьох чіпів — один вхід у хаб.
-  const controls = document.getElementById('cm-news-controls');
-  if (controls) {
-    controls.innerHTML =
-      `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
-  }
   paintNewsBadge(arts);
 }
 
-// «N нових» у шапці віджета — на місці, де до 31.07 стояв фальшивий «LIVE».
-// Окремою функцією, бо її кличе ще й подія `cstl-news-seen` (гасіння після хаба),
-// і перемальовувати заради цього весь віджет не треба.
+// «N нових» — лічильник свіжих новин ГРОМАДИ (не всіх: за темпом 0.26 статті на
+// день у Громаді проти ~54 в решті, лічильник «по всьому» щоранку писав би «54»
+// і став би шумом — розбір у `news.js`).
+//
+// 🔄 03.08: місце змінилось, правило — ні. Був у шапці багряного «приладу»
+// (`.cm-news-board-bar`); тепер стоїть біля назви секції «Головне». Окремою
+// функцією лишається з тієї самої причини, що й була: його кличе подія
+// `cstl-news-seen` (гасіння після відвідин хаба), і перемальовувати заради
+// цього весь блок новин не треба.
 function paintNewsBadge(arts) {
-  const bar = document.querySelector('.cm-news-board-bar');
-  if (!bar) return;
+  const head = document.querySelector('#hm-news .hm-sec-title');
+  if (!head) return;
   const n = countNewCommunity(arts);
-  const old = bar.querySelector('.cm-news-new');
+  const old = head.parentElement.querySelector('.hm-new-badge');
   if (!n) { if (old) old.remove(); return; }
-  const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+  const html = `<span class="hm-new-badge">${n} ${pluralNew(n)}</span>`;
   if (old) old.outerHTML = html;
-  else bar.insertAdjacentHTML('beforeend', html);
+  else head.insertAdjacentHTML('afterend', html);
 }
 
 // «1 нова · 2 нові · 5 нових» — українська має три форми, і «1 нових» різало б око.
@@ -1301,8 +1301,10 @@ export async function renderCommunityNews() {
   const arts = await ensureNewsLoaded();
   paintCmNews(el, arts);
 
-  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока
-  const section = document.querySelector('.cm-block--news');
+  // Делеговані слухачі — ОДИН раз на секцію.
+  // ⚠️ Прапорець на ЕЛЕМЕНТІ, а не в модулі: `initCommunity()` перебудовує
+  // `#cm-content` цілком, тобто секція щоразу НОВИЙ вузол.
+  const section = document.getElementById('hm-news');
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   // 🔴 31.07: биті чужі фото → брендовий плейсхолдер 🏰. До цього обробник висів на
@@ -1322,7 +1324,7 @@ export async function renderCommunityNews() {
       if (Number.isFinite(id)) openArticle(id);
       return;
     }
-    // Будь-яке інше місце віджета (шапка, «Усі новини», порожнє поле) → хаб.
+    // Будь-яке інше місце секції (назва, «Усі новини», порожнє поле) → хаб.
     // Категорію передаємо ЯВНО: віджет показує Громаду, тож і хаб має відкритись на
     // Громаді. Інакше людина тапала б по місцевій новині, а потрапляла у «Волинь»,
     // яку востаннє гортала (хаб памʼятає останню категорію для свайпів усередині себе).
