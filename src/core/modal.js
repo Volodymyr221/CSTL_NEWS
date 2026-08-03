@@ -14,22 +14,26 @@ import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } fr
 
 let _active = null;   // { el, close } — лише одна активна модалка примітиву за раз
 
-function buildSheet({ title, bodyHtml }) {
+// `dismissible: false` — модалка, яку не можна просто відхилити: немає ✕, немає
+// рисочки-грабера (вона обіцяє свайп, якого не буде), закриття по фону і по Escape
+// вимкнене. Єдиний вихід — кнопка у вмісті. Потрібно там, де закриття означає
+// «прочитав»: гейт правил Дошки (03.08).
+function buildSheet({ title, bodyHtml, dismissible }) {
   return `
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ''}>
-      <div class="app-modal-handle"></div>
-      <button class="app-modal-close" type="button" aria-label="Закрити">✕</button>
+      ${dismissible ? '<div class="app-modal-handle"></div>' : ''}
+      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="Закрити">✕</button>' : ''}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ''}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
 }
 
-function buildCenter({ title, bodyHtml }) {
+function buildCenter({ title, bodyHtml, dismissible }) {
   return `
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-card" role="dialog" aria-modal="true">
-      <button class="app-modal-close" type="button" aria-label="Закрити">✕</button>
+      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="Закрити">✕</button>' : ''}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ''}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
@@ -39,12 +43,17 @@ function buildCenter({ title, bodyHtml }) {
 // onClose() — викликається ОДИН раз перед закриттям (будь-яким шляхом: backdrop/X/ESC/свайп) —
 // для прибирання ресурсів викликача (напр. URL.revokeObjectURL на blob-фото).
 // Повертає { close, el }. swipeClose=false вимикає свайп (напр. коли всередині свій скрол-жест).
-export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMount, onClose, swipeClose = true, className = '' } = {}) {
+// dismissible=false — закрити можна ЛИШЕ програмно (з кнопки у вмісті): без ✕, без
+// свайпу, без тапу по фону, без Escape. Викликач зобовʼязаний дати свій вихід.
+export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMount, onClose, swipeClose = true, className = '', dismissible = true } = {}) {
   closeModal();   // одна модалка примітиву за раз — друга просто заміняє першу
+  if (!dismissible) swipeClose = false;   // свайп — теж спосіб відхилити
 
   const wrap = document.createElement('div');
   wrap.className = `app-modal app-modal--${variant}${className ? ' ' + className : ''}`;
-  wrap.innerHTML = variant === 'center' ? buildCenter({ title, bodyHtml }) : buildSheet({ title, bodyHtml });
+  wrap.innerHTML = variant === 'center'
+    ? buildCenter({ title, bodyHtml, dismissible })
+    : buildSheet({ title, bodyHtml, dismissible });
   document.body.appendChild(wrap);
   document.body.classList.add('modal-open');
   requestAnimationFrame(() => wrap.classList.add('open'));
@@ -53,7 +62,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   const panel    = wrap.querySelector('.app-modal-sheet, .app-modal-card');
   const closeBtn = wrap.querySelector('.app-modal-close');
 
-  const onKey = e => { if (e.key === 'Escape') close(); };
+  const onKey = e => { if (e.key === 'Escape' && dismissible) close(); };
   document.addEventListener('keydown', onKey);
 
   // ── ЗАКРИТТЯ ЯК У «СТРІЧЦІ»: АРКУШ З'ЇЖДЖАЄ ДОНИЗУ, А НЕ ЗГАСАЄ (27.07) ──────────
@@ -105,8 +114,8 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
     slideOut();
   }
 
-  backdrop?.addEventListener('click', close);
-  closeBtn?.addEventListener('click', close);
+  if (dismissible) backdrop?.addEventListener('click', close);
+  closeBtn?.addEventListener('click', close);   // при dismissible:false кнопки в розмітці немає
 
   // Свайп-вниз закриває (лише sheet-варіант).
   if (variant === 'sheet' && swipeClose && panel) {

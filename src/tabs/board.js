@@ -10,7 +10,8 @@
 //           setDiscussionsData / подію 'cstl-posts-changed').
 // Спільне обох типів (закладки, кнопки зберегти/шер) — core/board-shared.js.
 
-import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, deepLink, avatarCircle } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, deepLink, avatarCircle, lsGet, lsSet } from '../core/utils.js';
+import { BOARD_RULES_HTML } from '../core/legal.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
@@ -164,7 +165,12 @@ const REPORT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 // решту знаків екрана і сидить не по центру рядка, бо це гліф шрифту, а не іконка.
 // Векторна стрілка тієї самої товщини, що й «назад», — та сама мова на всій сторінці.
 const CHEVRON_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
-const SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+// 🔴 03.08 — ЩИТ СТАВ ЗАЛИТИМ (замовлення Вови «більш виразна іконка щита»).
+// Контурний щит зі stroke-width 2 при розмірі 20px давав тонкий блідий силует —
+// на світло-бордовій підкладці блоку він майже не читався. Заливка бордовим + БІЛА
+// галочка всередині дає знак, який видно з відстані витягнутої руки. Той самий
+// прийом, що в системних попередженнях iOS: залитий значок, контрастна деталь.
+const SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2 4.6 5.3v6.2c0 4.9 3.2 8.7 7.4 10.3 4.2-1.6 7.4-5.4 7.4-10.3V5.3z"/><path d="m10.8 15.4-3-3 1.5-1.5 1.5 1.5 3.9-3.9 1.5 1.5z" fill="#fff"/></svg>';
 
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
 const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
@@ -262,13 +268,68 @@ function boardActionsHtml(post) {
 // відповідь на питання «який?». Заразом порожній слот робив картку на 30px нижчою за
 // сусідні, і список ставав рваним.
 // Тепер відсікається лише ТОЧНИЙ дубль — таких 1 із 18.
+// 🔴 03.08 — ЗАГОЛОВОК СТАВ ГОЛОВНИМ АКЦЕНТОМ КАРТКИ (замовлення Вови: «щоб користувач
+// міг миттєво зчитувати назву навіть при швидкому скролінгу»). КАПС робить CSS
+// (`text-transform: uppercase`) — дані не чіпаємо: оригінальне написання потрібне
+// пошуку і сторінці оголошення. Заміряно в базі: 7 із 10 назв люди вже пишуть капсом,
+// 3 — ні, тобто список був різнобійний саме через людей, а не через код.
+//
+// 🔑 ЧОМУ ТУТ ЗʼЯВИЛАСЬ ОКРЕМА ФУНКЦІЯ, А НЕ САМЕ ЛИШЕ CSS.
+// Заміряно в живій базі: з 19 опублікованих оголошень **9 не мають назви взагалі**, і
+// картка підставляла в заголовок УВЕСЬ текст (`p.title || p.text`), найдовший — 1296
+// символів. Поки заголовок був 14.5px і тихий, це просто обрізалось двома рядками.
+// Зробити такий рядок капсом 16px/800 означало б поставити на пів списку стіну крику,
+// обрізану посеред слова. Тому безназвене оголошення дістає ЗАГОЛОВОК З ТЕКСТУ —
+// перше речення, — а решта тексту йде в рядок опису під ним.
+const CARD_TITLE_MAX = 80;   // стеля поля вводу (`#bm-title maxlength="80"`) — тримаємо ту саму
+// 🔴 Для ЗАГОЛОВКА, ВИТЯГНУТОГО З ТЕКСТУ, стеля інша — і ось чому.
+// Заміряно: у два рядки капсом при 16px влазить ~34-40 символів. Якщо взяти з тексту
+// цілих 80, клемп обріже показ на другому рядку, а опис під ним почнеться з 81-го
+// символа — і шматок посередині не побачить НІХТО. На знімку це виглядало так:
+// «ПРОДАМ КОРОВУ ТІЛЬНУ ТРЕТІМ ТЕЛЯМ СПОКІЙНА…» / «дзвоніть у будь-який час», а «дійна
+// добре їсть ціна договірна» зникло між ними.
+// Для НАПИСАНОЇ людиною назви такої проблеми немає: вона самостійна одиниця, а не
+// початок абзацу, і обрізати її показом — нормально.
+const CARD_HEAD_MAX = 40;
+
+// Обрізка по СЛОВУ, а не по символу: «ПРОДАМ БУДИНОК В ЖОРНИ…» читається, а
+// «ПРОДАМ БУДИНОК В ЖОРН…» — ні. Ріжемо по пробілу, якщо він не надто рано (60% межі),
+// інакше довге слово лишило б від заголовка недоречно короткий огризок.
+function clampChars(s, max) {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const sp  = cut.lastIndexOf(' ');
+  const body = sp > max * 0.6 ? cut.slice(0, sp) : cut;
+  return body.replace(/[\s,;:.!?—–-]+$/u, '') + '…';
+}
+
+// Заголовок картки: назва, а якщо її немає — перше речення тексту.
+// ⚠️ Регулярка навмисно вимагає, щоб речення ЗАКІНЧУВАЛОСЬ розділовим знаком або
+// текстом: коли в перших 80 символах крапки немає, збігу не буде і ми чесно впадемо
+// в обрізку по словах. Інакше «перше речення» на суцільному тексті без крапок
+// віддавало б усі 1296 символів.
+function cardTitleText(p) {
+  const title = (p.title || '').trim();
+  if (title) return clampChars(title, CARD_TITLE_MAX);
+  const text = (p.text || '').trim();
+  if (!text) return '';
+  const m = text.match(new RegExp(`^[^.!?\\n]{1,${CARD_HEAD_MAX}}(?=[.!?\\n]|$)`, 'u'));
+  return clampChars((m ? m[0] : text).trim(), CARD_HEAD_MAX);
+}
+
 function cardDescText(p) {
   const title = (p.title || '').trim();
   const text  = (p.text || '').trim();
   if (!text) return '';
+  // Назви немає → заголовок узяли з ТЕКСТУ, тож в опис іде РЕШТА тексту. Без цього
+  // опис починався б тими самими словами, що й заголовок над ним.
+  if (!title) {
+    const head = cardTitleText(p).replace(/…$/u, '');
+    const rest = text.startsWith(head) ? text.slice(head.length) : text;
+    return rest.replace(/^[\s.!?,;:—–-]+/u, '').trim();
+  }
   const norm = v => v.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   const nt = norm(title), nx = norm(text);
-  if (!nt) return text;
   if (nx === nt) return '';                       // текст = заголовок, слово в слово
   return text;
 }
@@ -282,7 +343,7 @@ function renderBoardCard(p) {
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   // Монограма замість фото — щоб висота рядка не залежала від даних. Той самий
   // прийом врятував рвані картки новин (там пусте місце давало 100/71/100).
-  const letter = (p.title || p.text || '?').trim().charAt(0).toUpperCase();
+  const letter = (cardTitleText(p) || '?').trim().charAt(0).toUpperCase();
   const media = photo
     ? `<img class="bd-ad-img" src="${escapeHtml(photo)}" alt="" loading="lazy"
              onerror="this.outerHTML='<div class=\\'bd-ad-img bd-ad-img--mono\\'>${escapeHtml(letter)}</div>'">`
@@ -296,7 +357,7 @@ function renderBoardCard(p) {
           <span class="bd-ad-time">${renderPostTime(p)}</span>
           ${boardActionsHtml(p)}
         </div>
-        <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || '')}</h3>
+        <h3 class="bd-ad-title">${escapeHtml(cardTitleText(p))}</h3>
         ${renderCardDesc(p)}
         <div class="bd-ad-foot">
           <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
@@ -842,6 +903,76 @@ function openAdReportSheet(postId) {
   });
 }
 
+// ── ГЕЙТ ПРАВИЛ ДОШКИ (03.08, замовлення Вови) ───────────────────────────────────
+// Один раз на акаунт, при першому вході на вкладку «Дошка». Патерн той самий, що в
+// OLX і Facebook Marketplace: коротке нагадування в КОЖНОМУ оголошенні
+// (`renderAdSafety`) + окремі правила, які людина читає ОДИН раз.
+//
+// 🔑 ЧОМУ ВІКНО НЕ ЗАКРИВАЄТЬСЯ НІЯК, КРІМ КНОПКИ (`dismissible: false`).
+// Вимога Вови: «не дозволяти взаємодіяти з оголошеннями до підтвердження ознайомлення».
+// Якби лишились ✕, тап по фону чи свайп — «ознайомився» перетворилось би на «змахнув, не
+// читаючи», і сенс блока зник би разом з його юридичною вагою. Тому опцію додано в
+// СПІЛЬНИЙ примітив `core/modal.js`, а не власною модалкою тут: копія chrome-логіки в
+// цьому проєкті вже коштувала розходження (див. шапку modal.js).
+const LS_BOARD_RULES = 'cstl_board_rules_v1';
+
+// Сховище: { '<uid або anon>': час прийняття }. Локально, а не в базі — правила мусить
+// побачити і НЕЗАЛОГІНЕНИЙ відвідувач (він так само читає оголошення і дзвонить), а в
+// нього рядка в базі немає за визначенням.
+// ⚠️ Чесна межа: новий пристрій = новий показ. Це прийнятно (вікно коротке), а
+// альтернатива — колонка в профілі — однаково не покрила б анонімів.
+function boardRulesMap() { return lsGet(LS_BOARD_RULES, {}) || {}; }
+
+function boardRulesAccepted() {
+  const map = boardRulesMap();
+  const id  = currentUserId() || 'anon';
+  if (map[id]) return true;
+  // ПЕРЕНЕСЕННЯ АНОНІМНОЇ ЗГОДИ НА ПЕРШИЙ АКАУНТ ЦЬОГО ПРИСТРОЮ.
+  // Без цього людина, яка почитала Дошку без входу, а потім увійшла, побачила б те саме
+  // вікно вдруге — на головній дії екрана це просто набридання.
+  // Умова `жодного uid ще немає` робить перенесення одноразовим за побудовою: ДРУГИЙ
+  // акаунт на тому ж телефоні — інша людина, і правила вона побачить, як і належить.
+  if (id !== 'anon' && map.anon && !Object.keys(map).some(k => k !== 'anon')) {
+    acceptBoardRules(id);
+    return true;
+  }
+  return false;
+}
+
+function acceptBoardRules(id) {
+  const map = boardRulesMap();
+  map[id] = Date.now();
+  lsSet(LS_BOARD_RULES, map);
+}
+
+// Показ правил. `gate: true` — блокуючий перший показ із кнопкою прийняття;
+// `gate: false` — звичайний перегляд із сайдбару (закривається як усі модалки).
+export function openBoardRules({ gate = false } = {}) {
+  const { close } = openModal({
+    title: gate ? 'Правила безпечного користування дошкою' : 'Правила Дошки',
+    className: 'app-modal--brules',
+    dismissible: !gate,
+    bodyHtml: BOARD_RULES_HTML + (gate
+      ? '<button class="brules-ok" type="button">Ознайомився та продовжити</button>'
+      : ''),
+    onMount: (wrap) => {
+      wrap.querySelector('.brules-ok')?.addEventListener('click', () => {
+        acceptBoardRules(currentUserId() || 'anon');
+        close();
+      });
+    },
+  });
+}
+
+// Вхід на Дошку. Викликається і при старті застосунку, і на кожному перемиканні вкладки —
+// тому перевірка «вже прийняв» стоїть першою і коштує один запис localStorage.
+function maybeShowBoardRules() {
+  if (boardRulesAccepted()) return;
+  // Затримка на кадр: вкладка щойно стала видимою, і без неї вікно виїжджало б
+  // одночасно з появою самого списку — два рухи разом читаються як смикання.
+  requestAnimationFrame(() => { if (!boardRulesAccepted()) openBoardRules({ gate: true }); });
+}
+
 // «Поскаржитися» — останнім тихим рядком, а не рівноправною кнопкою.
 //
 // 🔴 02.08 — БУЛО три однакові широкі кнопки (поділитися · зберегти · скаржитися).
@@ -859,13 +990,20 @@ function renderAdReport() {
 // Блок безпеки. Єдиний блок макета, який НЕ потребує жодних нових даних і при цьому
 // дає реальну користь: на дошці лежать телефони людей, і передоплата — головна схема
 // шахрайства на таких майданчиках.
+// 🔴 03.08 — ТЕКСТ ПЕРЕПИСАНО (замовлення Вови). Було лише «не переходьте за
+// посиланнями та не здійснюйте передоплату» — це порада, але вона мовчить про головне:
+// ХТО відповідає за угоду. Тепер перше речення прямо називає межу відповідальності
+// платформи, друге лишається практичною порадою. Той самий поділ, що в OLX і Facebook
+// Marketplace: коротке нагадування в кожному оголошенні + окремі правила один раз
+// (див. `openBoardRulesGate` нижче).
 function renderAdSafety() {
   return `
     <div class="cm-ad-safety">
       ${SHIELD_ICON_SVG}
       <span class="cm-ad-safety-text">
-        <b>Будьте обережні!</b>
-        Не переходьте за сторонніми посиланнями та не здійснюйте передоплату.
+        <b>Будьте обережні</b>
+        CSTL LIFE не є стороною угоди та не гарантує виконання домовленостей між
+        користувачами. Не здійснюйте передоплату, перевіряйте товар і продавця перед оплатою.
       </span>
     </div>`;
 }
@@ -2186,7 +2324,12 @@ export function initBoard() {
     // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
     // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.
     if (tab === 'board') requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); });
+    // Правила Дошки — один раз на акаунт, при вході на вкладку.
+    if (tab === 'board') maybeShowBoardRules();
   });
+  // Холодний старт із Дошкою вже активною (перезапуск застосунку на цій вкладці):
+  // події `cstl-tab-changed` не буде, бо вкладка не мінялась.
+  if (document.querySelector('.app-main')?.dataset.tab === 'board') maybeShowBoardRules();
   // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
   // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.
   setupHeaderCollapse();
