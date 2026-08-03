@@ -209,7 +209,7 @@
 /* Акцентна головна плитка — лише для збору. Той випадок, коли колір несе сенс
    «зараз потрібна твоя дія», а не прикрашає. Друга акцентна на екрані —
    плитка непрочитаних; більше двох не буває (правило в `home.css`). */
-.hm-hero--accent { background: var(--hm-accent); border-color: var(--hm-accent); }
+.hm-hero--accent { background: var(--brand-grad); border-color: transparent; }
 .hm-hero--accent .hm-hero-lab { color: rgba(255,255,255,0.78); }
 .hm-hero--accent .hm-hero-title { color: #fff; }
 .hm-hero--accent .hm-hero-sub { color: rgba(255,255,255,0.84); }
@@ -518,7 +518,7 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 }
 #hm-t-bus,   .hm-onphoto #hm-t-bus   { background: #22201E; }   /* графіт — «їхати» */
-#hm-t-board, .hm-onphoto #hm-t-board { background: var(--hm-accent); }  /* бордо — «дивитись» */
+#hm-t-board, .hm-onphoto #hm-t-board { background: var(--brand-grad-sm); }  /* бордо — «дивитись» */
 #hm-t-tel,   .hm-onphoto #hm-t-tel   { background: #4A4E55; }   /* сірий — «дзвонити» */
 #hm-t-msg,   .hm-onphoto #hm-t-msg   { background: #1D3A5C; }   /* синій — «тобі писали» */
 
