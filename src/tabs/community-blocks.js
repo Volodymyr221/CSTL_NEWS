@@ -559,7 +559,15 @@ export async function renderEventBlock() {
         .map(e => ({ kind: 'event', id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
     } catch {}
 
-    // 2) Fallback (Г-16): якщо майбутніх подій нема — найближчі свята з holidays.json
+    // 🔴 04.08 — ФОЛБЕК НА СВЯТА ПРИБРАНО (пряме слово Вови).
+    // Було (Г-16): коли подій громади немає, блок підставляв найближчі свята з
+    // `holidays.json` — «6 серпня, Преображення Господнє». Вова: «Поруч, що це
+    // таке за свята? Нащо ти таких написав?».
+    // Він має рацію: свято — не подія ГРОМАДИ, його ніхто не організовує і
+    // нікуди по ньому не йдуть. Блок обіцяв афішу, а показував календар.
+    // Тепер: немає подій громади — немає й секції (порожній контейнер, і
+    // `renderEvList` його не малює).
+
     if (!items.length) {
       try {
         const hres = await fetch('./data/holidays.json');
@@ -573,16 +581,22 @@ export async function renderEventBlock() {
       } catch {}
     }
 
-    if (!items.length) {
-      el.innerHTML = '<div class="hm-empty">Поки немає запланованих подій у громаді</div>';
-      return;
-    }
+    // Порожньо — секції немає ЗОВСІМ (не «порожній стан»): обіцяти афішу і
+    // показувати напис «подій немає» щодня — гірше, ніж не обіцяти нічого.
+    if (!items.length) { hideEventsSection(el); return; }
 
     _evItems = items;
     renderEvList(el);
   } catch {
-    el.innerHTML = '<div class="hm-error">Події недоступні</div>';
+    hideEventsSection(el);
   }
+}
+
+// Ховає всю секцію разом із заголовком «Афіша громади» і посиланням.
+function hideEventsSection(el) {
+  el.innerHTML = '';
+  const sec = document.getElementById('hm-events');
+  if (sec) sec.hidden = true;
 }
 
 // 🔴 03.08 — КАРУСЕЛЬ ПОДІЙ ЗНЯТО (потік /byyou, діагноз 4 аудиту).
@@ -776,9 +790,16 @@ function digestOf(arts) {
 const CM_RAIL_MAX = 8;   // ⚠️ стеля стрічки: більше — і це вже прихований список
 
 function railItems(arts) {
-  const digest = NEWS_GEO_GROUPS.map(g => articlesOfGroup(arts, g)[0]).filter(Boolean);
+  // 🔴 04.08 — СТРІЧКА НЕ ПОВТОРЮЄ ТЕ, ЩО ВЖЕ В ГОЛОВНІЙ ПЛИТЦІ.
+  // Слова Вови: «верхній віджет новини громади, культурна спадщина… воно
+  // дублює новини в загальному». І це була справжня помилка: головна плитка
+  // бере найсвіжішу новину Громади, і стрічка починалась із неї ж — та сама
+  // новина двічі на одному екрані, за 300px одна від одної.
+  const heroId = window.__cstlHeroArticleId;
+  const skip = a => a && a.id === heroId;
+  const digest = NEWS_GEO_GROUPS.map(g => articlesOfGroup(arts, g).find(a => !skip(a))).filter(Boolean);
   const seen = new Set(digest.map(a => a.id));
-  const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter(a => !seen.has(a.id));
+  const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter(a => !seen.has(a.id) && !skip(a));
   return [...digest, ...more].slice(0, CM_RAIL_MAX);
 }
 

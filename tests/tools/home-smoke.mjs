@@ -102,8 +102,12 @@ await step('плитка Дошки → вкладка Дошка', async () => 
   await page.locator('#hm-t-board').click();
   await page.waitForTimeout(900);
 });
-await step('розкриття «Усі телефони»', async () => {
-  await page.locator('.hm-tels > summary').click();
+await step('екстрені номери на місці', async () => {
+  // 04.08: секція «Усі телефони» внизу зникла — номери стали плиткою бенто.
+  // Клікати `tel:` не можна (стенд відкрив би зовнішній додаток), тому просто
+  // переконуємось, що номери видимі й тапабельні.
+  const tel = page.locator('#hm-t-tel a').first();
+  await tel.waitFor({ state: 'visible', timeout: 5000 });
 });
 await step('плитка автобуса → Автобуси', async () => {
   const t = page.locator('#hm-t-bus');

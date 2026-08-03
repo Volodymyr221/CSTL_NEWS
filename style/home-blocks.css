@@ -489,3 +489,83 @@
 /* Мініатюри Дошки на склі: обідок світлий, інакше вони «вирізані» з картки. */
 .hm-onphoto .hm-tile-thumbs i { border-color: rgba(255,255,255,0.35); }
 .hm-onphoto .hm-tile-thumbs b { color: rgba(255,255,255,0.80); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   04.08 — ПРАВКИ ПО ЖИВОМУ ПЕРЕГЛЯДУ ВОВИ
+
+   Дослівні скарги і що зроблено:
+   • «оці два маленьких віджета, автобус і на дошці… але їх погано видно, типу.
+      Їх надо чорними, може, зробити, чи бордовими, щось. Або щось чорне, щось
+      бордове, щось сіре» → плитки стали ТЕМНИМИ, кожна свого тону.
+   • «зверху маленька іконка акаунта, погода взагалі неясно… взагалі якось все
+      в ряд пише» → рядок стану розведено на два рівні.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ТЕМНІ ПЛИТКИ ─────────────────────────────────────────────────────────────
+ * Скляні плитки на фото читались погано — світле на світлому. Темні тримають
+ * контраст на будь-якому кадрі: і на світлому небі, і на тіні костелу.
+ * Три тони, як і просив Вова: графіт · бордо · сірий. Різні тони не заради
+ * барвистості — вони кажуть, що це РІЗНІ речі (їхати · дивитись · дзвонити).
+ * ⚠️ Специфічність вища за скляні правила `.hm-onphoto` вище — саме тому цей
+ * блок стоїть НИЖЧЕ у файлі і перекриває їх порядком.
+ */
+.hm-onphoto .hm-tile,
+.hm-tile {
+  color: #fff;
+  border-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+#hm-t-bus,   .hm-onphoto #hm-t-bus   { background: #22201E; }   /* графіт — «їхати» */
+#hm-t-board, .hm-onphoto #hm-t-board { background: var(--hm-accent); }  /* бордо — «дивитись» */
+#hm-t-tel,   .hm-onphoto #hm-t-tel   { background: #4A4E55; }   /* сірий — «дзвонити» */
+#hm-t-msg,   .hm-onphoto #hm-t-msg   { background: #1D3A5C; }   /* синій — «тобі писали» */
+
+.hm-tile-lab, .hm-onphoto .hm-tile-lab { color: rgba(255,255,255,0.72); }
+.hm-tile-big, .hm-onphoto .hm-tile-big { color: #fff; }
+.hm-tile-sub, .hm-onphoto .hm-tile-sub { color: rgba(255,255,255,0.78); }
+.hm-tile:active, .hm-onphoto .hm-tile:active { filter: brightness(1.25); background: inherit; }
+.hm-tile-thumbs i { border-color: rgba(255,255,255,0.28); }
+.hm-tile-thumbs b { color: rgba(255,255,255,0.75); }
+
+/* Номери всередині плитки «Екстрені» — окремі тап-цілі 44px кожен. */
+.hm-tile-tels { display: flex; gap: 8px; margin-top: 2px; }
+.hm-tile-tels a {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-decoration: none;
+}
+.hm-tile-tels a:active { background: rgba(255, 255, 255, 0.26); }
+
+/* ── РЯДОК СТАНУ У ДВА РІВНІ ──────────────────────────────────────────────────
+ * Було: аватар · привітання · погода · дата — чотири різні речі в один рядок,
+ * і кожна тиснула сусідів (дата обрізалась трьома крапками).
+ * Стало: зліва аватар і привітання з датою під ним, справа погода. Око читає
+ * зверху вниз, а не через кому.
+ */
+.hm-status {
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  min-height: 64px;
+}
+.hm-status-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hm-status .hm-greet { font-size: 19px; }
+.hm-status-date {
+  max-width: none;
+  font-size: 11.5px;
+  letter-spacing: 0.2px;
+}
+.hm-onphoto .hm-status-date { color: rgba(255,255,255,0.78); }
+.hm-status-acc { margin-top: 2px; width: 38px; height: 38px; }
+.hm-wx { margin-top: 2px; height: 32px; }
