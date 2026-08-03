@@ -11568,22 +11568,22 @@ ${ev.description || ""}`
   }
   function heroImgsHtml() {
     return heroSet().map((it, i) => `
-    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
+    <img class="hm-top-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
   `).join("");
   }
   function syncHeroCaption() {
-    const sub = document.querySelector(".cm-hero-sub");
+    const sub = document.querySelector(".hm-top-cap");
     const it = heroSet()[_heroIndex];
     if (sub && it)
       sub.textContent = it.caption;
   }
   function showHeroSlide(idx) {
-    const wrap = document.querySelector(".cm-hero");
+    const wrap = document.querySelector(".hm-top-photo");
     if (!wrap)
       return;
     const n = heroSet().length;
     _heroIndex = (idx + n) % n;
-    wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
+    wrap.querySelectorAll(".hm-top-img").forEach((img, i) => {
       img.classList.toggle("active", i === _heroIndex);
     });
     syncHeroCaption();
@@ -11594,18 +11594,19 @@ ${ev.description || ""}`
     _heroIndex = 0;
     _heroIsDay = isDaytime();
     _heroInterval = setInterval(() => {
-      const wrap = document.querySelector(".cm-hero");
+      const wrap = document.querySelector(".hm-top-photo");
       if (!wrap) {
         clearInterval(_heroInterval);
         _heroInterval = null;
         return;
       }
+      if (document.hidden)
+        return;
       const day = isDaytime();
       if (day !== _heroIsDay) {
         _heroIsDay = day;
         _heroIndex = 0;
-        wrap.querySelectorAll(".cm-hero-img").forEach((img) => img.remove());
-        wrap.insertAdjacentHTML("afterbegin", heroImgsHtml());
+        wrap.innerHTML = heroImgsHtml();
         syncHeroCaption();
         return;
       }
@@ -11632,7 +11633,7 @@ ${ev.description || ""}`
     return { text: `${hello}, ${who}!` };
   }
   function updateGreetingName() {
-    const el = document.querySelector(".cm-greeting-text");
+    const el = document.querySelector(".hm-greet");
     if (el)
       el.textContent = getGreeting().text;
     fitGreeting();
@@ -11640,7 +11641,7 @@ ${ev.description || ""}`
   var GREET_FONT_MAX = 27;
   var GREET_FONT_MIN = 19;
   function fitGreeting() {
-    const el = document.querySelector(".cm-greeting-text");
+    const el = document.querySelector(".hm-greet");
     if (!el)
       return;
     let size = GREET_FONT_MAX;
@@ -11663,232 +11664,91 @@ ${ev.description || ""}`
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
-    <!-- \u041A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u2014 \u041F\u0420\u0418\u0411\u0418\u0422\u0410 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0412\u043E\u0432\u0438 16.07: \xAB\u0456\u043A\u043E\u043D\u043A\u0430 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435
-         \u0434\u0456\u0432\u0430\u0454\u0442\u044C\u0441\u044F\xBB). \u041E\u043A\u0440\u0435\u043C\u0438\u0439 sticky-\u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043D\u0443\u043B\u044C\u043E\u0432\u043E\u0457 \u0432\u0438\u0441\u043E\u0442\u0438: \u043A\u043D\u043E\u043F\u043A\u0430 \u0441\u0442\u043E\u0457\u0442\u044C \u0443
-         \u043F\u0440\u0430\u0432\u043E\u043C\u0443 \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u043C\u0443 \u043A\u0443\u0442\u0456 \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0443 \u0432\u0456\u0434 \u0441\u0442\u0430\u0440\u0442\u0443 \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F
-         \u0457\u0434\u0435 \u0433\u0435\u0442\u044C, \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u043F\u0440\u0438\u0457\u0436\u0434\u0436\u0430\u0454, \u0430 \u0432\u043E\u043D\u0430 \u043D\u0430 \u043C\u0456\u0441\u0446\u0456. -->
-    <div class="cm-acc-pin">
-      <button class="cm-greet-account" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
-      </button>
-    </div>
+    <!-- \u0428\u0410\u041F\u041A\u0410. \u0424\u043E\u0442\u043E \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C, \u0430\u043B\u0435 \u0441\u0442\u0430\u043B\u043E \u0422\u041B\u041E\u041C \u0432\u0438\u0441\u043E\u0442\u043E\u044E ~200px \u0437\u0430\u043C\u0456\u0441\u0442\u044C 560px
+         \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E\u0433\u043E \u0431\u043B\u043E\u043A\u0430. \u0423\u0441\u044F \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0430 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F \u2014 \u043F\u043E\u0432\u0435\u0440\u0445 \u043D\u044C\u043E\u0433\u043E. -->
+    <header class="hm-top">
+      <div class="hm-top-photo">${heroImgsHtml()}</div>
+      <div class="hm-top-shade" aria-hidden="true"></div>
 
-    <!-- \u0421\u0442\u0438\u043A-\u0437\u043E\u043D\u0430 \u0432\u0456\u0442\u0430\u043D\u043D\u044F: \u0432\u0438\u0441\u043E\u0442\u0430 = \u0432\u0456\u0442\u0430\u043D\u043D\u044F + \u0437\u0430\u043F\u0430\u0441 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB (padding-bottom).
-         .cm-greeting \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 position:sticky, \u0442\u043E\u043C\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0442\u0440\u0438\u043C\u0430\u0454 \u0439\u043E\u0433\u043E
-         \u043D\u0430 \u041A\u041E\u041C\u041F\u041E\u0417\u0418\u0422\u041E\u0420\u0406 (\u0431\u0435\u0437 JS-\u0441\u043A\u0440\u043E\u043B\u0443) \u2192 \u043D\u0443\u043B\u044C \u0434\u044C\u043E\u0440\u0433\u0430\u043D\u043D\u044F \u043D\u0430 iOS. \u041A\u043E\u043B\u0438 \u0437\u043E\u043D\u0430
-         \u0434\u043E\u0437\u043D\u0438\u043A\u0430\u0454 (\u043F\u0440\u043E\u0441\u043A\u0440\u043E\u043B\u0438\u043B\u0438 padding-bottom) \u2014 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u0457\u0434\u0435 \u0432\u0433\u043E\u0440\u0443. -->
-    <div class="cm-greeting-stick">
-      <section class="cm-greeting">
-        <div class="cm-greeting-col">
-          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      <div class="hm-top-in">
+        <div class="hm-top-row">
+          <span class="hm-top-date">${escapeHtml(todayStr)}</span>
+          <!-- \u041A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u0440\u0430\u0432\u043E\u043C\u0443 \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u043C\u0443 \u043A\u0443\u0442\u0456 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F
+               \u0412\u043E\u0432\u0438 16.07). \u041F\u0440\u0438\u0431\u0438\u0442\u0438\u043C sticky-\u0435\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C \u0432\u043E\u043D\u0430 \u0431\u0456\u043B\u044C\u0448\u0435 \u041D\u0415 \u0454 \u2014 \u043D\u0430 \u043D\u043E\u0432\u0456\u0439
+               \u0448\u0430\u043F\u0446\u0456 \u043D\u0435\u043C\u0430 \u0447\u043E\u0433\u043E \xAB\u043D\u0435 \u0434\u0456\u0432\u0430\u0442\u0438\xBB, \u0435\u043A\u0440\u0430\u043D \u043F\u0456\u0434 \u043D\u0435\u044E \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F. -->
+          <button class="hm-top-acc" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+          </button>
         </div>
-      </section>
-      <!-- \u0420\u043E\u0437\u043F\u0456\u0440\u043A\u0430 \u0437\u0430\u043F\u0430\u0441\u0443 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB: \u0420\u0415\u0410\u041B\u042C\u041D\u0418\u0419 \u0431\u043B\u043E\u043A (\u043D\u0435 padding!) \u2014 \u0456\u043D\u0430\u043A\u0448\u0435
-           sticky \u0443 Chromium \u043D\u0435 \u0442\u0440\u0438\u043C\u0430\u0454 (padding \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430 \u043D\u0435 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u0443 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D
-           \u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F). \u0407\u0457 \u0432\u0438\u0441\u043E\u0442\u0430 = \u0441\u043A\u0456\u043B\u044C\u043A\u0438 px \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0456\u0433\u043D\u043E\u0440\u0443\u0454 \u0441\u043A\u0440\u043E\u043B. -->
-      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
-    </div>
 
-    <section class="cm-hero">
-      ${heroImgsHtml()}
-      <!-- \u0424\u0440\u043E\u0441\u0442-\u0441\u043C\u0443\u0433\u0443 (.cm-hero-blurband) \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u043E 16.07 (\u0412\u043E\u0432\u0430, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u043B\u0438\u0441\u0442\xBB):
-           \u043D\u0435\u043F\u0440\u043E\u0437\u043E\u0440\u0438\u0439 \u0442\u0456\u043B\u0435\u0441\u043D\u0438\u0439 \u043B\u0438\u0441\u0442 \u043D\u0430\u043B\u044F\u0433\u0430\u0454 \u043D\u0430 \u0444\u043E\u0442\u043E \u0456 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u0457\u0457 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454. -->
-      <div class="cm-hero-overlay">
-        <!-- \u041F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E (\u0412\u043E\u0432\u0430 20.07, \u0432\u0430\u0440\u0456\u0430\u043D\u0442 \u0411): \u0434\u0432\u0430 \u0434\u0440\u0456\u0431\u043D\u0456 \u0440\u044F\u0434\u043A\u0438 \u0432 \u0441\u0442\u0438\u043B\u0456 \u043F\u0456\u0434\u043F\u0438\u0441\u0443
-             \u0436\u0443\u0440\u043D\u0430\u043B\u0443 \u2014 \xAB\u041E\u041B\u0418\u041A\u0410\xBB (\u0440\u043E\u0437\u0440\u0456\u0434\u0436\u0435\u043D\u0456 \u043A\u0430\u043F\u0456\u0442\u0435\u043B\u0456) + \u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043C'\u044F\u0442\u043A\u0438 \u043A\u0443\u0440\u0441\u0438\u0432\u043E\u043C \u043F\u0456\u0434 \u043D\u0435\u044E.
-             \u0414\u0435\u043B\u0456\u043A\u0430\u0442\u043D\u0438\u0439, \u043D\u0435 \u043D\u0430\u0437\u0432\u0430 \u0431\u043B\u043E\u043A\u0443; \u0447\u0438\u0442\u0430\u0431\u0435\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u043D\u0430 \u0434\u0435\u043D\u044C/\u043D\u0456\u0447 \u0447\u0435\u0440\u0435\u0437 \u0442\u0456\u043D\u044C + \u043B\u0435\u0433\u043A\u0435
-             \u0437\u0430\u0442\u0435\u043C\u043D\u0435\u043D\u043D\u044F \u0432\u043D\u0438\u0437\u0443 \u0444\u043E\u0442\u043E. \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u0436\u0438\u0432\u0435 \u043E\u043A\u0440\u0435\u043C\u043E \u043D\u0438\u0436\u0447\u0435 (cm-sec-head). -->
-        <div class="cm-hero-caption">
-          <span class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</span>
-          <span class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</span>
+        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+
+        <!-- \u041F\u043E\u0433\u043E\u0434\u0430. \u041A\u0440\u043E\u043A 4 \u043D\u0430\u043F\u043E\u0432\u043D\u0438\u0442\u044C \u0457\u0457 \u0434\u0430\u043D\u0438\u043C\u0438; \u043F\u043E\u043A\u0438 \u2014 \u043C\u0456\u0441\u0446\u0435 \u0439 \u043F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E. -->
+        <div class="hm-top-foot">
+          <button class="hm-wx" type="button" data-hm-weather hidden></button>
+          <span class="hm-top-cap">${escapeHtml(heroSet()[0].caption)}</span>
         </div>
-      </div>
-    </section>
-    <div class="cm-hero-spacer"></div>
-
-    <!-- \u041B\u0418\u0421\u0422 (\u0412\u043E\u0432\u0430 16.07, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u044F\u043A \u0441\u0443\u0447\u0430\u0441\u043D\u0438\u0439 iOS-\u0434\u043E\u0434\u0430\u0442\u043E\u043A\xBB): \u0442\u0456\u043B\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430
-         \u043D\u0430 \u0432\u0441\u044E \u0448\u0438\u0440\u0438\u043D\u0443, \u0449\u043E \u041D\u0410\u041B\u042F\u0413\u0410\u0404 \u043D\u0430 \u0444\u043E\u0442\u043E (\u0437\u0430\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0456 \u0432\u0435\u0440\u0445\u043D\u0456 \u043A\u0443\u0442\u0438 + \u0433\u043B\u0438\u0431\u043E\u043A\u0430 \u0442\u0456\u043D\u044C
-         \u0443\u0433\u043E\u0440\u0443). \u0423\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 \u044F\u0437\u0438\u0447\u043E\u043A \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB (\u0432\u0438\u043F\u0443\u043A\u043B\u0438\u0439 \u0432\u0438\u0441\u0442\u0443\u043F \u043B\u0438\u0441\u0442\u0430 \u043D\u0430 \u0444\u043E\u0442\u043E)
-         \u0456 \u0432\u0441\u0456 \u0431\u043B\u043E\u043A\u0438. \u0425\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430: sec-head sticky \u2192 \u0434\u043E\u0457\u0436\u0434\u0436\u0430\u0454 \u0434\u043E \u0448\u0430\u043F\u043A\u0438,
-         \u0437\u0430\u043B\u0438\u043F\u0430\u0454 \u0456 \u0441\u0442\u0430\u0454 \u0431\u043B\u044E\u0440-\u043F\u0430\u043D\u0435\u043B\u043B\u044E (--stuck), \u0431\u043B\u043E\u043A\u0438 \u043F\u0456\u0440\u043D\u0430\u044E\u0442\u044C \u043F\u0456\u0434 \u043D\u0435\u0457.
-         \u041A\u043D\u043E\u043F\u043A\u0438 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u0442\u0443\u0442 \u041D\u0415\u041C\u0410 \u2014 \u0432\u043E\u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u043E \u043F\u0440\u0438\u0431\u0438\u0442\u0430 (.cm-acc-pin). -->
-    <div class="cm-sheet">
-    <!-- \u041F\u0440\u0438\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0439 \u0434\u043E \u0448\u0430\u043F\u043A\u0438 \u0431\u043B\u044E\u0440-\u0440\u044F\u0434\u043E\u043A (\u041F\u0440\u0430\u0432\u043A\u0430 1): fixed, \u043D\u0435 \u0457\u0434\u0435 \u0437\u0456 \u0441\u043A\u0440\u043E\u043B\u043E\u043C; opacity \u0441\u043A\u0440\u0430\u0431\u0438\u0442\u044C\u0441\u044F. -->
-    <div class="cm-topbar-blur" aria-hidden="true"></div>
-    <div id="cm-sec-sentinel" aria-hidden="true"></div>
-    <header class="cm-sec-head" id="cm-sec-head">
-      <div class="cm-sec-head-in">
-        <h2>\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
-        <!-- \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0417\u041D\u041E\u0412\u0423 \u0432 \u043B\u0438\u043F\u043A\u0456\u0439 \u0448\u0430\u043F\u0446\u0456 (\u0412\u043E\u0432\u0430 16.07, \u0432\u0435\u0447\u0456\u0440): \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0456
-             \u043F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u2014 \u043E\u0434\u043D\u0435 \u0446\u0456\u043B\u0435, \u043E\u0431\u0438\u0434\u0432\u0430 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043A\u043E\u043B\u0438 \u0448\u0430\u043F\u043A\u0430 \u0437\u0430\u043B\u0438\u043F\u0430\u0454.
-             \u0420\u0430\u043D\u0456\u0448\u0435 \u0431\u0443\u0432 \u0443 \u0442\u0456\u043B\u0456 \u0431\u043B\u043E\u043A\u0443 \u2192 \u0432\u0456\u0434\u0441\u043A\u0440\u043E\u043B\u044E\u0432\u0430\u0432\u0441\u044F \u0433\u0435\u0442\u044C, \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043B\u0438\u0448\u0430\u0432\u0441\u044F \u043B\u0438\u0448\u0435 h2. -->
-        <p class="cm-sheet-sub">\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
       </div>
     </header>
 
-    <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
-         \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
+    <div class="hm-body">
+      <!-- \u0413\u043E\u043B\u043E\u0441 \u0412\u043E\u0432\u0438. \u041D\u0415 \u043B\u0438\u043F\u043A\u0435: \u043F\u0430\u043D\u0435\u043B\u044C \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u043A\u0440\u0438\u0432\u0430\u0454. -->
+      <div class="hm-hello">
+        <h2 class="hm-hello-t">\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
+        <p class="hm-hello-s">\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
+      </div>
 
-    <!-- \u{1F534} 31.07: \u0448\u0430\u043F\u043A\u0430 \u0441\u0442\u0430\u043B\u0430 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u044C\u043E\u044E <button>. \u0420\u0430\u043D\u0456\u0448\u0435 \u0446\u0435 \u0431\u0443\u0432 <div>, \u043F\u043E \u044F\u043A\u043E\u043C\u0443
-         \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0442\u0430\u043F\u0430\u043B\u043E\u0441\u044C; \u0442\u0435\u043F\u0435\u0440 \u0443\u0432\u0435\u0441\u044C \u0432\u0456\u0434\u0436\u0435\u0442 \u0432\u0435\u0434\u0435 \u0432 \u0445\u0430\u0431 \u043D\u043E\u0432\u0438\u043D, \u0456 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0456 \u0442\u0430
-         \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
-    <section id="cm-news-board" class="cm-block cm-block--news">
-      <button class="cm-news-board-bar" type="button" data-cm-news-open>
-        <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
-      </button>
-      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-      <div id="cm-news-controls" class="cm-news-controls"></div>
-    </section>
+      <!-- \u0421\u041C\u0423\u0413\u0410 \xAB\u0417\u0410\u0420\u0410\u0417\xBB (\u043A\u0440\u043E\u043A 5): \u043A\u0430\u043F\u0441\u0443\u043B\u0438 \u0437'\u044F\u0432\u043B\u044F\u044E\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043A\u043E\u043B\u0438 \u0454 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0442\u0438. -->
+      <div class="hm-now" id="hm-now" hidden></div>
 
-    <!-- \u0412\u0456\u0434\u0436\u0435\u0442 \u0414\u043E\u0448\u043A\u0438 (\u043F\u043E\u0432\u043D\u0430 \u043F\u0435\u0440\u0435\u0440\u043E\u0431\u043A\u0430 13.07, \u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438): \u0448\u0430\u043F\u043A\u0430 \u0442\u0435\u043F\u0435\u0440
-         \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0432\u0456\u0434\u0436\u0435\u0442\u0430 (\u0440\u0435\u043D\u0434\u0435\u0440\u0438\u0442\u044C renderBoardBlock), \u0441\u0442\u0430\u0440\u0430 \xAB\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438\xBB \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u0430. -->
-    <section class="cm-block cm-block--board">
-      <div id="cm-board-content" class="cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <!-- \u0417\u0411\u0406\u0420 (\u043A\u0440\u043E\u043A 7): \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 = \u0431\u043B\u043E\u043A\u0430 \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456 \u043D\u0435\u043C\u0430\u0454 \u0432\u0437\u0430\u0433\u0430\u043B\u0456. -->
+      <section class="hm-fund-wrap" id="hm-fund"></section>
 
-    <section class="cm-block cm-block--event">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-        <button class="cm-block-link" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
-      </header>
-      <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <section class="hm-sec" id="hm-news">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u0413\u043E\u043B\u043E\u0432\u043D\u0435</h3>
+          <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</button>
+        </div>
+        <div id="cm-news-content"></div>
+      </section>
 
-    <section class="cm-block cm-block--bus">
-      <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-      <footer class="cm-block-footer">
-        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412 \u2192</button>
-      </footer>
-    </section>
+      <section class="hm-sec" id="hm-events">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457</h3>
+          <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430</button>
+        </div>
+        <div id="cm-event-content"></div>
+      </section>
 
-    <section class="cm-block cm-block--weather">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
-      </header>
-      <div id="cm-weather-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <section class="hm-sec" id="hm-board">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+          <button class="hm-sec-link" type="button" data-switch-tab="board">\u0423\u0441\u044F \u0434\u043E\u0448\u043A\u0430</button>
+        </div>
+        <div id="cm-board-content"></div>
+      </section>
 
-    <!-- \u0411\u043B\u043E\u043A \u0421\u0432\u0456\u0442\u043B\u043E \u2014 \u043F\u0440\u0438\u0445\u043E\u0432\u0430\u043D\u043E 16.05.2026 (\u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0430\u0440\u0430\u0437\u0456 \u043D\u0435 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0430\u044E\u0442\u044C).
-         \u0429\u043E\u0431 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438: \u0440\u043E\u0437\u043A\u043E\u043C\u0435\u043D\u0442\u0443\u0432\u0430\u0442\u0438 \u0441\u0435\u043A\u0446\u0456\u044E + \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 renderPowerBlock() \u0443 initCommunity. -->
-    <!--
-    <section class="cm-block cm-block--power">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
-        <button class="cm-block-link" data-switch-tab="power">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
-      </header>
-      <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-    -->
+      <section class="hm-sec" id="hm-contacts">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438</h3>
+        </div>
+        <div id="cm-contacts-content"></div>
+      </section>
 
-    <section id="cm-contacts" class="cm-block cm-block--contacts">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
-      </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-    </div><!-- /.cm-sheet -->
+      <!-- \u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0435\u0440\u0435\u0457\u0445\u0430\u0432 \u0443 \u0441\u043C\u0443\u0433\u0443 \xAB\u0417\u0410\u0420\u0410\u0417\xBB \u043A\u0430\u043F\u0441\u0443\u043B\u043E\u044E \u0437 \u0432\u0456\u0434\u043B\u0456\u043A\u043E\u043C; \u043F\u043E\u0432\u043D\u0438\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014
+           \u043D\u0430 \u0441\u0432\u043E\u0457\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456. \u041A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F, \u0431\u043E renderBusBlock() \u043D\u0430\u043F\u043E\u0432\u043D\u044E\u0454
+           \u0441\u0430\u043C\u0435 \u0439\u043E\u0433\u043E (\u043A\u0440\u043E\u043A 5 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C \u0432\u043C\u0456\u0441\u0442 \u0443 \u043A\u0430\u043F\u0441\u0443\u043B\u0443). -->
+      <div id="cm-bus-content" hidden></div>
+      <!-- \u041F\u043E\u0433\u043E\u0434\u0430: \u0434\u0430\u043D\u0456 \u043C\u0430\u043B\u044E\u0454 renderWeatherBlock(), \u043C\u0456\u0441\u0446\u0435 \u043F\u043E\u043A\u0430\u0437\u0443 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 .hm-wx. -->
+      <div id="cm-weather-content" hidden></div>
+    </div>
   `;
   }
   var _greetingWired = false;
-  var _focusWired = false;
-  function initCenterFocus() {
-    if (_focusWired)
-      return;
-    const main = document.querySelector(".app-main");
-    if (!main)
-      return;
-    const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    _focusWired = true;
-    let raf = null;
-    let _stickyTop = null;
-    let _secRestTop = null;
-    let _maskW = 0;
-    const buildSheetMask = (w) => {
-      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17, sd = 1.5;
-      const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-      const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
-      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    };
-    const apply = () => {
-      raf = null;
-      if (main.dataset.tab !== "community")
-        return;
-      const vh = main.clientHeight;
-      const viewCenter = vh / 2;
-      const sec = document.getElementById("cm-sec-head");
-      const hdr = document.querySelector(".app-header");
-      if (sec) {
-        const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
-        if (_stickyTop === null)
-          _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
-        const pinLine = pinY + _stickyTop;
-        const secTop = sec.getBoundingClientRect().top;
-        if (main.scrollTop < 4)
-          _secRestTop = secTop;
-        const startY = _secRestTop != null ? _secRestTop : secTop;
-        const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
-        const START = 0.4;
-        const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
-        const sheet = document.querySelector(".cm-sheet");
-        if (sheet) {
-          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
-          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
-          sheet.style.setProperty("--sheet-blur", (6 + 5 * progColor).toFixed(1) + "px");
-          const w = sheet.clientWidth;
-          if (w && w !== _maskW) {
-            _maskW = w;
-            sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
-          }
-        }
-        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
-      }
-      if (!allowMotion)
-        return;
-      let best = null, bestDist = Infinity;
-      document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
-        const r = b.getBoundingClientRect();
-        if (r.bottom < -80 || r.top > vh + 80) {
-          if (b.dataset.cf) {
-            b.style.transform = "";
-            b.classList.remove("cm-block--focus");
-            delete b.dataset.cf;
-          }
-          return;
-        }
-        const blockCenter = (r.top + r.bottom) / 2;
-        const dist = Math.abs(blockCenter - viewCenter);
-        const scaleDist = b.id === "cm-news-board" && blockCenter > viewCenter ? 0 : dist;
-        const t = Math.min(1, scaleDist / (vh * 0.55));
-        b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
-        b.dataset.cf = "1";
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = b;
-        }
-      });
-      document.querySelectorAll("#cm-content .cm-block--focus").forEach((b) => {
-        if (b !== best)
-          b.classList.remove("cm-block--focus");
-      });
-      if (best)
-        best.classList.add("cm-block--focus");
-    };
-    const onScroll = () => {
-      if (!raf)
-        raf = requestAnimationFrame(apply);
-    };
-    main.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    window.addEventListener("cstl-tab-changed", onScroll);
-    onScroll();
-  }
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
-    initCenterFocus();
     refreshAccountButtons();
     if (!_greetingWired) {
       onAuthChange(updateGreetingName);

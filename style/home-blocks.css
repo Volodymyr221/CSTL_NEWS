@@ -1,0 +1,209 @@
+/* ===== HOME BLOCKS — блоки головного екрана «Громада» (03.08.2026) ===========
+ *
+ * Тут — ФОРМА конкретних блоків головної. Токени, примітиви (картка, капсула,
+ * секція, стани, поява) живуть у `style/home.css` і сюди лише приходять.
+ * Розділення таке саме, як у `style/news-card.css`: форма в одному місці,
+ * кольори-токени задає екран.
+ *
+ * Розбір «чому саме так» — `_ai-tools/AUDIT_GROMADA_2026-08.md`.
+ */
+
+/* ═══ КОНТЕЙНЕР ЕКРАНА ════════════════════════════════════════════════════════
+ * Було: `padding: 6px 14px 0` + `gap: 14px` на самому контейнері — тобто ВСІ
+ * блоки, включно з фото на всю ширину, жили в 14px рамці й фото доводилось
+ * витягувати від'ємними полями. Тепер поле дає `.hm-body`, а шапка від краю
+ * до краю — просто тому, що вона поза цим полем.
+ */
+#cm-content {
+  padding: 0;
+  gap: 0;
+}
+
+/* ═══ ШАПКА ═══════════════════════════════════════════════════════════════════
+ * ГЕОМЕТРІЯ (описую наперед — правило «CSS/layout описати перед пушем»):
+ * висота 200px фіксована; фото `position:absolute; inset:0` тягнеться на всю
+ * площу і НЕ бере участі у вимірюванні (той самий прийом, що врятував картку
+ * Дошки 03.08 — там кадр 1200×1600 диктував висоту картки).
+ * Усередині — колонка з `justify-content: space-between` і полем 12px/14px:
+ * рядок дати зверху, привітання посередині, погода+підпис знизу.
+ * Тобто 200 − 12 − 12 = 176px на три рядки, які самі розходяться по краях.
+ *
+ * 🔴 ЧОМУ 200, А НЕ 560: заміряно, що фото 560px = 76.6% видимої зони, і перша
+ * інформація починалась на 662px — нижче першого екрана. 200px лишають фото
+ * впізнаваним (костел читається), але звільняють ~360px під зміст.
+ */
+.hm-top {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 0 0 22px 22px;
+  background: #2A2520;          /* поки фото не завантажилось — теплий темний, не білий спалах */
+  isolation: isolate;
+}
+.hm-top-photo { position: absolute; inset: 0; }
+.hm-top-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 55%;   /* зсув донизу (Рома 09.07): показати НИЗ костелу */
+  display: block;
+  opacity: 0;
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hm-top-img.active { opacity: 1; }
+
+/* Затемнення. ДВІ смуги, а не рівна плита: угорі під дату, внизу під привітання
+   й погоду. Рівна плита на 45% зробила б з фото сірий прямокутник — сенс
+   лишати фото тоді зникає. Середина майже чиста — саме там купол костелу. */
+.hm-top-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.10) 34%,
+                            rgba(0,0,0,0.16) 52%, rgba(0,0,0,0.62) 100%);
+}
+.hm-top-in {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--hm-edge) 12px;
+}
+.hm-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hm-top-date {
+  font-size: var(--hm-t-meta);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+/* Кнопка кабінету: видимий кружечок 36px, тап-ціль 44px через невидиме
+   розширення (Apple HIG). Той самий прийом, що на круглих кнопках сторінки
+   оголошення 02.08 — маленька кнопка, у яку не треба цілитись. */
+.hm-top-acc {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--hm-r-pill);
+  background: rgba(255, 255, 255, 0.20);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;             /* фото профілю всередині — по колу */
+}
+.hm-top-acc::after { content: ''; position: absolute; inset: -4px; }
+.hm-top-acc img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Привітання — ЄДИНИЙ великий текст екрана. Кегль підбирає JS (`fitGreeting`,
+   рішення Вови 15.07: один рядок завжди), тому тут лише стеля і nowrap. */
+.hm-greet {
+  margin: 0;
+  font-size: var(--hm-t-greet);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.hm-top-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+}
+/* Підпис фото (рішення Вови 20.07 «підпис = що зображено») — місце змінилось,
+   рішення лишилось. Дрібно, курсивом, у куті: це підпис, а не назва блоку. */
+.hm-top-cap {
+  /* margin-left:auto, а не самий лише text-align: поки погоди немає (перший кадр
+     або помилка мережі) підпис лишається ЄДИНИМ елементом рядка, і
+     `space-between` притиснув би його ВЛІВО, під привітання. Заміряно скріншотом. */
+  margin-left: auto;
+  font-size: 10.5px;
+  font-style: italic;
+  line-height: 1.3;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  max-width: 52%;
+}
+
+/* ═══ ТІЛО ════════════════════════════════════════════════════════════════════ */
+
+.hm-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hm-gap-sec);
+  padding: 0 var(--hm-edge) 26px;
+}
+
+/* ═══ «ШО В СЕЛІ?» ════════════════════════════════════════════════════════════
+ * Голос Вови, а не службовий заголовок. Було: липка панель 75px, що накривала
+ * картки на кожному скролі (діагноз 5 аудиту). Стало: звичайний блок ~54px,
+ * який просто прокручується разом з усім. Нічого не накриває — нічого й не
+ * тримає під собою.
+ */
+.hm-hello {
+  padding: 16px 0 0;
+  text-align: center;
+}
+.hm-hello-t {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--hm-ink);
+}
+.hm-hello-s {
+  margin: 3px 0 0;
+  font-size: var(--hm-t-meta);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--hm-ink-mute);
+}
+
+/* ═══ СМУГА «ЗАРАЗ» ═══════════════════════════════════════════════════════════
+ * Горизонтальний ряд капсул. Виходить за поле `.hm-body` від'ємним полем і
+ * повертає його своїм padding — щоб капсула, що не влізла, обрізалась КРАЄМ
+ * ЕКРАНА, а не краєм поля (інакше видно «стінку» за 14px до краю і незрозуміло,
+ * що ряд гортається).
+ * ⚠️ Це горизонтальний скролер — при появі нових треба тримати його в списку
+ * `tests/drift.mjs` (сторож бічного зсуву сторінки).
+ */
+.hm-now {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-inline: calc(var(--hm-edge) * -1);
+  padding: 2px var(--hm-edge);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.hm-now::-webkit-scrollbar { display: none; }
+.hm-now > * { scroll-snap-align: start; }
+.hm-now[hidden] { display: none; }
+
+/* ═══ ЗБІР ════════════════════════════════════════════════════════════════════
+ * Порожній контейнер не малює НІЧОГО — ні рамки, ні відступу. Саме тому
+ * `:empty { display: none }`, а не «сховати вміст»: інакше в ритмі секцій
+ * лишалась би дірка 22px там, де активних зборів немає.
+ */
+.hm-fund-wrap:empty { display: none; }

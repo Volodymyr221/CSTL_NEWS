@@ -26,15 +26,21 @@ const out = await page.evaluate(v => {
     const r = el.getBoundingClientRect();
     rows.push({ name, h: Math.round(r.height), top: Math.round(r.top + main.scrollTop) });
   };
-  push('hero фото', root.querySelector('.cm-hero'));
-  push('greeting (зона)', root.querySelector('.cm-greeting-stick'));
-  push('шапка ШО В СЕЛІ?', root.querySelector('.cm-sec-head'));
-  push('НОВИНИ', root.querySelector('#cm-news-board'));
-  push('ДОШКА', root.querySelector('.cm-block--board'));
-  push('ПОДІЇ', root.querySelector('.cm-block--event'));
-  push('АВТОБУС', root.querySelector('.cm-block--bus'));
-  push('ПОГОДА', root.querySelector('.cm-block--weather'));
-  push('КОНТАКТИ', root.querySelector('#cm-contacts'));
+  // Старий екран і новий міряються ОДНИМ інструментом: `pick` бере ПЕРШИЙ селектор,
+  // що знайшовся. Інакше порівняння «було/стало» йшло б двома різними мірками —
+  // а це рівно та помилка, через яку перевірка вже брехала сім разів.
+  const pick = (...sels) => sels.reduce((found, s) => found || root.querySelector(s), null);
+  push('шапка/hero',      pick('.hm-top', '.cm-hero'));
+  push('greeting (зона)', pick('.cm-greeting-stick'));
+  push('ШО В СЕЛІ?',      pick('.hm-hello', '.cm-sec-head'));
+  push('смуга ЗАРАЗ',     pick('#hm-now:not([hidden])'));
+  push('ЗБІР',            pick('#hm-fund'));
+  push('НОВИНИ',          pick('#hm-news', '#cm-news-board'));
+  push('ПОДІЇ',           pick('#hm-events', '.cm-block--event'));
+  push('ДОШКА',           pick('#hm-board', '.cm-block--board'));
+  push('АВТОБУС',         pick('.cm-block--bus'));
+  push('ПОГОДА',          pick('.cm-block--weather'));
+  push('КОНТАКТИ',        pick('#hm-contacts', '#cm-contacts'));
 
   // вкладені скролери
   const nested = [...root.querySelectorAll('*')].filter(e => {
@@ -45,7 +51,7 @@ const out = await page.evaluate(v => {
 
   // автоматичні рухи (таймери) — рахуємо каруселі
   const carousels = {
-    heroФото: root.querySelectorAll('.cm-hero-img').length,
+    heroФото: root.querySelectorAll('.hm-top-img, .cm-hero-img').length,
     дошкаКартки: root.querySelectorAll('.cmbw-card').length,
     подіїСлайди: root.querySelectorAll('.cm-ev-slide').length,
     автобусКрапки: root.querySelectorAll('.bhv4-dot-nav').length,
