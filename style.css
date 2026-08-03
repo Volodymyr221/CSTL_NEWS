@@ -18,6 +18,10 @@
 @import url('style/modal.css');      /* .article-modal — sticky-header, swipe, body */
 @import url('style/tabbar.css');     /* .tab-bar, .tab-item, .tab-icon, .tab-label */
 @import url('style/community.css');  /* .cm-* — вкладка Громада, D2 colored blocks, hero, board */
+/* ⚠️ home.css — ПІСЛЯ community.css навмисно: він переозначує поверхню головної
+   (`.app-main[data-tab="community"]`) тією самою специфічністю, тож виграє лише
+   порядком. Переставиш вище — головна поверне стару бежеву поверхню мовчки. */
+@import url('style/home.css');       /* .hm-* — ДИЗАЙН-СИСТЕМА головного екрана (токени + примітиви) */
 @import url('style/feed.css');       /* .fd-* — вкладка «Стрічка»: сторінки-канали громади */
 @import url('style/account.css');    /* .acc-* — Фаза Б: вхід, профіль, Кабінет жителя + іконка 👤 */
 @import url('style/messages.css');   /* .pm-* — Фаза Б: приватний чат, список розмов, Мої оголошення */
