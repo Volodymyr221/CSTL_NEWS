@@ -64,6 +64,55 @@
 .app-modal--sheet.open .app-modal-sheet { transform: translateY(0); }
 /* Модифікатор для довгого документу (Політика конфіденційності тощо) — вищий лист */
 .app-modal--doc .app-modal-sheet { max-height: 92svh; }
+
+/* ── Правила Дошки (03.08) ────────────────────────────────────────────────────
+   Один вигляд на два випадки: блокуючий гейт при першому вході на Дошку (без ✕,
+   без рисочки — їх не малює `dismissible: false`) і звичайний перегляд із сайдбару.
+   ⚠️ `padding-top` тут ПОТРІБЕН саме через відсутність рисочки: базовий лист має
+   згори лише 4px, бо решту відступу давав грабер. Без цього заголовок гейта
+   прилипав би до краю екрана. */
+.app-modal--brules .app-modal-sheet { max-height: 92svh; padding-top: 18px; }
+.brules-lead { font-size: 13.5px; line-height: 1.5; color: #4A4A4A; margin: 0 0 12px; }
+.brules-list { margin: 0; padding: 0; list-style: none; }
+.brules-list li {
+  position: relative;
+  padding-left: 18px;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #3A3A3A;
+}
+/* Маркер малюємо самі, а не `list-style`: рідна крапка не дає керувати ані розміром,
+   ані кольором, і на бордовому акценті сірий буллет виглядав би випадковим. */
+.brules-list li::before {
+  content: '';
+  position: absolute; left: 4px; top: 8px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--news-accent, #722F37);
+  opacity: 0.55;
+}
+.brules-list b { font-weight: 700; color: #141414; }
+/* Кнопка ПРИЛИПЛА до низу листа: гейт закривається лише нею, тому вона не має права
+   поїхати за межі екрана на довгому тексті чи малому телефоні. Підкладка непрозора —
+   інакше рядки правил просвічували б крізь неї під час прокрутки. */
+.brules-ok {
+  position: sticky;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--news-accent, #722F37);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.brules-ok:active { opacity: 0.88; }
 .app-modal-handle {
   width: 40px; height: 4px;
   background: rgba(0, 0, 0, 0.18);

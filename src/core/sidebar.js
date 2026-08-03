@@ -5,7 +5,7 @@
 
 import { isTeamMember } from './supabase.js';
 import { onAuthChange } from './auth.js';
-import { LEGAL_DOC_HTML } from './legal.js';
+import { LEGAL_DOC_HTML, BOARD_RULES_HTML } from './legal.js';
 import { openModal } from './modal.js';
 import { ICONS } from './icons.js';
 
@@ -24,6 +24,10 @@ const NAV = [
   { id: 'contacts',    label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
   { divider: true },
   { id: 'support', label: 'Підтримка',            icon: ICONS.help, kind: 'info' },
+  // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
+  // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
+  // «Політики»: там документ на кілька екранів, і потрібний розділ довелось би шукати.
+  { id: 'boardrules', label: 'Правила Дошки',     icon: ICONS.clipboard, kind: 'info' },
   { id: 'policy',  label: 'Політика і приватність', icon: ICONS.lock, kind: 'info' },
 ];
 
@@ -44,6 +48,11 @@ const INFO = {
           '<a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=Підтримка%20CSTL%20LIFE">' +
           ICONS.mail + ' Написати в підтримку</a><br><br>' +
           '<span class="info-mail-plain">olykacastle@gmail.com</span>',
+  },
+  boardrules: {
+    title: 'Правила Дошки',
+    className: 'app-modal--brules',   // той самий вигляд, що й у гейта при першому вході
+    body: BOARD_RULES_HTML,
   },
   policy: {
     title: 'Політика і приватність',
@@ -146,7 +155,7 @@ function openInfoModal(key) {
   openModal({
     title: data.title,
     bodyHtml: data.body,
-    className: data.doc ? 'app-modal--doc' : '',
+    className: data.className || (data.doc ? 'app-modal--doc' : ''),
   });
 }
 

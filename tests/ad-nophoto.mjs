@@ -78,6 +78,12 @@ await p.waitForTimeout(1500);
 // Правило проєкту: шумовий поріг має бути 0, інакше порівняння нічого не доводить.
 await p.evaluate(() => document.querySelector('.consent-accept')?.click());
 await p.waitForTimeout(300);
+// Те саме про гейт правил Дошки (03.08): при першому вході він накриває екран цілком —
+// і в цьому вимірі дав би 124 «протікання» у КОЖНОМУ випадку, зокрема контрольному.
+// Приймаємо його тут же, бо цей стенд про модалку оголошення, а не про правила
+// (їх власний сторож — `tests/board-rules.mjs`).
+await p.evaluate(() => document.querySelector('.brules-ok')?.click());
+await p.waitForTimeout(400);
 
 const openAd = async id => {
   const hit = await p.evaluate(pid => {
