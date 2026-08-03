@@ -336,7 +336,7 @@
 .hm-tile--accent .hm-tile-lab,
 .hm-tile--accent .hm-tile-sub { color: rgba(255,255,255,0.78); }
 .hm-tile--accent .hm-tile-big { color: #fff; }
-.hm-tile--accent:active { background: var(--red-dark); }
+.hm-tile--accent:active { background: var(--brand-grad-press); }
 
 /* ── СТРІЧКА (rail) ──────────────────────────────────────────────────────────
  * Горизонтальний ряд карток. Виходить за поле `.hm-body` від'ємним полем і
