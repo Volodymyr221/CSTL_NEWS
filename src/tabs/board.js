@@ -158,6 +158,10 @@ function renderContactBar(p) {
 // Іконки модалки оголошення (02.08). Прості контурні, у стилі решти застосунку.
 const BACK_ICON_SVG   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const REPORT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15V4h16l-3 4 3 4H4"/><path d="M4 22V4"/></svg>';
+// ⚠️ Стрілка «›» була ТЕКСТОВИМ символом — і це видно було на скріні: вона тонша за
+// решту знаків екрана і сидить не по центру рядка, бо це гліф шрифту, а не іконка.
+// Векторна стрілка тієї самої товщини, що й «назад», — та сама мова на всій сторінці.
+const CHEVRON_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
 const SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
 
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
@@ -326,10 +330,10 @@ function wireAdModalChrome(modal, close) {
   });
   // Фото автора підтягується прогресивно (літера → фото), як у чатах і обговореннях.
   hydrateAvatars(modal);
-  // «На платформі з …» + галочка довіри — окремим тихим запитом уже ПІСЛЯ показу.
+  // «Учасник CSTL LIFE з …» + галочка довіри — окремим тихим запитом уже ПІСЛЯ показу.
   // ⚠️ Свідомо не блокуємо відкриття модалки заради цього рядка: без нього картка
   // повноцінна, а чекати на мережу, щоб показати оголошення, — гірше за його брак.
-  // ⚠️ Рядок уже НЕ порожній — у розмітці стоїть «Учасник спільноти». Запит його лише
+  // ⚠️ Рядок уже НЕ порожній — у розмітці стоїть «Учасник CSTL LIFE». Запит його лише
   // УТОЧНЮЄ до дати. Тому картка не стрибає і виглядає однаково в кожному оголошенні,
   // хоч профіль приїхав, хоч ні (скарга Вови: «не в кожного пише інформація»).
   const sinceEl = modal.querySelector('[data-ad-since]');
@@ -339,7 +343,13 @@ function wireAdModalChrome(modal, close) {
       if (!pr || !sinceEl.isConnected) return;
       const dt = new Date(pr.created_at);
       if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
-        sinceEl.textContent = `На платформі з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+        // ⚠️ Хвіст «· ще N оголошень» дописуємо назад: він порахований з уже
+        // завантаженого списку і до профілю стосунку не має. Без цього мережева
+        // відповідь мовчки стирала б інформацію, яка вже була на екрані.
+        const tail = sinceEl.dataset.more && +sinceEl.dataset.more > 0
+          ? sinceEl.textContent.slice(sinceEl.textContent.indexOf(' · '))
+          : '';
+        sinceEl.textContent = `Учасник CSTL LIFE з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}${tail}`;
       }
       // 🔴 02.08 — ГАЛОЧКУ ПРИБРАНО (пряме рішення Вови: «Галочку не треба ставити
       // всім підряд, тільки офіційним публічним людям, які будуть визначатись вручну»).
@@ -680,9 +690,10 @@ function renderAdSpecs(_p) {
 // `profiles.created_at` через `get_public_profile`, і в кого рядка профілю немає (старе
 // оголошення, акаунт без заповненого профілю) — місце лишалось ПОРОЖНІМ. Тобто картка
 // виглядала по-різному у різних оголошеннях без жодної причини, зрозумілої читачеві.
-// Тепер підпис малюється ОДРАЗУ і завжди: «Учасник спільноти» — твердження, істинне для
+// Тепер підпис малюється ОДРАЗУ і завжди: «Учасник CSTL LIFE» — твердження, істинне для
 // будь-кого, хто має акаунт і подав оголошення. Прийде профіль із датою — рядок
-// уточниться до «На платформі з …». Дату поста як підміну реєстрації НЕ беремо: людина
+// уточниться до «Учасник CSTL LIFE з …» (формулювання Вови: назва продукту, а не
+// безлике «платформа»). Дату поста як підміну реєстрації НЕ беремо: людина
 // могла зареєструватись раніше, і тоді напис був би просто неправдою.
 // ⚠️ Для офіційних оголошень (без `owner_uid`) підпису немає — там автор це установа,
 // а не «учасник спільноти».
@@ -690,15 +701,33 @@ function renderAdAuthor(p) {
   const name = liveName(p.author, p.owner_uid, 'анонімно');
   const uid = p.owner_uid || '';
   const av = avatarCircle({ name, url: cachedAvatar(uid), cls: 'cm-ad-avatar', uid });
+  // Скільки ще оголошень у цієї людини. Рахуємо з уже завантаженого списку — нуль
+  // запитів, нуль очікування. Це єдина цифра про автора, яка справді допомагає
+  // покупцеві: «людина тут не вперше» — і водночас другий вхід у профіль.
+  const others = uid
+    ? allPosts.filter(x => x.owner_uid === uid && x.type === 'board' && String(x.id) !== String(p.id)).length
+    : 0;
   return `
-    <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ''}>
-      ${av}
-      <span class="cm-ad-author-info">
-        <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
-        ${uid ? '<span class="cm-ad-author-since" data-ad-since>Учасник спільноти</span>' : ''}
-      </span>
-      ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">›</span>' : ''}
-    </div>`;
+    <section class="cm-ad-seller">
+      <h4 class="cm-ad-seller-cap">Автор оголошення</h4>
+      <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ''}>
+        ${av}
+        <span class="cm-ad-author-info">
+          <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+          ${uid ? `<span class="cm-ad-author-since" data-ad-since data-more="${others}">Учасник CSTL LIFE${others ? ` · ще ${others} ${plural(others, 'оголошення', 'оголошення', 'оголошень')}` : ''}</span>` : ''}
+        </span>
+        ${uid ? `<span class="cm-ad-author-go" aria-hidden="true">${CHEVRON_ICON_SVG}</span>` : ''}
+      </div>
+    </section>`;
+}
+
+// Українська множина: 1 оголошення · 2-4 оголошення · 5+ оголошень.
+// ⚠️ Без цього виходило б «ще 5 оголошення» — дрібниця, яку помічають одразу.
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
 }
 
 // «Поскаржитися» — останнім тихим рядком, а не рівноправною кнопкою.

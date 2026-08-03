@@ -6126,6 +6126,7 @@
   }
   var BACK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
   var REPORT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15V4h16l-3 4 3 4H4"/><path d="M4 22V4"/></svg>';
+  var CHEVRON_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
   var SHIELD_ICON_SVG = '<svg class="cm-ad-safety-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
@@ -6214,7 +6215,8 @@
           return;
         const dt = new Date(pr.created_at);
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
-          sinceEl.textContent = `\u041D\u0430 \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u0456 \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+          const tail = sinceEl.dataset.more && +sinceEl.dataset.more > 0 ? sinceEl.textContent.slice(sinceEl.textContent.indexOf(" \xB7 ")) : "";
+          sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}${tail}`;
         }
       }).catch(() => {
       });
@@ -6355,15 +6357,27 @@
     const name = liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E");
     const uid = p.owner_uid || "";
     const av = avatarCircle({ name, url: cachedAvatar(uid), cls: "cm-ad-avatar", uid });
+    const others = uid ? allPosts.filter((x) => x.owner_uid === uid && x.type === "board" && String(x.id) !== String(p.id)).length : 0;
     return `
-    <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ""}>
-      ${av}
-      <span class="cm-ad-author-info">
-        <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
-        ${uid ? '<span class="cm-ad-author-since" data-ad-since>\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438</span>' : ""}
-      </span>
-      ${uid ? '<span class="cm-ad-author-go" aria-hidden="true">\u203A</span>' : ""}
-    </div>`;
+    <section class="cm-ad-seller">
+      <h4 class="cm-ad-seller-cap">\u0410\u0432\u0442\u043E\u0440 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h4>
+      <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ""}>
+        ${av}
+        <span class="cm-ad-author-info">
+          <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+          ${uid ? `<span class="cm-ad-author-since" data-ad-since data-more="${others}">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE${others ? ` \xB7 \u0449\u0435 ${others} ${plural(others, "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C")}` : ""}</span>` : ""}
+        </span>
+        ${uid ? `<span class="cm-ad-author-go" aria-hidden="true">${CHEVRON_ICON_SVG}</span>` : ""}
+      </div>
+    </section>`;
+  }
+  function plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11)
+      return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
+      return few;
+    return many;
   }
   function renderAdReport() {
     return `
