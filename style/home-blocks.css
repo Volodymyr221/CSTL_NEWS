@@ -466,3 +466,100 @@
 .hm-ad-meta > span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
 .hm-ad-meta svg { flex: 0 0 auto; }
 .hm-ad-time { margin-left: auto; flex: 0 0 auto; }
+
+/* ═══ ТЕЛЕФОНИ ════════════════════════════════════════════════════════════════
+ * Три екстрені завжди на видноті + розкриття «Усі телефони громади».
+ * ГЕОМЕТРІЯ: сітка 3 колонки по 1fr із gap 8px у картці з padding 12px →
+ * на 390px екрані плитка виходить (390 − 28 поля − 24 padding − 16 gap) / 3 ≈ 107px.
+ * Це вистачає на «Швидка допомога» у два рядки і номер під ним.
+ *
+ * 🔴 ЧОМУ <details>, А НЕ ВЛАСНИЙ ПЕРЕМИКАЧ: працює без JS, дає клавіатуру і
+ * читач екрана безкоштовно, і не тримає стану в модулі — а стан у модулі тут
+ * злітав би, бо `initCommunity()` перебудовує #cm-content цілком.
+ */
+.hm-tels { padding: 12px; }
+
+.hm-tel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.hm-tel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  min-height: 76px;
+  justify-content: center;
+  border-radius: var(--hm-r-in);
+  background: var(--hm-press);
+  text-decoration: none;
+  text-align: center;
+}
+.hm-tel:active { opacity: 0.7; }
+.hm-tel-ic { display: inline-flex; color: var(--hm-accent); }
+.hm-tel-ic svg { width: 18px; height: 18px; }
+.hm-tel-name {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--hm-ink-body);
+}
+.hm-tel-num {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--hm-ink);
+}
+
+/* Розкриття. Тап-ціль рядка 44px (Apple HIG) — тут вона справжня, а не через
+   невидиме розширення: рядок і так на всю ширину картки. */
+.hm-tel-more { margin-top: 10px; }
+.hm-tel-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 2px;
+  font-size: var(--hm-t-body);
+  font-weight: 700;
+  color: var(--hm-accent);
+  cursor: pointer;
+  list-style: none;
+}
+.hm-tel-more > summary::-webkit-details-marker { display: none; }
+/* Стрілка-шеврон малюється CSS: власний трикутник браузера виглядає по-різному
+   в Safari і Chrome, а тут поруч уже є шеврони посилань секцій. */
+.hm-tel-more > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.2s var(--hm-ease);
+}
+.hm-tel-more[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.hm-tel-count {
+  padding: 1px 7px;
+  border-radius: var(--hm-r-pill);
+  background: var(--hm-accent-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+.hm-tel-rows { display: flex; flex-direction: column; }
+.hm-tel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 2px;
+  text-decoration: none;
+  border-top: 1px solid var(--hm-line);
+}
+.hm-tel-row:active { background: var(--hm-press); }
+.hm-tel-row-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hm-tel-row .hm-tel-name { font-size: var(--hm-t-body); text-align: left; }
+.hm-tel-row .hm-tel-num  { font-size: var(--hm-t-meta); font-weight: 700; color: var(--hm-ink-mute); }

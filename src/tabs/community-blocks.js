@@ -977,7 +977,7 @@ export async function renderContactsBlock() {
     const list = data.contacts || [];
 
     if (!list.length) {
-      el.innerHTML = '<div class="cm-block-empty">Контактів немає</div>';
+      el.innerHTML = '<div class="hm-empty">Контактів немає</div>';
       return;
     }
 
@@ -994,43 +994,49 @@ export async function renderContactsBlock() {
     const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
     emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
-    // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
-    const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">Місцеві</div>
-        <div class="cm-contact-rows">
-          ${local.map(c => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    // 🔴 03.08 — ДОВІДНИК ЗГОРНУТО (потік /byyou, діагноз 3 аудиту).
+    //
+    // Було: 420px = 57.5% видимої зони на СТАТИЧНИЙ телефонний довідник —
+    // більше, ніж діставалось оголошенням і подіям разом. Причина не в тому,
+    // що контакти зайві: вони потрібні кілька разів на рік, а місце займали
+    // щодня.
+    //
+    // Стало: три екстрені номери завжди на видноті (101 · 102 · 103 — саме те,
+    // що набирають не думаючи), решта — за кнопкою «Усі телефони».
+    // ⚠️ Розкриття робить <details>, а не JS: він працює без скриптів, уміє
+    // клавіатуру і читач екрана з коробки, і не потребує стану в модулі, який
+    // злітав би на кожному перерендері `#cm-content`.
+    const chipHtml = c => `
+      <a class="hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+        <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+      </a>`;
 
-    // ── ЕКСТРЕНІ (внизу) — компактна сітка маленьких плиток (3 в ряд) ──────────
-    const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">Екстрені</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map(c => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    const rowHtml = c => `
+      <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-row-text">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
 
-    el.innerHTML = localHtml + emergencyHtml;
+    // Три перші екстрені видно завжди; усе інше — під розкриттям.
+    const quick = emergency.slice(0, 3);
+    const rest  = [...local, ...emergency.slice(3)];
+
+    el.innerHTML = `
+      <div class="hm-card hm-tels">
+        <div class="hm-tel-grid">${quick.map(chipHtml).join('')}</div>
+        ${rest.length ? `
+          <details class="hm-tel-more">
+            <summary>Усі телефони громади<span class="hm-tel-count">${rest.length}</span></summary>
+            <div class="hm-tel-rows">${rest.map(rowHtml).join('')}</div>
+          </details>` : ''}
+      </div>`;
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
+    el.innerHTML = '<div class="hm-error">Контакти недоступні</div>';
   }
 }
 

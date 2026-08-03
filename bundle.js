@@ -11263,7 +11263,7 @@ ${ev.description || ""}`
       const data = await res.json();
       const list = data.contacts || [];
       if (!list.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
       const telOf = (p) => p.replace(/[^\d+]/g, "");
@@ -11275,39 +11275,33 @@ ${ev.description || ""}`
         return i === -1 ? 99 : i;
       };
       emergency.sort((a, b) => emergRank(a) - emergRank(b));
-      const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
-        <div class="cm-contact-rows">
-          ${local.map((c) => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map((c) => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      el.innerHTML = localHtml + emergencyHtml;
+      const chipHtml = (c) => `
+      <a class="hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+        <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+      </a>`;
+      const rowHtml = (c) => `
+      <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-row-text">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
+      const quick = emergency.slice(0, 3);
+      const rest = [...local, ...emergency.slice(3)];
+      el.innerHTML = `
+      <div class="hm-card hm-tels">
+        <div class="hm-tel-grid">${quick.map(chipHtml).join("")}</div>
+        ${rest.length ? `
+          <details class="hm-tel-more">
+            <summary>\u0423\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438<span class="hm-tel-count">${rest.length}</span></summary>
+            <div class="hm-tel-rows">${rest.map(rowHtml).join("")}</div>
+          </details>` : ""}
+      </div>`;
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      el.innerHTML = '<div class="hm-error">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
