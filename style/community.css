@@ -4342,7 +4342,7 @@ textarea.cm-board-input.bm-invalid {
   background:
     radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),          /* віньєтка по контуру */
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%), /* глянець згори */
-    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);                          /* винно-багряний → затемнений низ */
+    var(--brand-grad);   /* 04.08: єдина брендова поверхня — див. `--brand-grad` у base.css */                          /* винно-багряний → затемнений низ */
   border: 1px solid rgba(0, 0, 0, 0.35);
   border-radius: 18px;
   box-shadow:
@@ -4884,7 +4884,7 @@ textarea.cm-board-input.bm-invalid {
   background:
     radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%),
-    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);
+    var(--brand-grad);   /* 04.08: єдина брендова поверхня — див. `--brand-grad` у base.css */
   border-radius: 0 0 18px 18px;
 }
 #board-content .bd-hero {

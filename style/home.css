@@ -332,7 +332,7 @@
   white-space: nowrap;
 }
 /* Акцентна плитка — рівно для того, що справді зараз важливе. */
-.hm-tile--accent { background: var(--hm-accent); border-color: var(--hm-accent); }
+.hm-tile--accent { background: var(--brand-grad-sm); border-color: transparent; }
 .hm-tile--accent .hm-tile-lab,
 .hm-tile--accent .hm-tile-sub { color: rgba(255,255,255,0.78); }
 .hm-tile--accent .hm-tile-big { color: #fff; }
