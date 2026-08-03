@@ -1,555 +1,378 @@
-/* ===== HOME BLOCKS — блоки головного екрана «Громада» (03.08.2026) ===========
+/* ===== HOME BLOCKS — блоки головного екрана «ПУЛЬС» (03.08.2026) =============
  *
- * Тут — ФОРМА конкретних блоків головної. Токени, примітиви (картка, капсула,
- * секція, стани, поява) живуть у `style/home.css` і сюди лише приходять.
- * Розділення таке саме, як у `style/news-card.css`: форма в одному місці,
- * кольори-токени задає екран.
+ * Тут ФОРМА конкретних блоків. Токени і примітиви (плитка, бенто, стрічка,
+ * стани) живуть у `style/home.css`.
+ *
+ * 🔴 ЦЕ ДРУГИЙ ЗАХІД. Перший (варіант 2, PR #757) Вова відхилив словами:
+ * «Ти змінив окремі блоки, але не переосмислив сторінку… все ще виглядає як
+ * класичний список карток із 2021 року». Тодішній файл описував рівно це:
+ * шапку-банер 200px і кілька однакових білих карток на всю ширину.
+ * Точка відкату до нього — гілка `backup/community-v2-cards-20260803`.
  *
  * Розбір «чому саме так» — `_ai-tools/AUDIT_GROMADA_2026-08.md`.
  */
 
-/* ═══ КОНТЕЙНЕР ЕКРАНА ════════════════════════════════════════════════════════
- * Було: `padding: 6px 14px 0` + `gap: 14px` на самому контейнері — тобто ВСІ
- * блоки, включно з фото на всю ширину, жили в 14px рамці й фото доводилось
- * витягувати від'ємними полями. Тепер поле дає `.hm-body`, а шапка від краю
- * до краю — просто тому, що вона поза цим полем.
- */
-#cm-content {
-  padding: 0;
-  gap: 0;
-}
+#cm-content { padding: 0; gap: 0; }
 
-/* ═══ ШАПКА ═══════════════════════════════════════════════════════════════════
- * ГЕОМЕТРІЯ (описую наперед — правило «CSS/layout описати перед пушем»):
- * висота 200px фіксована; фото `position:absolute; inset:0` тягнеться на всю
- * площу і НЕ бере участі у вимірюванні (той самий прийом, що врятував картку
- * Дошки 03.08 — там кадр 1200×1600 диктував висоту картки).
- * Усередині — колонка з `justify-content: space-between` і полем 12px/14px:
- * рядок дати зверху, привітання посередині, погода+підпис знизу.
- * Тобто 200 − 12 − 12 = 176px на три рядки, які самі розходяться по краях.
- *
- * 🔴 ЧОМУ 200, А НЕ 560: заміряно, що фото 560px = 76.6% видимої зони, і перша
- * інформація починалась на 662px — нижче першого екрана. 200px лишають фото
- * впізнаваним (костел читається), але звільняють ~360px під зміст.
+/* ═══ РЯДОК СТАНУ ═════════════════════════════════════════════════════════════
+ * 56px замість шапки-банера на 200px. Слова Вови: «Не використовуй великі
+ * декоративні банери, які займають половину екрана».
+ * ГЕОМЕТРІЯ: аватар 34px · привітання (розтягується) · погода · дата.
+ * Жодного декоративного пікселя: кожен елемент рядка щось повідомляє або
+ * кудись веде.
  */
-.hm-top {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-  border-radius: 0 0 22px 22px;
-  background: #2A2520;          /* поки фото не завантажилось — теплий темний, не білий спалах */
-  isolation: isolate;
-}
-.hm-top-photo { position: absolute; inset: 0; }
-.hm-top-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 55%;   /* зсув донизу (Рома 09.07): показати НИЗ костелу */
-  display: block;
-  opacity: 0;
-  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.hm-top-img.active { opacity: 1; }
-
-/* Затемнення. ДВІ смуги, а не рівна плита: угорі під дату, внизу під привітання
-   й погоду. Рівна плита на 45% зробила б з фото сірий прямокутник — сенс
-   лишати фото тоді зникає. Середина майже чиста — саме там купол костелу. */
-.hm-top-shade {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.10) 34%,
-                            rgba(0,0,0,0.16) 52%, rgba(0,0,0,0.62) 100%);
-}
-.hm-top-in {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--hm-edge) 12px;
-}
-.hm-top-row {
+.hm-status {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
+  padding: 10px var(--hm-edge) 8px;
+  min-height: 56px;
 }
-.hm-top-date {
-  font-size: var(--hm-t-meta);
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-}
-/* Кнопка кабінету: видимий кружечок 36px, тап-ціль 44px через невидиме
-   розширення (Apple HIG). Той самий прийом, що на круглих кнопках сторінки
-   оголошення 02.08 — маленька кнопка, у яку не треба цілитись. */
-.hm-top-acc {
+.hm-status-acc {
   position: relative;
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: var(--hm-r-pill);
-  background: rgba(255, 255, 255, 0.20);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  color: #fff;
+  background: var(--hm-card);
+  box-shadow: var(--hm-shadow);
+  color: var(--hm-ink-body);
   cursor: pointer;
-  overflow: hidden;             /* фото профілю всередині — по колу */
+  overflow: hidden;             /* фото профілю — по колу */
 }
-.hm-top-acc::after { content: ''; position: absolute; inset: -4px; }
-.hm-top-acc img { width: 100%; height: 100%; object-fit: cover; }
+/* Невидиме розширення тап-цілі до 44px (Apple HIG): видимий кружечок лишається
+   маленьким, а палець влучає. Той самий прийом, що на сторінці оголошення. */
+.hm-status-acc::after { content: ''; position: absolute; inset: -5px; }
+.hm-status-acc img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Привітання — ЄДИНИЙ великий текст екрана. Кегль підбирає JS (`fitGreeting`,
-   рішення Вови 15.07: один рядок завжди), тому тут лише стеля і nowrap. */
+/* Привітання більше НЕ герой екрана: у варіанті 2 це був білий текст 27px на
+   фото. Тепер це рядок стану — кегль підбирає JS (`fitGreeting`), стеля нижча. */
 .hm-greet {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  font-size: var(--hm-t-greet);
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.4px;
-  color: #fff;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  color: var(--hm-ink);
   white-space: nowrap;
   overflow: hidden;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
-.hm-top-foot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 30px;
+.hm-status-date {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hm-ink-mute);
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-/* ── ПОГОДА в шапці ───────────────────────────────────────────────────────────
- * Скляна капсула на фото: іконка · градуси · місто. Тап → аркуш із прогнозом
- * на 7 днів і графіками по годинах (нічого з блока не втрачено, переїхала лише
- * адреса). Висота 30px при тап-цілі 44px — розширення невидиме, як у кнопки
- * кабінету поруч.
- * ⚠️ `hidden` знімає JS: поки погоди немає, капсули НЕ існує. Порожня
- * «погода недоступна» у шапці зайняла б місце і не сказала б нічого.
- */
+/* Погода в рядку стану: капсула, тап → аркуш прогнозу на 7 днів і графіки
+   по годинах. ⚠️ `hidden` знімає JS — поки погоди немає, капсули НЕ існує. */
 .hm-wx {
   position: relative;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 11px;
-  border: 0;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--hm-line);
   border-radius: var(--hm-r-pill);
-  background: rgba(255, 255, 255, 0.20);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  color: #fff;
-  font-size: var(--hm-t-meta);
+  background: var(--hm-card);
+  color: var(--hm-ink);
+  font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .hm-wx[hidden] { display: none; }
-.hm-wx::after { content: ''; position: absolute; inset: -7px -6px; }
-.hm-wx:active { background: rgba(255, 255, 255, 0.32); }
-.hm-wx b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
-.hm-wx-ic { font-size: 15px; line-height: 1; }
+.hm-wx::after { content: ''; position: absolute; inset: -8px -6px; }
+.hm-wx:active { background: var(--hm-press); }
+.hm-wx b { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; }
+.hm-wx-ic { font-size: 13px; line-height: 1; }
 .hm-wx-ic .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
-.hm-wx-city { opacity: 0.85; }
-
-/* Рядок 7 днів усередині аркуша погоди: той самий `.cm-fc-day`, лише відступ
-   під ним — бо тепер під рядком одразу графіки, а не край блока. */
-.app-modal--weather .wx-days { border-top: 0; padding-top: 0; margin-bottom: 4px; }
-/* Підпис фото (рішення Вови 20.07 «підпис = що зображено») — місце змінилось,
-   рішення лишилось. Дрібно, курсивом, у куті: це підпис, а не назва блоку. */
-.hm-top-cap {
-  /* margin-left:auto, а не самий лише text-align: поки погоди немає (перший кадр
-     або помилка мережі) підпис лишається ЄДИНИМ елементом рядка, і
-     `space-between` притиснув би його ВЛІВО, під привітання. Заміряно скріншотом. */
-  margin-left: auto;
-  font-size: 10.5px;
-  font-style: italic;
-  line-height: 1.3;
-  text-align: right;
-  color: rgba(255, 255, 255, 0.72);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  max-width: 52%;
-}
+/* Місто в рядку стану ховаємо: воно завжди «Олика», а місце коштує дорого. */
+.hm-wx-city { display: none; }
 
 /* ═══ ТІЛО ════════════════════════════════════════════════════════════════════ */
 
 .hm-body {
   display: flex;
   flex-direction: column;
-  gap: var(--hm-gap-sec);
+  gap: 18px;
   padding: 0 var(--hm-edge) 26px;
 }
 
 /* ═══ «ШО В СЕЛІ?» ════════════════════════════════════════════════════════════
- * Голос Вови, а не службовий заголовок. Було: липка панель 75px, що накривала
- * картки на кожному скролі (діагноз 5 аудиту). Стало: звичайний блок ~54px,
- * який просто прокручується разом з усім. Нічого не накриває — нічого й не
- * тримає під собою.
+ * Голос Вови. У варіанті 2 це був блок 51px по центру на всю ширину — рівно та
+ * форма, яку Вова назвав 2021-м. Тепер дрібна мітка зліва: назва лишилась
+ * (прибирати не можна — на Дошці це вже відкочували 01.08), місця майже не їсть.
  */
-.hm-hello {
-  padding: 16px 0 0;
-  text-align: center;
-}
-.hm-hello-t {
-  margin: 0;
-  font-size: 16px;
+.hm-kicker {
+  margin: 2px 0 -8px 2px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 3px;
-  color: var(--hm-ink);
+  letter-spacing: 2.4px;
+  color: var(--hm-ink-mute);
 }
-.hm-hello-s {
-  margin: 3px 0 0;
-  font-size: var(--hm-t-meta);
-  font-weight: 600;
-  letter-spacing: 0.4px;
+
+/* ═══ ГОЛОВНА ПЛИТКА ══════════════════════════════════════════════════════════
+ * Найбільший елемент екрана — і єдиний, якому дозволено бути великим.
+ * ГЕОМЕТРІЯ: `min-height: 148px` (196px із фото), вміст притиснутий донизу
+ * (`justify-content: flex-end`) — тому плитка з фото і без фото читається як
+ * ОДНА конструкція, а не два різні блоки. Це прямий урок сторінки оголошення
+ * від 02.08, де гілкування «є фото / нема фото» дало зламаний екран.
+ *
+ * 🔴 Це СЛОТ: що в ньому — вирішує пріоритет дня (`src/tabs/home-hero.js`),
+ * а не верстка. У неділю тут може бути подія, в понеділок новина, під час
+ * збору — збір. Саме це робить екран персональним, а не порядок блоків під ним.
+ */
+.hm-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 148px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--hm-card);
+  border: 1px solid var(--hm-line);
+  box-shadow: var(--hm-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-hero--photo { min-height: 196px; border-color: transparent; }
+.hm-hero-photo {
+  position: absolute;
+  inset: 0;
+  background-color: #2A2520;    /* поки фото не приїхало — теплий темний, не спалах */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+/* Затемнення лише знизу: верх кадру лишається чистим, інакше фото стає сірою
+   плитою і сенс його показувати зникає. */
+.hm-hero-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.20) 42%, rgba(0,0,0,0.76) 100%);
+}
+.hm-hero-in { position: relative; }
+.hm-hero-lab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
   color: var(--hm-ink-mute);
 }
-
-/* ═══ СМУГА «ЗАРАЗ» ═══════════════════════════════════════════════════════════
- * Горизонтальний ряд капсул. Виходить за поле `.hm-body` від'ємним полем і
- * повертає його своїм padding — щоб капсула, що не влізла, обрізалась КРАЄМ
- * ЕКРАНА, а не краєм поля (інакше видно «стінку» за 14px до краю і незрозуміло,
- * що ряд гортається).
- * ⚠️ Це горизонтальний скролер — при появі нових треба тримати його в списку
- * `tests/drift.mjs` (сторож бічного зсуву сторінки).
- */
-.hm-now {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin-inline: calc(var(--hm-edge) * -1);
-  padding: 2px var(--hm-edge);
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-}
-.hm-now::-webkit-scrollbar { display: none; }
-.hm-now > * { scroll-snap-align: start; }
-.hm-now[hidden] { display: none; }
-
-/* ═══ ЗБІР ════════════════════════════════════════════════════════════════════
- * Порожній контейнер не малює НІЧОГО — ні рамки, ні відступу. Саме тому
- * `:empty { display: none }`, а не «сховати вміст»: інакше в ритмі секцій
- * лишалась би дірка 22px там, де активних зборів немає.
- *
- * 🔴 ЧОМУ БЛОК НЕ КРИЧИТЬ. Замовлення Вови було «добре помічався, але НЕ
- * виглядав як реклама» — а це дві вимоги, що тягнуть у різні боки. Розвʼязка:
- * помітність дає МІСЦЕ (другий блок на екрані, вище за новини), а не колір.
- * Тому картка тут — та сама біла поверхня, що в новин і оголошень; від решти
- * її відрізняє рівно одна деталь — вузька акцентна смуга ліворуч. Кольоровий
- * банер на всю ширину помічають один раз, а далі прокручують не читаючи.
- */
-.hm-fund {
-  /* Смуга ліворуч — єдина «гучна» деталь блока. 3px: помітно боковим зором,
-     але не ділить картку навпіл, як робить 6-8px. */
-  border-left: 3px solid var(--hm-accent);
-}
-.hm-fund-in { padding: var(--hm-pad); }
-
-.hm-fund-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.hm-fund-mark {
-  flex: 0 0 auto;
-  display: inline-flex;
-  margin-top: 2px;              /* оптичне вирівнювання по першому рядку назви */
-  color: var(--hm-accent);
-}
-.hm-fund-mark svg { width: 17px; height: 17px; }
-.hm-fund-title {
+.hm-hero-lab svg { width: 13px; height: 13px; }
+.hm-hero-title {
   margin: 0;
-  font-size: var(--hm-t-lead);
+  font-size: 20px;
   font-weight: 800;
-  line-height: 1.28;
-  letter-spacing: -0.2px;
+  line-height: 1.24;
+  letter-spacing: -0.4px;
   color: var(--hm-ink);
-}
-/* Хто збирає — НЕ дрібний підпис під кнопкою, а другий рядок одразу під назвою.
-   Довіру дає імʼя організатора; ховати його в петит означало б будувати блок,
-   якому не можна вірити. */
-.hm-fund-org {
-  margin: 6px 0 0;
-  font-size: var(--hm-t-meta);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--hm-ink-body);
-}
-.hm-fund-ver { color: var(--hm-ink-mute); font-weight: 600; }
-.hm-fund-note {
-  margin: 7px 0 0;
-  font-size: var(--hm-t-body);
-  line-height: 1.4;
-  color: var(--hm-ink-body);
-}
-
-/* Числа — головний доказ. Тому зібране велике й темне, ціль і відсоток тихі. */
-.hm-fund-sums {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 12px;
-}
-.hm-fund-raised { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; color: var(--hm-ink); }
-.hm-fund-goal   { font-size: var(--hm-t-meta); font-weight: 600; color: var(--hm-ink-mute); }
-.hm-fund-pct    { margin-left: auto; font-size: var(--hm-t-meta); font-weight: 800; color: var(--hm-accent); }
-
-.hm-fund-bar {
-  margin-top: 7px;
-  height: 6px;
-  border-radius: var(--hm-r-pill);
-  background: var(--hm-press);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.hm-fund-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--hm-accent);
-}
-
-/* Кнопка НЕ на всю ширину: суцільна смуга-заклик — головна ознака рекламного
-   блока. Вміщена по вмісту кнопка читається як дія, а не як банер. */
-.hm-fund-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 13px;
-  padding: 0 18px;
-  min-height: 40px;
-  border-radius: var(--hm-r-pill);
-  background: var(--hm-accent);
-  color: #fff;
-  font-size: var(--hm-t-card);
-  font-weight: 700;
-  text-decoration: none;
-}
-.hm-fund-cta:active { background: var(--red-dark); }
-
-/* Межа відповідальності — той самий принцип, що в блоці безпеки Дошки 03.08:
-   платформа прямо каже, чим вона НЕ є. */
-.hm-fund-fine {
-  margin: 9px 0 0;
-  font-size: 11px;
+.hm-hero-sub {
+  margin: 6px 0 0;
+  font-size: var(--hm-t-body);
   line-height: 1.35;
-  color: var(--hm-ink-mute);
-}
-.hm-fund-wrap:empty { display: none; }
-
-/* ═══ ПОДІЇ ═══════════════════════════════════════════════════════════════════
- * Рядок: дата-стовпчик 46px ліворуч · відлік · назва · час і місце.
- * ГЕОМЕТРІЯ: картка = padding 12px + вміст; дата фіксована 46px, решта
- * `min-width: 0` (інакше довга назва розпирає рядок і локація їде за край).
- *
- * 🔴 ЧОМУ НЕ КАРУСЕЛЬ. Було: одна подія у вікні + крапки 8px + авто-ротація 6с.
- * З п'яти найближчих подій людина бачила ОДНУ, а решту діставала або чеканням,
- * або влучанням у крапку. Три статичні рядки коштують 213px і показують утричі
- * більше — при тому що прибирають цілий таймер.
- */
-.hm-ev-list { display: flex; flex-direction: column; gap: var(--hm-gap-card); }
-
-.hm-ev {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-}
-.hm-ev-date {
-  flex: 0 0 46px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 0;
-  border-radius: var(--hm-r-in);
-  background: var(--hm-accent-soft);
-  color: var(--hm-accent);
-}
-.hm-ev-d { font-size: 19px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
-.hm-ev-m { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-
-.hm-ev-body { min-width: 0; flex: 1; }
-.hm-ev-when {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.7px;
-  color: var(--hm-ink-mute);
-}
-/* «Сьогодні» і «завтра» — єдиний випадок, коли відлік має колір. Далі за шкалою
-   («через 3 тижні») колір був би тривогою без приводу. */
-.hm-ev-when--soon { color: var(--hm-accent); }
-.hm-ev-title {
-  margin: 3px 0 0;
-  font-size: var(--hm-t-card);
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--hm-ink);
+  color: var(--hm-ink-body);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.hm-ev-meta {
-  margin: 4px 0 0;
-  font-size: var(--hm-t-meta);
+/* На фото світлішає ЛИШЕ колір тексту: розміри, відступи й порядок ті самі,
+   тож плитка з фото і без читається як одна річ. */
+.hm-hero--photo .hm-hero-lab { color: rgba(255,255,255,0.82); }
+.hm-hero--photo .hm-hero-title { color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,0.45); }
+.hm-hero--photo .hm-hero-sub { color: rgba(255,255,255,0.86); }
+
+/* Акцентна головна плитка — лише для збору. Той випадок, коли колір несе сенс
+   «зараз потрібна твоя дія», а не прикрашає. Друга акцентна на екрані —
+   плитка непрочитаних; більше двох не буває (правило в `home.css`). */
+.hm-hero--accent { background: var(--hm-accent); border-color: var(--hm-accent); }
+.hm-hero--accent .hm-hero-lab { color: rgba(255,255,255,0.78); }
+.hm-hero--accent .hm-hero-title { color: #fff; }
+.hm-hero--accent .hm-hero-sub { color: rgba(255,255,255,0.84); }
+
+.hm-hero-bar {
+  margin-top: 11px;
+  height: 5px;
+  border-radius: var(--hm-r-pill);
+  background: rgba(255,255,255,0.28);
+  overflow: hidden;
+}
+.hm-hero-bar > span { display: block; height: 100%; border-radius: inherit; background: #fff; }
+.hm-hero-pct {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.86);
+}
+/* Кнопка НЕ на всю ширину: суцільна смуга-заклик — головна ознака рекламного
+   блока, а збір має виглядати як факт громади, не як банер. */
+.hm-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin-top: 11px;
+  padding: 0 16px;
+  min-height: 40px;
+  border-radius: var(--hm-r-pill);
+  background: #fff;
+  color: var(--hm-accent);
+  font-size: var(--hm-t-card);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* ═══ ПЛИТКА ДОШКИ (2×1) ══════════════════════════════════════════════════════
+ * Число + мініатюри останніх фото. Мініатюри — доказ, що там ЖИВІ речі, а не
+ * лічильник заради лічильника.
+ */
+.hm-tile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hm-tile-thumbs { display: flex; align-items: center; }
+.hm-tile-thumbs i {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin-left: -8px;          /* мініатюри налягають одна на одну — щільний ряд */
+  border-radius: 9px;
+  border: 2px solid var(--hm-card);
+  background: var(--hm-press) center/cover no-repeat;
+}
+.hm-tile-thumbs i:first-child { margin-left: 0; }
+.hm-tile-thumbs b {
+  margin-left: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--hm-ink-mute);
+}
+
+/* ═══ ПЛИТКА ПОДІЇ у стрічці «ПОРУЧ» ══════════════════════════════════════════
+ * Питання до цього блока одне — «що поруч і коли», тому плитка починається з
+ * великого числа дня, а не з назви.
+ * ГЕОМЕТРІЯ: 132px завширшки — на 390px екрані видно 2.5 плитки, тобто ряд
+ * явно «продовжується» і жест напрошується сам.
+ */
+.hm-evt {
+  width: 132px;
+  padding: 11px;
+  border-radius: var(--hm-r-card);
+  background: var(--hm-card);
+  border: 1px solid var(--hm-line);
+  box-shadow: var(--hm-shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-evt:active { background: var(--hm-press); }
+.hm-evt-date { display: flex; align-items: baseline; gap: 4px; }
+.hm-evt-d { font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: -0.8px; color: var(--hm-ink); }
+.hm-evt-m { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--hm-ink-mute); }
+/* Найближче — акцентом. Далі за шкалою колір був би тривогою без приводу. */
+.hm-evt--soon .hm-evt-d,
+.hm-evt--soon .hm-evt-m { color: var(--hm-accent); }
+.hm-evt-title {
+  margin: 7px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.28;
+  color: var(--hm-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hm-evt-meta {
+  margin: 5px 0 0;
+  font-size: 11px;
   color: var(--hm-ink-mute);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ═══ ОГОЛОШЕННЯ ══════════════════════════════════════════════════════════════
- * Та сама форма, що в списку самої Дошки після 01.08: фото ліворуч, категорія,
- * назва, локація і час. Людина має впізнати оголошення, а не вчити другий
- * вигляд того самого об'єкта.
- * ГЕОМЕТРІЯ: фото 64×64 фіксовано, права колонка `min-width: 0`.
+/* ═══ ТЕЛЕФОНИ — тихий підвал ═════════════════════════════════════════════════
+ * Шлях за день: 420px (57.5% екрана) → 195px → рядок ~64px.
+ * 101 · 102 · 103 набирають не думаючи; решта — за розкриттям.
  */
-.hm-ads { display: flex; flex-direction: column; gap: var(--hm-gap-card); }
-
-.hm-ad {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-}
-.hm-ad-photo {
-  flex: 0 0 64px;
-  height: 64px;
-  border-radius: var(--hm-r-in);
-  background: var(--hm-press) center/cover no-repeat;
-}
-/* Монограма замість порожнього квадрата: оголошення без фото має виглядати як
-   оголошення без фото, а не як помилка завантаження. */
-.hm-ad-photo--mono {
-  display: grid;
-  place-items: center;
-  background: var(--hm-accent-soft);
-  color: var(--hm-accent);
-  font-size: 24px;
-  font-weight: 800;
-}
-.hm-ad-body { min-width: 0; flex: 1; }
-.hm-ad-title {
-  margin: 4px 0 0;
-  font-size: var(--hm-t-card);
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--hm-ink);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.hm-ad-meta {
+.hm-tels > summary {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 5px 0 0;
-  font-size: var(--hm-t-meta);
-  color: var(--hm-ink-mute);
-  min-width: 0;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
 }
-.hm-ad-meta > span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
-.hm-ad-meta svg { flex: 0 0 auto; }
-.hm-ad-time { margin-left: auto; flex: 0 0 auto; }
-
-/* ═══ ТЕЛЕФОНИ ════════════════════════════════════════════════════════════════
- * Три екстрені завжди на видноті + розкриття «Усі телефони громади».
- * ГЕОМЕТРІЯ: сітка 3 колонки по 1fr із gap 8px у картці з padding 12px →
- * на 390px екрані плитка виходить (390 − 28 поля − 24 padding − 16 gap) / 3 ≈ 107px.
- * Це вистачає на «Швидка допомога» у два рядки і номер під ним.
- *
- * 🔴 ЧОМУ <details>, А НЕ ВЛАСНИЙ ПЕРЕМИКАЧ: працює без JS, дає клавіатуру і
- * читач екрана безкоштовно, і не тримає стану в модулі — а стан у модулі тут
- * злітав би, бо `initCommunity()` перебудовує #cm-content цілком.
- */
-.hm-tels { padding: 12px; }
-
-.hm-tel-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.hm-tel {
-  display: flex;
-  flex-direction: column;
+.hm-tels > summary::-webkit-details-marker { display: none; }
+.hm-tels-quick { display: flex; gap: 6px; }
+/* Тап-ціль 44px: видима капсула лишається 34px (три поспіль у рядок), а палець
+   влучає в невидиме розширення. Стенд зловив 34px — на око непомітно, для
+   екстреного номера ціна промаху висока. */
+.hm-tel-chip {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 10px 6px;
-  min-height: 76px;
   justify-content: center;
-  border-radius: var(--hm-r-in);
-  background: var(--hm-press);
-  text-decoration: none;
-  text-align: center;
-}
-.hm-tel:active { opacity: 0.7; }
-.hm-tel-ic { display: inline-flex; color: var(--hm-accent); }
-.hm-tel-ic svg { width: 18px; height: 18px; }
-.hm-tel-name {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--hm-ink-body);
-}
-.hm-tel-num {
+  min-width: 52px;
+  height: 34px;
+  border-radius: var(--hm-r-pill);
+  background: var(--hm-card);
+  border: 1px solid var(--hm-line);
+  color: var(--hm-ink);
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: -0.2px;
-  color: var(--hm-ink);
+  text-decoration: none;
 }
-
-/* Розкриття. Тап-ціль рядка 44px (Apple HIG) — тут вона справжня, а не через
-   невидиме розширення: рядок і так на всю ширину картки. */
-.hm-tel-more { margin-top: 10px; }
-.hm-tel-more > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 2px;
-  font-size: var(--hm-t-body);
+.hm-tel-chip::after { content: ''; position: absolute; inset: -5px -2px; }
+.hm-tel-chip:active { background: var(--hm-press); }
+.hm-tels-more {
+  margin-left: auto;
+  font-size: var(--hm-t-meta);
   font-weight: 700;
   color: var(--hm-accent);
-  cursor: pointer;
-  list-style: none;
+  white-space: nowrap;
 }
-.hm-tel-more > summary::-webkit-details-marker { display: none; }
-/* Стрілка-шеврон малюється CSS: власний трикутник браузера виглядає по-різному
-   в Safari і Chrome, а тут поруч уже є шеврони посилань секцій. */
-.hm-tel-more > summary::after {
+/* Стрілка малюється CSS: власний трикутник браузера виглядає по-різному в
+   Safari і Chrome, а поруч уже є шеврони посилань секцій. */
+.hm-tels-more::after {
   content: '';
-  width: 7px;
-  height: 7px;
-  margin-left: auto;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: rotate(45deg) translate(-2px, -2px);
   transition: transform 0.2s var(--hm-ease);
 }
-.hm-tel-more[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
-.hm-tel-count {
-  padding: 1px 7px;
-  border-radius: var(--hm-r-pill);
-  background: var(--hm-accent-soft);
-  font-size: 11px;
-  font-weight: 800;
-}
-.hm-tel-rows { display: flex; flex-direction: column; }
+.hm-tels[open] .hm-tels-more::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.hm-tel-rows { display: flex; flex-direction: column; margin-top: 6px; }
 .hm-tel-row {
   display: flex;
   align-items: center;
@@ -560,24 +383,19 @@
   border-top: 1px solid var(--hm-line);
 }
 .hm-tel-row:active { background: var(--hm-press); }
+.hm-tel-ic { display: inline-flex; color: var(--hm-accent); }
+.hm-tel-ic svg { width: 18px; height: 18px; }
 .hm-tel-row-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.hm-tel-row .hm-tel-name { font-size: var(--hm-t-body); text-align: left; }
-.hm-tel-row .hm-tel-num  { font-size: var(--hm-t-meta); font-weight: 700; color: var(--hm-ink-mute); }
+.hm-tel-name { font-size: var(--hm-t-body); font-weight: 600; color: var(--hm-ink-body); }
+.hm-tel-num  { font-size: var(--hm-t-meta); font-weight: 700; color: var(--hm-ink-mute); }
 
-/* ═══ КІСТЯК ЗАВАНТАЖЕННЯ ═════════════════════════════════════════════════════
- * Розміри навмисно збігаються зі справжніми картками: фото 64×64, рядки 13 і
- * 11px, той самий padding 10px і той самий gap між картками. Якби кістяк був
- * іншої висоти, поява даних смикала б сторінку — і він шкодив би більше, ніж
- * порожнє місце.
+/* ═══ КІСТЯК ══════════════════════════════════════════════════════════════════
+ * Розміри збігаються зі справжніми елементами — інакше поява даних смикне
+ * сторінку, і кістяк зашкодить більше, ніж порожнє місце.
  */
-.hm-skel-list { display: flex; flex-direction: column; gap: var(--hm-gap-card); }
-.hm-skel-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-}
-.hm-skel-ph { flex: 0 0 64px; height: 64px; }
-.hm-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.hm-skel-l1 { height: 13px; width: 82%; }
-.hm-skel-l2 { height: 11px; width: 54%; }
+.hm-skel-hero { height: 148px; border-radius: 20px; }
+.hm-skel-tile { flex: 0 0 auto; width: 244px; height: 210px; border-radius: 14px; }
+
+/* У вузькій (1×1) плитці Дошки мініатюри ховаємо: у 176px ряд «7 оголошень» +
+   чотири квадрати 34px не влазить, і число — головне — почало б стискатись. */
+.hm-tile:not(.hm-tile--wide) .hm-tile-thumbs { display: none; }

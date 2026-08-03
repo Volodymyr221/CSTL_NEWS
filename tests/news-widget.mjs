@@ -81,8 +81,11 @@ ok('🔴 у віджеті НЕМА вкладених скролерів', w.sc
 // Стеля 480px: заміряно 431px після переробки (було 567). Запас ~50px на інший
 // шрифт/масштаб iOS. Якщо колись знову підповзе до 567 — це повернення хвороби.
 ok('віджет не з\'їдає головний екран (< 480px)', w.h < 480, `${w.h}px = ${Math.round(w.h / VIEW * 1000) / 10}% видимої зони`);
-ok('у віджеті рівно 3 картки', w.cards === 3, `${w.cards}`);
-ok('картинок у віджеті не більше 3', w.imgs <= 3, `${w.imgs}`);
+// 🔄 03.08 («ПУЛЬС»): віджет став горизонтальною стрічкою, тож карток більше
+// трьох — але їх число обмежене стелею `CM_RAIL_MAX = 8`. Перевіряємо саме
+// стелю: за нею стрічка перестає бути «поглядом» і стає прихованим списком.
+ok('у стрічці не більше 8 карток', w.cards <= 8, `${w.cards}`);
+ok('картинок не більше, ніж карток', w.imgs <= w.cards, `${w.imgs} на ${w.cards}`);
 ok('фальшивого «LIVE» більше нема', !w.live);
 ok('чіпи і старий скролер прибрані', w.chips === 0, `залишків: ${w.chips}`);
 // 🔄 03.08: віджет став секцією головної, і входом у хаб є посилання
@@ -95,12 +98,19 @@ ok('є вхід «Усі новини»', w.hasAll);
 // Повертаємо віджету те, що прибрали (вкладений скролер) — перевірка МУСИТЬ упасти.
 const ctrl = await page.evaluate(`(() => {
   const count = ${COUNT_SCROLLERS};
+  // Підкидаємо у секцію справжній вертикальний скролер — саме той дефект, який
+  // 31.07 прибирали з віджета новин. Перевірка мусить його побачити, інакше вона
+  // не ловить нічого і зелений колір нічого не вартий.
+  // ⚠️ Ламати саму стрічку не годиться: у flex-ряду висота дітей тягнеться за
+  // контейнером, тож scrollHeight не перевищує clientHeight і «зламаний»
+  // варіант виглядає справним. Перша версія цього контролю на цьому й спіймалась.
   const n = document.querySelector('#hm-news');
-  const box = n.querySelector('.cm-news-top3');
-  box.style.maxHeight = '200px';
-  box.style.overflowY = 'auto';
+  const box = document.createElement('div');
+  box.style.cssText = 'height:80px;overflow-y:auto';
+  box.innerHTML = '<div style="height:400px"></div>';
+  n.appendChild(box);
   const found = count(n);
-  box.style.maxHeight = ''; box.style.overflowY = '';
+  box.remove();
   return { found, afterRestore: count(n).length };
 })()`);
 ok('🔴 КОНТРОЛЬ: на навмисно зламаному віджеті скролер ЗНАЙДЕНО',
@@ -108,7 +118,7 @@ ok('🔴 КОНТРОЛЬ: на навмисно зламаному віджет
 ok('КОНТРОЛЬ: після відкату скролерів знову 0', ctrl.afterRestore === 0);
 
 // ── 3. Хаб ──────────────────────────────────────────────────────────────────
-await page.locator('[data-cm-news-all]').click();
+await page.locator('[data-cm-news-all]').first().click();
 await page.waitForTimeout(800);
 
 const h = await page.evaluate(`(() => {
@@ -244,7 +254,7 @@ await page.evaluate(() => {
   if (b) b.click();
 });
 await page.waitForTimeout(500);
-await page.locator('[data-cm-news-all]').click();
+await page.locator('[data-cm-news-all]').first().click();
 await page.waitForTimeout(900);
 
 const look = await page.evaluate(() => {

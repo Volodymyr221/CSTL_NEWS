@@ -30,16 +30,14 @@ const out = await page.evaluate(v => {
   // що знайшовся. Інакше порівняння «було/стало» йшло б двома різними мірками —
   // а це рівно та помилка, через яку перевірка вже брехала сім разів.
   const pick = (...sels) => sels.reduce((found, s) => found || root.querySelector(s), null);
-  push('шапка/hero',      pick('.hm-top', '.cm-hero'));
-  push('greeting (зона)', pick('.cm-greeting-stick'));
-  push('ШО В СЕЛІ?',      pick('.hm-hello', '.cm-sec-head'));
-  push('смуга ЗАРАЗ',     pick('#hm-now:not([hidden])'));
-  push('ЗБІР',            pick('#hm-fund'));
+  push('рядок стану',     pick('.hm-status', '.hm-top', '.cm-hero'));
+  push('ГОЛОВНА ПЛИТКА',  pick('#hm-hero'));
+  push('ШО В СЕЛІ?',      pick('.hm-kicker', '.hm-hello', '.cm-sec-head'));
+  push('БЕНТО',           pick('#hm-bento:not([hidden])'));
   push('НОВИНИ',          pick('#hm-news', '#cm-news-board'));
   push('ПОДІЇ',           pick('#hm-events', '.cm-block--event'));
-  push('ДОШКА',           pick('#hm-board', '.cm-block--board'));
-  push('АВТОБУС',         pick('.cm-block--bus'));
-  push('ПОГОДА',          pick('.cm-block--weather'));
+  push('ДОШКА (плитка)',  pick('#hm-t-board:not([hidden])'));
+  push('АВТОБУС (плитка)',pick('#hm-t-bus:not([hidden])'));
   push('КОНТАКТИ',        pick('#hm-contacts', '#cm-contacts'));
 
   // вкладені скролери

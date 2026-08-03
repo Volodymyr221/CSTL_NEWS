@@ -1,7 +1,9 @@
 // src/tabs/community-blocks.js
 // Всі render-блоки головної вкладки «Громада» (винесено з community.js 13.05).
-// Експортовані: renderWeatherBlock, renderPowerBlock, renderBusBlock,
-//               renderBoardBlock, renderEventBlock, renderContactsBlock.
+// Експортовані: renderWeatherBlock (кнопка погоди в рядку стану + аркуш прогнозу),
+//               renderEventBlock (стрічка «Поруч»), renderContactsBlock (рядок телефонів),
+//               renderCommunityNews (стрічка «Що нового»), renderPowerBlock (легасі).
+// ⚠️ Автобус і Дошка переїхали в бенто-плитки — `src/tabs/home-bento.js`.
 //
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
@@ -43,19 +45,11 @@ function loadCmTracked(todayISO) {
   return [];
 }
 
-// Вкладка Автобуси змінила відстеження → одразу перемальовуємо віджет Громади
-// (якщо вкладка Громада зараз не в DOM — renderBusBlock тихо вийде на null).
-window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
-// Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
-onAuthChange(() => { renderBusBlock(); });
+// ⚠️ Підписки на зміну відстеження і вхід/вихід переїхали в `home-bento.js`
+// (`initHomeBento`) — разом із самою автобусною плиткою.
 
 // Віджет Дошки (повна переробка 13.07, рішення Вови): стрічка ПАР карток з
 // автопрокруткою. Слайд «Розмови» видалено — Обговорення мають власну вкладку.
-// Скільки оголошень на головній. Три — рівно стільки, скільки дає уявлення
-// «чим зараз живе дошка», не перетворюючи секцію на список. Було 16 у
-// горизонтальній стрічці, з яких одночасно видно дві.
-const BW_SHOWN = 3;
-
 // Найближчі події громади. Порожньо → найближчі свята (Г-16 fallback).
 // ⚠️ 03.08: авто-ротація і крапки прибрані разом із каруселлю — див. `renderEvList`.
 let _evItems = [];
@@ -513,298 +507,22 @@ export async function renderPowerBlock() {
   }
 }
 
-// ── Блок 3: Наступний автобус ────────────────────────────────────────────────
+// ⚠️ Блок «Наступний автобус» переїхав у бенто-плитку 1×1 (`home-bento.js`, 03.08).
+// Було: велика картка з картою маршруту, свайпом між рейсами і крапками-навігацією
+// на всю ширину екрана. Стало: плитка «Через 12 хв · Рівне», тап — той самий рейс
+// на вкладці Автобуси. Карта маршруту лишається там, де їй місце — на своїй вкладці.
 
-function busIsDayActive(days) {
-  const d = new Date().getDay();
-  if (days === 'щодня') return true;
-  if (days === 'пн-сб') return d >= 1 && d <= 6;
-  if (days === 'пн-пт') return d >= 1 && d <= 5;
-  return true;
-}
 
-// Маршрутна шкала з зупинками-крапками і маркером 🚌 на позиції автобуса.
-// Точна копія функції з buses.js — обидві використовують одні CSS-класи (.bhm-*).
-function renderBusRouteMap(route, timings) {
-  const stops    = route.stops;
-  const totalKm  = stops[stops.length - 1].km || 1;
-  const progress = (timings.progress * 100).toFixed(1);
-  const stopsHtml = stops.map(s => {
-    const pct = totalKm ? (s.km / totalKm) * 100 : 0;
-    const isCurrent = s.name === timings.currentStop;
-    return `<span class="bhm-stop${isCurrent ? ' bhm-stop--current' : ''}" style="left:${pct.toFixed(1)}%"></span>`;
-  }).join('');
-  return `
-    <div class="bus-hero-map" aria-hidden="true">
-      <div class="bhm-track">
-        <div class="bhm-fill" style="width:${progress}%"></div>
-        ${stopsHtml}
-        <span class="bhm-marker" style="left:${progress}%">🚌</span>
-      </div>
-      <div class="bhm-ends">
-        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
-        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
-      </div>
-    </div>
-  `;
-}
+// ⚠️ Віджет Дошки переїхав у бенто-плитку 2×1 (`src/tabs/home-bento.js`, 03.08).
+// Тут його більше немає: історія форм була корок зі стікерами й автопрокруткою →
+// три вертикальні рядки → плитка «19 оголошень» із мініатюрами останніх фото.
 
-export async function renderBusBlock() {
-  const el = document.getElementById('cm-bus-content');
-  if (!el) return;
-
-  try {
-    const res  = await fetch('./data/schedule.json');
-    const data = await res.json();
-
-    // Нова структура: data.days["2026-06-07"].routes
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
-
-    const dayRoutes = iso =>
-      (data.days?.[iso]?.routes) || (iso === todayISO ? data.routes : null) || [];
-    const depMins = r => scheduleGetStopMins(r, r.stops[0].name) || 0;
-
-    const entries = [];
-    const seen = new Set();
-    const add = (route, dateISO) => {
-      const key = dateISO + '|' + route.id;
-      if (seen.has(key)) return;
-      seen.add(key);
-      entries.push({ route, dateISO });
-    };
-
-    // 1) Відстежувані рейси (сьогодні + майбутні дні) — найвищий пріоритет.
-    //    Це дублює віджет відстеження з вкладки Автобуси у блок Громади.
-    for (const t of loadCmTracked(todayISO)) {
-      const r = dayRoutes(t.trackDate).find(x => x.id === t.routeId && x.status !== 'cancelled');
-      if (!r) continue;
-      if (t.trackDate === todayISO && getRouteState(r) === 'past') continue; // вже проїхав
-      add(r, t.trackDate);
-    }
-
-    // 2) Сьогоднішні активні: enroute + waiting у межах 90 хв
-    dayRoutes(todayISO)
-      .filter(r => {
-        if (r.status === 'cancelled') return false;
-        const state = getRouteState(r);
-        if (state === 'enroute') return true;
-        if (state === 'waiting') {
-          const t = getRouteTimings(r);
-          return t.minsToDeparture !== null && t.minsToDeparture <= 90;
-        }
-        return false;
-      })
-      .sort((a, b) => depMins(a) - depMins(b))
-      .forEach(r => add(r, todayISO));
-
-    // 3) Якщо для сьогодні нічого не зібрали — показуємо наступний сьогоднішній рейс
-    if (!entries.some(e => e.dateISO === todayISO)) {
-      const next = dayRoutes(todayISO)
-        .filter(r => r.status !== 'cancelled' && getRouteState(r) === 'waiting')
-        .sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
-      if (next) add(next, todayISO);
-    }
-
-    // 4) Сьогоднішні рейси закінчились і нічого не відстежується —
-    //    одразу показуємо найближчий завтрашній рейс (замість «рейсів більше немає»)
-    if (!entries.length) {
-      const tom = dayRoutes(tomorrowISO)
-        .filter(r => r.status !== 'cancelled')
-        .sort((a, b) => depMins(a) - depMins(b))[0];
-      if (tom) add(tom, tomorrowISO);
-    }
-
-    cmBusEntries = entries;
-
-    if (!cmBusEntries.length) {
-      el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
-      return;
-    }
-
-    if (cmBusIndex >= cmBusEntries.length) cmBusIndex = 0;
-    renderCmBusCard(el);
-  } catch {
-    el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
-  }
-}
-
-// Підпис над карткою для не-сьогоднішнього рейсу: «Завтра · 12 червня»
+// Назви місяців у родовому відмінку — потрібні плиткам подій («3 СЕРП»).
+// ⚠️ Жили в автобусному блоці, який 03.08 переїхав у бенто; при переїзді
+// константа лишилась без дому і блок подій падав з ReferenceError у catch,
+// показуючи «Події недоступні». Знайдено скріншотом, не тестом.
 const CM_MONTHS = ['січня','лютого','березня','квітня','травня','червня',
                    'липня','серпня','вересня','жовтня','листопада','грудня'];
-function cmDayLabel(dateISO, todayISO, tomorrowISO) {
-  if (dateISO === todayISO) return '';
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const prefix = dateISO === tomorrowISO ? 'Завтра' : '';
-  const datePart = `${d} ${CM_MONTHS[m - 1]}`;
-  return prefix ? `${prefix} · ${datePart}` : datePart;
-}
-
-function renderCmBusCard(el) {
-  if (!el || !cmBusEntries.length) return;
-  const { route, dateISO } = cmBusEntries[cmBusIndex];
-
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowISO = tomorrow.toISOString().slice(0, 10);
-
-  // Для не-сьогоднішніх днів: state→waiting, без відліку (як на вкладці Автобуси)
-  const base = getRouteTimings(route);
-  const timings = dateISO === todayISO
-    ? base
-    : { ...base, state: 'waiting', progress: 0, minsToDeparture: null, minsToArrival: null };
-
-  const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
-  const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : '';
-  el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
-
-  // Свайп
-  let touchStartX = 0, touchMoved = false;
-  const card = el.querySelector('.bhv4') || el.lastElementChild;
-  if (!card) return;
-  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchMoved = false; }, { passive: true });
-  card.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(dx) < 40) return;
-    touchMoved = true;
-    cmBusIndex = dx < 0
-      ? (cmBusIndex + 1) % cmBusEntries.length
-      : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
-    switchCmBusCard(el);
-  }, { passive: true });
-  // Тап по картці (не свайп) → САМЕ цей рейс на вкладці Автобуси, знайдено аудитом
-  // перенаправлень — раніше картка взагалі нічого не робила при тапі.
-  card.addEventListener('click', () => {
-    if (touchMoved) return;
-    if (typeof window.switchTab === 'function') window.switchTab('buses');
-    openSavedRouteOnBuses(route.id, dateISO, null, null);
-  });
-
-  // Тап по крапках
-  el.querySelectorAll('.bhv4-dot-nav').forEach(dot => {
-    dot.addEventListener('click', e => {
-      cmBusIndex = parseInt(e.target.dataset.idx, 10);
-      switchCmBusCard(el);
-    });
-  });
-}
-
-function switchCmBusCard(el) {
-  const content = el.querySelector('.bhv4-content');
-  if (!content) { renderCmBusCard(el); return; }
-  content.style.transition = 'opacity 0.08s ease';
-  content.style.opacity    = '0';
-  setTimeout(() => {
-    renderCmBusCard(el);
-    const newContent = el.querySelector('.bhv4-content');
-    if (newContent) {
-      newContent.style.opacity    = '0';
-      newContent.style.transition = 'opacity 0.1s ease';
-      requestAnimationFrame(() => requestAnimationFrame(() => { newContent.style.opacity = '1'; }));
-    }
-  }, 80);
-}
-
-// ── Блок: оголошення громади ─────────────────────────────────────────────────
-// Три випадкові оголошення рядками. Тап по рядку → зум оголошення;
-// «Уся дошка» в шапці секції → вкладка Дошка.
-
-const BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-
-// 🔴 03.08 — ОДИН РЯДОК ЗАМІСТЬ «СТІКЕРА» В ГОРИЗОНТАЛЬНІЙ СТРІЧЦІ.
-//
-// Було (13.07): темний корок + пари карток-стікерів зі шпилькою + автопрокрутка
-// кожні 5с + крапки-індикатори + масштабування карток при гортанні.
-// Тобто ОДИН вкладений горизонтальний скролер (єдиний, що лишався на головній
-// після 31.07) плюс ще один автоматичний рух — діагнози 4 і 9 аудиту.
-//
-// Стало: три рядки в стовпчик, статично. Форма навмисно та сама, що в списку
-// самої Дошки після 01.08 (фото ліворуч, категорія, назва, локація) — людина
-// має впізнати оголошення, а не вчити другий вигляд для того самого об'єкта.
-//
-// ⚠️ Темний корок пішов разом зі стікерами. Це СВІДОМА зміна рішення 28.07
-// («віджет лишається темним, малюється градієнтом») — тоді темним він був
-// відлунням корка на самій вкладці, а корка на Дошці немає з 01.08.
-function bwRowHtml(p) {
-  const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
-  const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
-  const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
-  const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
-  const color = catColor(p.category);
-  // Без фото — монограма з першої літери, як у списку Дошки. Порожній квадрат
-  // на його місці читався б як «фото не завантажилось», тобто як помилка.
-  const cover = photo
-    ? `<div class="hm-ad-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-    : `<div class="hm-ad-photo hm-ad-photo--mono">${escapeHtml(title.trim().charAt(0).toUpperCase())}</div>`;
-  return `
-    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
-      ${cover}
-      <div class="hm-ad-body">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
-        <h4 class="hm-ad-title">${escapeHtml(title)}</h4>
-        <p class="hm-ad-meta">
-          ${locLabel ? `<span>${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : ''}
-          ${ts ? `<span class="hm-ad-time">${formatTime(ts)}</span>` : ''}
-        </p>
-      </div>
-    </article>`;
-}
-
-// Fisher-Yates перемішування (чесний випадковий порядок, кожен елемент рівні шанси)
-function bwShuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-export async function renderBoardBlock() {
-  const el = document.getElementById('cm-board-content');
-  if (!el) return;
-
-  try {
-    // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло
-    let posts = [], usedSupabase = false;
-    if (isSupabaseReady()) {
-      const p = await fetchPublishedPosts();
-      if (p !== null) { posts = p; usedSupabase = true; }
-    }
-    if (!usedSupabase) {
-      const boardRes = await fetch('./data/community-board.json');
-      posts = ((await boardRes.json()).posts) || [];
-    }
-
-    // 2. Лише оголошення (type board), УСЯ громада без фільтра НП.
-    //    Порядок ВИПАДКОВИЙ (рішення Вови 13.07): віджет не дублює «свіжі вгорі»
-    //    вкладки, а дає рівний шанс УСІМ оголошенням, включно зі старими —
-    //    кожне відкриття Громади показує інший набір.
-    const ads = posts.filter(p => (p.type || 'board') === 'board');
-    if (!ads.length) {
-      el.innerHTML = '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення!</div>';
-      return;
-    }
-
-    el.innerHTML = `<div class="hm-ads">${bwShuffle(ads).slice(0, BW_SHOWN).map(bwRowHtml).join('')}</div>`;
-
-    // 3. Тап по картці → зум САМЕ цього оголошення (як було).
-    //    ⚠️ Прапорець на елементі: `initCommunity()` перебудовує #cm-content цілком.
-    if (!el.dataset.wired) {
-      el.dataset.wired = '1';
-      el.addEventListener('click', e => {
-        const card = e.target.closest('[data-bw-id]');
-        if (!card) return;
-        const post = ads.find(p => p.id === Number(card.dataset.bwId));
-        if (post) openAdModalStandalone(post);
-      });
-    }
-  } catch {
-    el.innerHTML = '<div class="hm-error">Дошка тимчасово недоступна</div>';
-  }
-}
-
 
 // ── Блок 5: Найближча подія громади ───────────────────────────────────────────
 // Раніше тут був фільтр isLocalEvent() по списку OTG_VILLAGES — він шукав
@@ -819,29 +537,6 @@ function pluralUA(n, one, few, many) {
   if (m10 === 1 && m100 !== 11) return one;
   if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
   return many;
-}
-
-// Countdown-текст «через X днів / завтра / сьогодні» для табло-капсули у блоку Громади
-function eventCountdown(ev, now) {
-  const eventDay = new Date(ev.date + 'T00:00:00');
-  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-  if (dayDiff === 0) {
-    if (!ev.time) return 'СЬОГОДНІ';
-    const dt = new Date(ev.date + 'T' + ev.time + ':00');
-    const diffMs = dt - now;
-    if (diffMs <= 0) return 'ЗАРАЗ';
-    if (diffMs < 60 * 60000) return `ЧЕРЕЗ ${Math.max(1, Math.floor(diffMs / 60000))} ХВ`;
-    const h = Math.floor(diffMs / 3600000);
-    const m = Math.floor((diffMs % 3600000) / 60000);
-    return m > 0 ? `ЧЕРЕЗ ${h} ГОД ${m} ХВ` : `ЧЕРЕЗ ${h} ГОД`;
-  }
-  if (dayDiff === 1) return 'ЗАВТРА';
-  if (dayDiff < 7)   return `ЧЕРЕЗ ${dayDiff} ${pluralUA(dayDiff, 'ДЕНЬ', 'ДНІ', 'ДНІВ')}`;
-  if (dayDiff < 14)  return 'ЧЕРЕЗ ТИЖДЕНЬ';
-  if (dayDiff < 30)  { const w = Math.floor(dayDiff / 7); return `ЧЕРЕЗ ${w} ${pluralUA(w, 'ТИЖДЕНЬ', 'ТИЖНІ', 'ТИЖНІВ')}`; }
-  const months = Math.floor(dayDiff / 30);
-  return `ЧЕРЕЗ ${months} ${pluralUA(months, 'МІСЯЦЬ', 'МІСЯЦІ', 'МІСЯЦІВ')}`;
 }
 
 export async function renderEventBlock() {
@@ -901,43 +596,38 @@ export async function renderEventBlock() {
 // п'ять дали б ~350px і перетворили б секцію на список. Решта — у «Афіші».
 // ⚠️ Fallback на свята (Г-16) збережено: коли подій громади немає, показуємо
 // найближчі свята — саме щоб секція не стояла порожньою в тихий місяць.
-const EV_SHOWN = 3;
+// 🔴 03.08 (потік «ПУЛЬС») — ПОДІЇ СТАЛИ ГОРИЗОНТАЛЬНОЮ СТРІЧКОЮ МІНІ-ПЛИТОК.
+//
+// Історія цього блока за один день: карусель з ОДНІЄЮ видимою карткою і
+// авто-ротацією 6с → три вертикальні рядки (278px) → стрічка плиток дат.
+// Причина останнього кроку — слова Вови про варіант 2: «вертикальний список
+// однакових білих карток». Питання до цього блока одне — «що поруч і коли»,
+// тому плитка починається з великого числа дня, а не з назви.
+const EV_SHOWN = 6;
 
-function evRowHtml(it, now) {
+function evTileHtml(it, now) {
   const d = new Date(it.date + 'T00:00:00');
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const diff = Math.round((d - today) / 86400000);
-  // «СЬОГОДНІ / ЗАВТРА / ЧЕРЕЗ N ДНІВ» — те саме правило, що було в каруселі
-  // (`eventCountdown`), лише подане рядком, а не капсулою на всю картку.
-  const when = escapeHtml(eventCountdown(it, now));
-  const urgent = diff <= 1;
-
-  const meta = [
-    it.time ? escapeHtml(it.time) : '',
-    it.location ? escapeHtml(it.location) : '',
-  ].filter(Boolean).join(' · ');
-
+  const soon = diff <= 1;
+  const when = diff === 0 ? 'сьогодні' : diff === 1 ? 'завтра' : (it.time || it.location || '');
   return `
-    <article class="hm-card hm-card--tap hm-ev" data-ev-id="${it.id}">
-      <div class="hm-ev-date" aria-hidden="true">
-        <span class="hm-ev-d">${d.getDate()}</span>
-        <span class="hm-ev-m">${CM_MONTHS[d.getMonth()].slice(0, 3)}</span>
+    <article class="hm-evt${soon ? ' hm-evt--soon' : ''}" data-ev-id="${it.id}">
+      <div class="hm-evt-date">
+        <span class="hm-evt-d">${d.getDate()}</span>
+        <span class="hm-evt-m">${escapeHtml(CM_MONTHS[d.getMonth()].slice(0, 3))}</span>
       </div>
-      <div class="hm-ev-body">
-        <span class="hm-ev-when${urgent ? ' hm-ev-when--soon' : ''}">${when}</span>
-        <h4 class="hm-ev-title">${escapeHtml(it.title)}</h4>
-        ${meta ? `<p class="hm-ev-meta">${meta}</p>` : ''}
-      </div>
+      <h4 class="hm-evt-title">${escapeHtml(it.title)}</h4>
+      <p class="hm-evt-meta">${escapeHtml(when)}</p>
     </article>`;
 }
 
 function renderEvList(el) {
   const now = new Date();
-  el.innerHTML = `<div class="hm-ev-list">${
-    _evItems.slice(0, EV_SHOWN).map(it => evRowHtml(it, now)).join('')
-  }</div>`;
+  el.innerHTML = _evItems.slice(0, EV_SHOWN).map(it => evTileHtml(it, now)).join('')
+    + `<button class="hm-rail-end" type="button" data-switch-tab="shotam">${ICONS.arrowRight}Афіша</button>`;
 
-  // Тап по рядку → САМЕ ця подія/свято у статейній модалці (як було в каруселі).
+  // Тап по плитці → САМЕ ця подія/свято у статейній модалці (як було в каруселі).
   el.querySelectorAll('[data-ev-id]').forEach(card => {
     card.addEventListener('click', () => {
       const id = Number(card.dataset.evId);
@@ -994,25 +684,15 @@ export async function renderContactsBlock() {
     const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
     emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
-    // 🔴 03.08 — ДОВІДНИК ЗГОРНУТО (потік /byyou, діагноз 3 аудиту).
+    // 🔴 03.08 (потік «ПУЛЬС») — ТЕЛЕФОНИ В ОДИН РЯДОК.
     //
-    // Було: 420px = 57.5% видимої зони на СТАТИЧНИЙ телефонний довідник —
-    // більше, ніж діставалось оголошенням і подіям разом. Причина не в тому,
-    // що контакти зайві: вони потрібні кілька разів на рік, а місце займали
-    // щодня.
-    //
-    // Стало: три екстрені номери завжди на видноті (101 · 102 · 103 — саме те,
-    // що набирають не думаючи), решта — за кнопкою «Усі телефони».
-    // ⚠️ Розкриття робить <details>, а не JS: він працює без скриптів, уміє
-    // клавіатуру і читач екрана з коробки, і не потребує стану в модулі, який
-    // злітав би на кожному перерендері `#cm-content`.
-    const chipHtml = c => `
-      <a class="hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
-        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-        <span class="hm-tel-name">${escapeHtml(c.name)}</span>
-        <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
-      </a>`;
-
+    // Шлях цього блока за день: 420px = 57.5% видимої зони (статичний довідник)
+    // → 195px (три плитки + розкриття) → рядок ~64px.
+    // Логіка та сама: 101 · 102 · 103 набирають не думаючи, решта потрібна
+    // кілька разів на рік. Тепер вони не «секція», а тихий підвал екрана.
+    // ⚠️ Розкриття робить <details>, а не JS: працює без скриптів, дає
+    // клавіатуру і читач екрана, і не тримає стану в модулі — а він злітав би,
+    // бо `initCommunity()` перебудовує #cm-content цілком.
     const rowHtml = c => `
       <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
         <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
@@ -1022,19 +702,19 @@ export async function renderContactsBlock() {
         </span>
       </a>`;
 
-    // Три перші екстрені видно завжди; усе інше — під розкриттям.
     const quick = emergency.slice(0, 3);
     const rest  = [...local, ...emergency.slice(3)];
 
     el.innerHTML = `
-      <div class="hm-card hm-tels">
-        <div class="hm-tel-grid">${quick.map(chipHtml).join('')}</div>
-        ${rest.length ? `
-          <details class="hm-tel-more">
-            <summary>Усі телефони громади<span class="hm-tel-count">${rest.length}</span></summary>
-            <div class="hm-tel-rows">${rest.map(rowHtml).join('')}</div>
-          </details>` : ''}
-      </div>`;
+      <details class="hm-tels">
+        <summary>
+          <span class="hm-tels-quick">${quick.map(c => `
+            <a class="hm-tel-chip" href="tel:${escapeHtml(telOf(c.phone))}"
+               aria-label="${escapeHtml(c.name)}">${escapeHtml(c.phone)}</a>`).join('')}</span>
+          <span class="hm-tels-more">Усі телефони громади</span>
+        </summary>
+        ${rest.length ? `<div class="hm-tel-rows">${rest.map(rowHtml).join('')}</div>` : ''}
+      </details>`;
   } catch {
     el.innerHTML = '<div class="hm-error">Контакти недоступні</div>';
   }
@@ -1082,28 +762,39 @@ function digestOf(arts) {
     .filter(Boolean);
 }
 
+// 🔴 03.08 (потік «ПУЛЬС») — НОВИНИ СТАЛИ ГОРИЗОНТАЛЬНОЮ СТРІЧКОЮ.
+//
+// Пряма вимога Вови: «Новини — лише один із блоків сторінки, а не вся сторінка».
+// У варіанті 2 три новини коштували 362px вертикалі — половину видимої зони і
+// найбільший блок екрана. Стрічка показує ті самі три (і ще кілька за жестом)
+// приблизно вдвічі дешевше по висоті, а головне — перестає бути стіною.
+//
+// ⚠️ НАБІР НОВИН НЕ ЗМІНИВСЯ: перші три — по одній з КОЖНОГО розділу
+// (Громада · Волинь · Україна та Світ). Це рішення 31.07 і воно про сенс:
+// людина одним поглядом бачить, що вдома, що в області, що в країні. Далі
+// стрічка добирає свіжі новини ГРОМАДИ — місцеве тут головне.
+const CM_RAIL_MAX = 8;   // ⚠️ стеля стрічки: більше — і це вже прихований список
+
+function railItems(arts) {
+  const digest = NEWS_GEO_GROUPS.map(g => articlesOfGroup(arts, g)[0]).filter(Boolean);
+  const seen = new Set(digest.map(a => a.id));
+  const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter(a => !seen.has(a.id));
+  return [...digest, ...more].slice(0, CM_RAIL_MAX);
+}
+
 function paintCmNews(el, arts) {
-  const top = digestOf(arts);
+  const top = railItems(arts);
   if (!top.length) {
-    el.innerHTML = '<div class="cm-block-empty">Новин поки немає</div>';
+    el.innerHTML = '<div class="hm-empty">Новин поки немає</div>';
   } else {
-    // ТРИ ОДНАКОВІ компактні картки — по одній з кожного розділу.
-    //
-    // 🔴 ВЕЛИКУ ПЕРШУ З ФОТО ПРОБУВАЛИ І ВІДКИНУЛИ — вдруге за день, і обидва рази
-    // числом, а не на смак. Уранці 31.07 варіант «1 hero + 2 рядки» дав віджет
-    // 824px = 112.8% видимої зони. Увечері я зробив «велику» дешевшою (фото 200 →
-    // 120px, заголовок 2 рядки, без анонсу) — усе одно **547px = 74.8%**, тобто
-    // майже рівно те, з чим потік боровся вранці (було 567px = 77.6%).
-    // Вова подивився обидва варіанти скріншотами і вибрав компактний.
-    // ➡️ Велика картка з фото лишається — але в ХАБІ, де вона відкриває цілий
-    // екран новин і має на це право. Табло — це погляд, а не читання.
-    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: 'mini' })}</div>`;
-    // Мітка розділу — те, що робить дайджест дайджестом («щоб кожна новина несла
-    // сенс», Вова). Пишемо назву РОЗДІЛУ, а не сире поле `geo`: у даних лежить
-    // 'Олика' (стара назва Громади) і 'Світ', а читач знає три назви.
+    el.innerHTML = newsCardsHtml(top, { variant: 'tile' })
+      + `<button class="hm-rail-end" type="button" data-cm-news-all>${ICONS.arrowRight}Усі новини</button>`;
+    // Мітка розділу — те, що робить дайджест дайджестом. Пишемо назву РОЗДІЛУ,
+    // а не сире поле `geo`: у даних лежить 'Олика' (стара назва Громади) і
+    // 'Світ', а читач знає три назви.
     [...el.querySelectorAll('.nc')].forEach((node, i) => {
       const b = node.querySelector('.nc-badge--geo');
-      if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
+      if (b && top[i]) b.textContent = geoGroupOf(top[i]) || b.textContent;
     });
   }
   paintNewsBadge(arts);

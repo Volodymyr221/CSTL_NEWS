@@ -29,33 +29,27 @@ import { refreshAccountButtons } from '../core/account-ui.js';
 import { ICONS } from '../core/icons.js';   // спільні векторні іконки (шеврон у посиланнях секцій)
 import {
   renderWeatherBlock,
-  renderBusBlock,
-  renderBoardBlock,
   renderEventBlock,
   renderContactsBlock,
   renderCommunityNews,
 } from './community-blocks.js';
-import { renderNowStrip, initHomeNow } from './home-now.js';
-import { renderFundBlock } from './home-fund.js';
+import { renderHero } from './home-hero.js';
+import { renderBentoTiles, initHomeBento } from './home-bento.js';
 
-// ── Hero: 4 денних + 4 вечірніх фото Олики ───────────────────────────────────
-// Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
-// Ручного гортання НЕМАЄ (рішення Роми 08.07): без свайпу і крапок — лише авто.
+// ── Фото Олики ───────────────────────────────────────────────────────────────
+// 🔴 03.08 (другий захід): фото БІЛЬШЕ НЕ БАНЕР І НЕ РОТАТОР.
 //
-// ⚠️ РОТАТОР СВІДОМО ЗБЕРЕЖЕНО, хоча аудит рахує автоматичні рухи шкодою.
-// Аргумент був про ЧОТИРИ рухи наввипередки (фото + карусель Дошки + карусель
-// Подій + фокус-скрол). Три з них цей потік знімає; фото лишається одне-єдине
-// і працює як тло, а не як зміст. Прибирати його ніхто не просив (HOT_RULES №9).
+// Слова Вови: «Не використовуй великі декоративні банери, які займають половину
+// екрана». У варіанті 2 фото було тлом шапки на 200px і крутилось кожні 6с —
+// тобто лишалось декорацією, просто меншою, ще й з таймером.
+//
+// Тепер фото працює ЛИШЕ як фолбек-тло головної плитки: коли в неї приїхала
+// новина з власним фото — показуємо фото новини; коли ні — Олику. Тобто
+// зображення завжди ПІД змістом і ніколи саме по собі.
+// ⚠️ Вибір день/вечір за сходом-заходом сонця збережено (рішення Роми 08.07):
+// вечірній набір вмикається за 2 години ДО заходу — золота година й сутінки
+// виглядають як «вечір», а не як день.
 const KOSTEL = 'Колегіальний костел Святої Трійці';
-const HERO_DAY     = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.day-${i}.jpg`,     caption: KOSTEL }));
-const HERO_EVENING = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.evening-${i}.jpg`, caption: KOSTEL }));
-
-let _heroInterval = null;
-let _heroIndex = 0;
-let _heroIsDay = null;   // поточний режим — щоб зловити схід/захід прямо на тіку
-
-// Вечірній набір вмикається за 2 ГОДИНИ ДО заходу сонця (рішення Роми 08.07):
-// золота година + сутінки виглядають як «вечір», не як день.
 const EVENING_LEAD_MS = 2 * 60 * 60 * 1000;
 
 function isDaytime(now = new Date()) {
@@ -64,55 +58,12 @@ function isDaytime(now = new Date()) {
   return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
 }
 
-function heroSet() { return isDaytime() ? HERO_DAY : HERO_EVENING; }
-
-function heroImgsHtml() {
-  return heroSet().map((it, i) => `
-    <img class="hm-top-img${i === 0 ? ' active' : ''}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? 'eager' : 'lazy'}">
-  `).join('');
-}
-
-// Підпис фото (рішення Вови 20.07 — «підпис = що зображено») переїхав у нижній
-// правий кут шапки дрібним кеглем. Рішення лишається чинним, змінилось лише місце.
-function syncHeroCaption() {
-  const sub = document.querySelector('.hm-top-cap');
-  const it = heroSet()[_heroIndex];
-  if (sub && it) sub.textContent = it.caption;
-}
-
-function showHeroSlide(idx) {
-  const wrap = document.querySelector('.hm-top-photo');
-  if (!wrap) return;
-  const n = heroSet().length;
-  _heroIndex = (idx + n) % n;
-  wrap.querySelectorAll('.hm-top-img').forEach((img, i) => {
-    img.classList.toggle('active', i === _heroIndex);
-  });
-  syncHeroCaption();
-}
-
-// Тік кожні 6с: наступний слайд. Якщо тим часом сонце зійшло/зайшло —
-// перезбираємо картинки на інший набір прямо на льоту, без перезавантаження.
-function startHeroRotator() {
-  if (_heroInterval) clearInterval(_heroInterval);
-  _heroIndex = 0;
-  _heroIsDay = isDaytime();
-  _heroInterval = setInterval(() => {
-    const wrap = document.querySelector('.hm-top-photo');
-    if (!wrap) { clearInterval(_heroInterval); _heroInterval = null; return; }
-    // Згорнутий застосунок — не крутимо (той самий запобіжник, що в каруселі Дошки):
-    // фонова вкладка все одно отримує таймери, і це просто витрата батареї.
-    if (document.hidden) return;
-    const day = isDaytime();
-    if (day !== _heroIsDay) {
-      _heroIsDay = day;
-      _heroIndex = 0;
-      wrap.innerHTML = heroImgsHtml();
-      syncHeroCaption();
-      return;
-    }
-    showHeroSlide(_heroIndex + 1);
-  }, 6000);
+// Одне фото на відкриття екрана (без таймера): який набір — вирішує сонце,
+// який кадр — просте чергування за днем місяця, щоб не показувати завжди перший.
+export function olykaPhoto() {
+  const set = isDaytime() ? 'day' : 'evening';
+  const n = (new Date().getDate() % 4) + 1;
+  return { src: `./photos/olyka.${set}-${n}.jpg`, caption: KOSTEL };
 }
 
 // ── Привітання + дата ────────────────────────────────────────────────────────
@@ -143,7 +94,8 @@ function updateGreetingName() {
 // Привітання — ОДИН рядок (рішення Вови 15.07): міряємо реальну ширину тексту
 // і зменшуємо шрифт від базового до мінімуму, поки не влізе (nowrap у CSS).
 // Мінімум 19px — «щоб не здавалось маленьким»; довші імена все одно влазять.
-const GREET_FONT_MAX = 27, GREET_FONT_MIN = 19;
+// Стеля 17px (а не 27): привітання більше не герой екрана, а елемент рядка стану.
+const GREET_FONT_MAX = 17, GREET_FONT_MIN = 13;
 function fitGreeting() {
   const el = document.querySelector('.hm-greet');
   if (!el) return;
@@ -156,14 +108,17 @@ function fitGreeting() {
   }
 }
 
+// Дата в рядку стану — КОРОТКА. Повний формат («понеділок · 3 серпня») у
+// 84px не влазив і обрізався трьома крапками (знайдено скріншотом); а рядок
+// стану має вміщати ще привітання й погоду.
 function formatTodayHeader() {
   const d = new Date();
-  const wd = ['неділя','понеділок','вівторок','середа','четвер','пʼятниця','субота'][d.getDay()];
-  const m  = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][d.getMonth()];
+  const wd = ['нд','пн','вт','ср','чт','пт','сб'][d.getDay()];
+  const m  = ['січ','лют','бер','квіт','трав','черв','лип','серп','вер','жовт','лист','груд'][d.getMonth()];
   return `${wd} · ${d.getDate()} ${m}`;
 }
 
-// ── Кістяк завантаження (skeleton) ───────────────────────────────────────────
+// ── Кістяк завантаження (skeleton) для горизонтальних стрічок ────────────────
 // Сірий силует майбутнього вмісту замість слова «Завантаження…».
 //
 // НАВІЩО. До 03.08 усі шість блоків головної показували однаковий текст
@@ -174,17 +129,9 @@ function formatTodayHeader() {
 // ⚠️ Розміри кістяка збігаються з розмірами справжніх карток (фото 64, рядки
 // 13 і 11px) — інакше при появі даних сторінка смикнеться, і кістяк зробить
 // гірше, ніж просто порожнє місце.
-function skelRows(n) {
-  return `<div class="hm-skel-list">${
-    Array.from({ length: n }, () => `
-      <div class="hm-card hm-skel-row" aria-hidden="true">
-        <div class="hm-skel hm-skel-ph"></div>
-        <div class="hm-skel-lines">
-          <div class="hm-skel hm-skel-l1"></div>
-          <div class="hm-skel hm-skel-l2"></div>
-        </div>
-      </div>`).join('')
-  }</div>`;
+function skelRail(n) {
+  return Array.from({ length: n }, () => `
+    <div class="hm-skel hm-skel-tile" aria-hidden="true"></div>`).join('');
 }
 
 // ── Каркас екрана ────────────────────────────────────────────────────────────
@@ -203,83 +150,65 @@ function renderSkeleton() {
   const todayStr = formatTodayHeader();
 
   el.innerHTML = `
-    <!-- ШАПКА. Фото лишилось, але стало ТЛОМ висотою ~200px замість 560px
-         самостійного блока. Уся текстова інформація — поверх нього. -->
-    <header class="hm-top">
-      <div class="hm-top-photo">${heroImgsHtml()}</div>
-      <div class="hm-top-shade" aria-hidden="true"></div>
-
-      <div class="hm-top-in">
-        <div class="hm-top-row">
-          <span class="hm-top-date">${escapeHtml(todayStr)}</span>
-          <!-- Кнопка кабінету лишається в правому верхньому куті (хореографія
-               Вови 16.07). Прибитим sticky-елементом вона більше НЕ є — на новій
-               шапці нема чого «не дівати», екран під нею просто прокручується. -->
-          <button class="hm-top-acc" type="button" data-account-btn aria-label="Кабінет">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
-          </button>
-        </div>
-
-        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
-
-        <!-- Погода. Крок 4 наповнить її даними; поки — місце й підпис фото. -->
-        <div class="hm-top-foot">
-          <button class="hm-wx" type="button" data-hm-weather hidden></button>
-          <span class="hm-top-cap">${escapeHtml(heroSet()[0].caption)}</span>
-        </div>
-      </div>
-    </header>
+    <!-- РЯДОК СТАНУ. 56px замість шапки-банера на 200px.
+         Слова Вови: «Не використовуй великі декоративні банери, які займають
+         половину екрана». Тут немає жодного декоративного пікселя: аватар веде
+         в кабінет, привітання персональне, погода — жива, дата — жива. -->
+    <div class="hm-status">
+      <button class="hm-status-acc" type="button" data-account-btn aria-label="Кабінет">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+      </button>
+      <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+      <button class="hm-wx" type="button" data-hm-weather hidden></button>
+      <span class="hm-status-date">${escapeHtml(todayStr)}</span>
+    </div>
 
     <div class="hm-body">
-      <!-- Голос Вови. НЕ липке: панель більше нічого не накриває. -->
-      <div class="hm-hello">
-        <h2 class="hm-hello-t">ШО В СЕЛІ?</h2>
-        <p class="hm-hello-s">Ось що головне у нас сьогодні</p>
+      <!-- ГОЛОВНА ПЛИТКА — СЛОТ, а не блок. Що в ній лежить, вирішує пріоритет
+           дня (див. src/tabs/home-hero.js), тому екран щодня різний. Це і є
+           «персональна домашня сторінка», а не сталий порядок віджетів. -->
+      <section id="hm-hero"></section>
+
+      <!-- Голос Вови. Дрібна мітка ЗЛІВА, а не банер по центру: у варіанті 2 це
+           був блок 51px на всю ширину — рівно та форма, яку Вова назвав 2021-м.
+           Прибирати назву не можна: на Дошці це вже відкочували 01.08. -->
+      <div class="hm-kicker">ШО В СЕЛІ?</div>
+
+      <!-- БЕНТО: дві плитки 1×1 і одна 2×1. Порожні себе не малюють. -->
+      <div class="hm-bento" id="hm-bento">
+        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
+        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
       </div>
 
-      <!-- СМУГА «ЗАРАЗ» (крок 5): капсули з'являються лише коли є що сказати. -->
-      <div class="hm-now" id="hm-now" hidden></div>
-
-      <!-- ЗБІР (крок 7): порожній контейнер = блока на екрані немає взагалі. -->
-      <section class="hm-fund-wrap" id="hm-fund"></section>
-
-      <section class="hm-sec hm-in" id="hm-news">
+      <!-- ЩО НОВОГО — горизонтальна стрічка. Новини стали ОДНИМ блоком
+           сторінки, а не самою сторінкою (пряма вимога Вови). -->
+      <section class="hm-sec" id="hm-news">
         <div class="hm-sec-head">
-          <h3 class="hm-sec-title">Головне</h3>
+          <h3 class="hm-sec-title">Що нового</h3>
           <button class="hm-sec-link" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-news-content">${skelRows(3)}</div>
+        <div class="hm-rail" id="cm-news-content">${skelRail(3)}</div>
       </section>
 
-      <section class="hm-sec hm-in" id="hm-events">
+      <!-- ПОРУЧ — події горизонтально, міні-плитками дат. -->
+      <section class="hm-sec" id="hm-events">
         <div class="hm-sec-head">
-          <h3 class="hm-sec-title">Найближчі події</h3>
+          <h3 class="hm-sec-title">Поруч</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-event-content">${skelRows(2)}</div>
+        <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
       </section>
 
-      <section class="hm-sec hm-in" id="hm-board">
-        <div class="hm-sec-head">
-          <h3 class="hm-sec-title">Оголошення громади</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="board">Уся дошка${ICONS.chevronRight}</button>
-        </div>
-        <div id="cm-board-content">${skelRows(3)}</div>
+      <!-- ТЕЛЕФОНИ — тихий низ, один рядок. -->
+      <section id="hm-contacts">
+        <div id="cm-contacts-content"></div>
       </section>
 
-      <section class="hm-sec hm-in" id="hm-contacts">
-        <div class="hm-sec-head">
-          <h3 class="hm-sec-title">Корисні телефони</h3>
-        </div>
-        <div id="cm-contacts-content">${skelRows(1)}</div>
-      </section>
-
-      <!-- Автобус переїхав у смугу «ЗАРАЗ» капсулою з відліком; повний розклад —
-           на своїй вкладці. Контейнер лишається, бо renderBusBlock() наповнює
-           саме його (крок 5 переносить вміст у капсулу). -->
+      <!-- Дані Дошки малюють плитку 2×1 вище; окремої секції більше немає. -->
+      <div id="cm-board-content" hidden></div>
+      <!-- Автобус малює плитку 1×1; погода — кнопку в рядку стану. -->
       <div id="cm-bus-content" hidden></div>
-      <!-- Погоді окремий контейнер більше не потрібен: renderWeatherBlock()
-           наповнює кнопку .hm-wx у шапці, а весь прогноз живе в її модалці. -->
     </div>
   `;
 }
@@ -292,7 +221,6 @@ let _nowWired = false;
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
-  startHeroRotator();
   refreshAccountButtons();    // кнопка кабінету: фото профілю або іконка
   // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
   if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
@@ -301,15 +229,13 @@ export function initCommunity() {
   // Помилка одного блоку не ламає інші (кожен має власний try/catch).
   // Смуга «ЗАРАЗ». Підписки на події заводимо один раз на життя застосунку
   // (`initHomeNow`), сам рендер — на кожне відкриття вкладки.
-  if (!_nowWired) { initHomeNow(); _nowWired = true; }
-  renderNowStrip();
-  renderFundBlock();
-  renderWeatherBlock();
-  renderBusBlock();
-  renderBoardBlock();
-  renderEventBlock();
-  renderContactsBlock();
-  renderCommunityNews();
+  if (!_nowWired) { initHomeBento(); _nowWired = true; }
+  renderWeatherBlock();     // → кнопка погоди в рядку стану
+  renderHero();             // → головна плитка-слот
+  renderBentoTiles();       // → автобус · повідомлення · дошка
+  renderEventBlock();       // → стрічка «Поруч»
+  renderContactsBlock();    // → рядок телефонів
+  renderCommunityNews();    // → стрічка «Що нового»
 }
 
 // B-21 fix: event delegation замість inline onclick="switchTab(...)" (XSS hardening).
