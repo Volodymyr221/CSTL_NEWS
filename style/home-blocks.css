@@ -399,3 +399,93 @@
 /* У вузькій (1×1) плитці Дошки мініатюри ховаємо: у 176px ряд «7 оголошень» +
    чотири квадрати 34px не влазить, і число — головне — почало б стискатись. */
 .hm-tile:not(.hm-tile--wide) .hm-tile-thumbs { display: none; }
+
+/* ═══ ФОТО ЯК ТЛО ВЕРХУ (04.08) ════════════════════════════════════════════════
+ * Замовлення Вови: «десь нам задній фон… зробити це на фото, і віджети
+ * інтегрувати так теж».
+ *
+ * 🔴 ЧОМУ ЦЕ НЕ ПОВЕРНЕННЯ БАНЕРА (від якого Вова відмовився 03.08):
+ * банер займав ВЛАСНЕ місце в потоці — 560px, а потім 200px, і зсував увесь
+ * зміст донизу. Тут фото лежить ПІД вмістом (`position: absolute`, `z-index: 0`)
+ * і не займає жодного пікселя розкладки: рядок стану, головна плитка й бенто
+ * стоять там само, де стояли. Декоративних пікселів як і було — нуль.
+ *
+ * ГЕОМЕТРІЯ: висота 420px = рядок стану 56 + плитка 196 + бенто 92 + відступи.
+ * Тобто фото рівно під «панеллю приладів», а стрічка новин починається вже на
+ * чистому тлі — саме тому великі картки новин лишились такими, як Вові
+ * подобається, і нічого не втратили в читабельності.
+ */
+.hm-photobg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 420px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;         /* фото нічого не перехоплює — тапи йдуть у плитки */
+}
+.hm-photobg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;  /* купол костелу ближче до верху кадру */
+  display: block;
+}
+/* Дві задачі одним шаром: (1) притемнити фото, щоб білий текст читався;
+   (2) розчинити його низ у тло сторінки, щоб не було видимої межі-обрізу. */
+.hm-photobg-fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(20,18,16,0.58) 0%,
+      rgba(20,18,16,0.42) 34%,
+      rgba(230,230,227,0.55) 82%,
+      var(--hm-bg) 100%);
+}
+/* Сам контейнер стає системою координат для фото. */
+#cm-content.hm-onphoto { position: relative; }
+#cm-content.hm-onphoto .hm-status,
+#cm-content.hm-onphoto .hm-body { position: relative; z-index: 1; }
+
+/* ── Текст верху стає світлим ─────────────────────────────────────────────── */
+.hm-onphoto .hm-greet { color: #fff; text-shadow: 0 1px 10px rgba(0,0,0,0.45); }
+.hm-onphoto .hm-status-date { color: rgba(255,255,255,0.80); }
+.hm-onphoto .hm-kicker { color: rgba(255,255,255,0.72); }
+
+/* ── Скло замість білих карток ────────────────────────────────────────────────
+ * Плитки на фото стають напівпрозорими: фото прозирає крізь них, і вони
+ * читаються як ОДИН прилад на спільному тлі, а не як окремі папірці, накидані
+ * зверху. Саме це Вова назвав «інтегрувати віджети».
+ * ⚠️ `backdrop-filter` разом із `will-change` у Safari дає застиглий blur — тут
+ * `will-change` немає навмисно (той самий урок, що на шапці Дошки 28.07).
+ */
+.hm-onphoto .hm-status-acc,
+.hm-onphoto .hm-wx,
+.hm-onphoto .hm-tile,
+.hm-onphoto .hm-hero:not(.hm-hero--photo):not(.hm-hero--accent) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  color: #fff;
+}
+.hm-onphoto .hm-status-acc { color: #fff; }
+.hm-onphoto .hm-wx { color: #fff; }
+.hm-onphoto .hm-wx b { color: #fff; }
+.hm-onphoto .hm-tile-lab { color: rgba(255,255,255,0.78); }
+.hm-onphoto .hm-tile-big { color: #fff; }
+.hm-onphoto .hm-tile-sub { color: rgba(255,255,255,0.80); }
+.hm-onphoto .hm-tile:active,
+.hm-onphoto .hm-status-acc:active,
+.hm-onphoto .hm-wx:active { background: rgba(255, 255, 255, 0.28); }
+/* Головна плитка без власного фото теж стає скляною — і тоді фото Олики видно
+   прямо крізь неї. Це і є «зробити це на фото». */
+.hm-onphoto .hm-hero:not(.hm-hero--photo):not(.hm-hero--accent) .hm-hero-lab { color: rgba(255,255,255,0.80); }
+.hm-onphoto .hm-hero:not(.hm-hero--photo):not(.hm-hero--accent) .hm-hero-title { color: #fff; }
+.hm-onphoto .hm-hero:not(.hm-hero--photo):not(.hm-hero--accent) .hm-hero-sub { color: rgba(255,255,255,0.86); }
+/* Мініатюри Дошки на склі: обідок світлий, інакше вони «вирізані» з картки. */
+.hm-onphoto .hm-tile-thumbs i { border-color: rgba(255,255,255,0.35); }
+.hm-onphoto .hm-tile-thumbs b { color: rgba(255,255,255,0.80); }
