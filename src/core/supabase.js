@@ -115,6 +115,48 @@ export async function submitDiscussion(payload) {
   return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
+// ── СКАРГИ НА ОГОЛОШЕННЯ ────────────────────────────────────────────────
+// 🔴 02.08 — до цього кнопка «Поскаржитися» показувала тост і НЕ ПИСАЛА НІКУДИ.
+// Тобто застосунок обіцяв дію, якої не існувало: людина вважала, що поскаржилась,
+// і більше не писала Вові напряму. Це гірше за відсутню кнопку.
+//
+// ⚠️ Клієнт шле РІВНО ТРИ поля: `post_id`, `reason`, `details`. Усе інше —
+// хто поскаржився, хто автор оголошення, як воно називалось — заповнює ТРИГЕР у
+// базі (`scripts/supabase_ad_reports.sql`). Причина не зручність: якби знімок робив
+// клієнт, зловмисник надіслав би чужий `post_owner_uid` і підставив би людину.
+//
+// Повертає { ok:true } або { ok:false, error } з ЛЮДСЬКИМ текстом — база кидає
+// свої повідомлення українською («Не можна поскаржитись на власне оголошення»,
+// «Забагато скарг за добу»), і саме їх варто показати, а не «помилка 400».
+// ⚠️ База кидає МАШИННІ КОДИ (`report_self`, `report_flood`…), а не готовий текст.
+// Причина: людські формулювання в проєкті живуть в ОДНОМУ місці (`netErrorText`), і
+// якби база слала українську фразу, вона стала б другою копією словника — а дві копії
+// в цьому проєкті вже розходились тричі. Заразом `netErrorText` не поглинає їх у
+// загальне «не вдалося зберегти», як сталося б із довільним текстом.
+const REPORT_ERRORS = {
+  report_auth:    'Щоб поскаржитись, треба увійти',
+  report_no_post: 'Оголошення вже видалено',
+  report_self:    'Це твоє власне оголошення',
+  report_flood:   'Забагато скарг за добу — спробуй завтра',
+};
+
+export async function submitAdReport(postId, reason, details) {
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.from('ad_reports').insert({
+    post_id: postId, reason, details: details || null,
+  }));
+  if (r.ok) return { ok: true };
+  // `raw` — технічний текст від бази; `error` — уже людський від `netErrorText`.
+  const raw = String(r.raw || '');
+  const code = Object.keys(REPORT_ERRORS).find(k => raw.includes(k));
+  if (code) return { ok: false, error: REPORT_ERRORS[code] };
+  // Унікальність (post_id, reporter_uid) — людина вже скаржилась на це оголошення.
+  if (/duplicate|unique/i.test(raw)) {
+    return { ok: false, error: 'Ти вже скаржився на це оголошення' };
+  }
+  return { ok: false, error: r.error };
+}
+
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
 
 export async function fetchPublishedAnnouncements() {

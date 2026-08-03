@@ -23,12 +23,14 @@ import {
   fetchAllComments,
   fetchAllReactions, getAnonId,
   fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
+  submitAdReport,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 // ⚠️ `core/sheet-motion.js` більше не імпортується ВЗАГАЛІ: у модалки оголошення немає
 // власного жесту закриття. Її закриває системний жест iPhone через історію браузера —
 // той самий механізм, що й екран спільноти у «Стрічці» (див. `core/layers.js`).
 import { openLayer, closeLayer } from '../core/layers.js';
+import { openModal } from '../core/modal.js';
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
@@ -326,7 +328,8 @@ function wireAdModalChrome(modal, close) {
   // «Скаржитися» поки лише підтверджує прийом: черги скарг у базі немає, а мовчазна
   // кнопка гірша за її відсутність.
   modal.querySelector('[data-ad-report]')?.addEventListener('click', () => {
-    showToast('Дякуємо. Ми перевіримо це оголошення.');
+    const pid = modal.dataset.postId;
+    if (pid) openAdReportSheet(pid);
   });
   // Фото автора підтягується прогресивно (літера → фото), як у чатах і обговореннях.
   hydrateAvatars(modal);
@@ -728,6 +731,85 @@ function plural(n, one, few, many) {
   if (m10 === 1 && m100 !== 11) return one;
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
   return many;
+}
+
+// ── ЛИСТ СКАРГИ ─────────────────────────────────────────────────────────────
+// 🔴 02.08 — до цього кнопка показувала тост і НЕ ПИСАЛА НІКУДИ. Застосунок обіцяв
+// дію, якої не існувало: людина вважала, що поскаржилась, і більше не писала Вові.
+//
+// ⚠️ ПРИЧИНИ — ЗАКРИТИЙ СПИСОК, а не вільне поле. Вільний текст без причини
+// неможливо ні відсортувати, ні порахувати; закритий список дає модерації чергу,
+// у якій видно ЩО саме переважає. Опис лишається — але як УТОЧНЕННЯ.
+// «Інше» без опису не приймається: така скарга не каже нічого, і база її відхилить
+// (`ad_reports_other_needs_details`). Тому кнопка вимикається просто тут — щоб
+// людина дізналась про це ДО надсилання, а не з помилки.
+const REPORT_REASONS = [
+  ['scam',       'Шахрайство або обман'],
+  ['spam',       'Спам чи реклама'],
+  ['offensive',  'Образливий вміст'],
+  ['false_info', 'Неправдива інформація'],
+  ['outdated',   'Товар уже неактуальний'],
+  ['other',      'Інше'],
+];
+
+function openAdReportSheet(postId) {
+  // Скарга від анонима нічого не варта: нема з ким зʼясувати деталі, і це відкритий
+  // канал спаму. База відхилить її однаково (`report_auth`), але просити вхід тут —
+  // чесніше, ніж дати заповнити форму й показати помилку в кінці.
+  requireAuth('поскаржитись на оголошення', () => {
+    const { close } = openModal({
+      title: 'Що не так з оголошенням?',
+      className: 'app-modal--report',
+      bodyHtml: `
+        <div class="ad-rep-list" role="radiogroup" aria-label="Причина скарги">
+          ${REPORT_REASONS.map(([code, label]) => `
+            <label class="ad-rep-item">
+              <input type="radio" name="ad-report-reason" value="${code}">
+              <span class="ad-rep-label">${escapeHtml(label)}</span>
+              <span class="ad-rep-mark" aria-hidden="true"></span>
+            </label>`).join('')}
+        </div>
+        <textarea class="ad-rep-text" rows="3" maxlength="1000"
+                  placeholder="Опишіть, що сталося (необовʼязково)"></textarea>
+        <button class="ad-rep-send" type="button" disabled>Надіслати скаргу</button>
+      `,
+      onMount: (wrap) => {
+        const radios = [...wrap.querySelectorAll('input[name="ad-report-reason"]')];
+        const area   = wrap.querySelector('.ad-rep-text');
+        const send   = wrap.querySelector('.ad-rep-send');
+
+        const chosen = () => radios.find(r => r.checked)?.value || '';
+        // «Інше» вимагає опису — рівно те саме правило, що й у базі. Дві копії правила
+        // тут свідомі й НЕОБХІДНІ: клієнт пояснює завчасно, база не довіряє клієнту.
+        const sync = () => {
+          const code = chosen();
+          const needDetails = code === 'other';
+          area.placeholder = needDetails
+            ? 'Опишіть, що сталося (обовʼязково)'
+            : 'Опишіть, що сталося (необовʼязково)';
+          send.disabled = !code || (needDetails && area.value.trim().length < 5);
+        };
+        radios.forEach(r => r.addEventListener('change', sync));
+        area.addEventListener('input', sync);
+
+        send.addEventListener('click', async () => {
+          send.disabled = true;
+          send.textContent = 'Надсилаю…';
+          const r = await submitAdReport(Number(postId), chosen(), area.value.trim());
+          if (!r.ok) {
+            // Лист НЕ закриваємо: людина має бачити, що саме не вийшло, і мати змогу
+            // виправити (напр. дописати опис) — а не починати все спочатку.
+            send.disabled = false;
+            send.textContent = 'Надіслати скаргу';
+            showToast(r.error, 4000);
+            return;
+          }
+          close();
+          showToast('Дякуємо. Скаргу передано на розгляд.');
+        });
+      },
+    });
+  });
 }
 
 // «Поскаржитися» — останнім тихим рядком, а не рівноправною кнопкою.
