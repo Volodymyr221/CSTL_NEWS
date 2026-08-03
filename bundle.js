@@ -5878,6 +5878,9 @@
   function hasThreadsCached() {
     return _hasThreads;
   }
+  function unreadChatsCached() {
+    return isLoggedIn() ? _unreadChats : 0;
+  }
   function paintTabDot(tab, on) {
     const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
     if (!dot)
@@ -5946,6 +5949,7 @@
     const hadThreads = _hasThreads;
     _hasThreads = pairs.length > 0;
     paintUnreadBadge();
+    window.dispatchEvent(new CustomEvent("cstl-unread-changed"));
     if (hadThreads !== _hasThreads)
       window.dispatchEvent(new CustomEvent("cstl-threads-changed"));
   }
@@ -11567,6 +11571,149 @@ ${ev.description || ""}`
     window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
   }
 
+  // src/tabs/home-now.js
+  var MAX_PILLS = 3;
+  var BUS_SOON_MIN = 90;
+  var TRACK_KEY2 = "bus_track_v2";
+  function loadTracked(todayISO) {
+    if (!isLoggedIn())
+      return [];
+    try {
+      const d = JSON.parse(localStorage.getItem(TRACK_KEY2 + ":" + currentUserId()));
+      if (d?.routes?.length)
+        return d.routes.filter((t) => t.trackDate >= todayISO);
+    } catch {
+    }
+    return [];
+  }
+  function pillHtml({ icon, text, action, aria }) {
+    return `<button class="hm-pill" type="button" data-now="${action}" aria-label="${escapeHtml(aria || text.replace(/<[^>]+>/g, ""))}">${icon}<span>${text}</span></button>`;
+  }
+  async function busPill() {
+    try {
+      const res = await fetch("./data/schedule.json");
+      const data = await res.json();
+      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const routes = data.days?.[todayISO]?.routes || data.routes || [];
+      const live = routes.filter((r) => r.status !== "cancelled");
+      if (!live.length)
+        return null;
+      const tracked = loadTracked(todayISO).map((t2) => t2.routeId);
+      const pickable = live.filter((r) => {
+        const st = getRouteState(r);
+        if (st === "enroute")
+          return true;
+        if (st !== "waiting")
+          return false;
+        const t2 = getRouteTimings(r);
+        return t2.minsToDeparture !== null && t2.minsToDeparture <= BUS_SOON_MIN;
+      });
+      if (!pickable.length)
+        return null;
+      const depMins = (r) => getStopMins(r, r.stops[0].name) ?? 0;
+      const route = pickable.find((r) => tracked.includes(r.id)) || pickable.sort((a, b) => depMins(a) - depMins(b))[0];
+      const t = getRouteTimings(route);
+      const [, to] = parseRouteEndpoints(route.name || "");
+      const when = t.state === "enroute" ? "\u0412 \u0414\u041E\u0420\u041E\u0417\u0406" : formatCountdownUpper(t.minsToDeparture);
+      if (!when)
+        return null;
+      return {
+        icon: ICONS.bus,
+        text: `${escapeHtml(to || route.name || "\u0420\u0435\u0439\u0441")} \xB7 <b>${escapeHtml(when.toLowerCase())}</b>`,
+        action: "bus",
+        aria: `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${to}, ${when.toLowerCase()}`,
+        run: () => {
+          if (typeof window.switchTab === "function")
+            window.switchTab("buses");
+          openSavedRouteOnBuses(route.id, todayISO, null, null);
+        }
+      };
+    } catch {
+      return null;
+    }
+  }
+  function chatPill() {
+    const n = unreadChatsCached();
+    if (!n)
+      return null;
+    return {
+      icon: ICONS.message,
+      text: `<b>${n}</b> ${pluralMsg(n)}`,
+      action: "chats",
+      aria: `${n} \u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C`,
+      run: () => openThreadsList()
+    };
+  }
+  function pluralMsg(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+    if (o === 1)
+      return "\u043D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (o >= 2 && o <= 4)
+      return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+  }
+  async function adsPill() {
+    if (!isLoggedIn())
+      return null;
+    try {
+      const mine = await fetchMyPosts(currentUserId());
+      const active = (mine || []).filter((p) => (p.status || "published") === "published");
+      if (!active.length)
+        return null;
+      return {
+        icon: ICONS.clipboard,
+        text: `<b>${active.length}</b> ${pluralAds(active.length)}`,
+        action: "myads",
+        aria: `\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F: ${active.length}`,
+        run: () => openMyAds()
+      };
+    } catch {
+      return null;
+    }
+  }
+  function pluralAds(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043C\u043E\u0457\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+    if (o === 1)
+      return "\u043C\u043E\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (o >= 2 && o <= 4)
+      return "\u043C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    return "\u043C\u043E\u0457\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+  }
+  var _actions = /* @__PURE__ */ new Map();
+  async function renderNowStrip() {
+    const el = document.getElementById("hm-now");
+    if (!el)
+      return;
+    const pills = (await Promise.all([busPill(), Promise.resolve(chatPill()), adsPill()])).filter(Boolean).slice(0, MAX_PILLS);
+    if (!pills.length) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    _actions = new Map(pills.map((p) => [p.action, p.run]));
+    el.innerHTML = pills.map(pillHtml).join("");
+    el.hidden = false;
+    if (!el.dataset.wired) {
+      el.dataset.wired = "1";
+      el.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-now]");
+        const run = b && _actions.get(b.dataset.now);
+        if (run)
+          run();
+      });
+    }
+  }
+  function initHomeNow() {
+    onAuthChange(() => renderNowStrip());
+    window.addEventListener("cstl-bus-track-changed", () => renderNowStrip());
+    window.addEventListener("cstl-unread-changed", () => renderNowStrip());
+    window.addEventListener("cstl-posts-changed", () => renderNowStrip());
+  }
+
   // src/tabs/community.js
   var KOSTEL = "\u041A\u043E\u043B\u0435\u0433\u0456\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u0441\u0442\u0435\u043B \u0421\u0432\u044F\u0442\u043E\u0457 \u0422\u0440\u0456\u0439\u0446\u0456";
   var HERO_DAY = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.day-${i}.jpg`, caption: KOSTEL }));
@@ -11763,6 +11910,7 @@ ${ev.description || ""}`
   `;
   }
   var _greetingWired = false;
+  var _nowWired = false;
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
@@ -11773,6 +11921,11 @@ ${ev.description || ""}`
       _greetingWired = true;
     }
     updateGreetingName();
+    if (!_nowWired) {
+      initHomeNow();
+      _nowWired = true;
+    }
+    renderNowStrip();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();

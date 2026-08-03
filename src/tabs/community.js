@@ -34,6 +34,7 @@ import {
   renderContactsBlock,
   renderCommunityNews,
 } from './community-blocks.js';
+import { renderNowStrip, initHomeNow } from './home-now.js';
 
 // ── Hero: 4 денних + 4 вечірніх фото Олики ───────────────────────────────────
 // Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
@@ -260,6 +261,7 @@ function renderSkeleton() {
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
 let _greetingWired = false;
+let _nowWired = false;
 
 export function initCommunity() {
   renderSkeleton();
@@ -271,6 +273,10 @@ export function initCommunity() {
   updateGreetingName();
   // Кожен блок вантажить свої дані сам і оновлює свою секцію, коли готовий.
   // Помилка одного блоку не ламає інші (кожен має власний try/catch).
+  // Смуга «ЗАРАЗ». Підписки на події заводимо один раз на життя застосунку
+  // (`initHomeNow`), сам рендер — на кожне відкриття вкладки.
+  if (!_nowWired) { initHomeNow(); _nowWired = true; }
+  renderNowStrip();
   renderWeatherBlock();
   renderBusBlock();
   renderBoardBlock();
