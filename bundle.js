@@ -11712,6 +11712,16 @@ ${ev.description || ""}`
     const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
+  function skelRows(n) {
+    return `<div class="hm-skel-list">${Array.from({ length: n }, () => `
+      <div class="hm-card hm-skel-row" aria-hidden="true">
+        <div class="hm-skel hm-skel-ph"></div>
+        <div class="hm-skel-lines">
+          <div class="hm-skel hm-skel-l1"></div>
+          <div class="hm-skel hm-skel-l2"></div>
+        </div>
+      </div>`).join("")}</div>`;
+  }
   function renderSkeleton() {
     const el = document.getElementById("cm-content");
     if (!el)
@@ -11759,35 +11769,35 @@ ${ev.description || ""}`
       <!-- \u0417\u0411\u0406\u0420 (\u043A\u0440\u043E\u043A 7): \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 = \u0431\u043B\u043E\u043A\u0430 \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456 \u043D\u0435\u043C\u0430\u0454 \u0432\u0437\u0430\u0433\u0430\u043B\u0456. -->
       <section class="hm-fund-wrap" id="hm-fund"></section>
 
-      <section class="hm-sec" id="hm-news">
+      <section class="hm-sec hm-in" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u0413\u043E\u043B\u043E\u0432\u043D\u0435</h3>
           <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-news-content"></div>
+        <div id="cm-news-content">${skelRows(3)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-events">
+      <section class="hm-sec hm-in" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-event-content"></div>
+        <div id="cm-event-content">${skelRows(2)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-board">
+      <section class="hm-sec hm-in" id="hm-board">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="board">\u0423\u0441\u044F \u0434\u043E\u0448\u043A\u0430${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-board-content"></div>
+        <div id="cm-board-content">${skelRows(3)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-contacts">
+      <section class="hm-sec hm-in" id="hm-contacts">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438</h3>
         </div>
-        <div id="cm-contacts-content"></div>
+        <div id="cm-contacts-content">${skelRows(1)}</div>
       </section>
 
       <!-- \u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0435\u0440\u0435\u0457\u0445\u0430\u0432 \u0443 \u0441\u043C\u0443\u0433\u0443 \xAB\u0417\u0410\u0420\u0410\u0417\xBB \u043A\u0430\u043F\u0441\u0443\u043B\u043E\u044E \u0437 \u0432\u0456\u0434\u043B\u0456\u043A\u043E\u043C; \u043F\u043E\u0432\u043D\u0438\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014

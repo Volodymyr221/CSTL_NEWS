@@ -163,6 +163,30 @@ function formatTodayHeader() {
   return `${wd} · ${d.getDate()} ${m}`;
 }
 
+// ── Кістяк завантаження (skeleton) ───────────────────────────────────────────
+// Сірий силует майбутнього вмісту замість слова «Завантаження…».
+//
+// НАВІЩО. До 03.08 усі шість блоків головної показували однаковий текст
+// «Завантаження…» — тобто перший кадр після відкриття був стіною однакових слів,
+// і людина не бачила, ЩО саме приїде. Кістяк каже те саме, але формою: видно,
+// що буде рядок із фото ліворуч і двома рядками тексту.
+//
+// ⚠️ Розміри кістяка збігаються з розмірами справжніх карток (фото 64, рядки
+// 13 і 11px) — інакше при появі даних сторінка смикнеться, і кістяк зробить
+// гірше, ніж просто порожнє місце.
+function skelRows(n) {
+  return `<div class="hm-skel-list">${
+    Array.from({ length: n }, () => `
+      <div class="hm-card hm-skel-row" aria-hidden="true">
+        <div class="hm-skel hm-skel-ph"></div>
+        <div class="hm-skel-lines">
+          <div class="hm-skel hm-skel-l1"></div>
+          <div class="hm-skel hm-skel-l2"></div>
+        </div>
+      </div>`).join('')
+  }</div>`;
+}
+
 // ── Каркас екрана ────────────────────────────────────────────────────────────
 //
 // Порядок секцій — це і є вся інформаційна архітектура нового екрана:
@@ -219,35 +243,35 @@ function renderSkeleton() {
       <!-- ЗБІР (крок 7): порожній контейнер = блока на екрані немає взагалі. -->
       <section class="hm-fund-wrap" id="hm-fund"></section>
 
-      <section class="hm-sec" id="hm-news">
+      <section class="hm-sec hm-in" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Головне</h3>
           <button class="hm-sec-link" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-news-content"></div>
+        <div id="cm-news-content">${skelRows(3)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-events">
+      <section class="hm-sec hm-in" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Найближчі події</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-event-content"></div>
+        <div id="cm-event-content">${skelRows(2)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-board">
+      <section class="hm-sec hm-in" id="hm-board">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Оголошення громади</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="board">Уся дошка${ICONS.chevronRight}</button>
         </div>
-        <div id="cm-board-content"></div>
+        <div id="cm-board-content">${skelRows(3)}</div>
       </section>
 
-      <section class="hm-sec" id="hm-contacts">
+      <section class="hm-sec hm-in" id="hm-contacts">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Корисні телефони</h3>
         </div>
-        <div id="cm-contacts-content"></div>
+        <div id="cm-contacts-content">${skelRows(1)}</div>
       </section>
 
       <!-- Автобус переїхав у смугу «ЗАРАЗ» капсулою з відліком; повний розклад —
