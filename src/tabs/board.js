@@ -249,6 +249,32 @@ function boardActionsHtml(post) {
 //
 // 📐 Заміряно на 17 живих оголошеннях: картка 96px, до першої картки 214px,
 // без прокрутки видно 6 карток.
+// 🔴 03.08 — ДВА РЯДКИ ОПИСУ НА КАРТЦІ (замовлення Вови: «добавити рядок чи два
+// опису, щоб зразу було ясно»). Заголовки на кшталт «Продаю машину» самі по собі не
+// кажуть нічого — людина однаково мусила відкрити картку, щоб зрозуміти, що продають.
+//
+// ⚠️ ОПИС, ЩО ДУБЛЮЄ ЗАГОЛОВОК, НЕ МАЛЮЄМО. У наших даних це часта пара: заголовок
+// «Куплю мотоцикл» і текст «Куплю мотоцикл.» — такий рядок був би чистим шумом і ще й
+// їв би висоту картки. Порівнюємо ЗМІСТ, а не рядки: знімаємо регістр, розділові знаки
+// й повторні пробіли. Якщо після зняття заголовка з початку тексту лишилось менше
+// 20 символів — теж не малюємо: «…в гарному стані» ще не пояснює оголошення.
+function cardDescText(p) {
+  const title = (p.title || '').trim();
+  const text  = (p.text || '').trim();
+  if (!text) return '';
+  const norm = v => v.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const nt = norm(title), nx = norm(text);
+  if (!nt) return text;
+  if (nx === nt) return '';                       // текст = заголовок, слово в слово
+  if (nx.startsWith(nt) && nx.length - nt.length < 20) return '';   // додав два слова
+  return text;
+}
+
+function renderCardDesc(p) {
+  const d = cardDescText(p);
+  return d ? `<p class="bd-ad-desc">${escapeHtml(d)}</p>` : '';
+}
+
 function renderBoardCard(p) {
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   // Монограма замість фото — щоб висота рядка не залежала від даних. Той самий
@@ -267,6 +293,7 @@ function renderBoardCard(p) {
           <span class="bd-ad-time">${renderPostTime(p)}</span>
         </div>
         <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || '')}</h3>
+        ${renderCardDesc(p)}
         <div class="bd-ad-foot">
           <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
           ${renderPrice(p)}

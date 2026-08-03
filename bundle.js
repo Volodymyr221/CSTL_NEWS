@@ -6189,6 +6189,25 @@
     </div>
   `;
   }
+  function cardDescText(p) {
+    const title = (p.title || "").trim();
+    const text = (p.text || "").trim();
+    if (!text)
+      return "";
+    const norm = (v) => v.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const nt = norm(title), nx = norm(text);
+    if (!nt)
+      return text;
+    if (nx === nt)
+      return "";
+    if (nx.startsWith(nt) && nx.length - nt.length < 20)
+      return "";
+    return text;
+  }
+  function renderCardDesc(p) {
+    const d = cardDescText(p);
+    return d ? `<p class="bd-ad-desc">${escapeHtml(d)}</p>` : "";
+  }
   function renderBoardCard(p) {
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const letter = (p.title || p.text || "?").trim().charAt(0).toUpperCase();
@@ -6203,6 +6222,7 @@
           <span class="bd-ad-time">${renderPostTime(p)}</span>
         </div>
         <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || "")}</h3>
+        ${renderCardDesc(p)}
         <div class="bd-ad-foot">
           <span class="bd-ad-loc">${PIN_ICON_SVG2}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
           ${renderPrice(p)}
