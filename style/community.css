@@ -78,7 +78,7 @@
   gap: 10px;
 }
 .cm-block-cta {
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   border: none;
   border-radius: 18px;
@@ -308,7 +308,7 @@
   flex-shrink: 0;
 }
 .cm-bus-countdown.urgent {
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
 }
 .cm-bus-main.urgent .cm-bus-time { color: var(--red); }
@@ -570,7 +570,7 @@
   transition: background 0.2s, transform 0.2s;
   cursor: pointer;
 }
-.cm-ev-dot.active { background: var(--brand-grad-sm); transform: scale(1.25); }
+.cm-ev-dot.active { background: #722F37; transform: scale(1.25); }
 /* Свято-картка (fallback): велика емодзі-обкладинка на кольоровому градієнті свята */
 .cm-ev-holiday { align-items: flex-start; }
 .cm-ev-holiday-emoji { font-size: 40px; line-height: 1; margin: 4px 0 2px; }
@@ -889,7 +889,7 @@
   width: 32px;
   height: 3px;
   border-radius: 1.5px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
 }
 .tab-bar .tab-item { position: relative; }
 
@@ -1498,11 +1498,7 @@
   width: calc(100% - 28px);
   margin: 14px;
   padding: 14px 18px;
-  /* 04.08: та сама брендова поверхня, що шапка Дошки. ⚠️ Колір ставиться ДВІЧІ —
-     тут і в `.board-trigger--fixed` нижче; друге правило перекриває це. Через це
-     перша спроба перевести FAB на градієнт не спрацювала: замінив одне місце,
-     а на екрані лишався старий плаский колір (помітив Вова скріншотом). */
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: #fff;
   border: 0;
   border-radius: 16px;
@@ -1514,7 +1510,7 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s ease, background 0.15s;
 }
-.cm-board-trigger:active { transform: scale(0.98); filter: brightness(0.88); }
+.cm-board-trigger:active { transform: scale(0.98); background: var(--red-dark); }
 .cm-board-trigger-icon { font-size: 18px; line-height: 1; }
 .cm-board-trigger-text { flex: 1; text-align: left; }
 
@@ -1705,7 +1701,7 @@
   width: 100%;
   margin-top: 10px;
   padding: 11px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1717,7 +1713,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cm-board-submit:active { background: var(--brand-grad-press); }
+.cm-board-submit:active { background: var(--red-dark); }
 
 .cm-board-hint {
   font-size: 11px;
@@ -1844,7 +1840,7 @@ textarea.cm-board-input.bm-invalid {
 }
 .bm-chip:active { transform: scale(0.96); }
 .bm-chip.active {
-  background: var(--brand-grad-sm);
+  background: var(--red);
   border-color: var(--red);
   color: white;
 }
@@ -2088,12 +2084,8 @@ textarea.cm-board-input.bm-invalid {
      бордовим, тож головна дія екрана має виглядати так само.
      ⚠️ `backdrop-filter` прибрано свідомо — під непрозорою заливкою він нічого не
      робить, а в Safari зайвий фільтр коштує кадрів. */
-  /* 04.08 — брендова поверхня замість плаского `--red`. САМЕ ЦЕ правило малює
-     кнопку на екрані: воно стоїть нижче за `.cm-board-trigger` і перекриває його.
-     Контраст не втрачено — градієнт темніший за старий плаский колір, біла
-     іконка на ньому лишається вище 9:1. */
-  background: var(--brand-grad-sm);
-  border: 1.5px solid transparent;
+  background: var(--red);
+  border: 1.5px solid var(--red);
   color: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
 }
@@ -2246,7 +2238,7 @@ textarea.cm-board-input.bm-invalid {
 /* Відкрите меню: кнопка ЛИШАЄТЬСЯ бордовою (було світле скло 0.52 — тепер це зробило б
    ✕ невидимим і кнопка на пів-секунди «блимала» б з кольору в біле). Трохи темніший
    відтінок — щоб натиснутий стан читався як «активна», а не як інша кнопка. */
-.board-fab.open .board-trigger--fixed { z-index: 152; background: var(--brand-grad-press); border-color: var(--red-dark); }
+.board-fab.open .board-trigger--fixed { z-index: 152; background: var(--red-dark); border-color: var(--red-dark); }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-icon { opacity: 0; }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-close { opacity: 1; }
 .board-fab.open .board-trigger-badge { display: none; }
@@ -2641,7 +2633,7 @@ textarea.cm-board-input.bm-invalid {
   gap: 8px;
   border: none;
   border-radius: 12px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: #FFF;
   font-size: 15px;
   font-weight: 700;
@@ -3882,7 +3874,7 @@ textarea.cm-board-input.bm-invalid {
 .disc-compose-input:focus { outline: none; border-color: var(--red); }
 .disc-compose-submit {
   border: none;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -3901,7 +3893,7 @@ textarea.cm-board-input.bm-invalid {
   padding: 13px;
   border: none;
   border-radius: 12px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -4018,7 +4010,7 @@ textarea.cm-board-input.bm-invalid {
 /* Чужі (білі) бульбашки — тонка рамка, щоб не зникали на світлому тлі чату #FCFAF4
    (Вова 20.07 зробив фон модалки в колір картки). Мої (червоні) — без рамки. */
 .bd-msg-group--other .bd-msg-bubble { border: 1px solid rgba(0,0,0,0.06); }
-.bd-msg-group--mine .bd-msg-bubble { background: var(--brand-grad-sm); }
+.bd-msg-group--mine .bd-msg-bubble { background: var(--red); }
 /* «хвостик» — гострішій кут у крайньої бульбашки групи */
 .bd-msg-group--other .bd-msg-bubble:last-child { border-bottom-left-radius: 5px; }
 .bd-msg-group--mine  .bd-msg-bubble:last-child { border-bottom-right-radius: 5px; }
@@ -4045,7 +4037,7 @@ textarea.cm-board-input.bm-invalid {
 .bd-chat-newpill {
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: 74px; z-index: 5;
-  background: var(--brand-grad-sm); color: #fff; border: none;
+  background: var(--red); color: #fff; border: none;
   padding: 7px 16px; border-radius: 18px;
   font-size: 13px; font-weight: 600; font-family: inherit;
   box-shadow: 0 3px 12px rgba(114,47,55,0.40);
@@ -4079,7 +4071,7 @@ textarea.cm-board-input.bm-invalid {
 .bd-chat-modal-input::placeholder { color: var(--gray); }
 .bd-chat-modal-send {
   width: 38px; height: 38px; border: none; border-radius: 50%;
-  background: var(--brand-grad-sm); color: #fff; font-size: 18px; font-weight: 700;
+  background: var(--red); color: #fff; font-size: 18px; font-weight: 700;
   flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 6px rgba(114,47,55,0.35);
   -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
@@ -4350,7 +4342,7 @@ textarea.cm-board-input.bm-invalid {
   background:
     radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),          /* віньєтка по контуру */
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%), /* глянець згори */
-    var(--brand-grad);   /* 04.08: єдина брендова поверхня — див. `--brand-grad` у base.css */                          /* винно-багряний → затемнений низ */
+    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);                          /* винно-багряний → затемнений низ */
   border: 1px solid rgba(0, 0, 0, 0.35);
   border-radius: 18px;
   box-shadow:
@@ -4569,10 +4561,7 @@ textarea.cm-board-input.bm-invalid {
 
   display: flex;
   flex-direction: column;
-  /* 03.08: крок у ритм головної. Був жорсткий 14px — власний ритм віджета, який
-     на новому екрані стояв поруч із секціями, зібраними по 10px. Токен із
-     фолбеком: якщо блок колись опиниться поза головною, поведінка не зміниться. */
-  gap: var(--hm-gap-card, 14px);
+  gap: 14px;
   padding: 0 0 8px;
   /* Довгий заголовок із RSS не має розпирати колонку вбік. */
   word-break: normal; overflow-wrap: break-word;
@@ -4597,14 +4586,7 @@ textarea.cm-board-input.bm-invalid {
      із обідком вона дала б ДВА розділювачі в одному місці — рівно та помилка,
      через яку 29.07 «давило на очі» на Дошці. Межу тримає один засіб — обідок. */
 }
-/* ⚠️ 03.08 — БАГРЯНОГО «ПРИЛАДУ» ПІД ЦИМИ КАРТКАМИ БІЛЬШЕ НЕМАЄ.
-   Редизайн головної (`/byyou` 03.08) прибрав контейнер `.cm-block--news` разом
-   із багряним градієнтом, глянцем і силуетом замку — новини стали звичайною
-   секцією в спільній системі екрана. Токени нижче лишились чинними (картка
-   біла, обідок `--news-line`), але фрази на кшталт «на багряному таблі» в
-   коментарях вище описують стан ДО 03.08 і збережені як історія рішення.
-   🔁 Повернути прилад = повернути обгортку в розмітці `community.js`; сам CSS
-   приладу нікуди не дівся і лежить у цьому файлі. */
+/* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    🔴 01.08.2026 — ДОШКА В ОДИН СТОВПЧИК. Прощання з корком (рішення Вови).
@@ -4892,7 +4874,7 @@ textarea.cm-board-input.bm-invalid {
   background:
     radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%),
-    var(--brand-grad);   /* 04.08: єдина брендова поверхня — див. `--brand-grad` у base.css */
+    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);
   border-radius: 0 0 18px 18px;
 }
 #board-content .bd-hero {

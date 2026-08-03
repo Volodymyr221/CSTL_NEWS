@@ -138,7 +138,7 @@ body.nh-open .article-modal {
   left: 12px; right: 12px; bottom: 0;
   height: 2.5px;
   border-radius: 2px 2px 0 0;
-  background: var(--brand-grad-sm);           /* бордо — колір бренду Громади (GEO_COLORS у news.js) */
+  background: #722F37;           /* бордо — колір бренду Громади (GEO_COLORS у news.js) */
 }
 
 /* ── Стрічка ───────────────────────────────────────────────────────────────── */

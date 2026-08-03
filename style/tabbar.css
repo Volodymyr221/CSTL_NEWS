@@ -51,7 +51,7 @@
   top: -2px; right: -4px;
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   /* Обідок кольором бару — щоб крапка читалась і коли лягає на лінію іконки.
      Той самий прийом, що на `.board-trigger-badge` (там обідок 2px білим). */
   box-shadow: 0 0 0 2px var(--white, #fff);
@@ -77,7 +77,7 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   display: flex;
   align-items: center;
   justify-content: center;
