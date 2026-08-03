@@ -73,6 +73,7 @@ const PHONE_ICON_SVG = ICONS.phone; // дедуп — раніше локаль�
 // донизу вилазить меню FAB, а знизу іконка повідомлень».
 // ⚠️ Розкладку дій Дошки вже перевертали двічі (01.08 і 02.08), і в документах
 // стояло «не міняй без нового слова Вови». Слово є — саме це повідомлення.
+const CLOSE_X_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const PLUS_ICON_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
@@ -1130,19 +1131,14 @@ function myActiveAdsCount() {
 // не стосується (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
 function syncMsgFab() {
   if (discOpen) return;
-  const box = document.querySelector('#board-content .bd-hero-actions');
-  if (!box) return;
-  const have = document.getElementById('bd-hero-msgs');
-  const need = canSeeMessages();
-  if (need && !have) {
-    box.insertAdjacentHTML('beforeend',
-      `<button class="bd-hero-msgs bd-hero-add" id="bd-hero-msgs" type="button" aria-label="Дії" aria-expanded="false">${PLUS_ICON_SVG}</button>`);
-    document.getElementById('bd-hero-msgs')
-      ?.addEventListener('click', () => document.getElementById('board-trigger')?.click());
-    paintUnreadBadge();   // щойно створений конверт ще порожній — заповнити з кешу
-  } else if (!need && have) {
-    have.remove();
+  const btn = document.getElementById('bd-msgs-fab');
+  if (!btn) return;
+  btn.hidden = !canSeeMessages();
+  if (!btn.dataset.wired) {
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
   }
+  paintUnreadBadge();   // бейдж переїхав разом із конвертом униз
 }
 
 
@@ -1204,10 +1200,13 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="cm-board-trigger-text">Подати оголошення</span>
+      <!-- Нижній круг тепер ПОВІДОМЛЕННЯ. Показується за тим самим правилом,
+           що раніше керувало конвертом у шапці (`canSeeMessages()` — є оголошення
+           АБО є розмова): новачку нема куди вести, тож кнопки в нього немає.
+           Малює/прибирає її `syncMsgFab()`. -->
+      <button class="cm-board-trigger board-trigger--fixed board-trigger--msgs" id="bd-msgs-fab"
+              type="button" aria-label="Повідомлення" hidden>
+        <span class="cm-board-trigger-icon">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></span>
       </button>
     </div>`;
 }
@@ -1340,11 +1339,16 @@ function renderHeader() {
         <p class="bd-hero-sub">Знайди, продай, обміняй або віддай безкоштовно</p>
       </div>
       <div class="bd-hero-actions">
-        ${canSeeMessages() ? `
-        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">
-          ${MSG_ICON_SVG}
-          <span class="board-trigger-badge" id="board-trigger-badge"></span>
-        </button>` : ''}
+        <!-- 🔄 04.08 (замовлення Вови): «+» переїхав У ШАПКУ, меню розкривається
+             ВНИЗ. Кнопка рендериться ЗАВЖДИ — це головна дія екрана, заради неї
+             Дошка існує; ховати її за умовою «є оголошення або розмова» не можна.
+             ⚠️ id лишається `board-trigger`: уся speed-dial механіка привʼязана
+             саме до нього, тож перенос кнопки її не чіпає. -->
+        <button class="bd-hero-msgs bd-hero-add" id="board-trigger" type="button"
+                aria-label="Дії" aria-expanded="false">
+          <span class="cm-board-trigger-icon">${PLUS_ICON_SVG}</span>
+          <span class="cm-board-trigger-close" aria-hidden="true">${CLOSE_X_SVG}</span>
+        </button>
       </div>
     </div>
   ` : '';
