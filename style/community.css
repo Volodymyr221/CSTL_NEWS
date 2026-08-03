@@ -5440,3 +5440,70 @@ textarea.cm-board-input.bm-invalid {
    екрана і сидить не по центру рядка, бо це гліф шрифту, а не іконка. */
 .cm-ad-author-go { flex: none; display: flex; color: #B0B0B0; }
 .cm-ad-author-go svg { width: 18px; height: 18px; }
+
+/* ── ЛИСТ СКАРГИ НА ОГОЛОШЕННЯ ────────────────────────────────────────────────
+   Відкривається зі сторінки оголошення (`data-ad-report`). Форма спільного
+   примітива `core/modal.js`, тому тут лише вміст — chrome (шапка, свайп, ✕)
+   малює сам примітив.
+   ⚠️ Кольори — родина поверхні Дошки (`--board-line`, `--board-press`,
+   `--news-accent`), нічого нового не заводимо. */
+.ad-rep-list { display: flex; flex-direction: column; }
+.ad-rep-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--board-line, #C4C4C1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ad-rep-item:last-child { border-bottom: 0; }
+/* Радіо ховаємо, але НЕ через `display:none`: той прибирає елемент із дерева
+   доступності й ламає керування з клавіатури та читач екрана. */
+.ad-rep-item input {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+.ad-rep-label { flex: 1; font-size: 16px; color: #1A1A1A; }
+.ad-rep-mark {
+  flex: none; width: 22px; height: 22px;
+  border: 2px solid var(--board-line, #C4C4C1);
+  border-radius: 50%;
+  transition: border-color .15s ease, background .15s ease;
+}
+.ad-rep-item input:checked ~ .ad-rep-mark {
+  border-color: var(--news-accent, #722F37);
+  background:
+    radial-gradient(circle at 50% 50%, var(--news-accent, #722F37) 0 5px, transparent 5px);
+}
+/* Видимий фокус — інакше з клавіатури не видно, де ти стоїш (радіо приховане). */
+.ad-rep-item input:focus-visible ~ .ad-rep-mark {
+  outline: 2px solid var(--news-accent, #722F37);
+  outline-offset: 2px;
+}
+.ad-rep-text {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--board-line, #C4C4C1);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit; font-size: 15px; line-height: 1.5;
+  color: #1A1A1A;
+  resize: none;
+}
+.ad-rep-text:focus { outline: none; border-color: var(--news-accent, #722F37); }
+.ad-rep-send {
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px;
+  border: 0; border-radius: 14px;
+  background: var(--news-accent, #722F37);
+  color: #fff;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Вимкнена кнопка мусить ВИГЛЯДАТИ вимкненою: інакше тап по ній читається як
+   поломка застосунку, а не як «спершу вибери причину». */
+.ad-rep-send:disabled { background: var(--board-press, #E4E4E1); color: #9A9A9A; cursor: default; }
+.ad-rep-send:not(:disabled):active { opacity: 0.85; }

@@ -476,6 +476,7 @@ let publishedPosts = [];
 let announcements  = [];
 let admins         = [];
 let comments       = [];
+let adReports      = [];      // скарги на оголошення (ad_reports), нові зверху
 let articles       = [];      // чернетки/готове до публікації (cms_articles)
 let articleDraft   = null;    // null = список; об'єкт = форма створення/редагування
 let communities    = [];      // спільноти-канали «Стрічки» (pages), відсортовані за sort_order
@@ -717,7 +718,7 @@ VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
 async function loadAll() {
   // Дошкові дані — лише адмінам (у редактора RLS їх однаково не віддасть).
   if (isAdmin) {
-    const [pending, published, ann, ad, com, pg, padm] = await Promise.all([
+    const [pending, published, ann, ad, com, pg, padm, rep] = await Promise.all([
       supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
       supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
       supa.from('announcements').select('*').order('created_at', { ascending: false }),
@@ -727,6 +728,9 @@ async function loadAll() {
       supa.from('pages').select('id, name, theme, avatar_url, banner_url, sort_order, is_system')
           .order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
       supa.from('page_admins').select('page_id'),   // для підрахунку власників на картці
+      // Скарги на оголошення. RLS віддає їх ЛИШЕ адміну — редактор побачив би нуль
+      // рядків, тому запит і стоїть у цій гілці.
+      supa.from('ad_reports').select('*').order('created_at', { ascending: false }).limit(300),
     ]);
     pendingPosts   = pending.data   || [];
     publishedPosts = published.data || [];
@@ -736,6 +740,9 @@ async function loadAll() {
     communities    = pg.data        || [];
     ownerCounts    = {};
     (padm.data || []).forEach(r => { ownerCounts[r.page_id] = (ownerCounts[r.page_id] || 0) + 1; });
+    // ⚠️ fail-soft: якщо міграцію ще не накатано, запит поверне помилку — адмінка
+    // мусить відкритись і без скарг, а не впасти цілком.
+    adReports = rep.data || [];
   }
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
@@ -746,6 +753,7 @@ async function loadAll() {
 // ── Векторні іконки вкладок (Tabler Icons, MIT — tabler.io/icons) замість
 // емодзі — той самий підхід що вже у src/core/board-categories.js на сайті.
 const ICO_CLIPBOARD_LIST = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /> <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M9 12l.01 0" /> <path d="M13 12l2 0" /> <path d="M9 16l.01 0" /> <path d="M13 16l2 0" /> </svg>';
+const ICO_FLAG = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z" /> <path d="M5 21v-7" /> </svg>';
 const ICO_SPEAKERPHONE = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 8a3 3 0 0 1 0 6" /> <path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5" /> <path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8" /> </svg>';
 const ICO_CHECK = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 12l5 5l10 -10" /> </svg>';
 const ICO_MESSAGE_CIRCLE = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /> </svg>';
@@ -766,6 +774,8 @@ function menuItems() {
   return [
     { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, count: () => articles.length },
     { id: 'pending',       icon: ICO_CLIPBOARD_LIST, label: 'Модерація',    show: isAdmin,     count: () => pendingPosts.length },
+    // Лічильник — лише НОВІ скарги: розглянуті не мусять світитись у сітці вічно.
+    { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     count: () => adReports.filter(r => r.status === 'new').length },
     { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Оголошення',   show: isAdmin,     count: () => 0 },
     { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
     { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
@@ -826,12 +836,94 @@ function renderTabContent() {
   if (activeTab === 'pending')        return renderPending(el);
   if (activeTab === 'published')      return renderPublished(el);
   if (activeTab === 'comments')       return renderCommentsModeration(el);
+  if (activeTab === 'reports')        return renderAdReports(el);
   if (activeTab === 'communities')    return renderCommunities(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'spend')          return renderSpend(el);
   if (activeTab === 'analytics')      return renderAnalytics(el);
   if (activeTab === 'settings')       return renderSettings(el);
+}
+
+// ── TAB: Скарги на оголошення ─────────────────────────────────────────
+// 🔴 02.08 — до цього кнопка «Поскаржитися» на сайті лише показувала тост і НЕ
+// ПИСАЛА НІКУДИ. Тобто застосунок обіцяв дію, якої не існувало.
+//
+// ⚠️ Усе, що тут показано, — ЗНІМОК на момент скарги (`post_title`, обидва імені).
+// Його робить тригер у базі, а не клієнт: інакше зловмисник надіслав би чужий
+// `post_owner_uid` і підставив би людину. Знімок ще й переживає видалення
+// оголошення — а скарга найпотрібніша саме тоді, коли порушник прибрав доказ.
+const REPORT_REASON_LABEL = {
+  scam:       'Шахрайство або обман',
+  spam:       'Спам чи реклама',
+  offensive:  'Образливий вміст',
+  false_info: 'Неправдива інформація',
+  outdated:   'Товар уже неактуальний',
+  other:      'Інше',
+};
+const REPORT_STATUS_LABEL = { new: 'Нова', reviewed: 'Переглянуто', dismissed: 'Відхилено' };
+
+// Фільтр списку. Стан у змінній, а не в DOM: renderApp() перемальовує розділ
+// цілком, і вибір у розмітці злітав би (та сама пастка, що з розгорнутими
+// постами у «Стрічці»).
+let reportsFilter = 'new';
+
+function renderAdReports(el) {
+  const counts = {
+    new:       adReports.filter(r => r.status === 'new').length,
+    reviewed:  adReports.filter(r => r.status === 'reviewed').length,
+    dismissed: adReports.filter(r => r.status === 'dismissed').length,
+  };
+  const list = adReports.filter(r => r.status === reportsFilter);
+
+  const chips = [['new', 'Нові'], ['reviewed', 'Переглянуті'], ['dismissed', 'Відхилені']]
+    .map(([k, label]) => `<button class="btn${reportsFilter === k ? '' : ' btn--ghost'}" data-rep-filter="${k}">${label} ${counts[k]}</button>`)
+    .join(' ');
+
+  el.innerHTML = `
+    <div class="section-title">Скарги на оголошення</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${chips}</div>
+    ${!adReports.length ? '<div class="empty">Скарг ще немає. Кнопка «Поскаржитися» на сторінці оголошення пише сюди.</div>'
+      : !list.length ? '<div class="empty">У цій категорії порожньо.</div>'
+      : list.map(r => `
+        <article class="card">
+          <div class="card-meta">
+            <span class="badge">${escapeHtml(REPORT_REASON_LABEL[r.reason] || r.reason)}</span>
+            <span class="badge badge--type">${escapeHtml(REPORT_STATUS_LABEL[r.status] || r.status)}</span>
+            <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(r.created_at))}</span>
+          </div>
+          ${r.details ? `<p class="card-text" style="font-style:italic">«${escapeHtml(r.details)}»</p>` : ''}
+          <div style="font-size:13px;line-height:1.7;color:#444;margin-top:6px">
+            <div><strong>Оголошення:</strong> ${escapeHtml(r.post_title || '(без назви)')} <span style="color:#999">#${r.post_id}</span></div>
+            <div><strong>Автор оголошення:</strong> ${escapeHtml(r.post_owner_name || '(імʼя невідоме)')}</div>
+            <div><strong>Поскаржився:</strong> ${escapeHtml(r.reporter_name || '(імʼя невідоме)')}</div>
+          </div>
+          <div class="card-actions">
+            ${r.status !== 'reviewed'  ? `<button class="btn" data-rep-status="reviewed"  data-rep-id="${r.id}">Переглянуто</button>` : ''}
+            ${r.status !== 'dismissed' ? `<button class="btn btn--ghost" data-rep-status="dismissed" data-rep-id="${r.id}">Відхилити</button>` : ''}
+            ${r.status !== 'new'       ? `<button class="btn btn--ghost" data-rep-status="new" data-rep-id="${r.id}">Повернути в нові</button>` : ''}
+          </div>
+        </article>`).join('')}
+  `;
+
+  el.querySelectorAll('[data-rep-filter]').forEach(b => b.addEventListener('click', () => {
+    reportsFilter = b.dataset.repFilter;
+    renderAdReports(el);
+  }));
+
+  // ⚠️ Міняємо ЛИШЕ `status`. Знімок і текст скарги захищені тригером у базі
+  // (`ad_reports_guard_update`) — журнал модерації мусить лишатись доказом, а не
+  // редагованим документом. `reviewed_at` теж ставить база, не ми.
+  el.querySelectorAll('[data-rep-status]').forEach(b => b.addEventListener('click', async () => {
+    const id = Number(b.dataset.repId), status = b.dataset.repStatus;
+    b.disabled = true;
+    const { error } = await supa.from('ad_reports').update({ status }).eq('id', id);
+    if (error) { b.disabled = false; return showToast('Помилка: ' + error.message, 4000); }
+    const row = adReports.find(x => x.id === id);
+    if (row) row.status = status;          // локально — щоб не перечитувати все
+    showToast('Скаргу позначено: ' + (REPORT_STATUS_LABEL[status] || status));
+    renderAdReports(el);
+  }));
 }
 
 // ── TAB: Витрати AI (лічильник автопостингу новин) ────────────────────

@@ -675,6 +675,31 @@
     const r = await netInsert(() => supa.from("posts").insert(row));
     return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
+  var REPORT_ERRORS = {
+    report_auth: "\u0429\u043E\u0431 \u043F\u043E\u0441\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044C, \u0442\u0440\u0435\u0431\u0430 \u0443\u0432\u0456\u0439\u0442\u0438",
+    report_no_post: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E",
+    report_self: "\u0426\u0435 \u0442\u0432\u043E\u0454 \u0432\u043B\u0430\u0441\u043D\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
+    report_flood: "\u0417\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u0441\u043A\u0430\u0440\u0433 \u0437\u0430 \u0434\u043E\u0431\u0443 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0437\u0430\u0432\u0442\u0440\u0430"
+  };
+  async function submitAdReport(postId, reason, details) {
+    if (!supa)
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.from("ad_reports").insert({
+      post_id: postId,
+      reason,
+      details: details || null
+    }));
+    if (r.ok)
+      return { ok: true };
+    const raw = String(r.raw || "");
+    const code = Object.keys(REPORT_ERRORS).find((k) => raw.includes(k));
+    if (code)
+      return { ok: false, error: REPORT_ERRORS[code] };
+    if (/duplicate|unique/i.test(raw)) {
+      return { ok: false, error: "\u0422\u0438 \u0432\u0436\u0435 \u0441\u043A\u0430\u0440\u0436\u0438\u0432\u0441\u044F \u043D\u0430 \u0446\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" };
+    }
+    return { ok: false, error: r.error };
+  }
   async function fetchPublishedAnnouncements() {
     if (!supa)
       return null;
@@ -6204,7 +6229,9 @@
     } catch (_) {
     }
     modal.querySelector("[data-ad-report]")?.addEventListener("click", () => {
-      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E. \u041C\u0438 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u043C\u043E \u0446\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.");
+      const pid = modal.dataset.postId;
+      if (pid)
+        openAdReportSheet(pid);
     });
     hydrateAvatars(modal);
     const sinceEl = modal.querySelector("[data-ad-since]");
@@ -6378,6 +6405,62 @@
     if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
       return few;
     return many;
+  }
+  var REPORT_REASONS = [
+    ["scam", "\u0428\u0430\u0445\u0440\u0430\u0439\u0441\u0442\u0432\u043E \u0430\u0431\u043E \u043E\u0431\u043C\u0430\u043D"],
+    ["spam", "\u0421\u043F\u0430\u043C \u0447\u0438 \u0440\u0435\u043A\u043B\u0430\u043C\u0430"],
+    ["offensive", "\u041E\u0431\u0440\u0430\u0437\u043B\u0438\u0432\u0438\u0439 \u0432\u043C\u0456\u0441\u0442"],
+    ["false_info", "\u041D\u0435\u043F\u0440\u0430\u0432\u0434\u0438\u0432\u0430 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F"],
+    ["outdated", "\u0422\u043E\u0432\u0430\u0440 \u0443\u0436\u0435 \u043D\u0435\u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0438\u0439"],
+    ["other", "\u0406\u043D\u0448\u0435"]
+  ];
+  function openAdReportSheet(postId) {
+    requireAuth("\u043F\u043E\u0441\u043A\u0430\u0440\u0436\u0438\u0442\u0438\u0441\u044C \u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", () => {
+      const { close } = openModal({
+        title: "\u0429\u043E \u043D\u0435 \u0442\u0430\u043A \u0437 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\u043C?",
+        className: "app-modal--report",
+        bodyHtml: `
+        <div class="ad-rep-list" role="radiogroup" aria-label="\u041F\u0440\u0438\u0447\u0438\u043D\u0430 \u0441\u043A\u0430\u0440\u0433\u0438">
+          ${REPORT_REASONS.map(([code, label]) => `
+            <label class="ad-rep-item">
+              <input type="radio" name="ad-report-reason" value="${code}">
+              <span class="ad-rep-label">${escapeHtml(label)}</span>
+              <span class="ad-rep-mark" aria-hidden="true"></span>
+            </label>`).join("")}
+        </div>
+        <textarea class="ad-rep-text" rows="3" maxlength="1000"
+                  placeholder="\u041E\u043F\u0438\u0448\u0456\u0442\u044C, \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)"></textarea>
+        <button class="ad-rep-send" type="button" disabled>\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0441\u043A\u0430\u0440\u0433\u0443</button>
+      `,
+        onMount: (wrap) => {
+          const radios = [...wrap.querySelectorAll('input[name="ad-report-reason"]')];
+          const area = wrap.querySelector(".ad-rep-text");
+          const send = wrap.querySelector(".ad-rep-send");
+          const chosen = () => radios.find((r) => r.checked)?.value || "";
+          const sync = () => {
+            const code = chosen();
+            const needDetails = code === "other";
+            area.placeholder = needDetails ? "\u041E\u043F\u0438\u0448\u0456\u0442\u044C, \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F (\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)" : "\u041E\u043F\u0438\u0448\u0456\u0442\u044C, \u0449\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)";
+            send.disabled = !code || needDetails && area.value.trim().length < 5;
+          };
+          radios.forEach((r) => r.addEventListener("change", sync));
+          area.addEventListener("input", sync);
+          send.addEventListener("click", async () => {
+            send.disabled = true;
+            send.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u044E\u2026";
+            const r = await submitAdReport(Number(postId), chosen(), area.value.trim());
+            if (!r.ok) {
+              send.disabled = false;
+              send.textContent = "\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0441\u043A\u0430\u0440\u0433\u0443";
+              showToast(r.error, 4e3);
+              return;
+            }
+            close();
+            showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E. \u0421\u043A\u0430\u0440\u0433\u0443 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E \u043D\u0430 \u0440\u043E\u0437\u0433\u043B\u044F\u0434.");
+          });
+        }
+      });
+    });
   }
   function renderAdReport() {
     return `
