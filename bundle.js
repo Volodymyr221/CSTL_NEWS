@@ -5878,6 +5878,9 @@
   function hasThreadsCached() {
     return _hasThreads;
   }
+  function unreadChatsCached() {
+    return isLoggedIn() ? _unreadChats : 0;
+  }
   function paintTabDot(tab, on) {
     const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
     if (!dot)
@@ -5946,6 +5949,7 @@
     const hadThreads = _hasThreads;
     _hasThreads = pairs.length > 0;
     paintUnreadBadge();
+    window.dispatchEvent(new CustomEvent("cstl-unread-changed"));
     if (hadThreads !== _hasThreads)
       window.dispatchEvent(new CustomEvent("cstl-threads-changed"));
   }
@@ -10607,25 +10611,24 @@ ${ev.description || ""}`
   onAuthChange(() => {
     renderBusBlock();
   });
-  var _bwTimer = null;
-  var _bwResume = null;
-  var BW_STEP_MS = 5e3;
-  var BW_RESUME_MS = 8e3;
-  var BW_MAX_CARDS = 16;
+  var BW_SHOWN = 3;
   var _evItems = [];
-  var _evIdx = 0;
-  var _evTimer = null;
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
   var _wxData = null;
-  function setWeatherTitle(cityName) {
-    const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
-    if (headerEl && cityName)
-      headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
+  function paintWeatherChip(info, temp, cityName) {
+    const btn = document.querySelector(".hm-wx");
+    if (!btn)
+      return;
+    btn.innerHTML = `<span class="hm-wx-ic">${info.icon}</span><b>${temp}\xB0</b><span class="hm-wx-city">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")}</span>`;
+    btn.hidden = false;
+    if (!btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", () => openWeatherSheet(0));
+    }
   }
   async function renderWeatherBlock() {
-    const el = document.getElementById("cm-weather-content");
-    if (!el)
+    if (!document.querySelector(".hm-wx"))
       return;
     try {
       const { lat, lon, city: knownCity } = await getCoords();
@@ -10641,37 +10644,25 @@ ${ev.description || ""}`
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
       const temp = Math.round(cur.temperature_2m);
-      const feels = Math.round(cur.apparent_temperature);
-      setWeatherTitle(cityName);
-      const forecastHtml = day.time.map((dateStr, i) => {
-        const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-        const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
-        const dayInfo = weatherCodeInfo(day.weather_code[i]);
-        return `
-        <button type="button" class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
-        </button>
-      `;
-      }).join("");
-      el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}\xB0</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A ${feels}\xB0</div>
-        </div>
-      </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
-    `;
-      el.querySelectorAll("[data-wx-day]").forEach((btn) => {
-        btn.addEventListener("click", () => openWeatherDayModal(+btn.dataset.wxDay));
-      });
+      paintWeatherChip(info, temp, cityName);
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function wxDaysRowHtml(activeIdx) {
+    const day = _wxData?.daily;
+    if (!day)
+      return "";
+    return day.time.map((dateStr, i) => {
+      const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+      const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
+      const dayInfo = weatherCodeInfo(day.weather_code[i]);
+      return `
+      <button type="button" class="cm-fc-day${i === activeIdx ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
+        <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+        <span class="cm-fc-date">${d.getDate()}</span>
+        <span class="cm-fc-icon">${dayInfo.icon}</span>
+      </button>`;
+    }).join("");
   }
   var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
   function wxGeom(points) {
@@ -10736,43 +10727,52 @@ ${ev.description || ""}`
       ${yAxis}${bars}
     </svg>`;
   }
-  function openWeatherDayModal(dayIndex) {
-    if (!_wxData || !_wxData.hourly)
-      return;
-    const daily = _wxData.daily;
-    const hourly = _wxData.hourly;
-    const dateStr = daily.time[dayIndex];
-    if (!dateStr)
-      return;
+  function wxDayData(dayIndex) {
+    const daily = _wxData?.daily, hourly = _wxData?.hourly;
+    const dateStr = daily?.time?.[dayIndex];
+    if (!dateStr || !hourly)
+      return null;
     const idxs = [];
     hourly.time.forEach((t, i) => {
       if (t.startsWith(dateStr))
         idxs.push(i);
     });
     if (!idxs.length)
-      return;
+      return null;
     const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
     const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
     const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
+    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
+    const nowHour = nowLocal.getUTCHours();
+    const initialIdx = dateStr === nowLocal.toISOString().slice(0, 10) ? tempPts.findIndex((p) => p.h === nowHour) : -1;
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
-    const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-    const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-    const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-    const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
-    const bodyHtml = `
+    return {
+      tempPts,
+      precipPts,
+      iconPts,
+      initialIdx: initialIdx >= 0 ? initialIdx : null,
+      dayName: dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()],
+      dateLabel: `${d.getDate()}.${pad(d.getMonth() + 1)}`,
+      info: weatherCodeInfo(daily.weather_code[dayIndex]),
+      tMax: Math.round(daily.temperature_2m_max[dayIndex]),
+      tMin: Math.round(daily.temperature_2m_min[dayIndex])
+    };
+  }
+  function wxDayBodyHtml(dd) {
+    return `
     <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-icon">${dd.info.icon}</div>
       <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+        <div class="wx-head-day">${escapeHtml(dd.dayName)} \xB7 ${dd.dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(dd.info.text)}</div>
       </div>
-      <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
+      <div class="wx-head-range">${dd.tMax}\xB0 / ${dd.tMin}\xB0</div>
     </div>
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
       <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: "\xB0" })}
+        ${wxLineChart(dd.tempPts, { unit: "\xB0" })}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
@@ -10780,27 +10780,43 @@ ${ev.description || ""}`
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
       <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
+        ${wxBarChart(dd.precipPts)}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
     </div>`;
-    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
-    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
-    const nowDateStr = nowLocal.toISOString().slice(0, 10);
-    const nowHour = nowLocal.getUTCHours();
-    const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
+  }
+  function openWeatherSheet(startDay = 0) {
+    const first = wxDayData(startDay);
+    if (!first)
+      return;
+    const bodyHtml = `
+    <div class="cm-weather-forecast wx-days">${wxDaysRowHtml(startDay)}</div>
+    <div class="wx-day"></div>`;
+    const paintDay = (wrap, idx) => {
+      const dd = wxDayData(idx);
+      if (!dd)
+        return;
+      const host = wrap.querySelector(".wx-day");
+      host.innerHTML = wxDayBodyHtml(dd);
+      wireWeatherScrubber(host, dd);
+      wrap.querySelectorAll("[data-wx-day]").forEach((b) => {
+        b.classList.toggle("cm-fc-day--today", Number(b.dataset.wxDay) === idx);
+      });
+    };
     const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
       swipeClose: false,
-      onMount: (wrap) => wireWeatherScrubber(wrap, {
-        tempPts,
-        precipPts,
-        iconPts,
-        initialIdx: initialIdx >= 0 ? initialIdx : null
-      })
+      onMount: (wrap) => {
+        paintDay(wrap, startDay);
+        wrap.querySelector(".wx-days").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-wx-day]");
+          if (b)
+            paintDay(wrap, Number(b.dataset.wxDay));
+        });
+      }
     });
     wireWeatherSwipe(el, close);
   }
@@ -11053,33 +11069,23 @@ ${ev.description || ""}`
     }, 80);
   }
   var BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-  var BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
-  function bwStopAuto() {
-    clearInterval(_bwTimer);
-    _bwTimer = null;
-    clearTimeout(_bwResume);
-    _bwResume = null;
-  }
-  function bwCardHtml(p) {
+  function bwRowHtml(p) {
     const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo;
     const title = p.title && p.title.trim() || (p.text || "").trim().slice(0, 60) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
     const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
     const color = catColor(p.category);
-    const cover = photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : "";
+    const cover = photo ? `<div class="hm-ad-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : `<div class="hm-ad-photo hm-ad-photo--mono">${escapeHtml(title.trim().charAt(0).toUpperCase())}</div>`;
     return `
-    <article class="cmbw-card" data-bw-id="${p.id}">
-      <div class="cmbw-in">
-        <span class="cmbw-pin" aria-hidden="true"></span>
-        ${cover}
-        <div class="cmbw-body">
-          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
-          <div class="cmbw-name">${escapeHtml(title)}</div>
-          <div class="cmbw-meta">
-            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
-            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
-          </div>
-        </div>
+    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
+      ${cover}
+      <div class="hm-ad-body">
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
+        <h4 class="hm-ad-title">${escapeHtml(title)}</h4>
+        <p class="hm-ad-meta">
+          ${locLabel ? `<span>${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : ""}
+          ${ts ? `<span class="hm-ad-time">${formatTime(ts)}</span>` : ""}
+        </p>
       </div>
     </article>`;
   }
@@ -11095,7 +11101,6 @@ ${ev.description || ""}`
     const el = document.getElementById("cm-board-content");
     if (!el)
       return;
-    bwStopAuto();
     try {
       let posts2 = [], usedSupabase = false;
       if (isSupabaseReady()) {
@@ -11110,130 +11115,24 @@ ${ev.description || ""}`
         posts2 = (await boardRes.json()).posts || [];
       }
       const ads = posts2.filter((p) => (p.type || "board") === "board");
-      const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
-      const cards = shown.map(bwCardHtml).join("");
-      el.classList.remove("cm-loading");
-      el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438">
-        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">\u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0406 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</span>
-      </div>
-      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
-           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
-           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
-           <span class="cmbw-dots" aria-hidden="true"></span>
-           <div class="cmbw-foot" data-bw-more role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-             <span>\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>${BW_ARROW_SVG}
-           </div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
-    `;
-      el.addEventListener("click", (e) => {
-        const card = e.target.closest("[data-bw-id]");
-        if (card) {
+      if (!ads.length) {
+        el.innerHTML = '<div class="hm-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>';
+        return;
+      }
+      el.innerHTML = `<div class="hm-ads">${bwShuffle(ads).slice(0, BW_SHOWN).map(bwRowHtml).join("")}</div>`;
+      if (!el.dataset.wired) {
+        el.dataset.wired = "1";
+        el.addEventListener("click", (e) => {
+          const card = e.target.closest("[data-bw-id]");
+          if (!card)
+            return;
           const post = ads.find((p) => p.id === Number(card.dataset.bwId));
-          if (post) {
+          if (post)
             openAdModalStandalone(post);
-            return;
-          }
-        }
-        if (e.target.closest("[data-bw-more]") || e.target.closest("[data-bw-head]")) {
-          if (typeof window.switchTab === "function")
-            window.switchTab("board");
-        }
-      });
-      const strip = el.querySelector("#cmbw-strip");
-      if (strip) {
-        const snapTargets = () => {
-          const kids = [...strip.children];
-          if (!kids.length)
-            return [];
-          const base = kids[0].offsetLeft;
-          return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
-        };
-        const targets0 = snapTargets();
-        const dotsWrap = el.querySelector(".cmbw-dots");
-        if (dotsWrap && targets0.length > 1) {
-          dotsWrap.innerHTML = targets0.map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join("");
-        }
-        const dotEls = dotsWrap ? [...dotsWrap.children] : [];
-        const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
-        const updateFx = () => {
-          const kids = [...strip.children];
-          if (!kids.length)
-            return;
-          const base = kids[0].offsetLeft;
-          const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
-          kids.forEach((c) => {
-            const l = c.offsetLeft - base + padL;
-            const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
-            const frac = Math.min(1, vis / c.offsetWidth);
-            if (c.firstElementChild)
-              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
-          });
-          if (dotEls.length) {
-            const targets = snapTargets();
-            let ai = 0, best = Infinity;
-            targets.forEach((t, i) => {
-              const d = Math.abs(t - strip.scrollLeft);
-              if (d < best) {
-                best = d;
-                ai = i;
-              }
-            });
-            dotEls.forEach((d, i) => d.classList.toggle("cmbw-dot--active", i === ai));
-          }
-        };
-        let fxRaf = 0;
-        strip.addEventListener("scroll", () => {
-          if (fxRaf)
-            return;
-          fxRaf = requestAnimationFrame(() => {
-            fxRaf = 0;
-            updateFx();
-          });
-        }, { passive: true });
-        updateFx();
-        if (targets0.length > 1) {
-          const tick = () => {
-            if (!document.contains(strip)) {
-              bwStopAuto();
-              return;
-            }
-            if (document.hidden)
-              return;
-            const targets = snapTargets();
-            if (!targets.length)
-              return;
-            const max = strip.scrollWidth - strip.clientWidth;
-            const next = targets.find((t) => t > strip.scrollLeft + 8);
-            strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
-          };
-          const startAuto = () => {
-            clearInterval(_bwTimer);
-            _bwTimer = setInterval(tick, BW_STEP_MS);
-          };
-          const pauseAuto = () => {
-            clearInterval(_bwTimer);
-            _bwTimer = null;
-            clearTimeout(_bwResume);
-            _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-          };
-          strip.addEventListener("touchstart", pauseAuto, { passive: true });
-          strip.addEventListener("pointerdown", pauseAuto);
-          if (dotsWrap)
-            dotsWrap.addEventListener("click", (e) => {
-              const d = e.target.closest("[data-bw-dot]");
-              if (!d)
-                return;
-              e.stopPropagation();
-              pauseAuto();
-              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
-              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
-            });
-          startAuto();
-        }
+        });
       }
     } catch {
-      el.innerHTML = '<div class="cmbw-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+      el.innerHTML = '<div class="hm-error">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
   function pluralUA(n, one, few, many) {
@@ -11279,10 +11178,6 @@ ${ev.description || ""}`
     const el = document.getElementById("cm-event-content");
     if (!el)
       return;
-    if (_evTimer) {
-      clearInterval(_evTimer);
-      _evTimer = null;
-    }
     try {
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
@@ -11303,111 +11198,50 @@ ${ev.description || ""}`
         }
       }
       if (!items.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
+        el.innerHTML = '<div class="hm-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
         return;
       }
       _evItems = items;
-      _evIdx = 0;
-      renderEvCarousel(el);
+      renderEvList(el);
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      el.innerHTML = '<div class="hm-error">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
-  function evSlideHtml(it, now) {
-    const eventDay = /* @__PURE__ */ new Date(it.date + "T00:00:00");
-    const todayDay = new Date(now);
-    todayDay.setHours(0, 0, 0, 0);
-    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-    const isUrgent = dayDiff <= 1;
-    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-    const catStr = escapeHtml(it.category || "");
-    const countdown = escapeHtml(eventCountdown(it, now));
-    if (it.kind === "holiday") {
-      const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : "";
-      return `
-      <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-ev-id="${it.id}">
-          <div class="evh-top">
-            <span class="tablo-countdown">${countdown}</span>
-            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
-          </div>
-          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || "\u{1F389}")}</div>
-          <div class="evh-title">${escapeHtml(it.title)}</div>
-          <div class="evh-meta tablo-soft">${dateStr}</div>
-        </article>
-      </div>
-    `;
-    }
-    const timeStr = it.time ? escapeHtml(it.time) : "";
-    const locStr = it.location ? escapeHtml(it.location) : "";
-    const thumb = it.image ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">` : "";
+  var EV_SHOWN = 3;
+  function evRowHtml(it, now) {
+    const d = /* @__PURE__ */ new Date(it.date + "T00:00:00");
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 864e5);
+    const when = escapeHtml(eventCountdown(it, now));
+    const urgent = diff <= 1;
+    const meta = [
+      it.time ? escapeHtml(it.time) : "",
+      it.location ? escapeHtml(it.location) : ""
+    ].filter(Boolean).join(" \xB7 ");
     return `
-    <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}${it.image ? " evh-card--photo" : ""}" data-ev-id="${it.id}">
-        ${thumb}
-        <div class="evh-top">
-          <span class="tablo-countdown">${countdown}</span>
-          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
-        </div>
-        <div class="evh-time tablo-time-mono">
-          <span class="evh-date tablo-time-accent">${dateStr}</span>
-          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ""}
-        </div>
-        <div class="evh-title">${escapeHtml(it.title)}</div>
-        ${locStr ? `<div class="evh-meta tablo-soft">\u{1F4CD} ${locStr}</div>` : ""}
-      </article>
-    </div>
-  `;
+    <article class="hm-card hm-card--tap hm-ev" data-ev-id="${it.id}">
+      <div class="hm-ev-date" aria-hidden="true">
+        <span class="hm-ev-d">${d.getDate()}</span>
+        <span class="hm-ev-m">${CM_MONTHS[d.getMonth()].slice(0, 3)}</span>
+      </div>
+      <div class="hm-ev-body">
+        <span class="hm-ev-when${urgent ? " hm-ev-when--soon" : ""}">${when}</span>
+        <h4 class="hm-ev-title">${escapeHtml(it.title)}</h4>
+        ${meta ? `<p class="hm-ev-meta">${meta}</p>` : ""}
+      </div>
+    </article>`;
   }
-  function renderEvCarousel(el) {
+  function renderEvList(el) {
     const now = /* @__PURE__ */ new Date();
-    const slides = _evItems.map((it) => evSlideHtml(it, now)).join("");
-    const dots = _evItems.length > 1 ? `<div class="cm-ev-dots">${_evItems.map((_, i) => `<span class="cm-ev-dot${i === _evIdx ? " active" : ""}" data-ev-idx="${i}"></span>`).join("")}</div>` : "";
-    el.innerHTML = `
-    <div class="cm-ev-carousel" id="cm-ev-carousel">
-      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
-      ${dots}
-    </div>
-  `;
-    el.querySelectorAll(".cm-ev-dot").forEach((dot) => {
-      dot.addEventListener("click", (e) => {
-        e.stopPropagation();
-        _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
-        updateEvPosition(el);
-        startEvRotator(el);
-      });
-    });
-    el.querySelectorAll(".evh-card[data-ev-id]").forEach((card) => {
+    el.innerHTML = `<div class="hm-ev-list">${_evItems.slice(0, EV_SHOWN).map((it) => evRowHtml(it, now)).join("")}</div>`;
+    el.querySelectorAll("[data-ev-id]").forEach((card) => {
       card.addEventListener("click", () => {
         const id = Number(card.dataset.evId);
         if (Number.isFinite(id))
           openShotamModal(id);
       });
     });
-    startEvRotator(el);
-  }
-  function updateEvPosition(el) {
-    const track = el.querySelector(".cm-ev-track");
-    if (track)
-      track.style.transform = `translateX(-${_evIdx * 100}%)`;
-    el.querySelectorAll(".cm-ev-dot").forEach((d, i) => d.classList.toggle("active", i === _evIdx));
-  }
-  function startEvRotator(el) {
-    if (_evTimer) {
-      clearInterval(_evTimer);
-      _evTimer = null;
-    }
-    if (_evItems.length < 2)
-      return;
-    _evTimer = setInterval(() => {
-      if (!document.getElementById("cm-ev-carousel")) {
-        clearInterval(_evTimer);
-        _evTimer = null;
-        return;
-      }
-      _evIdx = (_evIdx + 1) % _evItems.length;
-      updateEvPosition(el);
-    }, 6e3);
   }
   var CONTACT_ICONS = {
     ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -11429,7 +11263,7 @@ ${ev.description || ""}`
       const data = await res.json();
       const list = data.contacts || [];
       if (!list.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
       const telOf = (p) => p.replace(/[^\d+]/g, "");
@@ -11441,39 +11275,33 @@ ${ev.description || ""}`
         return i === -1 ? 99 : i;
       };
       emergency.sort((a, b) => emergRank(a) - emergRank(b));
-      const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
-        <div class="cm-contact-rows">
-          ${local.map((c) => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map((c) => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      el.innerHTML = localHtml + emergencyHtml;
+      const chipHtml = (c) => `
+      <a class="hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+        <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+      </a>`;
+      const rowHtml = (c) => `
+      <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-row-text">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
+      const quick = emergency.slice(0, 3);
+      const rest = [...local, ...emergency.slice(3)];
+      el.innerHTML = `
+      <div class="hm-card hm-tels">
+        <div class="hm-tel-grid">${quick.map(chipHtml).join("")}</div>
+        ${rest.length ? `
+          <details class="hm-tel-more">
+            <summary>\u0423\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438<span class="hm-tel-count">${rest.length}</span></summary>
+            <div class="hm-tel-rows">${rest.map(rowHtml).join("")}</div>
+          </details>` : ""}
+      </div>`;
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      el.innerHTML = '<div class="hm-error">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
@@ -11492,28 +11320,24 @@ ${ev.description || ""}`
           b.textContent = geoGroupOf(top[i]) || b.textContent;
       });
     }
-    const controls = document.getElementById("cm-news-controls");
-    if (controls) {
-      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
-    }
     paintNewsBadge(arts);
   }
   function paintNewsBadge(arts) {
-    const bar = document.querySelector(".cm-news-board-bar");
-    if (!bar)
+    const head = document.querySelector("#hm-news .hm-sec-title");
+    if (!head)
       return;
     const n = countNewCommunity(arts);
-    const old = bar.querySelector(".cm-news-new");
+    const old = head.parentElement.querySelector(".hm-new-badge");
     if (!n) {
       if (old)
         old.remove();
       return;
     }
-    const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+    const html = `<span class="hm-new-badge">${n} ${pluralNew(n)}</span>`;
     if (old)
       old.outerHTML = html;
     else
-      bar.insertAdjacentHTML("beforeend", html);
+      head.insertAdjacentHTML("afterend", html);
   }
   function pluralNew(n) {
     const t = n % 100, o = n % 10;
@@ -11531,7 +11355,7 @@ ${ev.description || ""}`
       return;
     const arts = await ensureNewsLoaded();
     paintCmNews(el, arts);
-    const section = document.querySelector(".cm-block--news");
+    const section = document.getElementById("hm-news");
     if (!section || section.dataset.wired)
       return;
     section.dataset.wired = "1";
@@ -11547,6 +11371,237 @@ ${ev.description || ""}`
       openNewsHub(CM_NEWS_GROUP);
     });
     window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
+  }
+
+  // src/tabs/home-now.js
+  var MAX_PILLS = 3;
+  var BUS_SOON_MIN = 90;
+  var TRACK_KEY2 = "bus_track_v2";
+  function loadTracked(todayISO) {
+    if (!isLoggedIn())
+      return [];
+    try {
+      const d = JSON.parse(localStorage.getItem(TRACK_KEY2 + ":" + currentUserId()));
+      if (d?.routes?.length)
+        return d.routes.filter((t) => t.trackDate >= todayISO);
+    } catch {
+    }
+    return [];
+  }
+  function pillHtml({ icon, text, action, aria }) {
+    return `<button class="hm-pill" type="button" data-now="${action}" aria-label="${escapeHtml(aria || text.replace(/<[^>]+>/g, ""))}">${icon}<span>${text}</span></button>`;
+  }
+  async function busPill() {
+    try {
+      const res = await fetch("./data/schedule.json");
+      const data = await res.json();
+      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const routes = data.days?.[todayISO]?.routes || data.routes || [];
+      const live = routes.filter((r) => r.status !== "cancelled");
+      if (!live.length)
+        return null;
+      const tracked = loadTracked(todayISO).map((t2) => t2.routeId);
+      const pickable = live.filter((r) => {
+        const st = getRouteState(r);
+        if (st === "enroute")
+          return true;
+        if (st !== "waiting")
+          return false;
+        const t2 = getRouteTimings(r);
+        return t2.minsToDeparture !== null && t2.minsToDeparture <= BUS_SOON_MIN;
+      });
+      if (!pickable.length)
+        return null;
+      const depMins = (r) => getStopMins(r, r.stops[0].name) ?? 0;
+      const route = pickable.find((r) => tracked.includes(r.id)) || pickable.sort((a, b) => depMins(a) - depMins(b))[0];
+      const t = getRouteTimings(route);
+      const [, to] = parseRouteEndpoints(route.name || "");
+      const when = t.state === "enroute" ? "\u0412 \u0414\u041E\u0420\u041E\u0417\u0406" : formatCountdownUpper(t.minsToDeparture);
+      if (!when)
+        return null;
+      return {
+        icon: ICONS.bus,
+        text: `${escapeHtml(to || route.name || "\u0420\u0435\u0439\u0441")} \xB7 <b>${escapeHtml(when.toLowerCase())}</b>`,
+        action: "bus",
+        aria: `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${to}, ${when.toLowerCase()}`,
+        run: () => {
+          if (typeof window.switchTab === "function")
+            window.switchTab("buses");
+          openSavedRouteOnBuses(route.id, todayISO, null, null);
+        }
+      };
+    } catch {
+      return null;
+    }
+  }
+  function chatPill() {
+    const n = unreadChatsCached();
+    if (!n)
+      return null;
+    return {
+      icon: ICONS.message,
+      text: `<b>${n}</b> ${pluralMsg(n)}`,
+      action: "chats",
+      aria: `${n} \u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C`,
+      run: () => openThreadsList()
+    };
+  }
+  function pluralMsg(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+    if (o === 1)
+      return "\u043D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (o >= 2 && o <= 4)
+      return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+  }
+  async function adsPill() {
+    if (!isLoggedIn())
+      return null;
+    try {
+      const mine = await fetchMyPosts(currentUserId());
+      const active = (mine || []).filter((p) => (p.status || "published") === "published");
+      if (!active.length)
+        return null;
+      return {
+        icon: ICONS.clipboard,
+        text: `<b>${active.length}</b> ${pluralAds(active.length)}`,
+        action: "myads",
+        aria: `\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F: ${active.length}`,
+        run: () => openMyAds()
+      };
+    } catch {
+      return null;
+    }
+  }
+  function pluralAds(n) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return "\u043C\u043E\u0457\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+    if (o === 1)
+      return "\u043C\u043E\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (o >= 2 && o <= 4)
+      return "\u043C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    return "\u043C\u043E\u0457\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+  }
+  var _actions = /* @__PURE__ */ new Map();
+  async function renderNowStrip() {
+    const el = document.getElementById("hm-now");
+    if (!el)
+      return;
+    const pills = (await Promise.all([busPill(), Promise.resolve(chatPill()), adsPill()])).filter(Boolean).slice(0, MAX_PILLS);
+    if (!pills.length) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    _actions = new Map(pills.map((p) => [p.action, p.run]));
+    el.innerHTML = pills.map(pillHtml).join("");
+    el.hidden = false;
+    if (!el.dataset.wired) {
+      el.dataset.wired = "1";
+      el.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-now]");
+        const run = b && _actions.get(b.dataset.now);
+        if (run)
+          run();
+      });
+    }
+  }
+  function initHomeNow() {
+    onAuthChange(() => renderNowStrip());
+    window.addEventListener("cstl-bus-track-changed", () => renderNowStrip());
+    window.addEventListener("cstl-unread-changed", () => renderNowStrip());
+    window.addEventListener("cstl-posts-changed", () => renderNowStrip());
+  }
+
+  // src/tabs/home-fund.js
+  var SRC = "./data/fundraisers.json";
+  var MAX_SHOWN = 2;
+  async function loadFundraisers() {
+    try {
+      const res = await fetch(SRC, { cache: "no-cache" });
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : data.items || [];
+      return items.filter(isPublishable);
+    } catch {
+      return [];
+    }
+  }
+  function isPublishable(it) {
+    return !!(it && it.active !== false && it.title && it.org && it.url);
+  }
+  function money(n) {
+    if (typeof n !== "number" || !isFinite(n))
+      return "";
+    return new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 }).format(n) + " \u20B4";
+  }
+  function progressOf(it) {
+    const { goal, raised } = it;
+    if (typeof goal !== "number" || typeof raised !== "number" || goal <= 0)
+      return null;
+    return Math.max(0, Math.min(100, Math.round(raised / goal * 100)));
+  }
+  function cardHtml2(it) {
+    const pct = progressOf(it);
+    const done = pct !== null && pct >= 100;
+    let sums = "";
+    if (pct !== null) {
+      sums = `<span class="hm-fund-raised">${money(it.raised)}</span>
+            <span class="hm-fund-goal">\u0437 ${money(it.goal)}</span>
+            <span class="hm-fund-pct">${pct}%</span>`;
+    } else if (typeof it.raised === "number") {
+      sums = `<span class="hm-fund-raised">${money(it.raised)}</span>
+            <span class="hm-fund-goal">\u0437\u0456\u0431\u0440\u0430\u043D\u043E</span>`;
+    }
+    const bar = pct !== null ? `
+    <div class="hm-fund-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="${pct}" aria-label="\u0417\u0456\u0431\u0440\u0430\u043D\u043E ${pct} \u0432\u0456\u0434\u0441\u043E\u0442\u043A\u0456\u0432">
+      <span style="width:${pct}%"></span>
+    </div>` : "";
+    return `
+    <article class="hm-card hm-fund" data-fund="${escapeHtml(String(it.id || it.title))}">
+      <div class="hm-fund-in">
+        <div class="hm-fund-head">
+          <!-- \u0412\u0435\u043A\u0442\u043E\u0440\u043D\u0430 \u0456\u043A\u043E\u043D\u043A\u0430, \u0430 \u043D\u0435 \u0435\u043C\u043E\u0434\u0437\u0456 \u{1F397}: \u0435\u043C\u043E\u0434\u0437\u0456 \u043C\u0430\u043B\u044E\u0454 \u0428\u0420\u0418\u0424\u0422 \u041F\u0420\u0418\u0421\u0422\u0420\u041E\u042E, \u0456
+               \u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0456 \u0441\u0438\u0441\u0442\u0435\u043C \u0441\u0442\u0440\u0456\u0447\u043A\u0430 \u0432\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043C\u043E\u043D\u043E\u0445\u0440\u043E\u043C\u043D\u0438\u043C \u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C \u0430\u0431\u043E \u043D\u0435
+               \u0432\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u0437\u043E\u0432\u0441\u0456\u043C. \u041F\u0440\u043E\u0454\u043A\u0442 \u0443\u0436\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0432 \u0435\u043C\u043E\u0434\u0437\u0456 \u043D\u0430 ICONS \u0437 \u0442\u0456\u0454\u0457
+               \u0441\u0430\u043C\u043E\u0457 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. -->
+          <span class="hm-fund-mark" aria-hidden="true">${ICONS.community}</span>
+          <h4 class="hm-fund-title">${escapeHtml(it.title)}</h4>
+        </div>
+
+        <p class="hm-fund-org">${escapeHtml(it.org)}${it.verifiedBy ? ` \xB7 <span class="hm-fund-ver">\u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 ${escapeHtml(it.verifiedBy)}</span>` : ""}</p>
+
+        ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ""}
+
+        ${sums ? `<div class="hm-fund-sums">${sums}</div>` : ""}
+        ${bar}
+
+        <a class="hm-fund-cta" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+          ${done ? "\u0426\u0456\u043B\u044C \u0437\u0456\u0431\u0440\u0430\u043D\u043E \u2014 \u0434\u0435\u0442\u0430\u043B\u0456" : "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0442\u0438"}
+        </a>
+        <p class="hm-fund-fine">\u041A\u043E\u0448\u0442\u0438 \u0439\u0434\u0443\u0442\u044C \u043D\u0430\u043F\u0440\u044F\u043C\u0443 \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0442\u043E\u0440\u0443. CSTL LIFE \u043D\u0435 \u0437\u0431\u0438\u0440\u0430\u0454 \u0456 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454 \u0433\u0440\u043E\u0448\u0456.</p>
+      </div>
+    </article>`;
+  }
+  async function renderFundBlock() {
+    const host = document.getElementById("hm-fund");
+    if (!host)
+      return;
+    const items = (await loadFundraisers()).slice(0, MAX_SHOWN);
+    if (!items.length) {
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML = `
+    <div class="hm-sec">
+      <div class="hm-sec-head">
+        <h3 class="hm-sec-title">\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u0437\u0431\u043E\u0440\u0438</h3>
+      </div>
+      ${items.map(cardHtml2).join("")}
+    </div>`;
   }
 
   // src/tabs/community.js
@@ -11568,22 +11623,22 @@ ${ev.description || ""}`
   }
   function heroImgsHtml() {
     return heroSet().map((it, i) => `
-    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
+    <img class="hm-top-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
   `).join("");
   }
   function syncHeroCaption() {
-    const sub = document.querySelector(".cm-hero-sub");
+    const sub = document.querySelector(".hm-top-cap");
     const it = heroSet()[_heroIndex];
     if (sub && it)
       sub.textContent = it.caption;
   }
   function showHeroSlide(idx) {
-    const wrap = document.querySelector(".cm-hero");
+    const wrap = document.querySelector(".hm-top-photo");
     if (!wrap)
       return;
     const n = heroSet().length;
     _heroIndex = (idx + n) % n;
-    wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
+    wrap.querySelectorAll(".hm-top-img").forEach((img, i) => {
       img.classList.toggle("active", i === _heroIndex);
     });
     syncHeroCaption();
@@ -11594,18 +11649,19 @@ ${ev.description || ""}`
     _heroIndex = 0;
     _heroIsDay = isDaytime();
     _heroInterval = setInterval(() => {
-      const wrap = document.querySelector(".cm-hero");
+      const wrap = document.querySelector(".hm-top-photo");
       if (!wrap) {
         clearInterval(_heroInterval);
         _heroInterval = null;
         return;
       }
+      if (document.hidden)
+        return;
       const day = isDaytime();
       if (day !== _heroIsDay) {
         _heroIsDay = day;
         _heroIndex = 0;
-        wrap.querySelectorAll(".cm-hero-img").forEach((img) => img.remove());
-        wrap.insertAdjacentHTML("afterbegin", heroImgsHtml());
+        wrap.innerHTML = heroImgsHtml();
         syncHeroCaption();
         return;
       }
@@ -11632,7 +11688,7 @@ ${ev.description || ""}`
     return { text: `${hello}, ${who}!` };
   }
   function updateGreetingName() {
-    const el = document.querySelector(".cm-greeting-text");
+    const el = document.querySelector(".hm-greet");
     if (el)
       el.textContent = getGreeting().text;
     fitGreeting();
@@ -11640,7 +11696,7 @@ ${ev.description || ""}`
   var GREET_FONT_MAX = 27;
   var GREET_FONT_MIN = 19;
   function fitGreeting() {
-    const el = document.querySelector(".cm-greeting-text");
+    const el = document.querySelector(".hm-greet");
     if (!el)
       return;
     let size = GREET_FONT_MAX;
@@ -11656,6 +11712,16 @@ ${ev.description || ""}`
     const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
+  function skelRows(n) {
+    return `<div class="hm-skel-list">${Array.from({ length: n }, () => `
+      <div class="hm-card hm-skel-row" aria-hidden="true">
+        <div class="hm-skel hm-skel-ph"></div>
+        <div class="hm-skel-lines">
+          <div class="hm-skel hm-skel-l1"></div>
+          <div class="hm-skel hm-skel-l2"></div>
+        </div>
+      </div>`).join("")}</div>`;
+  }
   function renderSkeleton() {
     const el = document.getElementById("cm-content");
     if (!el)
@@ -11663,238 +11729,104 @@ ${ev.description || ""}`
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
-    <!-- \u041A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u2014 \u041F\u0420\u0418\u0411\u0418\u0422\u0410 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0412\u043E\u0432\u0438 16.07: \xAB\u0456\u043A\u043E\u043D\u043A\u0430 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435
-         \u0434\u0456\u0432\u0430\u0454\u0442\u044C\u0441\u044F\xBB). \u041E\u043A\u0440\u0435\u043C\u0438\u0439 sticky-\u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043D\u0443\u043B\u044C\u043E\u0432\u043E\u0457 \u0432\u0438\u0441\u043E\u0442\u0438: \u043A\u043D\u043E\u043F\u043A\u0430 \u0441\u0442\u043E\u0457\u0442\u044C \u0443
-         \u043F\u0440\u0430\u0432\u043E\u043C\u0443 \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u043C\u0443 \u043A\u0443\u0442\u0456 \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0443 \u0432\u0456\u0434 \u0441\u0442\u0430\u0440\u0442\u0443 \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F
-         \u0457\u0434\u0435 \u0433\u0435\u0442\u044C, \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u043F\u0440\u0438\u0457\u0436\u0434\u0436\u0430\u0454, \u0430 \u0432\u043E\u043D\u0430 \u043D\u0430 \u043C\u0456\u0441\u0446\u0456. -->
-    <div class="cm-acc-pin">
-      <button class="cm-greet-account" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
-      </button>
-    </div>
+    <!-- \u0428\u0410\u041F\u041A\u0410. \u0424\u043E\u0442\u043E \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C, \u0430\u043B\u0435 \u0441\u0442\u0430\u043B\u043E \u0422\u041B\u041E\u041C \u0432\u0438\u0441\u043E\u0442\u043E\u044E ~200px \u0437\u0430\u043C\u0456\u0441\u0442\u044C 560px
+         \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E\u0433\u043E \u0431\u043B\u043E\u043A\u0430. \u0423\u0441\u044F \u0442\u0435\u043A\u0441\u0442\u043E\u0432\u0430 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F \u2014 \u043F\u043E\u0432\u0435\u0440\u0445 \u043D\u044C\u043E\u0433\u043E. -->
+    <header class="hm-top">
+      <div class="hm-top-photo">${heroImgsHtml()}</div>
+      <div class="hm-top-shade" aria-hidden="true"></div>
 
-    <!-- \u0421\u0442\u0438\u043A-\u0437\u043E\u043D\u0430 \u0432\u0456\u0442\u0430\u043D\u043D\u044F: \u0432\u0438\u0441\u043E\u0442\u0430 = \u0432\u0456\u0442\u0430\u043D\u043D\u044F + \u0437\u0430\u043F\u0430\u0441 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB (padding-bottom).
-         .cm-greeting \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 position:sticky, \u0442\u043E\u043C\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0442\u0440\u0438\u043C\u0430\u0454 \u0439\u043E\u0433\u043E
-         \u043D\u0430 \u041A\u041E\u041C\u041F\u041E\u0417\u0418\u0422\u041E\u0420\u0406 (\u0431\u0435\u0437 JS-\u0441\u043A\u0440\u043E\u043B\u0443) \u2192 \u043D\u0443\u043B\u044C \u0434\u044C\u043E\u0440\u0433\u0430\u043D\u043D\u044F \u043D\u0430 iOS. \u041A\u043E\u043B\u0438 \u0437\u043E\u043D\u0430
-         \u0434\u043E\u0437\u043D\u0438\u043A\u0430\u0454 (\u043F\u0440\u043E\u0441\u043A\u0440\u043E\u043B\u0438\u043B\u0438 padding-bottom) \u2014 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u0457\u0434\u0435 \u0432\u0433\u043E\u0440\u0443. -->
-    <div class="cm-greeting-stick">
-      <section class="cm-greeting">
-        <div class="cm-greeting-col">
-          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      <div class="hm-top-in">
+        <div class="hm-top-row">
+          <span class="hm-top-date">${escapeHtml(todayStr)}</span>
+          <!-- \u041A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u0440\u0430\u0432\u043E\u043C\u0443 \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u043C\u0443 \u043A\u0443\u0442\u0456 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F
+               \u0412\u043E\u0432\u0438 16.07). \u041F\u0440\u0438\u0431\u0438\u0442\u0438\u043C sticky-\u0435\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C \u0432\u043E\u043D\u0430 \u0431\u0456\u043B\u044C\u0448\u0435 \u041D\u0415 \u0454 \u2014 \u043D\u0430 \u043D\u043E\u0432\u0456\u0439
+               \u0448\u0430\u043F\u0446\u0456 \u043D\u0435\u043C\u0430 \u0447\u043E\u0433\u043E \xAB\u043D\u0435 \u0434\u0456\u0432\u0430\u0442\u0438\xBB, \u0435\u043A\u0440\u0430\u043D \u043F\u0456\u0434 \u043D\u0435\u044E \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0440\u043E\u043A\u0440\u0443\u0447\u0443\u0454\u0442\u044C\u0441\u044F. -->
+          <button class="hm-top-acc" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+          </button>
         </div>
-      </section>
-      <!-- \u0420\u043E\u0437\u043F\u0456\u0440\u043A\u0430 \u0437\u0430\u043F\u0430\u0441\u0443 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB: \u0420\u0415\u0410\u041B\u042C\u041D\u0418\u0419 \u0431\u043B\u043E\u043A (\u043D\u0435 padding!) \u2014 \u0456\u043D\u0430\u043A\u0448\u0435
-           sticky \u0443 Chromium \u043D\u0435 \u0442\u0440\u0438\u043C\u0430\u0454 (padding \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430 \u043D\u0435 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u0443 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D
-           \u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F). \u0407\u0457 \u0432\u0438\u0441\u043E\u0442\u0430 = \u0441\u043A\u0456\u043B\u044C\u043A\u0438 px \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0456\u0433\u043D\u043E\u0440\u0443\u0454 \u0441\u043A\u0440\u043E\u043B. -->
-      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
-    </div>
 
-    <section class="cm-hero">
-      ${heroImgsHtml()}
-      <!-- \u0424\u0440\u043E\u0441\u0442-\u0441\u043C\u0443\u0433\u0443 (.cm-hero-blurband) \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u043E 16.07 (\u0412\u043E\u0432\u0430, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u043B\u0438\u0441\u0442\xBB):
-           \u043D\u0435\u043F\u0440\u043E\u0437\u043E\u0440\u0438\u0439 \u0442\u0456\u043B\u0435\u0441\u043D\u0438\u0439 \u043B\u0438\u0441\u0442 \u043D\u0430\u043B\u044F\u0433\u0430\u0454 \u043D\u0430 \u0444\u043E\u0442\u043E \u0456 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u0457\u0457 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454. -->
-      <div class="cm-hero-overlay">
-        <!-- \u041F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E (\u0412\u043E\u0432\u0430 20.07, \u0432\u0430\u0440\u0456\u0430\u043D\u0442 \u0411): \u0434\u0432\u0430 \u0434\u0440\u0456\u0431\u043D\u0456 \u0440\u044F\u0434\u043A\u0438 \u0432 \u0441\u0442\u0438\u043B\u0456 \u043F\u0456\u0434\u043F\u0438\u0441\u0443
-             \u0436\u0443\u0440\u043D\u0430\u043B\u0443 \u2014 \xAB\u041E\u041B\u0418\u041A\u0410\xBB (\u0440\u043E\u0437\u0440\u0456\u0434\u0436\u0435\u043D\u0456 \u043A\u0430\u043F\u0456\u0442\u0435\u043B\u0456) + \u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043C'\u044F\u0442\u043A\u0438 \u043A\u0443\u0440\u0441\u0438\u0432\u043E\u043C \u043F\u0456\u0434 \u043D\u0435\u044E.
-             \u0414\u0435\u043B\u0456\u043A\u0430\u0442\u043D\u0438\u0439, \u043D\u0435 \u043D\u0430\u0437\u0432\u0430 \u0431\u043B\u043E\u043A\u0443; \u0447\u0438\u0442\u0430\u0431\u0435\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u043D\u0430 \u0434\u0435\u043D\u044C/\u043D\u0456\u0447 \u0447\u0435\u0440\u0435\u0437 \u0442\u0456\u043D\u044C + \u043B\u0435\u0433\u043A\u0435
-             \u0437\u0430\u0442\u0435\u043C\u043D\u0435\u043D\u043D\u044F \u0432\u043D\u0438\u0437\u0443 \u0444\u043E\u0442\u043E. \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u0436\u0438\u0432\u0435 \u043E\u043A\u0440\u0435\u043C\u043E \u043D\u0438\u0436\u0447\u0435 (cm-sec-head). -->
-        <div class="cm-hero-caption">
-          <span class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</span>
-          <span class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</span>
+        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+
+        <!-- \u041F\u043E\u0433\u043E\u0434\u0430. \u041A\u0440\u043E\u043A 4 \u043D\u0430\u043F\u043E\u0432\u043D\u0438\u0442\u044C \u0457\u0457 \u0434\u0430\u043D\u0438\u043C\u0438; \u043F\u043E\u043A\u0438 \u2014 \u043C\u0456\u0441\u0446\u0435 \u0439 \u043F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E. -->
+        <div class="hm-top-foot">
+          <button class="hm-wx" type="button" data-hm-weather hidden></button>
+          <span class="hm-top-cap">${escapeHtml(heroSet()[0].caption)}</span>
         </div>
-      </div>
-    </section>
-    <div class="cm-hero-spacer"></div>
-
-    <!-- \u041B\u0418\u0421\u0422 (\u0412\u043E\u0432\u0430 16.07, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u044F\u043A \u0441\u0443\u0447\u0430\u0441\u043D\u0438\u0439 iOS-\u0434\u043E\u0434\u0430\u0442\u043E\u043A\xBB): \u0442\u0456\u043B\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430
-         \u043D\u0430 \u0432\u0441\u044E \u0448\u0438\u0440\u0438\u043D\u0443, \u0449\u043E \u041D\u0410\u041B\u042F\u0413\u0410\u0404 \u043D\u0430 \u0444\u043E\u0442\u043E (\u0437\u0430\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0456 \u0432\u0435\u0440\u0445\u043D\u0456 \u043A\u0443\u0442\u0438 + \u0433\u043B\u0438\u0431\u043E\u043A\u0430 \u0442\u0456\u043D\u044C
-         \u0443\u0433\u043E\u0440\u0443). \u0423\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 \u044F\u0437\u0438\u0447\u043E\u043A \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB (\u0432\u0438\u043F\u0443\u043A\u043B\u0438\u0439 \u0432\u0438\u0441\u0442\u0443\u043F \u043B\u0438\u0441\u0442\u0430 \u043D\u0430 \u0444\u043E\u0442\u043E)
-         \u0456 \u0432\u0441\u0456 \u0431\u043B\u043E\u043A\u0438. \u0425\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430: sec-head sticky \u2192 \u0434\u043E\u0457\u0436\u0434\u0436\u0430\u0454 \u0434\u043E \u0448\u0430\u043F\u043A\u0438,
-         \u0437\u0430\u043B\u0438\u043F\u0430\u0454 \u0456 \u0441\u0442\u0430\u0454 \u0431\u043B\u044E\u0440-\u043F\u0430\u043D\u0435\u043B\u043B\u044E (--stuck), \u0431\u043B\u043E\u043A\u0438 \u043F\u0456\u0440\u043D\u0430\u044E\u0442\u044C \u043F\u0456\u0434 \u043D\u0435\u0457.
-         \u041A\u043D\u043E\u043F\u043A\u0438 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u0442\u0443\u0442 \u041D\u0415\u041C\u0410 \u2014 \u0432\u043E\u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u043E \u043F\u0440\u0438\u0431\u0438\u0442\u0430 (.cm-acc-pin). -->
-    <div class="cm-sheet">
-    <!-- \u041F\u0440\u0438\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0439 \u0434\u043E \u0448\u0430\u043F\u043A\u0438 \u0431\u043B\u044E\u0440-\u0440\u044F\u0434\u043E\u043A (\u041F\u0440\u0430\u0432\u043A\u0430 1): fixed, \u043D\u0435 \u0457\u0434\u0435 \u0437\u0456 \u0441\u043A\u0440\u043E\u043B\u043E\u043C; opacity \u0441\u043A\u0440\u0430\u0431\u0438\u0442\u044C\u0441\u044F. -->
-    <div class="cm-topbar-blur" aria-hidden="true"></div>
-    <div id="cm-sec-sentinel" aria-hidden="true"></div>
-    <header class="cm-sec-head" id="cm-sec-head">
-      <div class="cm-sec-head-in">
-        <h2>\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
-        <!-- \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0417\u041D\u041E\u0412\u0423 \u0432 \u043B\u0438\u043F\u043A\u0456\u0439 \u0448\u0430\u043F\u0446\u0456 (\u0412\u043E\u0432\u0430 16.07, \u0432\u0435\u0447\u0456\u0440): \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0456
-             \u043F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u2014 \u043E\u0434\u043D\u0435 \u0446\u0456\u043B\u0435, \u043E\u0431\u0438\u0434\u0432\u0430 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043A\u043E\u043B\u0438 \u0448\u0430\u043F\u043A\u0430 \u0437\u0430\u043B\u0438\u043F\u0430\u0454.
-             \u0420\u0430\u043D\u0456\u0448\u0435 \u0431\u0443\u0432 \u0443 \u0442\u0456\u043B\u0456 \u0431\u043B\u043E\u043A\u0443 \u2192 \u0432\u0456\u0434\u0441\u043A\u0440\u043E\u043B\u044E\u0432\u0430\u0432\u0441\u044F \u0433\u0435\u0442\u044C, \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043B\u0438\u0448\u0430\u0432\u0441\u044F \u043B\u0438\u0448\u0435 h2. -->
-        <p class="cm-sheet-sub">\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
       </div>
     </header>
 
-    <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
-         \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
+    <div class="hm-body">
+      <!-- \u0413\u043E\u043B\u043E\u0441 \u0412\u043E\u0432\u0438. \u041D\u0415 \u043B\u0438\u043F\u043A\u0435: \u043F\u0430\u043D\u0435\u043B\u044C \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u043A\u0440\u0438\u0432\u0430\u0454. -->
+      <div class="hm-hello">
+        <h2 class="hm-hello-t">\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
+        <p class="hm-hello-s">\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
+      </div>
 
-    <!-- \u{1F534} 31.07: \u0448\u0430\u043F\u043A\u0430 \u0441\u0442\u0430\u043B\u0430 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u044C\u043E\u044E <button>. \u0420\u0430\u043D\u0456\u0448\u0435 \u0446\u0435 \u0431\u0443\u0432 <div>, \u043F\u043E \u044F\u043A\u043E\u043C\u0443
-         \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0442\u0430\u043F\u0430\u043B\u043E\u0441\u044C; \u0442\u0435\u043F\u0435\u0440 \u0443\u0432\u0435\u0441\u044C \u0432\u0456\u0434\u0436\u0435\u0442 \u0432\u0435\u0434\u0435 \u0432 \u0445\u0430\u0431 \u043D\u043E\u0432\u0438\u043D, \u0456 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0456 \u0442\u0430
-         \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
-    <section id="cm-news-board" class="cm-block cm-block--news">
-      <button class="cm-news-board-bar" type="button" data-cm-news-open>
-        <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
-      </button>
-      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-      <div id="cm-news-controls" class="cm-news-controls"></div>
-    </section>
+      <!-- \u0421\u041C\u0423\u0413\u0410 \xAB\u0417\u0410\u0420\u0410\u0417\xBB (\u043A\u0440\u043E\u043A 5): \u043A\u0430\u043F\u0441\u0443\u043B\u0438 \u0437'\u044F\u0432\u043B\u044F\u044E\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043A\u043E\u043B\u0438 \u0454 \u0449\u043E \u0441\u043A\u0430\u0437\u0430\u0442\u0438. -->
+      <div class="hm-now" id="hm-now" hidden></div>
 
-    <!-- \u0412\u0456\u0434\u0436\u0435\u0442 \u0414\u043E\u0448\u043A\u0438 (\u043F\u043E\u0432\u043D\u0430 \u043F\u0435\u0440\u0435\u0440\u043E\u0431\u043A\u0430 13.07, \u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438): \u0448\u0430\u043F\u043A\u0430 \u0442\u0435\u043F\u0435\u0440
-         \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0432\u0456\u0434\u0436\u0435\u0442\u0430 (\u0440\u0435\u043D\u0434\u0435\u0440\u0438\u0442\u044C renderBoardBlock), \u0441\u0442\u0430\u0440\u0430 \xAB\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438\xBB \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u0430. -->
-    <section class="cm-block cm-block--board">
-      <div id="cm-board-content" class="cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <!-- \u0417\u0411\u0406\u0420 (\u043A\u0440\u043E\u043A 7): \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 = \u0431\u043B\u043E\u043A\u0430 \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456 \u043D\u0435\u043C\u0430\u0454 \u0432\u0437\u0430\u0433\u0430\u043B\u0456. -->
+      <section class="hm-fund-wrap" id="hm-fund"></section>
 
-    <section class="cm-block cm-block--event">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-        <button class="cm-block-link" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
-      </header>
-      <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <section class="hm-sec hm-in" id="hm-news">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u0413\u043E\u043B\u043E\u0432\u043D\u0435</h3>
+          <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>
+        </div>
+        <div id="cm-news-content">${skelRows(3)}</div>
+      </section>
 
-    <section class="cm-block cm-block--bus">
-      <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-      <footer class="cm-block-footer">
-        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412 \u2192</button>
-      </footer>
-    </section>
+      <section class="hm-sec hm-in" id="hm-events">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457</h3>
+          <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
+        </div>
+        <div id="cm-event-content">${skelRows(2)}</div>
+      </section>
 
-    <section class="cm-block cm-block--weather">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
-      </header>
-      <div id="cm-weather-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
+      <section class="hm-sec hm-in" id="hm-board">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+          <button class="hm-sec-link" type="button" data-switch-tab="board">\u0423\u0441\u044F \u0434\u043E\u0448\u043A\u0430${ICONS.chevronRight}</button>
+        </div>
+        <div id="cm-board-content">${skelRows(3)}</div>
+      </section>
 
-    <!-- \u0411\u043B\u043E\u043A \u0421\u0432\u0456\u0442\u043B\u043E \u2014 \u043F\u0440\u0438\u0445\u043E\u0432\u0430\u043D\u043E 16.05.2026 (\u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0430\u0440\u0430\u0437\u0456 \u043D\u0435 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0430\u044E\u0442\u044C).
-         \u0429\u043E\u0431 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438: \u0440\u043E\u0437\u043A\u043E\u043C\u0435\u043D\u0442\u0443\u0432\u0430\u0442\u0438 \u0441\u0435\u043A\u0446\u0456\u044E + \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 renderPowerBlock() \u0443 initCommunity. -->
-    <!--
-    <section class="cm-block cm-block--power">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
-        <button class="cm-block-link" data-switch-tab="power">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
-      </header>
-      <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-    -->
+      <section class="hm-sec hm-in" id="hm-contacts">
+        <div class="hm-sec-head">
+          <h3 class="hm-sec-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438</h3>
+        </div>
+        <div id="cm-contacts-content">${skelRows(1)}</div>
+      </section>
 
-    <section id="cm-contacts" class="cm-block cm-block--contacts">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
-      </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-    </div><!-- /.cm-sheet -->
+      <!-- \u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0435\u0440\u0435\u0457\u0445\u0430\u0432 \u0443 \u0441\u043C\u0443\u0433\u0443 \xAB\u0417\u0410\u0420\u0410\u0417\xBB \u043A\u0430\u043F\u0441\u0443\u043B\u043E\u044E \u0437 \u0432\u0456\u0434\u043B\u0456\u043A\u043E\u043C; \u043F\u043E\u0432\u043D\u0438\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014
+           \u043D\u0430 \u0441\u0432\u043E\u0457\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456. \u041A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F, \u0431\u043E renderBusBlock() \u043D\u0430\u043F\u043E\u0432\u043D\u044E\u0454
+           \u0441\u0430\u043C\u0435 \u0439\u043E\u0433\u043E (\u043A\u0440\u043E\u043A 5 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C \u0432\u043C\u0456\u0441\u0442 \u0443 \u043A\u0430\u043F\u0441\u0443\u043B\u0443). -->
+      <div id="cm-bus-content" hidden></div>
+      <!-- \u041F\u043E\u0433\u043E\u0434\u0456 \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D: renderWeatherBlock()
+           \u043D\u0430\u043F\u043E\u0432\u043D\u044E\u0454 \u043A\u043D\u043E\u043F\u043A\u0443 .hm-wx \u0443 \u0448\u0430\u043F\u0446\u0456, \u0430 \u0432\u0435\u0441\u044C \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0436\u0438\u0432\u0435 \u0432 \u0457\u0457 \u043C\u043E\u0434\u0430\u043B\u0446\u0456. -->
+    </div>
   `;
   }
   var _greetingWired = false;
-  var _focusWired = false;
-  function initCenterFocus() {
-    if (_focusWired)
-      return;
-    const main = document.querySelector(".app-main");
-    if (!main)
-      return;
-    const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    _focusWired = true;
-    let raf = null;
-    let _stickyTop = null;
-    let _secRestTop = null;
-    let _maskW = 0;
-    const buildSheetMask = (w) => {
-      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17, sd = 1.5;
-      const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-      const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
-      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    };
-    const apply = () => {
-      raf = null;
-      if (main.dataset.tab !== "community")
-        return;
-      const vh = main.clientHeight;
-      const viewCenter = vh / 2;
-      const sec = document.getElementById("cm-sec-head");
-      const hdr = document.querySelector(".app-header");
-      if (sec) {
-        const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
-        if (_stickyTop === null)
-          _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
-        const pinLine = pinY + _stickyTop;
-        const secTop = sec.getBoundingClientRect().top;
-        if (main.scrollTop < 4)
-          _secRestTop = secTop;
-        const startY = _secRestTop != null ? _secRestTop : secTop;
-        const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
-        const START = 0.4;
-        const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
-        const sheet = document.querySelector(".cm-sheet");
-        if (sheet) {
-          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
-          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
-          sheet.style.setProperty("--sheet-blur", (6 + 5 * progColor).toFixed(1) + "px");
-          const w = sheet.clientWidth;
-          if (w && w !== _maskW) {
-            _maskW = w;
-            sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
-          }
-        }
-        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
-      }
-      if (!allowMotion)
-        return;
-      let best = null, bestDist = Infinity;
-      document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
-        const r = b.getBoundingClientRect();
-        if (r.bottom < -80 || r.top > vh + 80) {
-          if (b.dataset.cf) {
-            b.style.transform = "";
-            b.classList.remove("cm-block--focus");
-            delete b.dataset.cf;
-          }
-          return;
-        }
-        const blockCenter = (r.top + r.bottom) / 2;
-        const dist = Math.abs(blockCenter - viewCenter);
-        const scaleDist = b.id === "cm-news-board" && blockCenter > viewCenter ? 0 : dist;
-        const t = Math.min(1, scaleDist / (vh * 0.55));
-        b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
-        b.dataset.cf = "1";
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = b;
-        }
-      });
-      document.querySelectorAll("#cm-content .cm-block--focus").forEach((b) => {
-        if (b !== best)
-          b.classList.remove("cm-block--focus");
-      });
-      if (best)
-        best.classList.add("cm-block--focus");
-    };
-    const onScroll = () => {
-      if (!raf)
-        raf = requestAnimationFrame(apply);
-    };
-    main.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    window.addEventListener("cstl-tab-changed", onScroll);
-    onScroll();
-  }
+  var _nowWired = false;
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
-    initCenterFocus();
     refreshAccountButtons();
     if (!_greetingWired) {
       onAuthChange(updateGreetingName);
       _greetingWired = true;
     }
     updateGreetingName();
+    if (!_nowWired) {
+      initHomeNow();
+      _nowWired = true;
+    }
+    renderNowStrip();
+    renderFundBlock();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();
@@ -16332,7 +16264,7 @@ END:VEVENT`
       return "";
     return `${MONTHS_GEN[dt.getMonth()]} ${y}`;
   }
-  function cardHtml2(p) {
+  function cardHtml3(p) {
     const name = p && p.name && p.name.trim() ? p.name.trim() : "\u0416\u0438\u0442\u0435\u043B\u044C \u0433\u0440\u043E\u043C\u0430\u0434\u0438";
     const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
     const av = avatarCircle({ name, url, cls: "pcard-av" });
@@ -16362,7 +16294,7 @@ END:VEVENT`
       variant: "sheet",
       className: "app-modal--top",
       // поверх кабінету/чату (інакше ховається під ними)
-      bodyHtml: cardHtml2(p || { uid }),
+      bodyHtml: cardHtml3(p || { uid }),
       onMount: (wrap) => {
         const avwrap = wrap.querySelector(".pcard-avwrap");
         const url = avwrap && avwrap.dataset.pcardPhoto;

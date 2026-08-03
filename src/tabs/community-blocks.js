@@ -6,7 +6,7 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey } from '../core/utils.js';   // attachSwipe більше не потрібен: горизонтальну стрічку Дошки знято 03.08
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -51,16 +51,14 @@ onAuthChange(() => { renderBusBlock(); });
 
 // Віджет Дошки (повна переробка 13.07, рішення Вови): стрічка ПАР карток з
 // автопрокруткою. Слайд «Розмови» видалено — Обговорення мають власну вкладку.
-let _bwTimer  = null;   // інтервал автопрокрутки пар
-let _bwResume = null;   // таймаут відновлення автопрокрутки після дотику
-const BW_STEP_MS   = 5000;  // період автозміни пари (мс)
-const BW_RESUME_MS = 8000;  // пауза після дотику пальцем (мс)
-const BW_MAX_CARDS = 16;    // максимум випадкових оголошень у стрічці (Вова 13.07)
+// Скільки оголошень на головній. Три — рівно стільки, скільки дає уявлення
+// «чим зараз живе дошка», не перетворюючи секцію на список. Було 16 у
+// горизонтальній стрічці, з яких одночасно видно дві.
+const BW_SHOWN = 3;
 
-// Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
+// Найближчі події громади. Порожньо → найближчі свята (Г-16 fallback).
+// ⚠️ 03.08: авто-ротація і крапки прибрані разом із каруселлю — див. `renderEvList`.
 let _evItems = [];
-let _evIdx   = 0;
-let _evTimer = null;
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -85,14 +83,37 @@ const WEEKDAYS_UA_FULL = ['Неділя', 'Понеділок', 'Вівторо�
 // Кеш останньої відповіді Open-Meteo — потрібен модалці «по годинах» (клік на день).
 let _wxData = null;
 
-function setWeatherTitle(cityName) {
-  const headerEl = document.querySelector('.cm-block--weather .cm-block-title');
-  if (headerEl && cityName) headerEl.textContent = `Погода в ${cityName}`;
+// 🔴 03.08 — ПОГОДА ПЕРЕЇХАЛА В ШАПКУ (потік /byyou «Громада як Home-екран»).
+//
+// Було: окремий блок ПЕРЕДОСТАННІМ на екрані, початок на 1839px — щоб побачити
+// температуру, треба прогорнути 2.5 екрана. Заразом звірено по `index.html:27-28`:
+// з шапки застосунку погоду прибрали 08.07, тобто вгорі її не було НІДЕ.
+// Стало: рядок у шапці головної (`.hm-wx`) — іконка, градуси, місто.
+//
+// ⚠️ НІЧОГО НЕ ВТРАЧЕНО. Прогноз на 7 днів і графіки по годинах не зникли —
+// вони переїхали в ОДНУ модалку `openWeatherSheet()`, куди веде тап по рядку.
+// Це навмисно один аркуш, а не «аркуш поверх аркуша»: модалка над модалкою на
+// iPhone має два свайпи закриття один поверх одного, а цей клас багів у проєкті
+// вже коштував окремого блока роботи 02.08 (сторінка оголошення).
+function paintWeatherChip(info, temp, cityName) {
+  const btn = document.querySelector('.hm-wx');
+  if (!btn) return;
+  btn.innerHTML =
+    `<span class="hm-wx-ic">${info.icon}</span>` +
+    `<b>${temp}°</b>` +
+    `<span class="hm-wx-city">${escapeHtml(cityName || 'Олика')}</span>`;
+  btn.hidden = false;
+  // Слухач вішаємо ОДИН раз: renderWeatherBlock кличеться і при поверненні на
+  // вкладку, а другий слухач відкривав би дві модалки з одного тапу.
+  if (!btn.dataset.wired) {
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', () => openWeatherSheet(0));
+  }
 }
 
 export async function renderWeatherBlock() {
-  const el = document.getElementById('cm-weather-content');
-  if (!el) return;
+  // Кнопка живе в шапці головної; окремого контейнера під блок більше немає.
+  if (!document.querySelector('.hm-wx')) return;
 
   try {
     const { lat, lon, city: knownCity } = await getCoords();
@@ -112,42 +133,31 @@ export async function renderWeatherBlock() {
     const day  = data.daily;
     const info = weatherCodeInfo(cur.weather_code);
     const temp  = Math.round(cur.temperature_2m);
-    const feels = Math.round(cur.apparent_temperature);
 
-    setWeatherTitle(cityName);
-
-    const forecastHtml = day.time.map((dateStr, i) => {
-      const d = new Date(dateStr + 'T00:00:00');
-      const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
-      const dayInfo = weatherCodeInfo(day.weather_code[i]);
-      return `
-        <button type="button" class="cm-fc-day${i === 0 ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
-        </button>
-      `;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}°</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">Відчувається як ${feels}°</div>
-        </div>
-      </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
-    `;
-
-    // Клік на день → модалка «по годинах» (температура + опади).
-    el.querySelectorAll('[data-wx-day]').forEach(btn => {
-      btn.addEventListener('click', () => openWeatherDayModal(+btn.dataset.wxDay));
-    });
+    paintWeatherChip(info, temp, cityName);
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Погода тимчасово недоступна</div>';
+    // Погоди немає — рядок просто НЕ з'являється. Порожня кнопка «погода
+    // недоступна» у шапці зайняла б місце і не сказала б нічого корисного;
+    // це той самий принцип, що й у капсул «ЗАРАЗ» та блока зборів.
   }
+}
+
+// Рядок 7 днів для модалки. Той самий вигляд, що був у блоці (`.cm-fc-day`),
+// тому окремого CSS не заводимо — переїхала лише адреса, не форма.
+function wxDaysRowHtml(activeIdx) {
+  const day = _wxData?.daily;
+  if (!day) return '';
+  return day.time.map((dateStr, i) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
+    const dayInfo = weatherCodeInfo(day.weather_code[i]);
+    return `
+      <button type="button" class="cm-fc-day${i === activeIdx ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
+        <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+        <span class="cm-fc-date">${d.getDate()}</span>
+        <span class="cm-fc-icon">${dayInfo.icon}</span>
+      </button>`;
+  }).join('');
 }
 
 // ── Модалка «Погода по годинах» ──────────────────────────────────────────────
@@ -224,43 +234,59 @@ function wxBarChart(points) {
     </svg>`;
 }
 
-export function openWeatherDayModal(dayIndex) {
-  if (!_wxData || !_wxData.hourly) return;
-  const daily = _wxData.daily;
-  const hourly = _wxData.hourly;
-  const dateStr = daily.time[dayIndex];
-  if (!dateStr) return;
+// Дані одного дня для графіків. Витягнуто окремо, бо тепер день ПЕРЕМИКАЄТЬСЯ
+// всередині відкритого аркуша, а не відкриває новий.
+function wxDayData(dayIndex) {
+  const daily = _wxData?.daily, hourly = _wxData?.hourly;
+  const dateStr = daily?.time?.[dayIndex];
+  if (!dateStr || !hourly) return null;
 
   // Зрізаємо 24 години обраного дня (hourly.time відсортовані, timezone=auto, старт 00:00).
   const idxs = [];
   hourly.time.forEach((t, i) => { if (t.startsWith(dateStr)) idxs.push(i); });
-  if (!idxs.length) return;
+  if (!idxs.length) return null;
 
-  const tempPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
+  const tempPts   = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
   const precipPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
   // Іконка погоди на кожну годину (для скрабера — тягнеш палець, бачиш що о цій годині).
-  const iconPts = idxs.map(i => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+  const iconPts   = idxs.map(i => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+
+  // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
+  // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
+  // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
+  const offsetSec = _wxData.utc_offset_seconds ?? 7200;   // 7200с=+2год — фолбек лише якщо API не віддав поле
+  const nowLocal = new Date(Date.now() + offsetSec * 1000);
+  const nowHour = nowLocal.getUTCHours();
+  const initialIdx = dateStr === nowLocal.toISOString().slice(0, 10)
+    ? tempPts.findIndex(p => p.h === nowHour)
+    : -1;
 
   const d = new Date(dateStr + 'T00:00:00');
-  const dayName = dayIndex === 0 ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()];
-  const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-  const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-  const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-  const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
+  return {
+    tempPts, precipPts, iconPts,
+    initialIdx: initialIdx >= 0 ? initialIdx : null,
+    dayName: dayIndex === 0 ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()],
+    dateLabel: `${d.getDate()}.${pad(d.getMonth() + 1)}`,
+    info: weatherCodeInfo(daily.weather_code[dayIndex]),
+    tMax: Math.round(daily.temperature_2m_max[dayIndex]),
+    tMin: Math.round(daily.temperature_2m_min[dayIndex]),
+  };
+}
 
-  const bodyHtml = `
+function wxDayBodyHtml(dd) {
+  return `
     <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-icon">${dd.info.icon}</div>
       <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} · ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+        <div class="wx-head-day">${escapeHtml(dd.dayName)} · ${dd.dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(dd.info.text)}</div>
       </div>
-      <div class="wx-head-range">${tMax}° / ${tMin}°</div>
+      <div class="wx-head-range">${dd.tMax}° / ${dd.tMin}°</div>
     </div>
     <div class="wx-chart-block">
       <div class="wx-chart-title">🌡️ Температура, °C</div>
       <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: '°' })}
+        ${wxLineChart(dd.tempPts, { unit: '°' })}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
@@ -268,20 +294,35 @@ export function openWeatherDayModal(dayIndex) {
     <div class="wx-chart-block">
       <div class="wx-chart-title">💧 Ймовірність опадів, %</div>
       <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
+        ${wxBarChart(dd.precipPts)}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
     </div>`;
+}
 
-  // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
-  // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
-  // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
-  const offsetSec = _wxData.utc_offset_seconds ?? 7200;   // 7200с=+2год — фолбек лише якщо API не віддав поле
-  const nowLocal = new Date(Date.now() + offsetSec * 1000);
-  const nowDateStr = nowLocal.toISOString().slice(0, 10);
-  const nowHour = nowLocal.getUTCHours();
-  const initialIdx = dateStr === nowDateStr ? tempPts.findIndex(p => p.h === nowHour) : -1;
+// ОДИН аркуш погоди: рядок 7 днів + графіки обраного дня. Тап по іншому дню
+// перемальовує ЛИШЕ нижню частину (`.wx-day`), аркуш лишається тим самим.
+export function openWeatherSheet(startDay = 0) {
+  const first = wxDayData(startDay);
+  if (!first) return;
+
+  const bodyHtml = `
+    <div class="cm-weather-forecast wx-days">${wxDaysRowHtml(startDay)}</div>
+    <div class="wx-day"></div>`;
+
+  const paintDay = (wrap, idx) => {
+    const dd = wxDayData(idx);
+    if (!dd) return;
+    const host = wrap.querySelector('.wx-day');
+    host.innerHTML = wxDayBodyHtml(dd);
+    // Скрабер вішається на СВІЖУ розмітку — саме тому кличемо його тут, а не
+    // один раз при монтуванні: після innerHTML старі вузли (і слухачі) зникли.
+    wireWeatherScrubber(host, dd);
+    wrap.querySelectorAll('[data-wx-day]').forEach(b => {
+      b.classList.toggle('cm-fc-day--today', Number(b.dataset.wxDay) === idx);
+    });
+  };
 
   // swipeClose:false — власний wireWeatherSwipe нижче (ігнорує свайп що почався
   // на скрабер-графіку, спільний примітив цього не вміє).
@@ -290,10 +331,13 @@ export function openWeatherDayModal(dayIndex) {
     variant: 'sheet',
     className: 'app-modal--weather',
     swipeClose: false,
-    onMount: (wrap) => wireWeatherScrubber(wrap, {
-      tempPts, precipPts, iconPts,
-      initialIdx: initialIdx >= 0 ? initialIdx : null,
-    }),
+    onMount: (wrap) => {
+      paintDay(wrap, startDay);
+      wrap.querySelector('.wx-days').addEventListener('click', e => {
+        const b = e.target.closest('[data-wx-day]');
+        if (b) paintDay(wrap, Number(b.dataset.wxDay));
+      });
+    },
   });
   wireWeatherSwipe(el, close);
 }
@@ -662,46 +706,47 @@ function switchCmBusCard(el) {
   }, 80);
 }
 
-// ── Блок 4: Віджет Дошки — «шматочок живої Дошки» (переробка 13.07, Вова) ────
-// Темний корок (як вкладка Дошка, Д-21), горизонтальна стрічка ПАР карток-стікерів
-// (фото · тег категорії · заголовок · локація · дата) + автопрокрутка по 2 картки.
-// Тап по картці → зум оголошення; шапка / «Всі оголошення» → вкладка Дошка.
+// ── Блок: оголошення громади ─────────────────────────────────────────────────
+// Три випадкові оголошення рядками. Тап по рядку → зум оголошення;
+// «Уся дошка» в шапці секції → вкладка Дошка.
 
 const BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-const BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
 
-function bwStopAuto() {
-  clearInterval(_bwTimer);  _bwTimer  = null;
-  clearTimeout(_bwResume);  _bwResume = null;
-}
-
-// Одна картка стрічки — міні-версія реальної картки вкладки Дошка.
-// Без фото обкладинки НЕМА — картка просто нижча, як на вкладці Дошка
-// (рішення Вови 13.07, замінило плейсхолдер-обкладинку).
-// Вміст загорнуто у .cmbw-in — саме її масштабує карусель (JS нижче),
-// щоб снап-геометрія зовнішньої картки лишалась незмінною.
-function bwCardHtml(p) {
+// 🔴 03.08 — ОДИН РЯДОК ЗАМІСТЬ «СТІКЕРА» В ГОРИЗОНТАЛЬНІЙ СТРІЧЦІ.
+//
+// Було (13.07): темний корок + пари карток-стікерів зі шпилькою + автопрокрутка
+// кожні 5с + крапки-індикатори + масштабування карток при гортанні.
+// Тобто ОДИН вкладений горизонтальний скролер (єдиний, що лишався на головній
+// після 31.07) плюс ще один автоматичний рух — діагнози 4 і 9 аудиту.
+//
+// Стало: три рядки в стовпчик, статично. Форма навмисно та сама, що в списку
+// самої Дошки після 01.08 (фото ліворуч, категорія, назва, локація) — людина
+// має впізнати оголошення, а не вчити другий вигляд для того самого об'єкта.
+//
+// ⚠️ Темний корок пішов разом зі стікерами. Це СВІДОМА зміна рішення 28.07
+// («віджет лишається темним, малюється градієнтом») — тоді темним він був
+// відлунням корка на самій вкладці, а корка на Дошці немає з 01.08.
+function bwRowHtml(p) {
   const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
   const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
   const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
   const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
   const color = catColor(p.category);
+  // Без фото — монограма з першої літери, як у списку Дошки. Порожній квадрат
+  // на його місці читався б як «фото не завантажилось», тобто як помилка.
   const cover = photo
-    ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-    : '';
+    ? `<div class="hm-ad-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
+    : `<div class="hm-ad-photo hm-ad-photo--mono">${escapeHtml(title.trim().charAt(0).toUpperCase())}</div>`;
   return `
-    <article class="cmbw-card" data-bw-id="${p.id}">
-      <div class="cmbw-in">
-        <span class="cmbw-pin" aria-hidden="true"></span>
-        ${cover}
-        <div class="cmbw-body">
-          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
-          <div class="cmbw-name">${escapeHtml(title)}</div>
-          <div class="cmbw-meta">
-            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
-            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ''}
-          </div>
-        </div>
+    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
+      ${cover}
+      <div class="hm-ad-body">
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
+        <h4 class="hm-ad-title">${escapeHtml(title)}</h4>
+        <p class="hm-ad-meta">
+          ${locLabel ? `<span>${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : ''}
+          ${ts ? `<span class="hm-ad-time">${formatTime(ts)}</span>` : ''}
+        </p>
       </div>
     </article>`;
 }
@@ -719,7 +764,6 @@ function bwShuffle(arr) {
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
-  bwStopAuto();   // перерендер — старий інтервал більше не тримаємо
 
   try {
     // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло
@@ -734,136 +778,30 @@ export async function renderBoardBlock() {
     }
 
     // 2. Лише оголошення (type board), УСЯ громада без фільтра НП.
-    //    Порядок — ВИПАДКОВИЙ при кожному рендері (рішення Вови 13.07): віджет не
-    //    дублює «свіжі вгорі» вкладки, а дає рівний шанс УСІМ оголошенням, включно
-    //    зі старими — кожне відкриття Громади показує інший набір і порядок.
+    //    Порядок ВИПАДКОВИЙ (рішення Вови 13.07): віджет не дублює «свіжі вгорі»
+    //    вкладки, а дає рівний шанс УСІМ оголошенням, включно зі старими —
+    //    кожне відкриття Громади показує інший набір.
     const ads = posts.filter(p => (p.type || 'board') === 'board');
-    const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+    if (!ads.length) {
+      el.innerHTML = '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення!</div>';
+      return;
+    }
 
-    const cards = shown.map(bwCardHtml).join('');
+    el.innerHTML = `<div class="hm-ads">${bwShuffle(ads).slice(0, BW_SHOWN).map(bwRowHtml).join('')}</div>`;
 
-    // .cm-loading знято → padding контейнера зникає, шапка/низ дістають країв
-    // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
-    el.classList.remove('cm-loading');
-    el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити всі оголошення громади">
-        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">АКТУАЛЬНІ ОГОЛОШЕННЯ ГРОМАДИ</span>
-      </div>
-      ${ads.length
-        ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
-           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
-           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
-           <span class="cmbw-dots" aria-hidden="true"></span>
-           <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
-             <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
-           </div>`
-        : '<div class="cmbw-empty">На дошці поки порожньо — подайте перше оголошення!</div>'}
-    `;
-
-    // 3. Тапи: картка → зум САМЕ цього оголошення; шапка / «Всі» → вкладка Дошка.
-    el.addEventListener('click', e => {
-      const card = e.target.closest('[data-bw-id]');
-      if (card) {
+    // 3. Тап по картці → зум САМЕ цього оголошення (як було).
+    //    ⚠️ Прапорець на елементі: `initCommunity()` перебудовує #cm-content цілком.
+    if (!el.dataset.wired) {
+      el.dataset.wired = '1';
+      el.addEventListener('click', e => {
+        const card = e.target.closest('[data-bw-id]');
+        if (!card) return;
         const post = ads.find(p => p.id === Number(card.dataset.bwId));
-        if (post) { openAdModalStandalone(post); return; }
-      }
-      if (e.target.closest('[data-bw-more]') || e.target.closest('[data-bw-head]')) {
-        if (typeof window.switchTab === 'function') window.switchTab('board');
-      }
-    });
-
-    // 4. Стрічка: карусель-масштаб карток, крапки-індикатори пар, автопрокрутка.
-    const strip = el.querySelector('#cmbw-strip');
-    if (strip) {
-      // Снап-цілі = позиції початку кожної ПАРИ (непарні картки) у КООРДИНАТАХ
-      // СКРОЛУ: перша пара = 0 (картка «вліво»); наступні = зсув від першої мінус
-      // scroll-margin-left 12px (CSS дає його всім парам крім першої, щоб минула
-      // картка визирала зліва). offsetLeft беремо ЯК РІЗНИЦЮ з першою карткою —
-      // він рахується від offsetParent із власним зсувом, різниця його прибирає.
-      const snapTargets = () => {
-        const kids = [...strip.children];
-        if (!kids.length) return [];
-        const base = kids[0].offsetLeft;
-        return kids.filter((_, i) => i % 2 === 0)
-          .map(c => Math.max(0, c.offsetLeft - base - 12));
-      };
-      const targets0 = snapTargets();
-
-      // Крапки-індикатори пар у шапці — як свайп-крапки віджета автобусів
-      // (рішення Вови 13.07, замінили лічильник «N оголошень»).
-      const dotsWrap = el.querySelector('.cmbw-dots');
-      if (dotsWrap && targets0.length > 1) {
-        dotsWrap.innerHTML = targets0
-          .map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join('');
-      }
-      const dotEls = dotsWrap ? [...dotsWrap.children] : [];
-
-      // Карусель: центральна пара — повний розмір, обрізані бічні картки менші.
-      // Масштаб = частка видимої ширини картки (плавно росте/спадає при гортанні).
-      // Скейлиться внутрішня .cmbw-in — зовнішня картка (снап) не рухається.
-      const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
-      const updateFx = () => {
-        const kids = [...strip.children];
-        if (!kids.length) return;
-        const base  = kids[0].offsetLeft;
-        const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
-        kids.forEach(c => {
-          const l    = c.offsetLeft - base + padL;
-          const vis  = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
-          const frac = Math.min(1, vis / c.offsetWidth);
-          if (c.firstElementChild) c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
-        });
-        if (dotEls.length) {   // активна крапка = найближча снап-ціль
-          const targets = snapTargets();
-          let ai = 0, best = Infinity;
-          targets.forEach((t, i) => {
-            const d = Math.abs(t - strip.scrollLeft);
-            if (d < best) { best = d; ai = i; }
-          });
-          dotEls.forEach((d, i) => d.classList.toggle('cmbw-dot--active', i === ai));
-        }
-      };
-      let fxRaf = 0;
-      strip.addEventListener('scroll', () => {
-        if (fxRaf) return;
-        fxRaf = requestAnimationFrame(() => { fxRaf = 0; updateFx(); });
-      }, { passive: true });
-      updateFx();
-
-      // Автопрокрутка: кожні BW_STEP_MS — наступна ПАРА (снап робить CSS),
-      // в кінці — плавно на початок. Дотик/крапка → пауза, відновлення через
-      // BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
-      if (targets0.length > 1) {
-        const tick = () => {
-          if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
-          if (document.hidden) return;
-          const targets = snapTargets(); if (!targets.length) return;
-          const max  = strip.scrollWidth - strip.clientWidth;
-          const next = targets.find(t => t > strip.scrollLeft + 8);
-          strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
-        };
-        const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
-        const pauseAuto = () => {
-          clearInterval(_bwTimer); _bwTimer = null;
-          clearTimeout(_bwResume);
-          _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-        };
-        strip.addEventListener('touchstart', pauseAuto, { passive: true });
-        strip.addEventListener('pointerdown', pauseAuto);
-        if (dotsWrap) dotsWrap.addEventListener('click', e => {
-          const d = e.target.closest('[data-bw-dot]');
-          if (!d) return;
-          e.stopPropagation();   // шапка теж клікабельна — крапка не має відкривати вкладку
-          pauseAuto();
-          const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
-          strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: 'smooth' });
-        });
-        startAuto();
-      }
+        if (post) openAdModalStandalone(post);
+      });
     }
   } catch {
-    el.innerHTML = '<div class="cmbw-empty">Дошка тимчасово недоступна</div>';
+    el.innerHTML = '<div class="hm-error">Дошка тимчасово недоступна</div>';
   }
 }
 
@@ -910,9 +848,6 @@ export async function renderEventBlock() {
   const el = document.getElementById('cm-event-content');
   if (!el) return;
 
-  // Зупиняємо попередню ротацію (перерендер/повернення на вкладку) — без витоку інтервалів
-  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
-
   try {
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
@@ -944,124 +879,73 @@ export async function renderEventBlock() {
     }
 
     if (!items.length) {
-      el.innerHTML = '<div class="cm-block-empty">Поки немає запланованих подій у громаді</div>';
+      el.innerHTML = '<div class="hm-empty">Поки немає запланованих подій у громаді</div>';
       return;
     }
 
     _evItems = items;
-    _evIdx   = 0;
-    renderEvCarousel(el);
+    renderEvList(el);
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Події недоступні</div>';
+    el.innerHTML = '<div class="hm-error">Події недоступні</div>';
   }
 }
 
-// Одна картка каруселі — подія (табло-стиль) або свято (cover_emoji + градієнт).
-function evSlideHtml(it, now) {
-  const eventDay = new Date(it.date + 'T00:00:00');
-  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-  const isUrgent = dayDiff <= 1;
-  const dateStr   = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-  const catStr    = escapeHtml(it.category || '');
-  const countdown = escapeHtml(eventCountdown(it, now));
+// 🔴 03.08 — КАРУСЕЛЬ ПОДІЙ ЗНЯТО (потік /byyou, діагноз 4 аудиту).
+//
+// Було: одна картка у вікні + крапки + авто-ротація кожні 6с. Тобто з п'яти
+// найближчих подій людина бачила ОДНУ, а щоб побачити решту — мусила або чекати
+// (по 6 секунд на кожну), або влучати пальцем у крапки 8px.
+// Стало: ТРИ найближчі події одночасно, статично, без жодного таймера.
+//
+// ⚠️ Чому три, а не п'ять: три рядки — це 213px, тобто менше третини екрана;
+// п'ять дали б ~350px і перетворили б секцію на список. Решта — у «Афіші».
+// ⚠️ Fallback на свята (Г-16) збережено: коли подій громади немає, показуємо
+// найближчі свята — саме щоб секція не стояла порожньою в тихий місяць.
+const EV_SHOWN = 3;
 
-  if (it.kind === 'holiday') {
-    const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : '';
-    return `
-      <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? ' tablo-hero--urgent' : ''}"${grad} data-ev-id="${it.id}">
-          <div class="evh-top">
-            <span class="tablo-countdown">${countdown}</span>
-            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
-          </div>
-          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || '🎉')}</div>
-          <div class="evh-title">${escapeHtml(it.title)}</div>
-          <div class="evh-meta tablo-soft">${dateStr}</div>
-        </article>
-      </div>
-    `;
-  }
+function evRowHtml(it, now) {
+  const d = new Date(it.date + 'T00:00:00');
+  const today = new Date(now); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 86400000);
+  // «СЬОГОДНІ / ЗАВТРА / ЧЕРЕЗ N ДНІВ» — те саме правило, що було в каруселі
+  // (`eventCountdown`), лише подане рядком, а не капсулою на всю картку.
+  const when = escapeHtml(eventCountdown(it, now));
+  const urgent = diff <= 1;
 
-  const timeStr = it.time ? escapeHtml(it.time) : '';
-  const locStr  = it.location ? escapeHtml(it.location) : '';
-  // Мініатюра фото (якщо є) — маленький квадрат у кутку картки, текст лишається зліва.
-  const thumb = it.image
-    ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">`
-    : '';
+  const meta = [
+    it.time ? escapeHtml(it.time) : '',
+    it.location ? escapeHtml(it.location) : '',
+  ].filter(Boolean).join(' · ');
+
   return `
-    <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}${it.image ? ' evh-card--photo' : ''}" data-ev-id="${it.id}">
-        ${thumb}
-        <div class="evh-top">
-          <span class="tablo-countdown">${countdown}</span>
-          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
-        </div>
-        <div class="evh-time tablo-time-mono">
-          <span class="evh-date tablo-time-accent">${dateStr}</span>
-          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ''}
-        </div>
-        <div class="evh-title">${escapeHtml(it.title)}</div>
-        ${locStr ? `<div class="evh-meta tablo-soft">📍 ${locStr}</div>` : ''}
-      </article>
-    </div>
-  `;
+    <article class="hm-card hm-card--tap hm-ev" data-ev-id="${it.id}">
+      <div class="hm-ev-date" aria-hidden="true">
+        <span class="hm-ev-d">${d.getDate()}</span>
+        <span class="hm-ev-m">${CM_MONTHS[d.getMonth()].slice(0, 3)}</span>
+      </div>
+      <div class="hm-ev-body">
+        <span class="hm-ev-when${urgent ? ' hm-ev-when--soon' : ''}">${when}</span>
+        <h4 class="hm-ev-title">${escapeHtml(it.title)}</h4>
+        ${meta ? `<p class="hm-ev-meta">${meta}</p>` : ''}
+      </div>
+    </article>`;
 }
 
-// Рендер каруселі: трек зі слайдів + крапки. Одна картка видима, авто-ротація ~6с.
-function renderEvCarousel(el) {
-  const now    = new Date();
-  const slides = _evItems.map(it => evSlideHtml(it, now)).join('');
-  const dots   = _evItems.length > 1
-    ? `<div class="cm-ev-dots">${_evItems.map((_, i) =>
-        `<span class="cm-ev-dot${i === _evIdx ? ' active' : ''}" data-ev-idx="${i}"></span>`).join('')}</div>`
-    : '';
+function renderEvList(el) {
+  const now = new Date();
+  el.innerHTML = `<div class="hm-ev-list">${
+    _evItems.slice(0, EV_SHOWN).map(it => evRowHtml(it, now)).join('')
+  }</div>`;
 
-  el.innerHTML = `
-    <div class="cm-ev-carousel" id="cm-ev-carousel">
-      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
-      ${dots}
-    </div>
-  `;
-
-  // Крапки — ручний перехід (зупиняє й перезапускає авто-ротацію)
-  el.querySelectorAll('.cm-ev-dot').forEach(dot => {
-    dot.addEventListener('click', e => {
-      e.stopPropagation();
-      _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
-      updateEvPosition(el);
-      startEvRotator(el);   // рестарт таймера від нового індексу
-    });
-  });
-
-  // Тап по картці → відкрити САМЕ цю подію/свято в статейній модалці (не просто вкладку).
-  el.querySelectorAll('.evh-card[data-ev-id]').forEach(card => {
+  // Тап по рядку → САМЕ ця подія/свято у статейній модалці (як було в каруселі).
+  el.querySelectorAll('[data-ev-id]').forEach(card => {
     card.addEventListener('click', () => {
       const id = Number(card.dataset.evId);
       if (Number.isFinite(id)) openShotamModal(id);
     });
   });
-
-  startEvRotator(el);
 }
 
-// Зсув треку + активна крапка
-function updateEvPosition(el) {
-  const track = el.querySelector('.cm-ev-track');
-  if (track) track.style.transform = `translateX(-${_evIdx * 100}%)`;
-  el.querySelectorAll('.cm-ev-dot').forEach((d, i) => d.classList.toggle('active', i === _evIdx));
-}
-
-// Авто-ротація 6с (реюз патерну hero-ротатора). Стоп коли каруселі нема в DOM.
-function startEvRotator(el) {
-  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
-  if (_evItems.length < 2) return;
-  _evTimer = setInterval(() => {
-    if (!document.getElementById('cm-ev-carousel')) { clearInterval(_evTimer); _evTimer = null; return; }
-    _evIdx = (_evIdx + 1) % _evItems.length;
-    updateEvPosition(el);
-  }, 6000);
-}
 
 // ── Блок 7: Контакти ─────────────────────────────────────────────────────────
 
@@ -1093,7 +977,7 @@ export async function renderContactsBlock() {
     const list = data.contacts || [];
 
     if (!list.length) {
-      el.innerHTML = '<div class="cm-block-empty">Контактів немає</div>';
+      el.innerHTML = '<div class="hm-empty">Контактів немає</div>';
       return;
     }
 
@@ -1110,43 +994,49 @@ export async function renderContactsBlock() {
     const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
     emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
-    // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
-    const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">Місцеві</div>
-        <div class="cm-contact-rows">
-          ${local.map(c => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    // 🔴 03.08 — ДОВІДНИК ЗГОРНУТО (потік /byyou, діагноз 3 аудиту).
+    //
+    // Було: 420px = 57.5% видимої зони на СТАТИЧНИЙ телефонний довідник —
+    // більше, ніж діставалось оголошенням і подіям разом. Причина не в тому,
+    // що контакти зайві: вони потрібні кілька разів на рік, а місце займали
+    // щодня.
+    //
+    // Стало: три екстрені номери завжди на видноті (101 · 102 · 103 — саме те,
+    // що набирають не думаючи), решта — за кнопкою «Усі телефони».
+    // ⚠️ Розкриття робить <details>, а не JS: він працює без скриптів, уміє
+    // клавіатуру і читач екрана з коробки, і не потребує стану в модулі, який
+    // злітав би на кожному перерендері `#cm-content`.
+    const chipHtml = c => `
+      <a class="hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+        <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+      </a>`;
 
-    // ── ЕКСТРЕНІ (внизу) — компактна сітка маленьких плиток (3 в ряд) ──────────
-    const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">Екстрені</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map(c => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    const rowHtml = c => `
+      <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-row-text">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
 
-    el.innerHTML = localHtml + emergencyHtml;
+    // Три перші екстрені видно завжди; усе інше — під розкриттям.
+    const quick = emergency.slice(0, 3);
+    const rest  = [...local, ...emergency.slice(3)];
+
+    el.innerHTML = `
+      <div class="hm-card hm-tels">
+        <div class="hm-tel-grid">${quick.map(chipHtml).join('')}</div>
+        ${rest.length ? `
+          <details class="hm-tel-more">
+            <summary>Усі телефони громади<span class="hm-tel-count">${rest.length}</span></summary>
+            <div class="hm-tel-rows">${rest.map(rowHtml).join('')}</div>
+          </details>` : ''}
+      </div>`;
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
+    el.innerHTML = '<div class="hm-error">Контакти недоступні</div>';
   }
 }
 
@@ -1216,27 +1106,27 @@ function paintCmNews(el, arts) {
       if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
     });
   }
-  // Нижня панель: замість трьох чіпів — один вхід у хаб.
-  const controls = document.getElementById('cm-news-controls');
-  if (controls) {
-    controls.innerHTML =
-      `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
-  }
   paintNewsBadge(arts);
 }
 
-// «N нових» у шапці віджета — на місці, де до 31.07 стояв фальшивий «LIVE».
-// Окремою функцією, бо її кличе ще й подія `cstl-news-seen` (гасіння після хаба),
-// і перемальовувати заради цього весь віджет не треба.
+// «N нових» — лічильник свіжих новин ГРОМАДИ (не всіх: за темпом 0.26 статті на
+// день у Громаді проти ~54 в решті, лічильник «по всьому» щоранку писав би «54»
+// і став би шумом — розбір у `news.js`).
+//
+// 🔄 03.08: місце змінилось, правило — ні. Був у шапці багряного «приладу»
+// (`.cm-news-board-bar`); тепер стоїть біля назви секції «Головне». Окремою
+// функцією лишається з тієї самої причини, що й була: його кличе подія
+// `cstl-news-seen` (гасіння після відвідин хаба), і перемальовувати заради
+// цього весь блок новин не треба.
 function paintNewsBadge(arts) {
-  const bar = document.querySelector('.cm-news-board-bar');
-  if (!bar) return;
+  const head = document.querySelector('#hm-news .hm-sec-title');
+  if (!head) return;
   const n = countNewCommunity(arts);
-  const old = bar.querySelector('.cm-news-new');
+  const old = head.parentElement.querySelector('.hm-new-badge');
   if (!n) { if (old) old.remove(); return; }
-  const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
+  const html = `<span class="hm-new-badge">${n} ${pluralNew(n)}</span>`;
   if (old) old.outerHTML = html;
-  else bar.insertAdjacentHTML('beforeend', html);
+  else head.insertAdjacentHTML('afterend', html);
 }
 
 // «1 нова · 2 нові · 5 нових» — українська має три форми, і «1 нових» різало б око.
@@ -1255,8 +1145,10 @@ export async function renderCommunityNews() {
   const arts = await ensureNewsLoaded();
   paintCmNews(el, arts);
 
-  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока
-  const section = document.querySelector('.cm-block--news');
+  // Делеговані слухачі — ОДИН раз на секцію.
+  // ⚠️ Прапорець на ЕЛЕМЕНТІ, а не в модулі: `initCommunity()` перебудовує
+  // `#cm-content` цілком, тобто секція щоразу НОВИЙ вузол.
+  const section = document.getElementById('hm-news');
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   // 🔴 31.07: биті чужі фото → брендовий плейсхолдер 🏰. До цього обробник висів на
@@ -1276,7 +1168,7 @@ export async function renderCommunityNews() {
       if (Number.isFinite(id)) openArticle(id);
       return;
     }
-    // Будь-яке інше місце віджета (шапка, «Усі новини», порожнє поле) → хаб.
+    // Будь-яке інше місце секції (назва, «Усі новини», порожнє поле) → хаб.
     // Категорію передаємо ЯВНО: віджет показує Громаду, тож і хаб має відкритись на
     // Громаді. Інакше людина тапала б по місцевій новині, а потрапляла у «Волинь»,
     // яку востаннє гортала (хаб памʼятає останню категорію для свайпів усередині себе).
