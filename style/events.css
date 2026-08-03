@@ -117,7 +117,7 @@
 }
 .cal-pill:active { transform: scale(0.95); }
 .cal-pill.active {
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
 }
 .cal-pill--today {
@@ -157,7 +157,7 @@
   border-radius: 50%;
   background: transparent;
 }
-.cal-pill--has-events .cal-pill-dot { background: var(--brand-grad-sm); }
+.cal-pill--has-events .cal-pill-dot { background: var(--red); }
 .cal-pill--has-events.active .cal-pill-dot { background: white; }
 .cal-pill--all .cal-pill-dot { display: none; }
 

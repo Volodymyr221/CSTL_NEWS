@@ -107,7 +107,7 @@
 .pw-help-btn {
   display: inline-block;
   padding: 8px 14px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   border-radius: 999px;
   font-size: 13px; font-weight: 700;

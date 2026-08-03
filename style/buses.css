@@ -120,7 +120,7 @@
 }
 .bus-week-page-dot.active {
   opacity: 1;
-  background: var(--brand-grad-sm);
+  background: var(--red);
 }
 
 /* Таби напрямку */
@@ -215,7 +215,7 @@
   color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   min-height: 160px;
-  background: var(--brand-grad-sm);
+  background: #722F37;
 }
 
 /* Фото — розтягується на всю картку */
@@ -286,7 +286,7 @@
   animation: bs-wait-pulse 1.4s ease-in-out infinite;
 }
 .bhv4-state-dot--urgent  {
-  background: var(--brand-grad-sm);
+  background: #722F37;
   box-shadow: 0 0 0 3px rgba(114,47,55,0.35);
   animation: bs-soon-pulse 1.4s ease-in-out infinite;
 }
@@ -621,13 +621,13 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   text-decoration: none;
   flex-shrink: 0;
   transition: background 0.15s;
 }
-.brow-call:active { background: var(--brand-grad-press); }
+.brow-call:active { background: var(--red-dark); }
 
 /* Кнопка "Показати всі рейси / Сховати минулі" */
 .bus-show-all {
@@ -682,7 +682,7 @@
 .bus-smart-hurry {
   font-size: 12px;
   font-weight: 700;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   padding: 3px 8px;
   border-radius: 20px;
@@ -783,14 +783,14 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   color: white;
   border-radius: 50%;
   flex-shrink: 0;
   text-decoration: none;
   transition: background 0.15s;
 }
-.bus-call-btn:active { background: var(--brand-grad-press); }
+.bus-call-btn:active { background: var(--red-dark); }
 .bus-card.past .bus-call-btn { display: none; }
 
 /* Кнопка "Поділитись рейсом" */
@@ -1143,7 +1143,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: #722F37;
   box-shadow: 0 0 0 3px rgba(114,47,55,0.35);
   animation: bs-soon-pulse 1.4s ease-in-out infinite;
 }
@@ -1511,7 +1511,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   flex-shrink: 0;
 }
 .pw-now-label {
@@ -1525,7 +1525,7 @@
 .pw-now-line-right {
   flex: 1;
   height: 1px;
-  background: var(--brand-grad-sm);
+  background: var(--red);
   opacity: 0.4;
 }
 
@@ -1659,7 +1659,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--brand-grad-sm);
+  background: #722F37;
   color: #fff;
   font-size: 9px;
   font-weight: 700;

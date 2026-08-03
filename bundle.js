@@ -5878,9 +5878,6 @@
   function hasThreadsCached() {
     return _hasThreads;
   }
-  function unreadChatsCached() {
-    return isLoggedIn() ? _unreadChats : 0;
-  }
   function paintTabDot(tab, on) {
     const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
     if (!dot)
@@ -5949,7 +5946,6 @@
     const hadThreads = _hasThreads;
     _hasThreads = pairs.length > 0;
     paintUnreadBadge();
-    window.dispatchEvent(new CustomEvent("cstl-unread-changed"));
     if (hadThreads !== _hasThreads)
       window.dispatchEvent(new CustomEvent("cstl-threads-changed"));
   }
@@ -6868,7 +6864,7 @@
   function renderHeader() {
     const discHead = "";
     const showCategories = activeType === "board";
-    const heroHtml2 = showCategories ? `
+    const heroHtml = showCategories ? `
     <div class="bd-hero">
       <div class="bd-hero-text">
         <h2 class="bd-hero-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
@@ -6926,7 +6922,7 @@
     const count = showCategories ? getBoardDisplayCount() : 0;
     const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
-      ${heroHtml2}
+      ${heroHtml}
       ${searchRowHtml}
     </div>
   ` : "";
@@ -10591,23 +10587,45 @@ ${ev.description || ""}`
   }
 
   // src/tabs/community-blocks.js
+  var cmBusIndex = 0;
+  var cmBusEntries = [];
+  var CM_TRACK_KEY = "bus_track_v2";
+  function loadCmTracked(todayISO) {
+    if (!isLoggedIn())
+      return [];
+    try {
+      const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY + ":" + currentUserId()));
+      if (d?.routes?.length)
+        return d.routes.filter((t) => t.trackDate >= todayISO);
+    } catch {
+    }
+    return [];
+  }
+  window.addEventListener("cstl-bus-track-changed", () => {
+    renderBusBlock();
+  });
+  onAuthChange(() => {
+    renderBusBlock();
+  });
+  var _bwTimer = null;
+  var _bwResume = null;
+  var BW_STEP_MS = 5e3;
+  var BW_RESUME_MS = 8e3;
+  var BW_MAX_CARDS = 16;
   var _evItems = [];
+  var _evIdx = 0;
+  var _evTimer = null;
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
   var _wxData = null;
-  function paintWeatherChip(info, temp, cityName) {
-    const btn = document.querySelector(".hm-wx");
-    if (!btn)
-      return;
-    btn.innerHTML = `<span class="hm-wx-ic">${info.icon}</span><b>${temp}\xB0</b><span class="hm-wx-city">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")}</span>`;
-    btn.hidden = false;
-    if (!btn.dataset.wired) {
-      btn.dataset.wired = "1";
-      btn.addEventListener("click", () => openWeatherSheet(0));
-    }
+  function setWeatherTitle(cityName) {
+    const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
+    if (headerEl && cityName)
+      headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
   }
   async function renderWeatherBlock() {
-    if (!document.querySelector(".hm-wx"))
+    const el = document.getElementById("cm-weather-content");
+    if (!el)
       return;
     try {
       const { lat, lon, city: knownCity } = await getCoords();
@@ -10623,25 +10641,37 @@ ${ev.description || ""}`
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
       const temp = Math.round(cur.temperature_2m);
-      paintWeatherChip(info, temp, cityName);
+      const feels = Math.round(cur.apparent_temperature);
+      setWeatherTitle(cityName);
+      const forecastHtml = day.time.map((dateStr, i) => {
+        const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+        const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
+        const dayInfo = weatherCodeInfo(day.weather_code[i]);
+        return `
+        <button type="button" class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
+          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+          <span class="cm-fc-date">${d.getDate()}</span>
+          <span class="cm-fc-icon">${dayInfo.icon}</span>
+        </button>
+      `;
+      }).join("");
+      el.innerHTML = `
+      <div class="cm-weather-main">
+        <div class="cm-weather-icon">${info.icon}</div>
+        <div class="cm-weather-temp">${temp}\xB0</div>
+        <div class="cm-weather-text">
+          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
+          <div class="cm-weather-feels">\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A ${feels}\xB0</div>
+        </div>
+      </div>
+      <div class="cm-weather-forecast">${forecastHtml}</div>
+    `;
+      el.querySelectorAll("[data-wx-day]").forEach((btn) => {
+        btn.addEventListener("click", () => openWeatherDayModal(+btn.dataset.wxDay));
+      });
     } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
-  }
-  function wxDaysRowHtml(activeIdx) {
-    const day = _wxData?.daily;
-    if (!day)
-      return "";
-    return day.time.map((dateStr, i) => {
-      const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-      const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
-      const dayInfo = weatherCodeInfo(day.weather_code[i]);
-      return `
-      <button type="button" class="cm-fc-day${i === activeIdx ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
-        <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-        <span class="cm-fc-date">${d.getDate()}</span>
-        <span class="cm-fc-icon">${dayInfo.icon}</span>
-      </button>`;
-    }).join("");
   }
   var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
   function wxGeom(points) {
@@ -10706,52 +10736,43 @@ ${ev.description || ""}`
       ${yAxis}${bars}
     </svg>`;
   }
-  function wxDayData(dayIndex) {
-    const daily = _wxData?.daily, hourly = _wxData?.hourly;
-    const dateStr = daily?.time?.[dayIndex];
-    if (!dateStr || !hourly)
-      return null;
+  function openWeatherDayModal(dayIndex) {
+    if (!_wxData || !_wxData.hourly)
+      return;
+    const daily = _wxData.daily;
+    const hourly = _wxData.hourly;
+    const dateStr = daily.time[dayIndex];
+    if (!dateStr)
+      return;
     const idxs = [];
     hourly.time.forEach((t, i) => {
       if (t.startsWith(dateStr))
         idxs.push(i);
     });
     if (!idxs.length)
-      return null;
+      return;
     const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
     const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
     const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
-    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
-    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
-    const nowHour = nowLocal.getUTCHours();
-    const initialIdx = dateStr === nowLocal.toISOString().slice(0, 10) ? tempPts.findIndex((p) => p.h === nowHour) : -1;
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return {
-      tempPts,
-      precipPts,
-      iconPts,
-      initialIdx: initialIdx >= 0 ? initialIdx : null,
-      dayName: dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()],
-      dateLabel: `${d.getDate()}.${pad(d.getMonth() + 1)}`,
-      info: weatherCodeInfo(daily.weather_code[dayIndex]),
-      tMax: Math.round(daily.temperature_2m_max[dayIndex]),
-      tMin: Math.round(daily.temperature_2m_min[dayIndex])
-    };
-  }
-  function wxDayBodyHtml(dd) {
-    return `
+    const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
+    const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
+    const info = weatherCodeInfo(daily.weather_code[dayIndex]);
+    const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
+    const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
+    const bodyHtml = `
     <div class="wx-head">
-      <div class="wx-head-icon">${dd.info.icon}</div>
+      <div class="wx-head-icon">${info.icon}</div>
       <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dd.dayName)} \xB7 ${dd.dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(dd.info.text)}</div>
+        <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
       </div>
-      <div class="wx-head-range">${dd.tMax}\xB0 / ${dd.tMin}\xB0</div>
+      <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
     </div>
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
       <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(dd.tempPts, { unit: "\xB0" })}
+        ${wxLineChart(tempPts, { unit: "\xB0" })}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
@@ -10759,43 +10780,27 @@ ${ev.description || ""}`
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
       <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(dd.precipPts)}
+        ${wxBarChart(precipPts)}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
     </div>`;
-  }
-  function openWeatherSheet(startDay = 0) {
-    const first = wxDayData(startDay);
-    if (!first)
-      return;
-    const bodyHtml = `
-    <div class="cm-weather-forecast wx-days">${wxDaysRowHtml(startDay)}</div>
-    <div class="wx-day"></div>`;
-    const paintDay = (wrap, idx) => {
-      const dd = wxDayData(idx);
-      if (!dd)
-        return;
-      const host = wrap.querySelector(".wx-day");
-      host.innerHTML = wxDayBodyHtml(dd);
-      wireWeatherScrubber(host, dd);
-      wrap.querySelectorAll("[data-wx-day]").forEach((b) => {
-        b.classList.toggle("cm-fc-day--today", Number(b.dataset.wxDay) === idx);
-      });
-    };
+    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
+    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
+    const nowDateStr = nowLocal.toISOString().slice(0, 10);
+    const nowHour = nowLocal.getUTCHours();
+    const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
     const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
       swipeClose: false,
-      onMount: (wrap) => {
-        paintDay(wrap, startDay);
-        wrap.querySelector(".wx-days").addEventListener("click", (e) => {
-          const b = e.target.closest("[data-wx-day]");
-          if (b)
-            paintDay(wrap, Number(b.dataset.wxDay));
-        });
-      }
+      onMount: (wrap) => wireWeatherScrubber(wrap, {
+        tempPts,
+        precipPts,
+        iconPts,
+        initialIdx: initialIdx >= 0 ? initialIdx : null
+      })
     });
     wireWeatherSwipe(el, close);
   }
@@ -10898,6 +10903,70 @@ ${ev.description || ""}`
       });
     });
   }
+  async function renderBusBlock() {
+    const el = document.getElementById("cm-bus-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/schedule.json");
+      const data = await res.json();
+      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const tomorrow = /* @__PURE__ */ new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+      const dayRoutes = (iso) => data.days?.[iso]?.routes || (iso === todayISO ? data.routes : null) || [];
+      const depMins = (r) => getStopMins(r, r.stops[0].name) || 0;
+      const entries = [];
+      const seen = /* @__PURE__ */ new Set();
+      const add = (route, dateISO) => {
+        const key = dateISO + "|" + route.id;
+        if (seen.has(key))
+          return;
+        seen.add(key);
+        entries.push({ route, dateISO });
+      };
+      for (const t of loadCmTracked(todayISO)) {
+        const r = dayRoutes(t.trackDate).find((x) => x.id === t.routeId && x.status !== "cancelled");
+        if (!r)
+          continue;
+        if (t.trackDate === todayISO && getRouteState(r) === "past")
+          continue;
+        add(r, t.trackDate);
+      }
+      dayRoutes(todayISO).filter((r) => {
+        if (r.status === "cancelled")
+          return false;
+        const state = getRouteState(r);
+        if (state === "enroute")
+          return true;
+        if (state === "waiting") {
+          const t = getRouteTimings(r);
+          return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+        }
+        return false;
+      }).sort((a, b) => depMins(a) - depMins(b)).forEach((r) => add(r, todayISO));
+      if (!entries.some((e) => e.dateISO === todayISO)) {
+        const next = dayRoutes(todayISO).filter((r) => r.status !== "cancelled" && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
+        if (next)
+          add(next, todayISO);
+      }
+      if (!entries.length) {
+        const tom = dayRoutes(tomorrowISO).filter((r) => r.status !== "cancelled").sort((a, b) => depMins(a) - depMins(b))[0];
+        if (tom)
+          add(tom, tomorrowISO);
+      }
+      cmBusEntries = entries;
+      if (!cmBusEntries.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
+        return;
+      }
+      if (cmBusIndex >= cmBusEntries.length)
+        cmBusIndex = 0;
+      renderCmBusCard(el);
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
+    }
+  }
   var CM_MONTHS = [
     "\u0441\u0456\u0447\u043D\u044F",
     "\u043B\u044E\u0442\u043E\u0433\u043E",
@@ -10912,10 +10981,308 @@ ${ev.description || ""}`
     "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
     "\u0433\u0440\u0443\u0434\u043D\u044F"
   ];
+  function cmDayLabel(dateISO, todayISO, tomorrowISO) {
+    if (dateISO === todayISO)
+      return "";
+    const [y, m, d] = dateISO.split("-").map(Number);
+    const prefix = dateISO === tomorrowISO ? "\u0417\u0430\u0432\u0442\u0440\u0430" : "";
+    const datePart = `${d} ${CM_MONTHS[m - 1]}`;
+    return prefix ? `${prefix} \xB7 ${datePart}` : datePart;
+  }
+  function renderCmBusCard(el) {
+    if (!el || !cmBusEntries.length)
+      return;
+    const { route, dateISO } = cmBusEntries[cmBusIndex];
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+    const base = getRouteTimings(route);
+    const timings = dateISO === todayISO ? base : { ...base, state: "waiting", progress: 0, minsToDeparture: null, minsToArrival: null };
+    const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
+    const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : "";
+    el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
+    let touchStartX = 0, touchMoved = false;
+    const card = el.querySelector(".bhv4") || el.lastElementChild;
+    if (!card)
+      return;
+    card.addEventListener("touchstart", (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchMoved = false;
+    }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) < 40)
+        return;
+      touchMoved = true;
+      cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusEntries.length : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
+      switchCmBusCard(el);
+    }, { passive: true });
+    card.addEventListener("click", () => {
+      if (touchMoved)
+        return;
+      if (typeof window.switchTab === "function")
+        window.switchTab("buses");
+      openSavedRouteOnBuses(route.id, dateISO, null, null);
+    });
+    el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        cmBusIndex = parseInt(e.target.dataset.idx, 10);
+        switchCmBusCard(el);
+      });
+    });
+  }
+  function switchCmBusCard(el) {
+    const content = el.querySelector(".bhv4-content");
+    if (!content) {
+      renderCmBusCard(el);
+      return;
+    }
+    content.style.transition = "opacity 0.08s ease";
+    content.style.opacity = "0";
+    setTimeout(() => {
+      renderCmBusCard(el);
+      const newContent = el.querySelector(".bhv4-content");
+      if (newContent) {
+        newContent.style.opacity = "0";
+        newContent.style.transition = "opacity 0.1s ease";
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          newContent.style.opacity = "1";
+        }));
+      }
+    }, 80);
+  }
+  var BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+  function bwStopAuto() {
+    clearInterval(_bwTimer);
+    _bwTimer = null;
+    clearTimeout(_bwResume);
+    _bwResume = null;
+  }
+  function bwCardHtml(p) {
+    const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo;
+    const title = p.title && p.title.trim() || (p.text || "").trim().slice(0, 60) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
+    const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
+    const color = catColor(p.category);
+    const cover = photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : "";
+    return `
+    <article class="cmbw-card" data-bw-id="${p.id}">
+      <div class="cmbw-in">
+        <span class="cmbw-pin" aria-hidden="true"></span>
+        ${cover}
+        <div class="cmbw-body">
+          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
+          <div class="cmbw-name">${escapeHtml(title)}</div>
+          <div class="cmbw-meta">
+            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
+            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+  function bwShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  async function renderBoardBlock() {
+    const el = document.getElementById("cm-board-content");
+    if (!el)
+      return;
+    bwStopAuto();
+    try {
+      let posts2 = [], usedSupabase = false;
+      if (isSupabaseReady()) {
+        const p = await fetchPublishedPosts();
+        if (p !== null) {
+          posts2 = p;
+          usedSupabase = true;
+        }
+      }
+      if (!usedSupabase) {
+        const boardRes = await fetch("./data/community-board.json");
+        posts2 = (await boardRes.json()).posts || [];
+      }
+      const ads = posts2.filter((p) => (p.type || "board") === "board");
+      const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+      const cards = shown.map(bwCardHtml).join("");
+      el.classList.remove("cm-loading");
+      el.innerHTML = `
+      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438">
+        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
+        <span class="cmbw-title">\u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0406 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</span>
+      </div>
+      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
+           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
+           <span class="cmbw-dots" aria-hidden="true"></span>
+           <div class="cmbw-foot" data-bw-more role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
+             <span>\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>${BW_ARROW_SVG}
+           </div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
+    `;
+      el.addEventListener("click", (e) => {
+        const card = e.target.closest("[data-bw-id]");
+        if (card) {
+          const post = ads.find((p) => p.id === Number(card.dataset.bwId));
+          if (post) {
+            openAdModalStandalone(post);
+            return;
+          }
+        }
+        if (e.target.closest("[data-bw-more]") || e.target.closest("[data-bw-head]")) {
+          if (typeof window.switchTab === "function")
+            window.switchTab("board");
+        }
+      });
+      const strip = el.querySelector("#cmbw-strip");
+      if (strip) {
+        const snapTargets = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
+            return [];
+          const base = kids[0].offsetLeft;
+          return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
+        };
+        const targets0 = snapTargets();
+        const dotsWrap = el.querySelector(".cmbw-dots");
+        if (dotsWrap && targets0.length > 1) {
+          dotsWrap.innerHTML = targets0.map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join("");
+        }
+        const dotEls = dotsWrap ? [...dotsWrap.children] : [];
+        const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+        const updateFx = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
+            return;
+          const base = kids[0].offsetLeft;
+          const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
+          kids.forEach((c) => {
+            const l = c.offsetLeft - base + padL;
+            const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
+            const frac = Math.min(1, vis / c.offsetWidth);
+            if (c.firstElementChild)
+              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+          });
+          if (dotEls.length) {
+            const targets = snapTargets();
+            let ai = 0, best = Infinity;
+            targets.forEach((t, i) => {
+              const d = Math.abs(t - strip.scrollLeft);
+              if (d < best) {
+                best = d;
+                ai = i;
+              }
+            });
+            dotEls.forEach((d, i) => d.classList.toggle("cmbw-dot--active", i === ai));
+          }
+        };
+        let fxRaf = 0;
+        strip.addEventListener("scroll", () => {
+          if (fxRaf)
+            return;
+          fxRaf = requestAnimationFrame(() => {
+            fxRaf = 0;
+            updateFx();
+          });
+        }, { passive: true });
+        updateFx();
+        if (targets0.length > 1) {
+          const tick = () => {
+            if (!document.contains(strip)) {
+              bwStopAuto();
+              return;
+            }
+            if (document.hidden)
+              return;
+            const targets = snapTargets();
+            if (!targets.length)
+              return;
+            const max = strip.scrollWidth - strip.clientWidth;
+            const next = targets.find((t) => t > strip.scrollLeft + 8);
+            strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
+          };
+          const startAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = setInterval(tick, BW_STEP_MS);
+          };
+          const pauseAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = null;
+            clearTimeout(_bwResume);
+            _bwResume = setTimeout(startAuto, BW_RESUME_MS);
+          };
+          strip.addEventListener("touchstart", pauseAuto, { passive: true });
+          strip.addEventListener("pointerdown", pauseAuto);
+          if (dotsWrap)
+            dotsWrap.addEventListener("click", (e) => {
+              const d = e.target.closest("[data-bw-dot]");
+              if (!d)
+                return;
+              e.stopPropagation();
+              pauseAuto();
+              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
+            });
+          startAuto();
+        }
+      }
+    } catch {
+      el.innerHTML = '<div class="cmbw-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+    }
+  }
+  function pluralUA(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11)
+      return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20))
+      return few;
+    return many;
+  }
+  function eventCountdown(ev, now) {
+    const eventDay = /* @__PURE__ */ new Date(ev.date + "T00:00:00");
+    const todayDay = new Date(now);
+    todayDay.setHours(0, 0, 0, 0);
+    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
+    if (dayDiff === 0) {
+      if (!ev.time)
+        return "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406";
+      const dt = /* @__PURE__ */ new Date(ev.date + "T" + ev.time + ":00");
+      const diffMs = dt - now;
+      if (diffMs <= 0)
+        return "\u0417\u0410\u0420\u0410\u0417";
+      if (diffMs < 60 * 6e4)
+        return `\u0427\u0415\u0420\u0415\u0417 ${Math.max(1, Math.floor(diffMs / 6e4))} \u0425\u0412`;
+      const h = Math.floor(diffMs / 36e5);
+      const m = Math.floor(diffMs % 36e5 / 6e4);
+      return m > 0 ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
+    }
+    if (dayDiff === 1)
+      return "\u0417\u0410\u0412\u0422\u0420\u0410";
+    if (dayDiff < 7)
+      return `\u0427\u0415\u0420\u0415\u0417 ${dayDiff} ${pluralUA(dayDiff, "\u0414\u0415\u041D\u042C", "\u0414\u041D\u0406", "\u0414\u041D\u0406\u0412")}`;
+    if (dayDiff < 14)
+      return "\u0427\u0415\u0420\u0415\u0417 \u0422\u0418\u0416\u0414\u0415\u041D\u042C";
+    if (dayDiff < 30) {
+      const w = Math.floor(dayDiff / 7);
+      return `\u0427\u0415\u0420\u0415\u0417 ${w} ${pluralUA(w, "\u0422\u0418\u0416\u0414\u0415\u041D\u042C", "\u0422\u0418\u0416\u041D\u0406", "\u0422\u0418\u0416\u041D\u0406\u0412")}`;
+    }
+    const months = Math.floor(dayDiff / 30);
+    return `\u0427\u0415\u0420\u0415\u0417 ${months} ${pluralUA(months, "\u041C\u0406\u0421\u042F\u0426\u042C", "\u041C\u0406\u0421\u042F\u0426\u0406", "\u041C\u0406\u0421\u042F\u0426\u0406\u0412")}`;
+  }
   async function renderEventBlock() {
     const el = document.getElementById("cm-event-content");
     if (!el)
       return;
+    if (_evTimer) {
+      clearInterval(_evTimer);
+      _evTimer = null;
+    }
     try {
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
@@ -10927,49 +11294,120 @@ ${ev.description || ""}`
       } catch {
       }
       if (!items.length) {
-        hideEventsSection(el);
+        try {
+          const hres = await fetch("./data/holidays.json");
+          const hall = await hres.json();
+          const harr = Array.isArray(hall) ? hall : hall.holidays || [];
+          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", id: h.id, date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
+        } catch {
+        }
+      }
+      if (!items.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
         return;
       }
       _evItems = items;
-      renderEvList(el);
+      _evIdx = 0;
+      renderEvCarousel(el);
     } catch {
-      hideEventsSection(el);
+      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
-  function hideEventsSection(el) {
-    el.innerHTML = "";
-    const sec = document.getElementById("hm-events");
-    if (sec)
-      sec.hidden = true;
-  }
-  var EV_SHOWN = 6;
-  function evTileHtml(it, now) {
-    const d = /* @__PURE__ */ new Date(it.date + "T00:00:00");
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const diff = Math.round((d - today) / 864e5);
-    const soon = diff <= 1;
-    const when = diff === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : diff === 1 ? "\u0437\u0430\u0432\u0442\u0440\u0430" : it.time || it.location || "";
-    return `
-    <article class="hm-evt${soon ? " hm-evt--soon" : ""}" data-ev-id="${it.id}">
-      <div class="hm-evt-date">
-        <span class="hm-evt-d">${d.getDate()}</span>
-        <span class="hm-evt-m">${escapeHtml(CM_MONTHS[d.getMonth()].slice(0, 3))}</span>
+  function evSlideHtml(it, now) {
+    const eventDay = /* @__PURE__ */ new Date(it.date + "T00:00:00");
+    const todayDay = new Date(now);
+    todayDay.setHours(0, 0, 0, 0);
+    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
+    const isUrgent = dayDiff <= 1;
+    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
+    const catStr = escapeHtml(it.category || "");
+    const countdown = escapeHtml(eventCountdown(it, now));
+    if (it.kind === "holiday") {
+      const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : "";
+      return `
+      <div class="cm-ev-slide">
+        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-ev-id="${it.id}">
+          <div class="evh-top">
+            <span class="tablo-countdown">${countdown}</span>
+            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
+          </div>
+          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || "\u{1F389}")}</div>
+          <div class="evh-title">${escapeHtml(it.title)}</div>
+          <div class="evh-meta tablo-soft">${dateStr}</div>
+        </article>
       </div>
-      <h4 class="hm-evt-title">${escapeHtml(it.title)}</h4>
-      <p class="hm-evt-meta">${escapeHtml(when)}</p>
-    </article>`;
+    `;
+    }
+    const timeStr = it.time ? escapeHtml(it.time) : "";
+    const locStr = it.location ? escapeHtml(it.location) : "";
+    const thumb = it.image ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">` : "";
+    return `
+    <div class="cm-ev-slide">
+      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}${it.image ? " evh-card--photo" : ""}" data-ev-id="${it.id}">
+        ${thumb}
+        <div class="evh-top">
+          <span class="tablo-countdown">${countdown}</span>
+          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
+        </div>
+        <div class="evh-time tablo-time-mono">
+          <span class="evh-date tablo-time-accent">${dateStr}</span>
+          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ""}
+        </div>
+        <div class="evh-title">${escapeHtml(it.title)}</div>
+        ${locStr ? `<div class="evh-meta tablo-soft">\u{1F4CD} ${locStr}</div>` : ""}
+      </article>
+    </div>
+  `;
   }
-  function renderEvList(el) {
+  function renderEvCarousel(el) {
     const now = /* @__PURE__ */ new Date();
-    el.innerHTML = _evItems.slice(0, EV_SHOWN).map((it) => evTileHtml(it, now)).join("") + `<button class="hm-rail-end" type="button" data-switch-tab="shotam">${ICONS.arrowRight}\u0410\u0444\u0456\u0448\u0430</button>`;
-    el.querySelectorAll("[data-ev-id]").forEach((card) => {
+    const slides = _evItems.map((it) => evSlideHtml(it, now)).join("");
+    const dots = _evItems.length > 1 ? `<div class="cm-ev-dots">${_evItems.map((_, i) => `<span class="cm-ev-dot${i === _evIdx ? " active" : ""}" data-ev-idx="${i}"></span>`).join("")}</div>` : "";
+    el.innerHTML = `
+    <div class="cm-ev-carousel" id="cm-ev-carousel">
+      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
+      ${dots}
+    </div>
+  `;
+    el.querySelectorAll(".cm-ev-dot").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
+        updateEvPosition(el);
+        startEvRotator(el);
+      });
+    });
+    el.querySelectorAll(".evh-card[data-ev-id]").forEach((card) => {
       card.addEventListener("click", () => {
         const id = Number(card.dataset.evId);
         if (Number.isFinite(id))
           openShotamModal(id);
       });
     });
+    startEvRotator(el);
+  }
+  function updateEvPosition(el) {
+    const track = el.querySelector(".cm-ev-track");
+    if (track)
+      track.style.transform = `translateX(-${_evIdx * 100}%)`;
+    el.querySelectorAll(".cm-ev-dot").forEach((d, i) => d.classList.toggle("active", i === _evIdx));
+  }
+  function startEvRotator(el) {
+    if (_evTimer) {
+      clearInterval(_evTimer);
+      _evTimer = null;
+    }
+    if (_evItems.length < 2)
+      return;
+    _evTimer = setInterval(() => {
+      if (!document.getElementById("cm-ev-carousel")) {
+        clearInterval(_evTimer);
+        _evTimer = null;
+        return;
+      }
+      _evIdx = (_evIdx + 1) % _evItems.length;
+      updateEvPosition(el);
+    }, 6e3);
   }
   var CONTACT_ICONS = {
     ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -10991,7 +11429,7 @@ ${ev.description || ""}`
       const data = await res.json();
       const list = data.contacts || [];
       if (!list.length) {
-        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
       const telOf = (p) => p.replace(/[^\d+]/g, "");
@@ -11003,70 +11441,79 @@ ${ev.description || ""}`
         return i === -1 ? 99 : i;
       };
       emergency.sort((a, b) => emergRank(a) - emergRank(b));
-      const rowHtml = (c) => `
-      <a class="hm-tel-row" href="tel:${escapeHtml(telOf(c.phone))}">
-        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-        <span class="hm-tel-row-text">
-          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
-          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
-        </span>
-      </a>`;
-      const quick = emergency.slice(0, 3);
-      const rest = [...local, ...emergency.slice(3)];
-      el.innerHTML = `
-      <details class="hm-tels">
-        <summary>
-          <span class="hm-tels-quick">${quick.map((c) => `
-            <a class="hm-tel-chip" href="tel:${escapeHtml(telOf(c.phone))}"
-               aria-label="${escapeHtml(c.name)}">${escapeHtml(c.phone)}</a>`).join("")}</span>
-          <span class="hm-tels-more">\u0423\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</span>
-        </summary>
-        ${rest.length ? `<div class="hm-tel-rows">${rest.map(rowHtml).join("")}</div>` : ""}
-      </details>`;
+      const localHtml = local.length ? `
+      <div class="cm-contact-group cm-contact-group--local">
+        <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
+        <div class="cm-contact-rows">
+          ${local.map((c) => `
+            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-row-text">
+                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
+                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
+              </span>
+            </a>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
+      const emergencyHtml = emergency.length ? `
+      <div class="cm-contact-group cm-contact-group--emergency">
+        <div class="cm-contact-group-title">\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</div>
+        <div class="cm-contact-grid-3">
+          ${emergency.map((c) => `
+            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
+              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
+            </a>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
+      el.innerHTML = localHtml + emergencyHtml;
     } catch {
-      el.innerHTML = '<div class="hm-error">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
-  var CM_RAIL_MAX = 8;
-  function railItems(arts) {
-    const heroId = window.__cstlHeroArticleId;
-    const skip = (a) => a && a.id === heroId;
-    const digest = NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g).find((a) => !skip(a))).filter(Boolean);
-    const seen = new Set(digest.map((a) => a.id));
-    const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter((a) => !seen.has(a.id) && !skip(a));
-    return [...digest, ...more].slice(0, CM_RAIL_MAX);
+  function digestOf(arts) {
+    return NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g)[0]).filter(Boolean);
   }
   function paintCmNews(el, arts) {
-    const top = railItems(arts);
+    const top = digestOf(arts);
     if (!top.length) {
-      el.innerHTML = '<div class="hm-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     } else {
-      el.innerHTML = newsCardsHtml(top, { variant: "tile" }) + `<button class="hm-rail-end" type="button" data-cm-news-all>${ICONS.arrowRight}\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</button>`;
+      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: "mini" })}</div>`;
       [...el.querySelectorAll(".nc")].forEach((node, i) => {
         const b = node.querySelector(".nc-badge--geo");
-        if (b && top[i])
+        if (b)
           b.textContent = geoGroupOf(top[i]) || b.textContent;
       });
+    }
+    const controls = document.getElementById("cm-news-controls");
+    if (controls) {
+      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
     }
     paintNewsBadge(arts);
   }
   function paintNewsBadge(arts) {
-    const head = document.querySelector("#hm-news .hm-sec-title");
-    if (!head)
+    const bar = document.querySelector(".cm-news-board-bar");
+    if (!bar)
       return;
     const n = countNewCommunity(arts);
-    const old = head.parentElement.querySelector(".hm-new-badge");
+    const old = bar.querySelector(".cm-news-new");
     if (!n) {
       if (old)
         old.remove();
       return;
     }
-    const html = `<span class="hm-new-badge">${n} ${pluralNew(n)}</span>`;
+    const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
     if (old)
       old.outerHTML = html;
     else
-      head.insertAdjacentHTML("afterend", html);
+      bar.insertAdjacentHTML("beforeend", html);
   }
   function pluralNew(n) {
     const t = n % 100, o = n % 10;
@@ -11084,7 +11531,7 @@ ${ev.description || ""}`
       return;
     const arts = await ensureNewsLoaded();
     paintCmNews(el, arts);
-    const section = document.getElementById("hm-news");
+    const section = document.querySelector(".cm-block--news");
     if (!section || section.dataset.wired)
       return;
     section.dataset.wired = "1";
@@ -11102,294 +11549,13 @@ ${ev.description || ""}`
     window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
   }
 
-  // src/tabs/home-hero.js
-  async function fundCandidate() {
-    try {
-      const res = await fetch("./data/fundraisers.json", { cache: "no-cache" });
-      const data = await res.json();
-      const items = (Array.isArray(data) ? data : data.items || []).filter((it2) => it2 && it2.active !== false && it2.title && it2.org && it2.url);
-      const it = items[0];
-      if (!it)
-        return null;
-      const pct = typeof it.goal === "number" && typeof it.raised === "number" && it.goal > 0 ? Math.max(0, Math.min(100, Math.round(it.raised / it.goal * 100))) : null;
-      return {
-        kind: "fund",
-        accent: true,
-        label: "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0437\u0431\u0456\u0440",
-        icon: ICONS.community,
-        title: it.title,
-        sub: it.org,
-        pct,
-        cta: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0442\u0438",
-        href: it.url
-      };
-    } catch {
-      return null;
-    }
-  }
-  async function eventCandidate() {
-    try {
-      const res = await fetch("./data/events.json");
-      const all = await res.json();
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      const soon = all.filter((e) => !e.auto).map((e) => ({ e, d: /* @__PURE__ */ new Date(e.date + "T00:00:00") })).filter((x) => x.d >= today && Math.round((x.d - today) / 864e5) <= 1).sort((a, b) => a.d - b.d)[0];
-      if (!soon)
-        return null;
-      const diff = Math.round((soon.d - today) / 864e5);
-      return {
-        kind: "event",
-        accent: false,
-        id: soon.e.id,
-        label: diff === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432 \u0433\u0440\u043E\u043C\u0430\u0434\u0456" : "\u0417\u0430\u0432\u0442\u0440\u0430 \u0432 \u0433\u0440\u043E\u043C\u0430\u0434\u0456",
-        icon: ICONS.calendar,
-        title: soon.e.title,
-        sub: [soon.e.time, soon.e.location].filter(Boolean).join(" \xB7 "),
-        photo: soon.e.image || null
-      };
-    } catch {
-      return null;
-    }
-  }
-  function heroHtml(c) {
-    const bar = c.pct !== null && c.pct !== void 0 ? `
-    <div class="hm-hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-         aria-valuenow="${c.pct}" aria-label="\u0417\u0456\u0431\u0440\u0430\u043D\u043E ${c.pct} \u0432\u0456\u0434\u0441\u043E\u0442\u043A\u0456\u0432">
-      <span style="width:${c.pct}%"></span>
-    </div>
-    <div class="hm-hero-pct">${c.pct}% \u0437\u0456\u0431\u0440\u0430\u043D\u043E</div>` : "";
-    const cta = c.cta ? `<a class="hm-hero-cta" href="${escapeHtml(c.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.cta)}</a>` : "";
-    const photo = c.photo ? `<div class="hm-hero-photo" style="background-image:url('${escapeHtml(c.photo)}')"></div>
-       <div class="hm-hero-shade" aria-hidden="true"></div>` : "";
-    return `
-    <article class="hm-hero${c.accent ? " hm-hero--accent" : ""}${c.photo ? " hm-hero--photo" : ""}" data-hero="${c.kind}">
-      ${photo}
-      <div class="hm-hero-in">
-        <span class="hm-hero-lab">${c.icon}${escapeHtml(c.label)}</span>
-        <h2 class="hm-hero-title">${escapeHtml(c.title)}</h2>
-        ${c.sub ? `<p class="hm-hero-sub">${escapeHtml(c.sub)}</p>` : ""}
-        ${bar}
-        ${cta}
-      </div>
-    </article>`;
-  }
-  var _current = null;
-  async function renderHero() {
-    const host = document.getElementById("hm-hero");
-    if (!host)
-      return;
-    host.innerHTML = '<div class="hm-skel hm-skel-hero" aria-hidden="true"></div>';
-    const [fund, ev] = await Promise.all([fundCandidate(), eventCandidate()]);
-    const c = fund || ev;
-    if (!c) {
-      host.innerHTML = "";
-      window.__cstlHeroArticleId = null;
-      return;
-    }
-    if (!c.photo && c.kind !== "fund")
-      c.photo = olykaPhoto().src;
-    _current = c;
-    window.__cstlHeroArticleId = c.kind === "news" ? c.id : null;
-    host.innerHTML = heroHtml(c);
-    if (!host.dataset.wired) {
-      host.dataset.wired = "1";
-      host.addEventListener("click", (e) => {
-        if (e.target.closest(".hm-hero-cta"))
-          return;
-        const c2 = _current;
-        if (!c2)
-          return;
-        if (c2.kind === "news")
-          return openArticle(c2.id);
-        if (c2.kind === "event")
-          return openShotamModal(c2.id);
-        if (c2.kind === "bus") {
-          window.switchTab?.("buses");
-          return openSavedRouteOnBuses(c2.routeId, c2.dateISO, null, null);
-        }
-      });
-    }
-  }
-
-  // src/tabs/home-bento.js
-  var BUS_SOON_MIN = 90;
-  var TRACK_KEY2 = "bus_track_v2";
-  var BOARD_THUMBS = 4;
-  function loadTracked(todayISO) {
-    if (!isLoggedIn())
-      return [];
-    try {
-      const d = JSON.parse(localStorage.getItem(TRACK_KEY2 + ":" + currentUserId()));
-      if (d?.routes?.length)
-        return d.routes.filter((t) => t.trackDate >= todayISO);
-    } catch {
-    }
-    return [];
-  }
-  function paint2(el, { label, icon, big, sub, accent = false, onTap }) {
-    el.innerHTML = `<span class="hm-tile-lab">${icon}${escapeHtml(label)}</span><span class="hm-tile-big">${escapeHtml(big)}</span>` + (sub ? `<span class="hm-tile-sub">${escapeHtml(sub)}</span>` : "");
-    el.classList.toggle("hm-tile--accent", accent);
-    el.hidden = false;
-    el.onclick = onTap || null;
-  }
-  async function busTile() {
-    const el = document.getElementById("hm-t-bus");
-    if (!el)
-      return;
-    el.hidden = true;
-    try {
-      const res = await fetch("./data/schedule.json");
-      const data = await res.json();
-      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const routes = (data.days?.[todayISO]?.routes || data.routes || []).filter((r) => r.status !== "cancelled");
-      const pickable = routes.filter((r) => {
-        const st = getRouteState(r);
-        if (st === "enroute")
-          return true;
-        if (st !== "waiting")
-          return false;
-        const t2 = getRouteTimings(r);
-        return t2.minsToDeparture !== null && t2.minsToDeparture <= BUS_SOON_MIN;
-      });
-      if (!pickable.length)
-        return;
-      const tracked = loadTracked(todayISO).map((t2) => t2.routeId);
-      const depMins = (r) => getStopMins(r, r.stops[0].name) ?? 0;
-      const route = pickable.find((r) => tracked.includes(r.id)) || pickable.sort((a, b) => depMins(a) - depMins(b))[0];
-      const t = getRouteTimings(route);
-      const [, to] = parseRouteEndpoints(route.name || "");
-      const when = t.state === "enroute" ? "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456" : formatCountdownUpper(t.minsToDeparture);
-      if (!when)
-        return;
-      paint2(el, {
-        label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441",
-        icon: ICONS.bus,
-        big: when.charAt(0) + when.slice(1).toLowerCase(),
-        sub: to || route.name || "",
-        onTap: () => {
-          window.switchTab?.("buses");
-          openSavedRouteOnBuses(route.id, todayISO, null, null);
-        }
-      });
-    } catch {
-    }
-  }
-  function msgTile() {
-    const el = document.getElementById("hm-t-msg");
-    if (!el)
-      return;
-    const n = unreadChatsCached();
-    if (!n) {
-      el.hidden = true;
-      return;
-    }
-    paint2(el, {
-      label: "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F",
-      icon: ICONS.message,
-      big: String(n),
-      sub: pluralMsg(n),
-      accent: true,
-      // непрочитане — єдине, що звертається особисто до людини
-      onTap: () => openThreadsList()
-    });
-  }
-  function pluralMsg(n) {
-    const t = n % 100, o = n % 10;
-    if (t >= 11 && t <= 14)
-      return "\u043D\u043E\u0432\u0438\u0445";
-    if (o === 1)
-      return "\u043D\u043E\u0432\u0435";
-    if (o >= 2 && o <= 4)
-      return "\u043D\u043E\u0432\u0456";
-    return "\u043D\u043E\u0432\u0438\u0445";
-  }
-  async function boardTile() {
-    const el = document.getElementById("hm-t-board");
-    if (!el)
-      return;
-    el.hidden = true;
-    try {
-      let posts2 = [];
-      if (isSupabaseReady()) {
-        const p = await fetchPublishedPosts();
-        if (p !== null)
-          posts2 = p;
-      }
-      if (!posts2.length) {
-        const r = await fetch("./data/community-board.json");
-        posts2 = (await r.json()).posts || [];
-      }
-      const ads = posts2.filter((p) => (p.type || "board") === "board");
-      if (!ads.length)
-        return;
-      const thumbs = ads.map((p) => Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo).filter(Boolean).slice(0, BOARD_THUMBS);
-      el.innerHTML = `<span class="hm-tile-lab">${ICONS.clipboard}\u041D\u0430 \u0434\u043E\u0448\u0446\u0456</span><div class="hm-tile-row"><span class="hm-tile-big">${ads.length} ${pluralAds(ads.length)}</span>` + (thumbs.length ? `<span class="hm-tile-thumbs">${thumbs.map((src) => `<i style="background-image:url('${escapeHtml(src)}')"></i>`).join("")}${ads.length > thumbs.length ? `<b>+${ads.length - thumbs.length}</b>` : ""}</span>` : "") + `</div>`;
-      el.hidden = false;
-      el.onclick = () => window.switchTab?.("board");
-    } catch {
-    }
-  }
-  function pluralAds(n) {
-    const t = n % 100, o = n % 10;
-    if (t >= 11 && t <= 14)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
-    if (o === 1)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    if (o >= 2 && o <= 4)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
-  }
-  async function telTile() {
-    const el = document.getElementById("hm-t-tel");
-    if (!el)
-      return;
-    el.hidden = true;
-    try {
-      const res = await fetch("./data/community.json");
-      const data = await res.json();
-      const list = data.contacts || [];
-      const EMERG_ORDER = ["101", "102", "103"];
-      const quick = EMERG_ORDER.map((num) => list.find((c) => String(c.phone || "").trim() === num)).filter(Boolean);
-      if (!quick.length)
-        return;
-      el.innerHTML = `<span class="hm-tile-lab">${ICONS.phone}\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</span><span class="hm-tile-tels">${quick.map((c) => `
-        <a href="tel:${escapeHtml(String(c.phone).replace(/[^\d+]/g, ""))}"
-           aria-label="${escapeHtml(c.name)}">${escapeHtml(c.phone)}</a>`).join("")}</span>`;
-      el.hidden = false;
-      el.onclick = null;
-    } catch {
-    }
-  }
-  async function renderBentoTiles() {
-    msgTile();
-    await Promise.all([busTile(), boardTile(), telTile()]);
-    syncBentoVisibility();
-  }
-  function syncBentoVisibility() {
-    const grid = document.getElementById("hm-bento");
-    if (!grid)
-      return;
-    const shown = [...grid.children].filter((c) => !c.hidden);
-    grid.hidden = shown.length === 0;
-    const wide = (el, on) => el && el.classList.toggle("hm-tile--wide", on);
-    const tel = grid.querySelector("#hm-t-tel");
-    const pairable = shown.filter((c) => c !== tel);
-    pairable.forEach((c, i) => {
-      const isLastOdd = i === pairable.length - 1 && pairable.length % 2 === 1;
-      wide(c, isLastOdd);
-    });
-    wide(tel, true);
-  }
-  function initHomeBento() {
-    const again = () => renderBentoTiles();
-    onAuthChange(again);
-    window.addEventListener("cstl-bus-track-changed", again);
-    window.addEventListener("cstl-unread-changed", again);
-    window.addEventListener("cstl-posts-changed", again);
-  }
-
   // src/tabs/community.js
   var KOSTEL = "\u041A\u043E\u043B\u0435\u0433\u0456\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u0441\u0442\u0435\u043B \u0421\u0432\u044F\u0442\u043E\u0457 \u0422\u0440\u0456\u0439\u0446\u0456";
+  var HERO_DAY = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.day-${i}.jpg`, caption: KOSTEL }));
+  var HERO_EVENING = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.evening-${i}.jpg`, caption: KOSTEL }));
+  var _heroInterval = null;
+  var _heroIndex = 0;
+  var _heroIsDay = null;
   var EVENING_LEAD_MS = 2 * 60 * 60 * 1e3;
   function isDaytime(now = /* @__PURE__ */ new Date()) {
     const t = sunTimes(now);
@@ -11397,10 +11563,54 @@ ${ev.description || ""}`
       return true;
     return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
   }
-  function olykaPhoto() {
-    const set = isDaytime() ? "day" : "evening";
-    const n = (/* @__PURE__ */ new Date()).getDate() % 4 + 1;
-    return { src: `./photos/olyka.${set}-${n}.jpg`, caption: KOSTEL };
+  function heroSet() {
+    return isDaytime() ? HERO_DAY : HERO_EVENING;
+  }
+  function heroImgsHtml() {
+    return heroSet().map((it, i) => `
+    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
+  `).join("");
+  }
+  function syncHeroCaption() {
+    const sub = document.querySelector(".cm-hero-sub");
+    const it = heroSet()[_heroIndex];
+    if (sub && it)
+      sub.textContent = it.caption;
+  }
+  function showHeroSlide(idx) {
+    const wrap = document.querySelector(".cm-hero");
+    if (!wrap)
+      return;
+    const n = heroSet().length;
+    _heroIndex = (idx + n) % n;
+    wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
+      img.classList.toggle("active", i === _heroIndex);
+    });
+    syncHeroCaption();
+  }
+  function startHeroRotator() {
+    if (_heroInterval)
+      clearInterval(_heroInterval);
+    _heroIndex = 0;
+    _heroIsDay = isDaytime();
+    _heroInterval = setInterval(() => {
+      const wrap = document.querySelector(".cm-hero");
+      if (!wrap) {
+        clearInterval(_heroInterval);
+        _heroInterval = null;
+        return;
+      }
+      const day = isDaytime();
+      if (day !== _heroIsDay) {
+        _heroIsDay = day;
+        _heroIndex = 0;
+        wrap.querySelectorAll(".cm-hero-img").forEach((img) => img.remove());
+        wrap.insertAdjacentHTML("afterbegin", heroImgsHtml());
+        syncHeroCaption();
+        return;
+      }
+      showHeroSlide(_heroIndex + 1);
+    }, 6e3);
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
@@ -11422,15 +11632,15 @@ ${ev.description || ""}`
     return { text: `${hello}, ${who}!` };
   }
   function updateGreetingName() {
-    const el = document.querySelector(".hm-greet");
+    const el = document.querySelector(".cm-greeting-text");
     if (el)
       el.textContent = getGreeting().text;
     fitGreeting();
   }
-  var GREET_FONT_MAX = 19;
-  var GREET_FONT_MIN = 14;
+  var GREET_FONT_MAX = 27;
+  var GREET_FONT_MIN = 19;
   function fitGreeting() {
-    const el = document.querySelector(".hm-greet");
+    const el = document.querySelector(".cm-greeting-text");
     if (!el)
       return;
     let size = GREET_FONT_MAX;
@@ -11446,10 +11656,6 @@ ${ev.description || ""}`
     const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
-  function skelRail(n) {
-    return Array.from({ length: n }, () => `
-    <div class="hm-skel hm-skel-tile" aria-hidden="true"></div>`).join("");
-  }
   function renderSkeleton() {
     const el = document.getElementById("cm-content");
     if (!el)
@@ -11457,92 +11663,241 @@ ${ev.description || ""}`
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
-    <!-- \u0420\u042F\u0414\u041E\u041A \u0421\u0422\u0410\u041D\u0423. 56px \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0448\u0430\u043F\u043A\u0438-\u0431\u0430\u043D\u0435\u0440\u0430 \u043D\u0430 200px.
-         \u0421\u043B\u043E\u0432\u0430 \u0412\u043E\u0432\u0438: \xAB\u041D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0432\u0435\u043B\u0438\u043A\u0456 \u0434\u0435\u043A\u043E\u0440\u0430\u0442\u0438\u0432\u043D\u0456 \u0431\u0430\u043D\u0435\u0440\u0438, \u044F\u043A\u0456 \u0437\u0430\u0439\u043C\u0430\u044E\u0442\u044C
-         \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0443 \u0435\u043A\u0440\u0430\u043D\u0430\xBB. \u0422\u0443\u0442 \u043D\u0435\u043C\u0430\u0454 \u0436\u043E\u0434\u043D\u043E\u0433\u043E \u0434\u0435\u043A\u043E\u0440\u0430\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0456\u043A\u0441\u0435\u043B\u044F: \u0430\u0432\u0430\u0442\u0430\u0440 \u0432\u0435\u0434\u0435
-         \u0432 \u043A\u0430\u0431\u0456\u043D\u0435\u0442, \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0435, \u043F\u043E\u0433\u043E\u0434\u0430 \u2014 \u0436\u0438\u0432\u0430, \u0434\u0430\u0442\u0430 \u2014 \u0436\u0438\u0432\u0430. -->
-    <div class="hm-status">
-      <button class="hm-status-acc" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+    <!-- \u041A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u2014 \u041F\u0420\u0418\u0411\u0418\u0422\u0410 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0412\u043E\u0432\u0438 16.07: \xAB\u0456\u043A\u043E\u043D\u043A\u0430 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435
+         \u0434\u0456\u0432\u0430\u0454\u0442\u044C\u0441\u044F\xBB). \u041E\u043A\u0440\u0435\u043C\u0438\u0439 sticky-\u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043D\u0443\u043B\u044C\u043E\u0432\u043E\u0457 \u0432\u0438\u0441\u043E\u0442\u0438: \u043A\u043D\u043E\u043F\u043A\u0430 \u0441\u0442\u043E\u0457\u0442\u044C \u0443
+         \u043F\u0440\u0430\u0432\u043E\u043C\u0443 \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u043C\u0443 \u043A\u0443\u0442\u0456 \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0443 \u0432\u0456\u0434 \u0441\u0442\u0430\u0440\u0442\u0443 \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F
+         \u0457\u0434\u0435 \u0433\u0435\u0442\u044C, \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u043F\u0440\u0438\u0457\u0436\u0434\u0436\u0430\u0454, \u0430 \u0432\u043E\u043D\u0430 \u043D\u0430 \u043C\u0456\u0441\u0446\u0456. -->
+    <div class="cm-acc-pin">
+      <button class="cm-greet-account" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
       </button>
-      <div class="hm-status-col">
-        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
-        <span class="hm-status-date">${escapeHtml(todayStr)}</span>
-      </div>
-      <button class="hm-wx" type="button" data-hm-weather hidden></button>
     </div>
 
-    <div class="hm-body">
-      <!-- \u{1F534} \u0412\u0410\u0420\u0406\u0410\u041D\u0422 G \u2014 \xAB\u041D\u041E\u0412\u0418\u041D\u0418 \u041D\u0410 \u0412\u0415\u0421\u042C \u0415\u041A\u0420\u0410\u041D + \u0428\u0423\u0425\u041B\u042F\u0414\u0410\xBB (04.08).
-           \u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u0456\u0437 \u0447\u043E\u0442\u0438\u0440\u044C\u043E\u0445 \u0437\u0430\u0445\u043E\u0434\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C: \u0412\u043E\u0432\u0430 \u0449\u043E\u0440\u0430\u0437\u0443 \u043A\u0430\u0437\u0430\u0432, \u0449\u043E \u0437 \u0443\u0441\u044C\u043E\u0433\u043E
-           \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0434\u043E\u0431\u0430\u044E\u0442\u044C\u0441\u044F \u0421\u0410\u041C\u0415 \u043D\u043E\u0432\u0438\u043D\u0438 (\xAB\u0454\u0434\u0438\u043D\u0435, \u0449\u043E \u0437 \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u0434\u043E\u0431\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0446\u0435
-           \u044F\u043A "\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E", \u0443\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438, \u044F\u043A \u043D\u043E\u0432\u0438\u043D\u0438 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0430\u044E\u0442\u044C\u0441\u044F\xBB), \u0430 \u0440\u0435\u0448\u0442\u0430
-           \u0449\u043E\u0440\u0430\u0437\u0443 \u0437\u0430\u0432\u0430\u0436\u0430\u043B\u0430. G \u0440\u043E\u0431\u0438\u0442\u044C \u0456\u0437 \u0446\u044C\u043E\u0433\u043E \u0432\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E, \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438
-           \u0449\u0435 \u043E\u0434\u0438\u043D \u0440\u044F\u0434 \u043F\u043B\u0438\u0442\u043E\u043A: \u0433\u043E\u043B\u043E\u0432\u043D\u0430 = \u043D\u043E\u0432\u0438\u043D\u0438, \u0432\u0441\u0435 \u0456\u043D\u0448\u0435 \u2014 \u0443 \u0448\u0443\u0445\u043B\u044F\u0434\u0456 \u0437\u043D\u0438\u0437\u0443,
-           \u044F\u043A\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C, \u043A\u043E\u043B\u0438 \u0442\u0440\u0435\u0431\u0430. -->
-      <section class="hm-sec hm-in" id="hm-news">
-        <div class="hm-sec-head">
-          <h3 class="hm-sec-title">\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E</h3>
-          <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>
+    <!-- \u0421\u0442\u0438\u043A-\u0437\u043E\u043D\u0430 \u0432\u0456\u0442\u0430\u043D\u043D\u044F: \u0432\u0438\u0441\u043E\u0442\u0430 = \u0432\u0456\u0442\u0430\u043D\u043D\u044F + \u0437\u0430\u043F\u0430\u0441 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB (padding-bottom).
+         .cm-greeting \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 position:sticky, \u0442\u043E\u043C\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0442\u0440\u0438\u043C\u0430\u0454 \u0439\u043E\u0433\u043E
+         \u043D\u0430 \u041A\u041E\u041C\u041F\u041E\u0417\u0418\u0422\u041E\u0420\u0406 (\u0431\u0435\u0437 JS-\u0441\u043A\u0440\u043E\u043B\u0443) \u2192 \u043D\u0443\u043B\u044C \u0434\u044C\u043E\u0440\u0433\u0430\u043D\u043D\u044F \u043D\u0430 iOS. \u041A\u043E\u043B\u0438 \u0437\u043E\u043D\u0430
+         \u0434\u043E\u0437\u043D\u0438\u043A\u0430\u0454 (\u043F\u0440\u043E\u0441\u043A\u0440\u043E\u043B\u0438\u043B\u0438 padding-bottom) \u2014 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u0457\u0434\u0435 \u0432\u0433\u043E\u0440\u0443. -->
+    <div class="cm-greeting-stick">
+      <section class="cm-greeting">
+        <div class="cm-greeting-col">
+          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
         </div>
-        <div class="hm-rail" id="cm-news-content">${skelRail(3)}</div>
       </section>
-
-      <!-- \u0410\u0444\u0456\u0448\u0430 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u043E\u0442\u043E\u0446\u0456: \u043F\u043E\u0434\u0456\u044F \u2014 \u0446\u0435 \u0442\u0435\u0436 \xAB\u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F\xBB, \u0456 \u0432\u043E\u043D\u0430
-           \u043F\u043E\u0440\u0443\u0447 \u0456\u0437 \u043D\u043E\u0432\u0438\u043D\u0430\u043C\u0438 \u0447\u0438\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0435\u043D\u043D\u044F, \u0430 \u043D\u0435 \u044F\u043A \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u043F\u0440\u0438\u043B\u0430\u0434.
-           \u0421\u0435\u043A\u0446\u0456\u044F \u0445\u043E\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0446\u0456\u043B\u043A\u043E\u043C, \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043D\u0435\u043C\u0430\u0454. -->
-      <section class="hm-sec hm-in" id="hm-events">
-        <div class="hm-sec-head">
-          <h3 class="hm-sec-title">\u0410\u0444\u0456\u0448\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-          <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
-        </div>
-        <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
-      </section>
-
-      <!-- \u0413\u043E\u043B\u043E\u0432\u043D\u0430 \u043F\u043B\u0438\u0442\u043A\u0430-\u0441\u043B\u043E\u0442 \u043F\u0435\u0440\u0435\u0457\u0445\u0430\u043B\u0430 \u0412 \u041A\u0406\u041D\u0415\u0426\u042C \u043F\u043E\u0442\u043E\u043A\u0443 \u0456 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u041B\u0418\u0428\u0415 \u0434\u043B\u044F
-           \u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u043E\u0433\u043E: \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0437\u0431\u0456\u0440 \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u041D\u043E\u0432\u0438\u043D\u0438 \u0432\u043E\u043D\u0430 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435
-           \u043F\u043E\u043A\u0430\u0437\u0443\u0454 \u2014 \u0441\u0430\u043C\u0435 \u043D\u0430 \u0446\u0435 \u0412\u043E\u0432\u0430 \u0441\u043A\u0430\u0440\u0436\u0438\u0432\u0441\u044F (\xAB\u0432\u043E\u043D\u043E \u0434\u0443\u0431\u043B\u044E\u0454 \u043D\u043E\u0432\u0438\u043D\u0438\xBB). -->
-      <section id="hm-hero"></section>
-
-      <div id="cm-contacts-content" hidden></div>
+      <!-- \u0420\u043E\u0437\u043F\u0456\u0440\u043A\u0430 \u0437\u0430\u043F\u0430\u0441\u0443 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB: \u0420\u0415\u0410\u041B\u042C\u041D\u0418\u0419 \u0431\u043B\u043E\u043A (\u043D\u0435 padding!) \u2014 \u0456\u043D\u0430\u043A\u0448\u0435
+           sticky \u0443 Chromium \u043D\u0435 \u0442\u0440\u0438\u043C\u0430\u0454 (padding \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430 \u043D\u0435 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u0443 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D
+           \u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F). \u0407\u0457 \u0432\u0438\u0441\u043E\u0442\u0430 = \u0441\u043A\u0456\u043B\u044C\u043A\u0438 px \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0456\u0433\u043D\u043E\u0440\u0443\u0454 \u0441\u043A\u0440\u043E\u043B. -->
+      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
     </div>
 
-    <!-- \u0428\u0423\u0425\u041B\u042F\u0414\u0410. \u041F\u0440\u0438\u0431\u0438\u0442\u0430 \u043D\u0430\u0434 \u0442\u0430\u0431-\u0431\u0430\u0440\u043E\u043C. \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0430 \u2014 \u0441\u043C\u0443\u0436\u043A\u0430 \u0437 \u0442\u0440\u044C\u043E\u043C\u0430 \u0444\u0430\u043A\u0442\u0430\u043C\u0438;
-         \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0430 \u2014 \u043F\u043B\u0438\u0442\u043A\u0438. \u0412\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0422\u0410\u041F\u041E\u041C, \u0431\u0435\u0437 \u0436\u0435\u0441\u0442\u0443: \u0432\u043B\u0430\u0441\u043D\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u043D\u0430
-         \u0446\u044C\u043E\u043C\u0443 \u0435\u043A\u0440\u0430\u043D\u0456 \u043A\u043E\u043D\u0444\u043B\u0456\u043A\u0442\u0443\u0432\u0430\u0432 \u0431\u0438 \u0437 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0438\u043C\u0438 \u0441\u0442\u0440\u0456\u0447\u043A\u0430\u043C\u0438 \u043D\u043E\u0432\u0438\u043D, \u0430 \u0446\u0435\u0439
-         \u043A\u043B\u0430\u0441 \u0431\u0430\u0433\u0456\u0432 \u0443 \u043F\u0440\u043E\u0454\u043A\u0442\u0456 \u0432\u0436\u0435 \u043A\u043E\u0448\u0442\u0443\u0432\u0430\u0432 \u043E\u043A\u0440\u0435\u043C\u043E\u0433\u043E \u0431\u043B\u043E\u043A\u0430 \u0440\u043E\u0431\u043E\u0442\u0438 02.08. -->
-    <details class="hm-drawer" id="hm-drawer">
-      <summary>
-        <span class="hm-drawer-grip" aria-hidden="true"></span>
-        <span class="hm-drawer-peek" id="hm-drawer-peek">\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \xB7 \u0414\u043E\u0448\u043A\u0430 \xB7 \u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</span>
-      </summary>
-      <div class="hm-bento" id="hm-bento">
-        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
-        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
+    <section class="cm-hero">
+      ${heroImgsHtml()}
+      <!-- \u0424\u0440\u043E\u0441\u0442-\u0441\u043C\u0443\u0433\u0443 (.cm-hero-blurband) \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u043E 16.07 (\u0412\u043E\u0432\u0430, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u043B\u0438\u0441\u0442\xBB):
+           \u043D\u0435\u043F\u0440\u043E\u0437\u043E\u0440\u0438\u0439 \u0442\u0456\u043B\u0435\u0441\u043D\u0438\u0439 \u043B\u0438\u0441\u0442 \u043D\u0430\u043B\u044F\u0433\u0430\u0454 \u043D\u0430 \u0444\u043E\u0442\u043E \u0456 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u0457\u0457 \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0454. -->
+      <div class="cm-hero-overlay">
+        <!-- \u041F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E (\u0412\u043E\u0432\u0430 20.07, \u0432\u0430\u0440\u0456\u0430\u043D\u0442 \u0411): \u0434\u0432\u0430 \u0434\u0440\u0456\u0431\u043D\u0456 \u0440\u044F\u0434\u043A\u0438 \u0432 \u0441\u0442\u0438\u043B\u0456 \u043F\u0456\u0434\u043F\u0438\u0441\u0443
+             \u0436\u0443\u0440\u043D\u0430\u043B\u0443 \u2014 \xAB\u041E\u041B\u0418\u041A\u0410\xBB (\u0440\u043E\u0437\u0440\u0456\u0434\u0436\u0435\u043D\u0456 \u043A\u0430\u043F\u0456\u0442\u0435\u043B\u0456) + \u043D\u0430\u0437\u0432\u0430 \u043F\u0430\u043C'\u044F\u0442\u043A\u0438 \u043A\u0443\u0440\u0441\u0438\u0432\u043E\u043C \u043F\u0456\u0434 \u043D\u0435\u044E.
+             \u0414\u0435\u043B\u0456\u043A\u0430\u0442\u043D\u0438\u0439, \u043D\u0435 \u043D\u0430\u0437\u0432\u0430 \u0431\u043B\u043E\u043A\u0443; \u0447\u0438\u0442\u0430\u0431\u0435\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u043D\u0430 \u0434\u0435\u043D\u044C/\u043D\u0456\u0447 \u0447\u0435\u0440\u0435\u0437 \u0442\u0456\u043D\u044C + \u043B\u0435\u0433\u043A\u0435
+             \u0437\u0430\u0442\u0435\u043C\u043D\u0435\u043D\u043D\u044F \u0432\u043D\u0438\u0437\u0443 \u0444\u043E\u0442\u043E. \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u0436\u0438\u0432\u0435 \u043E\u043A\u0440\u0435\u043C\u043E \u043D\u0438\u0436\u0447\u0435 (cm-sec-head). -->
+        <div class="cm-hero-caption">
+          <span class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</span>
+          <span class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</span>
+        </div>
       </div>
-    </details>
+    </section>
+    <div class="cm-hero-spacer"></div>
+
+    <!-- \u041B\u0418\u0421\u0422 (\u0412\u043E\u0432\u0430 16.07, \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043D \xAB\u044F\u043A \u0441\u0443\u0447\u0430\u0441\u043D\u0438\u0439 iOS-\u0434\u043E\u0434\u0430\u0442\u043E\u043A\xBB): \u0442\u0456\u043B\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430
+         \u043D\u0430 \u0432\u0441\u044E \u0448\u0438\u0440\u0438\u043D\u0443, \u0449\u043E \u041D\u0410\u041B\u042F\u0413\u0410\u0404 \u043D\u0430 \u0444\u043E\u0442\u043E (\u0437\u0430\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0456 \u0432\u0435\u0440\u0445\u043D\u0456 \u043A\u0443\u0442\u0438 + \u0433\u043B\u0438\u0431\u043E\u043A\u0430 \u0442\u0456\u043D\u044C
+         \u0443\u0433\u043E\u0440\u0443). \u0423\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 \u044F\u0437\u0438\u0447\u043E\u043A \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB (\u0432\u0438\u043F\u0443\u043A\u043B\u0438\u0439 \u0432\u0438\u0441\u0442\u0443\u043F \u043B\u0438\u0441\u0442\u0430 \u043D\u0430 \u0444\u043E\u0442\u043E)
+         \u0456 \u0432\u0441\u0456 \u0431\u043B\u043E\u043A\u0438. \u0425\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430: sec-head sticky \u2192 \u0434\u043E\u0457\u0436\u0434\u0436\u0430\u0454 \u0434\u043E \u0448\u0430\u043F\u043A\u0438,
+         \u0437\u0430\u043B\u0438\u043F\u0430\u0454 \u0456 \u0441\u0442\u0430\u0454 \u0431\u043B\u044E\u0440-\u043F\u0430\u043D\u0435\u043B\u043B\u044E (--stuck), \u0431\u043B\u043E\u043A\u0438 \u043F\u0456\u0440\u043D\u0430\u044E\u0442\u044C \u043F\u0456\u0434 \u043D\u0435\u0457.
+         \u041A\u043D\u043E\u043F\u043A\u0438 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u0442\u0443\u0442 \u041D\u0415\u041C\u0410 \u2014 \u0432\u043E\u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u043E \u043F\u0440\u0438\u0431\u0438\u0442\u0430 (.cm-acc-pin). -->
+    <div class="cm-sheet">
+    <!-- \u041F\u0440\u0438\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0439 \u0434\u043E \u0448\u0430\u043F\u043A\u0438 \u0431\u043B\u044E\u0440-\u0440\u044F\u0434\u043E\u043A (\u041F\u0440\u0430\u0432\u043A\u0430 1): fixed, \u043D\u0435 \u0457\u0434\u0435 \u0437\u0456 \u0441\u043A\u0440\u043E\u043B\u043E\u043C; opacity \u0441\u043A\u0440\u0430\u0431\u0438\u0442\u044C\u0441\u044F. -->
+    <div class="cm-topbar-blur" aria-hidden="true"></div>
+    <div id="cm-sec-sentinel" aria-hidden="true"></div>
+    <header class="cm-sec-head" id="cm-sec-head">
+      <div class="cm-sec-head-in">
+        <h2>\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
+        <!-- \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0417\u041D\u041E\u0412\u0423 \u0432 \u043B\u0438\u043F\u043A\u0456\u0439 \u0448\u0430\u043F\u0446\u0456 (\u0412\u043E\u0432\u0430 16.07, \u0432\u0435\u0447\u0456\u0440): \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0456
+             \u043F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u2014 \u043E\u0434\u043D\u0435 \u0446\u0456\u043B\u0435, \u043E\u0431\u0438\u0434\u0432\u0430 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043A\u043E\u043B\u0438 \u0448\u0430\u043F\u043A\u0430 \u0437\u0430\u043B\u0438\u043F\u0430\u0454.
+             \u0420\u0430\u043D\u0456\u0448\u0435 \u0431\u0443\u0432 \u0443 \u0442\u0456\u043B\u0456 \u0431\u043B\u043E\u043A\u0443 \u2192 \u0432\u0456\u0434\u0441\u043A\u0440\u043E\u043B\u044E\u0432\u0430\u0432\u0441\u044F \u0433\u0435\u0442\u044C, \u043D\u0430 \u0431\u043B\u044E\u0440\u0456 \u043B\u0438\u0448\u0430\u0432\u0441\u044F \u043B\u0438\u0448\u0435 h2. -->
+        <p class="cm-sheet-sub">\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
+      </div>
+    </header>
+
+    <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
+         \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
+
+    <!-- \u{1F534} 31.07: \u0448\u0430\u043F\u043A\u0430 \u0441\u0442\u0430\u043B\u0430 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u044C\u043E\u044E <button>. \u0420\u0430\u043D\u0456\u0448\u0435 \u0446\u0435 \u0431\u0443\u0432 <div>, \u043F\u043E \u044F\u043A\u043E\u043C\u0443
+         \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0442\u0430\u043F\u0430\u043B\u043E\u0441\u044C; \u0442\u0435\u043F\u0435\u0440 \u0443\u0432\u0435\u0441\u044C \u0432\u0456\u0434\u0436\u0435\u0442 \u0432\u0435\u0434\u0435 \u0432 \u0445\u0430\u0431 \u043D\u043E\u0432\u0438\u043D, \u0456 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0456 \u0442\u0430
+         \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 \u0435\u043B\u0435\u043C\u0435\u043D\u0442 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F, \u0430 \u043D\u0435 \u043A\u043B\u0456\u043A\u0430\u0431\u0435\u043B\u044C\u043D\u0438\u0439 \u0431\u043B\u043E\u043A. -->
+    <section id="cm-news-board" class="cm-block cm-block--news">
+      <button class="cm-news-board-bar" type="button" data-cm-news-open>
+        <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
+      </button>
+      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
+    </section>
+
+    <!-- \u0412\u0456\u0434\u0436\u0435\u0442 \u0414\u043E\u0448\u043A\u0438 (\u043F\u043E\u0432\u043D\u0430 \u043F\u0435\u0440\u0435\u0440\u043E\u0431\u043A\u0430 13.07, \u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438): \u0448\u0430\u043F\u043A\u0430 \u0442\u0435\u043F\u0435\u0440
+         \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0432\u0456\u0434\u0436\u0435\u0442\u0430 (\u0440\u0435\u043D\u0434\u0435\u0440\u0438\u0442\u044C renderBoardBlock), \u0441\u0442\u0430\u0440\u0430 \xAB\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438\xBB \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u0430. -->
+    <section class="cm-block cm-block--board">
+      <div id="cm-board-content" class="cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--event">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+        <button class="cm-block-link" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
+      </header>
+      <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--bus">
+      <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <footer class="cm-block-footer">
+        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412 \u2192</button>
+      </footer>
+    </section>
+
+    <section class="cm-block cm-block--weather">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
+      </header>
+      <div id="cm-weather-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <!-- \u0411\u043B\u043E\u043A \u0421\u0432\u0456\u0442\u043B\u043E \u2014 \u043F\u0440\u0438\u0445\u043E\u0432\u0430\u043D\u043E 16.05.2026 (\u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0430\u0440\u0430\u0437\u0456 \u043D\u0435 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0430\u044E\u0442\u044C).
+         \u0429\u043E\u0431 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438: \u0440\u043E\u0437\u043A\u043E\u043C\u0435\u043D\u0442\u0443\u0432\u0430\u0442\u0438 \u0441\u0435\u043A\u0446\u0456\u044E + \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 renderPowerBlock() \u0443 initCommunity. -->
+    <!--
+    <section class="cm-block cm-block--power">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
+        <button class="cm-block-link" data-switch-tab="power">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
+      </header>
+      <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+    -->
+
+    <section id="cm-contacts" class="cm-block cm-block--contacts">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
+      </header>
+      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+    </div><!-- /.cm-sheet -->
   `;
   }
   var _greetingWired = false;
-  var _nowWired = false;
+  var _focusWired = false;
+  function initCenterFocus() {
+    if (_focusWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    _focusWired = true;
+    let raf = null;
+    let _stickyTop = null;
+    let _secRestTop = null;
+    let _maskW = 0;
+    const buildSheetMask = (w) => {
+      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17, sd = 1.5;
+      const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
+      const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    };
+    const apply = () => {
+      raf = null;
+      if (main.dataset.tab !== "community")
+        return;
+      const vh = main.clientHeight;
+      const viewCenter = vh / 2;
+      const sec = document.getElementById("cm-sec-head");
+      const hdr = document.querySelector(".app-header");
+      if (sec) {
+        const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
+        if (_stickyTop === null)
+          _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+        const pinLine = pinY + _stickyTop;
+        const secTop = sec.getBoundingClientRect().top;
+        if (main.scrollTop < 4)
+          _secRestTop = secTop;
+        const startY = _secRestTop != null ? _secRestTop : secTop;
+        const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
+        const START = 0.4;
+        const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
+        const sheet = document.querySelector(".cm-sheet");
+        if (sheet) {
+          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
+          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
+          sheet.style.setProperty("--sheet-blur", (6 + 5 * progColor).toFixed(1) + "px");
+          const w = sheet.clientWidth;
+          if (w && w !== _maskW) {
+            _maskW = w;
+            sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
+          }
+        }
+        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
+      }
+      if (!allowMotion)
+        return;
+      let best = null, bestDist = Infinity;
+      document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
+        const r = b.getBoundingClientRect();
+        if (r.bottom < -80 || r.top > vh + 80) {
+          if (b.dataset.cf) {
+            b.style.transform = "";
+            b.classList.remove("cm-block--focus");
+            delete b.dataset.cf;
+          }
+          return;
+        }
+        const blockCenter = (r.top + r.bottom) / 2;
+        const dist = Math.abs(blockCenter - viewCenter);
+        const scaleDist = b.id === "cm-news-board" && blockCenter > viewCenter ? 0 : dist;
+        const t = Math.min(1, scaleDist / (vh * 0.55));
+        b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
+        b.dataset.cf = "1";
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = b;
+        }
+      });
+      document.querySelectorAll("#cm-content .cm-block--focus").forEach((b) => {
+        if (b !== best)
+          b.classList.remove("cm-block--focus");
+      });
+      if (best)
+        best.classList.add("cm-block--focus");
+    };
+    const onScroll = () => {
+      if (!raf)
+        raf = requestAnimationFrame(apply);
+    };
+    main.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("cstl-tab-changed", onScroll);
+    onScroll();
+  }
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
+    startHeroRotator();
+    initCenterFocus();
     refreshAccountButtons();
     if (!_greetingWired) {
       onAuthChange(updateGreetingName);
       _greetingWired = true;
     }
     updateGreetingName();
-    if (!_nowWired) {
-      initHomeBento();
-      _nowWired = true;
-    }
     renderWeatherBlock();
-    renderHero();
-    renderBentoTiles();
+    renderBusBlock();
+    renderBoardBlock();
     renderEventBlock();
     renderContactsBlock();
     renderCommunityNews();

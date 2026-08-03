@@ -62,7 +62,7 @@ const { ctx, page } = await openCommunity();
 // ── 1. Віджет Громади ───────────────────────────────────────────────────────
 const w = await page.evaluate(`(() => {
   const count = ${COUNT_SCROLLERS};
-  const n = document.querySelector('#hm-news');
+  const n = document.querySelector('.cm-block--news');
   if (!n) return null;
   return {
     scrollers: count(n),
@@ -71,7 +71,7 @@ const w = await page.evaluate(`(() => {
     imgs: n.querySelectorAll('img').length,
     live: /LIVE/.test(n.textContent),
     chips: n.querySelectorAll('.cm-news-chip, .cm-news-filters, .cm-news-feed').length,
-    headerTag: (n.querySelector('[data-cm-news-all]') || {}).tagName,
+    headerTag: (n.querySelector('.cm-news-board-bar') || {}).tagName,
     hasAll: !!n.querySelector('[data-cm-news-all]'),
   };
 })()`);
@@ -81,36 +81,23 @@ ok('🔴 у віджеті НЕМА вкладених скролерів', w.sc
 // Стеля 480px: заміряно 431px після переробки (було 567). Запас ~50px на інший
 // шрифт/масштаб iOS. Якщо колись знову підповзе до 567 — це повернення хвороби.
 ok('віджет не з\'їдає головний екран (< 480px)', w.h < 480, `${w.h}px = ${Math.round(w.h / VIEW * 1000) / 10}% видимої зони`);
-// 🔄 03.08 («ПУЛЬС»): віджет став горизонтальною стрічкою, тож карток більше
-// трьох — але їх число обмежене стелею `CM_RAIL_MAX = 8`. Перевіряємо саме
-// стелю: за нею стрічка перестає бути «поглядом» і стає прихованим списком.
-ok('у стрічці не більше 8 карток', w.cards <= 8, `${w.cards}`);
-ok('картинок не більше, ніж карток', w.imgs <= w.cards, `${w.imgs} на ${w.cards}`);
+ok('у віджеті рівно 3 картки', w.cards === 3, `${w.cards}`);
+ok('картинок у віджеті не більше 3', w.imgs <= 3, `${w.imgs}`);
 ok('фальшивого «LIVE» більше нема', !w.live);
 ok('чіпи і старий скролер прибрані', w.chips === 0, `залишків: ${w.chips}`);
-// 🔄 03.08: віджет став секцією головної, і входом у хаб є посилання
-// «Усі новини». Вимога та сама, що була до шапки-віджета 31.07 — це мусить бути
-// СПРАВЖНІЙ елемент керування (клавіатура, читач екрана), а не клікабельний div.
-ok('вхід у хаб — справжня кнопка', w.headerTag === 'BUTTON', w.headerTag);
+ok('шапка віджета — справжня кнопка', w.headerTag === 'BUTTON', w.headerTag);
 ok('є вхід «Усі новини»', w.hasAll);
 
 // ── 2. КОНТРОЛЬ: вимір справді ловить скролер ───────────────────────────────
 // Повертаємо віджету те, що прибрали (вкладений скролер) — перевірка МУСИТЬ упасти.
 const ctrl = await page.evaluate(`(() => {
   const count = ${COUNT_SCROLLERS};
-  // Підкидаємо у секцію справжній вертикальний скролер — саме той дефект, який
-  // 31.07 прибирали з віджета новин. Перевірка мусить його побачити, інакше вона
-  // не ловить нічого і зелений колір нічого не вартий.
-  // ⚠️ Ламати саму стрічку не годиться: у flex-ряду висота дітей тягнеться за
-  // контейнером, тож scrollHeight не перевищує clientHeight і «зламаний»
-  // варіант виглядає справним. Перша версія цього контролю на цьому й спіймалась.
-  const n = document.querySelector('#hm-news');
-  const box = document.createElement('div');
-  box.style.cssText = 'height:80px;overflow-y:auto';
-  box.innerHTML = '<div style="height:400px"></div>';
-  n.appendChild(box);
+  const n = document.querySelector('.cm-block--news');
+  const box = n.querySelector('.cm-news-top3');
+  box.style.maxHeight = '200px';
+  box.style.overflowY = 'auto';
   const found = count(n);
-  box.remove();
+  box.style.maxHeight = ''; box.style.overflowY = '';
   return { found, afterRestore: count(n).length };
 })()`);
 ok('🔴 КОНТРОЛЬ: на навмисно зламаному віджеті скролер ЗНАЙДЕНО',
@@ -118,7 +105,7 @@ ok('🔴 КОНТРОЛЬ: на навмисно зламаному віджет
 ok('КОНТРОЛЬ: після відкату скролерів знову 0', ctrl.afterRestore === 0);
 
 // ── 3. Хаб ──────────────────────────────────────────────────────────────────
-await page.locator('[data-cm-news-all]').first().click();
+await page.locator('.cm-news-board-bar').click();
 await page.waitForTimeout(800);
 
 const h = await page.evaluate(`(() => {
@@ -228,7 +215,7 @@ ok('мітка body.nh-open знята разом із хабом',
 // Підняття модалки scoped під `body.nh-open`, тож стаття, відкрита з ВІДЖЕТА,
 // мусить лишитись рівно такою, якою була: починатись під шапкою застосунку.
 // Без цієї перевірки «полагодив хаб — непомітно змінив Громаду» пройшло б тихо.
-await page.locator('#hm-news [data-article-id]').first().click();
+await page.locator('.cm-block--news [data-article-id]').first().click();
 await page.waitForTimeout(700);
 const fromWidget = await page.evaluate(() => {
   const m = document.getElementById('article-modal');
@@ -254,7 +241,7 @@ await page.evaluate(() => {
   if (b) b.click();
 });
 await page.waitForTimeout(500);
-await page.locator('[data-cm-news-all]').first().click();
+await page.locator('.cm-news-board-bar').click();
 await page.waitForTimeout(900);
 
 const look = await page.evaluate(() => {
