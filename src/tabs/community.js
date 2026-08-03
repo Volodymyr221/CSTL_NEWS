@@ -251,8 +251,8 @@ function renderSkeleton() {
            на своїй вкладці. Контейнер лишається, бо renderBusBlock() наповнює
            саме його (крок 5 переносить вміст у капсулу). -->
       <div id="cm-bus-content" hidden></div>
-      <!-- Погода: дані малює renderWeatherBlock(), місце показу — кнопка .hm-wx. -->
-      <div id="cm-weather-content" hidden></div>
+      <!-- Погоді окремий контейнер більше не потрібен: renderWeatherBlock()
+           наповнює кнопку .hm-wx у шапці, а весь прогноз живе в її модалці. -->
     </div>
   `;
 }

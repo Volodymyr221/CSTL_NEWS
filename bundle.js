@@ -10618,14 +10618,19 @@ ${ev.description || ""}`
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
   var _wxData = null;
-  function setWeatherTitle(cityName) {
-    const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
-    if (headerEl && cityName)
-      headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
+  function paintWeatherChip(info, temp, cityName) {
+    const btn = document.querySelector(".hm-wx");
+    if (!btn)
+      return;
+    btn.innerHTML = `<span class="hm-wx-ic">${info.icon}</span><b>${temp}\xB0</b><span class="hm-wx-city">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")}</span>`;
+    btn.hidden = false;
+    if (!btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", () => openWeatherSheet(0));
+    }
   }
   async function renderWeatherBlock() {
-    const el = document.getElementById("cm-weather-content");
-    if (!el)
+    if (!document.querySelector(".hm-wx"))
       return;
     try {
       const { lat, lon, city: knownCity } = await getCoords();
@@ -10641,37 +10646,25 @@ ${ev.description || ""}`
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
       const temp = Math.round(cur.temperature_2m);
-      const feels = Math.round(cur.apparent_temperature);
-      setWeatherTitle(cityName);
-      const forecastHtml = day.time.map((dateStr, i) => {
-        const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-        const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
-        const dayInfo = weatherCodeInfo(day.weather_code[i]);
-        return `
-        <button type="button" class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
-        </button>
-      `;
-      }).join("");
-      el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}\xB0</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A ${feels}\xB0</div>
-        </div>
-      </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
-    `;
-      el.querySelectorAll("[data-wx-day]").forEach((btn) => {
-        btn.addEventListener("click", () => openWeatherDayModal(+btn.dataset.wxDay));
-      });
+      paintWeatherChip(info, temp, cityName);
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function wxDaysRowHtml(activeIdx) {
+    const day = _wxData?.daily;
+    if (!day)
+      return "";
+    return day.time.map((dateStr, i) => {
+      const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+      const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
+      const dayInfo = weatherCodeInfo(day.weather_code[i]);
+      return `
+      <button type="button" class="cm-fc-day${i === activeIdx ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
+        <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+        <span class="cm-fc-date">${d.getDate()}</span>
+        <span class="cm-fc-icon">${dayInfo.icon}</span>
+      </button>`;
+    }).join("");
   }
   var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
   function wxGeom(points) {
@@ -10736,43 +10729,52 @@ ${ev.description || ""}`
       ${yAxis}${bars}
     </svg>`;
   }
-  function openWeatherDayModal(dayIndex) {
-    if (!_wxData || !_wxData.hourly)
-      return;
-    const daily = _wxData.daily;
-    const hourly = _wxData.hourly;
-    const dateStr = daily.time[dayIndex];
-    if (!dateStr)
-      return;
+  function wxDayData(dayIndex) {
+    const daily = _wxData?.daily, hourly = _wxData?.hourly;
+    const dateStr = daily?.time?.[dayIndex];
+    if (!dateStr || !hourly)
+      return null;
     const idxs = [];
     hourly.time.forEach((t, i) => {
       if (t.startsWith(dateStr))
         idxs.push(i);
     });
     if (!idxs.length)
-      return;
+      return null;
     const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
     const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
     const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
+    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
+    const nowHour = nowLocal.getUTCHours();
+    const initialIdx = dateStr === nowLocal.toISOString().slice(0, 10) ? tempPts.findIndex((p) => p.h === nowHour) : -1;
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
-    const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-    const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-    const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-    const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
-    const bodyHtml = `
+    return {
+      tempPts,
+      precipPts,
+      iconPts,
+      initialIdx: initialIdx >= 0 ? initialIdx : null,
+      dayName: dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()],
+      dateLabel: `${d.getDate()}.${pad(d.getMonth() + 1)}`,
+      info: weatherCodeInfo(daily.weather_code[dayIndex]),
+      tMax: Math.round(daily.temperature_2m_max[dayIndex]),
+      tMin: Math.round(daily.temperature_2m_min[dayIndex])
+    };
+  }
+  function wxDayBodyHtml(dd) {
+    return `
     <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-icon">${dd.info.icon}</div>
       <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+        <div class="wx-head-day">${escapeHtml(dd.dayName)} \xB7 ${dd.dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(dd.info.text)}</div>
       </div>
-      <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
+      <div class="wx-head-range">${dd.tMax}\xB0 / ${dd.tMin}\xB0</div>
     </div>
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
       <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: "\xB0" })}
+        ${wxLineChart(dd.tempPts, { unit: "\xB0" })}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
@@ -10780,27 +10782,43 @@ ${ev.description || ""}`
     <div class="wx-chart-block">
       <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
       <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
+        ${wxBarChart(dd.precipPts)}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
     </div>`;
-    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
-    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
-    const nowDateStr = nowLocal.toISOString().slice(0, 10);
-    const nowHour = nowLocal.getUTCHours();
-    const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
+  }
+  function openWeatherSheet(startDay = 0) {
+    const first = wxDayData(startDay);
+    if (!first)
+      return;
+    const bodyHtml = `
+    <div class="cm-weather-forecast wx-days">${wxDaysRowHtml(startDay)}</div>
+    <div class="wx-day"></div>`;
+    const paintDay = (wrap, idx) => {
+      const dd = wxDayData(idx);
+      if (!dd)
+        return;
+      const host = wrap.querySelector(".wx-day");
+      host.innerHTML = wxDayBodyHtml(dd);
+      wireWeatherScrubber(host, dd);
+      wrap.querySelectorAll("[data-wx-day]").forEach((b) => {
+        b.classList.toggle("cm-fc-day--today", Number(b.dataset.wxDay) === idx);
+      });
+    };
     const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
       swipeClose: false,
-      onMount: (wrap) => wireWeatherScrubber(wrap, {
-        tempPts,
-        precipPts,
-        iconPts,
-        initialIdx: initialIdx >= 0 ? initialIdx : null
-      })
+      onMount: (wrap) => {
+        paintDay(wrap, startDay);
+        wrap.querySelector(".wx-days").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-wx-day]");
+          if (b)
+            paintDay(wrap, Number(b.dataset.wxDay));
+        });
+      }
     });
     wireWeatherSwipe(el, close);
   }
@@ -11739,8 +11757,8 @@ ${ev.description || ""}`
            \u043D\u0430 \u0441\u0432\u043E\u0457\u0439 \u0432\u043A\u043B\u0430\u0434\u0446\u0456. \u041A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F, \u0431\u043E renderBusBlock() \u043D\u0430\u043F\u043E\u0432\u043D\u044E\u0454
            \u0441\u0430\u043C\u0435 \u0439\u043E\u0433\u043E (\u043A\u0440\u043E\u043A 5 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442\u044C \u0432\u043C\u0456\u0441\u0442 \u0443 \u043A\u0430\u043F\u0441\u0443\u043B\u0443). -->
       <div id="cm-bus-content" hidden></div>
-      <!-- \u041F\u043E\u0433\u043E\u0434\u0430: \u0434\u0430\u043D\u0456 \u043C\u0430\u043B\u044E\u0454 renderWeatherBlock(), \u043C\u0456\u0441\u0446\u0435 \u043F\u043E\u043A\u0430\u0437\u0443 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 .hm-wx. -->
-      <div id="cm-weather-content" hidden></div>
+      <!-- \u041F\u043E\u0433\u043E\u0434\u0456 \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D: renderWeatherBlock()
+           \u043D\u0430\u043F\u043E\u0432\u043D\u044E\u0454 \u043A\u043D\u043E\u043F\u043A\u0443 .hm-wx \u0443 \u0448\u0430\u043F\u0446\u0456, \u0430 \u0432\u0435\u0441\u044C \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0436\u0438\u0432\u0435 \u0432 \u0457\u0457 \u043C\u043E\u0434\u0430\u043B\u0446\u0456. -->
     </div>
   `;
   }

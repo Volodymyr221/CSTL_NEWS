@@ -85,14 +85,37 @@ const WEEKDAYS_UA_FULL = ['Неділя', 'Понеділок', 'Вівторо�
 // Кеш останньої відповіді Open-Meteo — потрібен модалці «по годинах» (клік на день).
 let _wxData = null;
 
-function setWeatherTitle(cityName) {
-  const headerEl = document.querySelector('.cm-block--weather .cm-block-title');
-  if (headerEl && cityName) headerEl.textContent = `Погода в ${cityName}`;
+// 🔴 03.08 — ПОГОДА ПЕРЕЇХАЛА В ШАПКУ (потік /byyou «Громада як Home-екран»).
+//
+// Було: окремий блок ПЕРЕДОСТАННІМ на екрані, початок на 1839px — щоб побачити
+// температуру, треба прогорнути 2.5 екрана. Заразом звірено по `index.html:27-28`:
+// з шапки застосунку погоду прибрали 08.07, тобто вгорі її не було НІДЕ.
+// Стало: рядок у шапці головної (`.hm-wx`) — іконка, градуси, місто.
+//
+// ⚠️ НІЧОГО НЕ ВТРАЧЕНО. Прогноз на 7 днів і графіки по годинах не зникли —
+// вони переїхали в ОДНУ модалку `openWeatherSheet()`, куди веде тап по рядку.
+// Це навмисно один аркуш, а не «аркуш поверх аркуша»: модалка над модалкою на
+// iPhone має два свайпи закриття один поверх одного, а цей клас багів у проєкті
+// вже коштував окремого блока роботи 02.08 (сторінка оголошення).
+function paintWeatherChip(info, temp, cityName) {
+  const btn = document.querySelector('.hm-wx');
+  if (!btn) return;
+  btn.innerHTML =
+    `<span class="hm-wx-ic">${info.icon}</span>` +
+    `<b>${temp}°</b>` +
+    `<span class="hm-wx-city">${escapeHtml(cityName || 'Олика')}</span>`;
+  btn.hidden = false;
+  // Слухач вішаємо ОДИН раз: renderWeatherBlock кличеться і при поверненні на
+  // вкладку, а другий слухач відкривав би дві модалки з одного тапу.
+  if (!btn.dataset.wired) {
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', () => openWeatherSheet(0));
+  }
 }
 
 export async function renderWeatherBlock() {
-  const el = document.getElementById('cm-weather-content');
-  if (!el) return;
+  // Кнопка живе в шапці головної; окремого контейнера під блок більше немає.
+  if (!document.querySelector('.hm-wx')) return;
 
   try {
     const { lat, lon, city: knownCity } = await getCoords();
@@ -112,42 +135,31 @@ export async function renderWeatherBlock() {
     const day  = data.daily;
     const info = weatherCodeInfo(cur.weather_code);
     const temp  = Math.round(cur.temperature_2m);
-    const feels = Math.round(cur.apparent_temperature);
 
-    setWeatherTitle(cityName);
-
-    const forecastHtml = day.time.map((dateStr, i) => {
-      const d = new Date(dateStr + 'T00:00:00');
-      const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
-      const dayInfo = weatherCodeInfo(day.weather_code[i]);
-      return `
-        <button type="button" class="cm-fc-day${i === 0 ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
-        </button>
-      `;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}°</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">Відчувається як ${feels}°</div>
-        </div>
-      </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
-    `;
-
-    // Клік на день → модалка «по годинах» (температура + опади).
-    el.querySelectorAll('[data-wx-day]').forEach(btn => {
-      btn.addEventListener('click', () => openWeatherDayModal(+btn.dataset.wxDay));
-    });
+    paintWeatherChip(info, temp, cityName);
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Погода тимчасово недоступна</div>';
+    // Погоди немає — рядок просто НЕ з'являється. Порожня кнопка «погода
+    // недоступна» у шапці зайняла б місце і не сказала б нічого корисного;
+    // це той самий принцип, що й у капсул «ЗАРАЗ» та блока зборів.
   }
+}
+
+// Рядок 7 днів для модалки. Той самий вигляд, що був у блоці (`.cm-fc-day`),
+// тому окремого CSS не заводимо — переїхала лише адреса, не форма.
+function wxDaysRowHtml(activeIdx) {
+  const day = _wxData?.daily;
+  if (!day) return '';
+  return day.time.map((dateStr, i) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
+    const dayInfo = weatherCodeInfo(day.weather_code[i]);
+    return `
+      <button type="button" class="cm-fc-day${i === activeIdx ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
+        <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+        <span class="cm-fc-date">${d.getDate()}</span>
+        <span class="cm-fc-icon">${dayInfo.icon}</span>
+      </button>`;
+  }).join('');
 }
 
 // ── Модалка «Погода по годинах» ──────────────────────────────────────────────
@@ -224,43 +236,59 @@ function wxBarChart(points) {
     </svg>`;
 }
 
-export function openWeatherDayModal(dayIndex) {
-  if (!_wxData || !_wxData.hourly) return;
-  const daily = _wxData.daily;
-  const hourly = _wxData.hourly;
-  const dateStr = daily.time[dayIndex];
-  if (!dateStr) return;
+// Дані одного дня для графіків. Витягнуто окремо, бо тепер день ПЕРЕМИКАЄТЬСЯ
+// всередині відкритого аркуша, а не відкриває новий.
+function wxDayData(dayIndex) {
+  const daily = _wxData?.daily, hourly = _wxData?.hourly;
+  const dateStr = daily?.time?.[dayIndex];
+  if (!dateStr || !hourly) return null;
 
   // Зрізаємо 24 години обраного дня (hourly.time відсортовані, timezone=auto, старт 00:00).
   const idxs = [];
   hourly.time.forEach((t, i) => { if (t.startsWith(dateStr)) idxs.push(i); });
-  if (!idxs.length) return;
+  if (!idxs.length) return null;
 
-  const tempPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
+  const tempPts   = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
   const precipPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
   // Іконка погоди на кожну годину (для скрабера — тягнеш палець, бачиш що о цій годині).
-  const iconPts = idxs.map(i => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+  const iconPts   = idxs.map(i => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+
+  // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
+  // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
+  // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
+  const offsetSec = _wxData.utc_offset_seconds ?? 7200;   // 7200с=+2год — фолбек лише якщо API не віддав поле
+  const nowLocal = new Date(Date.now() + offsetSec * 1000);
+  const nowHour = nowLocal.getUTCHours();
+  const initialIdx = dateStr === nowLocal.toISOString().slice(0, 10)
+    ? tempPts.findIndex(p => p.h === nowHour)
+    : -1;
 
   const d = new Date(dateStr + 'T00:00:00');
-  const dayName = dayIndex === 0 ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()];
-  const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-  const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-  const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-  const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
+  return {
+    tempPts, precipPts, iconPts,
+    initialIdx: initialIdx >= 0 ? initialIdx : null,
+    dayName: dayIndex === 0 ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()],
+    dateLabel: `${d.getDate()}.${pad(d.getMonth() + 1)}`,
+    info: weatherCodeInfo(daily.weather_code[dayIndex]),
+    tMax: Math.round(daily.temperature_2m_max[dayIndex]),
+    tMin: Math.round(daily.temperature_2m_min[dayIndex]),
+  };
+}
 
-  const bodyHtml = `
+function wxDayBodyHtml(dd) {
+  return `
     <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-icon">${dd.info.icon}</div>
       <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} · ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+        <div class="wx-head-day">${escapeHtml(dd.dayName)} · ${dd.dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(dd.info.text)}</div>
       </div>
-      <div class="wx-head-range">${tMax}° / ${tMin}°</div>
+      <div class="wx-head-range">${dd.tMax}° / ${dd.tMin}°</div>
     </div>
     <div class="wx-chart-block">
       <div class="wx-chart-title">🌡️ Температура, °C</div>
       <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: '°' })}
+        ${wxLineChart(dd.tempPts, { unit: '°' })}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
@@ -268,20 +296,35 @@ export function openWeatherDayModal(dayIndex) {
     <div class="wx-chart-block">
       <div class="wx-chart-title">💧 Ймовірність опадів, %</div>
       <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
+        ${wxBarChart(dd.precipPts)}
         <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
         <div class="wx-readout"></div>
       </div>
     </div>`;
+}
 
-  // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
-  // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
-  // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
-  const offsetSec = _wxData.utc_offset_seconds ?? 7200;   // 7200с=+2год — фолбек лише якщо API не віддав поле
-  const nowLocal = new Date(Date.now() + offsetSec * 1000);
-  const nowDateStr = nowLocal.toISOString().slice(0, 10);
-  const nowHour = nowLocal.getUTCHours();
-  const initialIdx = dateStr === nowDateStr ? tempPts.findIndex(p => p.h === nowHour) : -1;
+// ОДИН аркуш погоди: рядок 7 днів + графіки обраного дня. Тап по іншому дню
+// перемальовує ЛИШЕ нижню частину (`.wx-day`), аркуш лишається тим самим.
+export function openWeatherSheet(startDay = 0) {
+  const first = wxDayData(startDay);
+  if (!first) return;
+
+  const bodyHtml = `
+    <div class="cm-weather-forecast wx-days">${wxDaysRowHtml(startDay)}</div>
+    <div class="wx-day"></div>`;
+
+  const paintDay = (wrap, idx) => {
+    const dd = wxDayData(idx);
+    if (!dd) return;
+    const host = wrap.querySelector('.wx-day');
+    host.innerHTML = wxDayBodyHtml(dd);
+    // Скрабер вішається на СВІЖУ розмітку — саме тому кличемо його тут, а не
+    // один раз при монтуванні: після innerHTML старі вузли (і слухачі) зникли.
+    wireWeatherScrubber(host, dd);
+    wrap.querySelectorAll('[data-wx-day]').forEach(b => {
+      b.classList.toggle('cm-fc-day--today', Number(b.dataset.wxDay) === idx);
+    });
+  };
 
   // swipeClose:false — власний wireWeatherSwipe нижче (ігнорує свайп що почався
   // на скрабер-графіку, спільний примітив цього не вміє).
@@ -290,10 +333,13 @@ export function openWeatherDayModal(dayIndex) {
     variant: 'sheet',
     className: 'app-modal--weather',
     swipeClose: false,
-    onMount: (wrap) => wireWeatherScrubber(wrap, {
-      tempPts, precipPts, iconPts,
-      initialIdx: initialIdx >= 0 ? initialIdx : null,
-    }),
+    onMount: (wrap) => {
+      paintDay(wrap, startDay);
+      wrap.querySelector('.wx-days').addEventListener('click', e => {
+        const b = e.target.closest('[data-wx-day]');
+        if (b) paintDay(wrap, Number(b.dataset.wxDay));
+      });
+    },
   });
   wireWeatherSwipe(el, close);
 }
