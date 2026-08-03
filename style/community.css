@@ -1498,7 +1498,11 @@
   width: calc(100% - 28px);
   margin: 14px;
   padding: 14px 18px;
-  background: var(--red);
+  /* 04.08: та сама брендова поверхня, що шапка Дошки. ⚠️ Колір ставиться ДВІЧІ —
+     тут і в `.board-trigger--fixed` нижче; друге правило перекриває це. Через це
+     перша спроба перевести FAB на градієнт не спрацювала: замінив одне місце,
+     а на екрані лишався старий плаский колір (помітив Вова скріншотом). */
+  background: var(--brand-grad-sm);
   color: #fff;
   border: 0;
   border-radius: 16px;
@@ -1510,7 +1514,7 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s ease, background 0.15s;
 }
-.cm-board-trigger:active { transform: scale(0.98); background: var(--red-dark); }
+.cm-board-trigger:active { transform: scale(0.98); filter: brightness(0.88); }
 .cm-board-trigger-icon { font-size: 18px; line-height: 1; }
 .cm-board-trigger-text { flex: 1; text-align: left; }
 
@@ -2084,8 +2088,12 @@ textarea.cm-board-input.bm-invalid {
      бордовим, тож головна дія екрана має виглядати так само.
      ⚠️ `backdrop-filter` прибрано свідомо — під непрозорою заливкою він нічого не
      робить, а в Safari зайвий фільтр коштує кадрів. */
-  background: var(--red);
-  border: 1.5px solid var(--red);
+  /* 04.08 — брендова поверхня замість плаского `--red`. САМЕ ЦЕ правило малює
+     кнопку на екрані: воно стоїть нижче за `.cm-board-trigger` і перекриває його.
+     Контраст не втрачено — градієнт темніший за старий плаский колір, біла
+     іконка на ньому лишається вище 9:1. */
+  background: var(--brand-grad-sm);
+  border: 1.5px solid transparent;
   color: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
 }
