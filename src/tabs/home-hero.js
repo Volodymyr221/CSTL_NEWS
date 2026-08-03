@@ -187,6 +187,11 @@ export async function renderHero() {
   ]);
   const c = fund || ev || news || bus || fallbackCandidate();
   _current = c;
+  // Стрічка «Що нового» читає це, щоб не показати ту саму новину вдруге
+  // (скарга Вови 04.08: «воно дублює новини в загальному»). Через `window`, а не
+  // імпортом, бо інакше `community-blocks` і `home-hero` імпортували б одне
+  // одного по колу.
+  window.__cstlHeroArticleId = c.kind === 'news' ? c.id : null;
   host.innerHTML = heroHtml(c);
 
   // Прапорець на елементі, а не в модулі: `initCommunity()` перебудовує

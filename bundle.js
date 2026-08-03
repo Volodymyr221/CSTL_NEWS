@@ -10936,14 +10936,20 @@ ${ev.description || ""}`
         }
       }
       if (!items.length) {
-        el.innerHTML = '<div class="hm-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
+        hideEventsSection(el);
         return;
       }
       _evItems = items;
       renderEvList(el);
     } catch {
-      el.innerHTML = '<div class="hm-error">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      hideEventsSection(el);
     }
+  }
+  function hideEventsSection(el) {
+    el.innerHTML = "";
+    const sec = document.getElementById("hm-events");
+    if (sec)
+      sec.hidden = true;
   }
   var EV_SHOWN = 6;
   function evTileHtml(it, now) {
@@ -11033,9 +11039,11 @@ ${ev.description || ""}`
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
   var CM_RAIL_MAX = 8;
   function railItems(arts) {
-    const digest = NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g)[0]).filter(Boolean);
+    const heroId = window.__cstlHeroArticleId;
+    const skip = (a) => a && a.id === heroId;
+    const digest = NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g).find((a) => !skip(a))).filter(Boolean);
     const seen = new Set(digest.map((a) => a.id));
-    const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter((a) => !seen.has(a.id));
+    const more = articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter((a) => !seen.has(a.id) && !skip(a));
     return [...digest, ...more].slice(0, CM_RAIL_MAX);
   }
   function paintCmNews(el, arts) {
@@ -11245,6 +11253,7 @@ ${ev.description || ""}`
     ]);
     const c = fund || ev || news || bus || fallbackCandidate();
     _current = c;
+    window.__cstlHeroArticleId = c.kind === "news" ? c.id : null;
     host.innerHTML = heroHtml(c);
     if (!host.dataset.wired) {
       host.dataset.wired = "1";
@@ -11394,9 +11403,30 @@ ${ev.description || ""}`
       return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
   }
+  async function telTile() {
+    const el = document.getElementById("hm-t-tel");
+    if (!el)
+      return;
+    el.hidden = true;
+    try {
+      const res = await fetch("./data/community.json");
+      const data = await res.json();
+      const list = data.contacts || [];
+      const EMERG_ORDER = ["101", "102", "103"];
+      const quick = EMERG_ORDER.map((num) => list.find((c) => String(c.phone || "").trim() === num)).filter(Boolean);
+      if (!quick.length)
+        return;
+      el.innerHTML = `<span class="hm-tile-lab">${ICONS.phone}\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</span><span class="hm-tile-tels">${quick.map((c) => `
+        <a href="tel:${escapeHtml(String(c.phone).replace(/[^\d+]/g, ""))}"
+           aria-label="${escapeHtml(c.name)}">${escapeHtml(c.phone)}</a>`).join("")}</span>`;
+      el.hidden = false;
+      el.onclick = null;
+    } catch {
+    }
+  }
   async function renderBentoTiles() {
     msgTile();
-    await Promise.all([busTile(), boardTile()]);
+    await Promise.all([busTile(), boardTile(), telTile()]);
     syncBentoVisibility();
   }
   function syncBentoVisibility() {
@@ -11405,15 +11435,14 @@ ${ev.description || ""}`
       return;
     const shown = [...grid.children].filter((c) => !c.hidden);
     grid.hidden = shown.length === 0;
-    const board = grid.querySelector("#hm-t-board");
     const wide = (el, on) => el && el.classList.toggle("hm-tile--wide", on);
-    if (shown.length === 1) {
-      wide(shown[0], true);
-    } else if (shown.length === 2) {
-      shown.forEach((c) => wide(c, false));
-    } else {
-      shown.forEach((c) => wide(c, c === board));
-    }
+    const tel = grid.querySelector("#hm-t-tel");
+    const pairable = shown.filter((c) => c !== tel);
+    pairable.forEach((c, i) => {
+      const isLastOdd = i === pairable.length - 1 && pairable.length % 2 === 1;
+      wide(c, isLastOdd);
+    });
+    wide(tel, true);
   }
   function initHomeBento() {
     const again = () => renderBentoTiles();
@@ -11462,8 +11491,8 @@ ${ev.description || ""}`
       el.textContent = getGreeting().text;
     fitGreeting();
   }
-  var GREET_FONT_MAX = 17;
-  var GREET_FONT_MIN = 13;
+  var GREET_FONT_MAX = 19;
+  var GREET_FONT_MIN = 14;
   function fitGreeting() {
     const el = document.querySelector(".hm-greet");
     if (!el)
@@ -11477,8 +11506,8 @@ ${ev.description || ""}`
   }
   function formatTodayHeader() {
     const d = /* @__PURE__ */ new Date();
-    const wd = ["\u043D\u0434", "\u043F\u043D", "\u0432\u0442", "\u0441\u0440", "\u0447\u0442", "\u043F\u0442", "\u0441\u0431"][d.getDay()];
-    const m = ["\u0441\u0456\u0447", "\u043B\u044E\u0442", "\u0431\u0435\u0440", "\u043A\u0432\u0456\u0442", "\u0442\u0440\u0430\u0432", "\u0447\u0435\u0440\u0432", "\u043B\u0438\u043F", "\u0441\u0435\u0440\u043F", "\u0432\u0435\u0440", "\u0436\u043E\u0432\u0442", "\u043B\u0438\u0441\u0442", "\u0433\u0440\u0443\u0434"][d.getMonth()];
+    const wd = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"][d.getDay()];
+    const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
   function skelRail(n) {
@@ -11513,9 +11542,11 @@ ${ev.description || ""}`
       <button class="hm-status-acc" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
       </button>
-      <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+      <div class="hm-status-col">
+        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+        <span class="hm-status-date">${escapeHtml(todayStr)}</span>
+      </div>
       <button class="hm-wx" type="button" data-hm-weather hidden></button>
-      <span class="hm-status-date">${escapeHtml(todayStr)}</span>
     </div>
 
     <div class="hm-body">
@@ -11534,6 +11565,7 @@ ${ev.description || ""}`
         <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
         <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
         <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
       </div>
 
       <!-- \u0429\u041E \u041D\u041E\u0412\u041E\u0413\u041E \u2014 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0430 \u0441\u0442\u0440\u0456\u0447\u043A\u0430. \u041D\u043E\u0432\u0438\u043D\u0438 \u0441\u0442\u0430\u043B\u0438 \u041E\u0414\u041D\u0418\u041C \u0431\u043B\u043E\u043A\u043E\u043C
@@ -11549,16 +11581,19 @@ ${ev.description || ""}`
       <!-- \u041F\u041E\u0420\u0423\u0427 \u2014 \u043F\u043E\u0434\u0456\u0457 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u043E, \u043C\u0456\u043D\u0456-\u043F\u043B\u0438\u0442\u043A\u0430\u043C\u0438 \u0434\u0430\u0442. -->
       <section class="hm-sec" id="hm-events">
         <div class="hm-sec-head">
-          <h3 class="hm-sec-title">\u041F\u043E\u0440\u0443\u0447</h3>
+          <h3 class="hm-sec-title">\u0410\u0444\u0456\u0448\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
         </div>
         <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
       </section>
 
-      <!-- \u0422\u0415\u041B\u0415\u0424\u041E\u041D\u0418 \u2014 \u0442\u0438\u0445\u0438\u0439 \u043D\u0438\u0437, \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A. -->
-      <section id="hm-contacts">
-        <div id="cm-contacts-content"></div>
-      </section>
+      <!-- \u26A0\uFE0F 04.08 \u2014 \u041E\u041A\u0420\u0415\u041C\u041E\u0407 \u0421\u0415\u041A\u0426\u0406\u0407 \u0422\u0415\u041B\u0415\u0424\u041E\u041D\u0406\u0412 \u0412\u041D\u0418\u0417\u0423 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415\u041C\u0410\u0404.
+           \u0412\u043E\u0432\u0430: \xAB\u0406 \u0437\u043D\u0438\u0437\u0443 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438, \u0443\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438. \u0426\u0435 \u0432\u0437\u0430\u0433\u0430\u043B\u0456 \u043D\u0435\u0433\u0430\u0440\u043D\u043E
+           \u0440\u043E\u0437\u0442\u0430\u0448\u043E\u0432\u0430\u043D\u043E \u0456 \u043D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\xBB. \u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456 \u043D\u043E\u043C\u0435\u0440\u0438 \u041D\u0415 \u0432\u0442\u0440\u0430\u0447\u0435\u043D\u0456 \u2014 \u0432\u043E\u043D\u0438 \u0441\u0442\u0430\u043B\u0438
+           \u0442\u0440\u0435\u0442\u044C\u043E\u044E \u043F\u043B\u0438\u0442\u043A\u043E\u044E \u0431\u0435\u043D\u0442\u043E (\u0434\u0438\u0432. home-bento.js), \u043F\u043E\u0440\u0443\u0447 \u0437 \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u043E\u043C \u0456
+           \u0434\u043E\u0448\u043A\u043E\u044E. \u0422\u043E\u0431\u0442\u043E \u043B\u0438\u0448\u0438\u043B\u0438\u0441\u044C \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456, \u0430\u043B\u0435 \u044F\u043A \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u043F\u0440\u0438\u043B\u0430\u0434\u0443, \u0430 \u043D\u0435 \u044F\u043A
+           \u0445\u0432\u0456\u0441\u0442 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438. -->
+      <div id="cm-contacts-content" hidden></div>
 
       <!-- \u0414\u0430\u043D\u0456 \u0414\u043E\u0448\u043A\u0438 \u043C\u0430\u043B\u044E\u044E\u0442\u044C \u043F\u043B\u0438\u0442\u043A\u0443 2\xD71 \u0432\u0438\u0449\u0435; \u043E\u043A\u0440\u0435\u043C\u043E\u0457 \u0441\u0435\u043A\u0446\u0456\u0457 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454. -->
       <div id="cm-board-content" hidden></div>

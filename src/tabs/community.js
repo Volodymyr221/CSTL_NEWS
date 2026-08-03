@@ -95,7 +95,7 @@ function updateGreetingName() {
 // і зменшуємо шрифт від базового до мінімуму, поки не влізе (nowrap у CSS).
 // Мінімум 19px — «щоб не здавалось маленьким»; довші імена все одно влазять.
 // Стеля 17px (а не 27): привітання більше не герой екрана, а елемент рядка стану.
-const GREET_FONT_MAX = 17, GREET_FONT_MIN = 13;
+const GREET_FONT_MAX = 19, GREET_FONT_MIN = 14;
 function fitGreeting() {
   const el = document.querySelector('.hm-greet');
   if (!el) return;
@@ -113,8 +113,10 @@ function fitGreeting() {
 // стану має вміщати ще привітання й погоду.
 function formatTodayHeader() {
   const d = new Date();
-  const wd = ['нд','пн','вт','ср','чт','пт','сб'][d.getDay()];
-  const m  = ['січ','лют','бер','квіт','трав','черв','лип','серп','вер','жовт','лист','груд'][d.getMonth()];
+  // Повні назви повернулись: після розведення рядка на два рівні (04.08) дата
+  // стоїть під привітанням і має всю ширину — скорочення більше не потрібні.
+  const wd = ['неділя','понеділок','вівторок','середа','четвер','пʼятниця','субота'][d.getDay()];
+  const m  = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][d.getMonth()];
   return `${wd} · ${d.getDate()} ${m}`;
 }
 
@@ -174,9 +176,11 @@ function renderSkeleton() {
       <button class="hm-status-acc" type="button" data-account-btn aria-label="Кабінет">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
       </button>
-      <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+      <div class="hm-status-col">
+        <h1 class="hm-greet">${escapeHtml(greeting.text)}</h1>
+        <span class="hm-status-date">${escapeHtml(todayStr)}</span>
+      </div>
       <button class="hm-wx" type="button" data-hm-weather hidden></button>
-      <span class="hm-status-date">${escapeHtml(todayStr)}</span>
     </div>
 
     <div class="hm-body">
@@ -195,6 +199,7 @@ function renderSkeleton() {
         <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
         <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
         <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
       </div>
 
       <!-- ЩО НОВОГО — горизонтальна стрічка. Новини стали ОДНИМ блоком
@@ -210,16 +215,19 @@ function renderSkeleton() {
       <!-- ПОРУЧ — події горизонтально, міні-плитками дат. -->
       <section class="hm-sec" id="hm-events">
         <div class="hm-sec-head">
-          <h3 class="hm-sec-title">Поруч</h3>
+          <h3 class="hm-sec-title">Афіша громади</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша${ICONS.chevronRight}</button>
         </div>
         <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
       </section>
 
-      <!-- ТЕЛЕФОНИ — тихий низ, один рядок. -->
-      <section id="hm-contacts">
-        <div id="cm-contacts-content"></div>
-      </section>
+      <!-- ⚠️ 04.08 — ОКРЕМОЇ СЕКЦІЇ ТЕЛЕФОНІВ ВНИЗУ БІЛЬШЕ НЕМАЄ.
+           Вова: «І знизу контакти, усі телефони громади. Це взагалі негарно
+           розташовано і неправильно». Екстрені номери НЕ втрачені — вони стали
+           третьою плиткою бенто (див. home-bento.js), поруч з автобусом і
+           дошкою. Тобто лишились на екрані, але як частина приладу, а не як
+           хвіст сторінки. -->
+      <div id="cm-contacts-content" hidden></div>
 
       <!-- Дані Дошки малюють плитку 2×1 вище; окремої секції більше немає. -->
       <div id="cm-board-content" hidden></div>

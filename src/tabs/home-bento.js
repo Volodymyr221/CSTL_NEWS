@@ -169,11 +169,44 @@ function pluralAds(n) {
   return 'оголошень';
 }
 
+// ── 2×1 Екстрені телефони ────────────────────────────────────────────────────
+// 🔴 04.08 — переїхали СЮДИ з окремої секції внизу сторінки.
+// Вова: «І знизу контакти, усі телефони громади. Це взагалі негарно розташовано
+// і неправильно». Номери 101 · 102 · 103 набирають не думаючи, тож їм місце
+// серед приладів, а не в хвості екрана. Тап по плитці — дзвінок не робиться:
+// відкривається вкладка з повним списком контактів у сайдбарі проєкту немає,
+// тому плитка веде на самі номери — три окремі посилання всередині неї.
+async function telTile() {
+  const el = document.getElementById('hm-t-tel');
+  if (!el) return;
+  el.hidden = true;
+  try {
+    const res = await fetch('./data/community.json');
+    const data = await res.json();
+    const list = data.contacts || [];
+    const EMERG_ORDER = ['101', '102', '103'];
+    const quick = EMERG_ORDER
+      .map(num => list.find(c => String(c.phone || '').trim() === num))
+      .filter(Boolean);
+    if (!quick.length) return;
+
+    // Всередині плитки — справжні посилання `tel:`, а не одна велика кнопка:
+    // людині потрібен КОНКРЕТНИЙ номер одним тапом, а не екран зі списком.
+    el.innerHTML =
+      `<span class="hm-tile-lab">${ICONS.phone}Екстрені</span>` +
+      `<span class="hm-tile-tels">${quick.map(c => `
+        <a href="tel:${escapeHtml(String(c.phone).replace(/[^\d+]/g, ''))}"
+           aria-label="${escapeHtml(c.name)}">${escapeHtml(c.phone)}</a>`).join('')}</span>`;
+    el.hidden = false;
+    el.onclick = null;   // тапається саме номер, а не плитка цілком
+  } catch { /* немає даних — немає плитки */ }
+}
+
 // ── Рендер і підписки ────────────────────────────────────────────────────────
 
 export async function renderBentoTiles() {
   msgTile();                       // синхронно: з кешу, без мережі
-  await Promise.all([busTile(), boardTile()]);
+  await Promise.all([busTile(), boardTile(), telTile()]);
   syncBentoVisibility();
 }
 
@@ -192,15 +225,22 @@ function syncBentoVisibility() {
   // Тому: 1 плитка — на всю ширину (краще широка, ніж половина ряду в нікуди);
   // 2 плитки — поруч, справжній бенто-ряд; 3 — два квадрати згори і широка
   // «Дошка» під ними.
-  const board = grid.querySelector('#hm-t-board');
+  // 🔴 РОЗКЛАДКА В ПАРИ. Знайдено скріншотом 04.08: коли кожна плитка йшла на
+  // всю ширину, бенто перетворювалось на стовпчик темних смуг — тобто знову
+  // «список однакових карток», лише темний. Тому плитки шикуються ПАРАМИ.
+  //
+  // Правила:
+  //   • «Екстрені» завжди на всю ширину — три номери 44px поруч інакше не влазять;
+  //   • решта ділиться по дві в ряд у порядку появи;
+  //   • непарна остання розтягується (краще широка, ніж половина ряду в нікуди).
   const wide = (el, on) => el && el.classList.toggle('hm-tile--wide', on);
-  if (shown.length === 1) {
-    wide(shown[0], true);
-  } else if (shown.length === 2) {
-    shown.forEach(c => wide(c, false));
-  } else {
-    shown.forEach(c => wide(c, c === board));
-  }
+  const tel = grid.querySelector('#hm-t-tel');
+  const pairable = shown.filter(c => c !== tel);
+  pairable.forEach((c, i) => {
+    const isLastOdd = i === pairable.length - 1 && pairable.length % 2 === 1;
+    wide(c, isLastOdd);
+  });
+  wide(tel, true);
 }
 
 export function initHomeBento() {
