@@ -10927,15 +10927,6 @@ ${ev.description || ""}`
       } catch {
       }
       if (!items.length) {
-        try {
-          const hres = await fetch("./data/holidays.json");
-          const hall = await hres.json();
-          const harr = Array.isArray(hall) ? hall : hall.holidays || [];
-          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", id: h.id, date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
-        } catch {
-        }
-      }
-      if (!items.length) {
         hideEventsSection(el);
         return;
       }
@@ -11112,7 +11103,6 @@ ${ev.description || ""}`
   }
 
   // src/tabs/home-hero.js
-  var BUS_URGENT_MIN = 30;
   async function fundCandidate() {
     try {
       const res = await fetch("./data/fundraisers.json", { cache: "no-cache" });
@@ -11161,62 +11151,6 @@ ${ev.description || ""}`
       return null;
     }
   }
-  async function newsCandidate() {
-    try {
-      const arts = await ensureNewsLoaded();
-      const a = articlesOfGroup(arts, NEWS_GEO_GROUPS[0])[0];
-      if (!a)
-        return null;
-      return {
-        kind: "news",
-        accent: false,
-        id: a.id,
-        label: "\u041D\u043E\u0432\u0438\u043D\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438",
-        icon: ICONS.newspaper,
-        title: a.title,
-        sub: a.excerpt ? String(a.excerpt).slice(0, 90) : a.source || "",
-        photo: a.image || null
-      };
-    } catch {
-      return null;
-    }
-  }
-  async function busCandidate() {
-    try {
-      const res = await fetch("./data/schedule.json");
-      const data = await res.json();
-      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const routes = (data.days?.[todayISO]?.routes || data.routes || []).filter((r) => r.status !== "cancelled");
-      const pick = routes.map((r) => ({ r, t: getRouteTimings(r) })).filter((x) => getRouteState(x.r) === "waiting" && x.t.minsToDeparture !== null && x.t.minsToDeparture <= BUS_URGENT_MIN).sort((a, b) => a.t.minsToDeparture - b.t.minsToDeparture)[0];
-      if (!pick)
-        return null;
-      const [, to] = parseRouteEndpoints(pick.r.name || "");
-      return {
-        kind: "bus",
-        accent: false,
-        routeId: pick.r.id,
-        dateISO: todayISO,
-        label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u0441\u043A\u043E\u0440\u043E",
-        icon: ICONS.bus,
-        title: `${to || pick.r.name} \xB7 ${formatCountdownUpper(pick.t.minsToDeparture).toLowerCase()}`,
-        sub: "\u0422\u0430\u043F \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0440\u0435\u0439\u0441"
-      };
-    } catch {
-      return null;
-    }
-  }
-  function fallbackCandidate() {
-    const ph = olykaPhoto();
-    return {
-      kind: "idle",
-      accent: false,
-      label: "\u041E\u043B\u0438\u043A\u0430",
-      icon: ICONS.home,
-      title: "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432 \u0433\u0440\u043E\u043C\u0430\u0434\u0456 \u0442\u0438\u0445\u043E",
-      sub: ph.caption,
-      photo: ph.src
-    };
-  }
   function heroHtml(c) {
     const bar = c.pct !== null && c.pct !== void 0 ? `
     <div class="hm-hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
@@ -11245,13 +11179,13 @@ ${ev.description || ""}`
     if (!host)
       return;
     host.innerHTML = '<div class="hm-skel hm-skel-hero" aria-hidden="true"></div>';
-    const [fund, ev, news, bus] = await Promise.all([
-      fundCandidate(),
-      eventCandidate(),
-      newsCandidate(),
-      busCandidate()
-    ]);
-    const c = fund || ev || news || bus || fallbackCandidate();
+    const [fund, ev] = await Promise.all([fundCandidate(), eventCandidate()]);
+    const c = fund || ev;
+    if (!c) {
+      host.innerHTML = "";
+      window.__cstlHeroArticleId = null;
+      return;
+    }
     if (!c.photo && c.kind !== "fund")
       c.photo = olykaPhoto().src;
     _current = c;
@@ -11539,27 +11473,14 @@ ${ev.description || ""}`
     </div>
 
     <div class="hm-body">
-      <!-- \u0413\u041E\u041B\u041E\u0412\u041D\u0410 \u041F\u041B\u0418\u0422\u041A\u0410 \u2014 \u0421\u041B\u041E\u0422, \u0430 \u043D\u0435 \u0431\u043B\u043E\u043A. \u0429\u043E \u0432 \u043D\u0456\u0439 \u043B\u0435\u0436\u0438\u0442\u044C, \u0432\u0438\u0440\u0456\u0448\u0443\u0454 \u043F\u0440\u0456\u043E\u0440\u0438\u0442\u0435\u0442
-           \u0434\u043D\u044F (\u0434\u0438\u0432. src/tabs/home-hero.js), \u0442\u043E\u043C\u0443 \u0435\u043A\u0440\u0430\u043D \u0449\u043E\u0434\u043D\u044F \u0440\u0456\u0437\u043D\u0438\u0439. \u0426\u0435 \u0456 \u0454
-           \xAB\u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0430 \u0434\u043E\u043C\u0430\u0448\u043D\u044F \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0430\xBB, \u0430 \u043D\u0435 \u0441\u0442\u0430\u043B\u0438\u0439 \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0432\u0456\u0434\u0436\u0435\u0442\u0456\u0432. -->
-      <section id="hm-hero"></section>
-
-      <!-- \u0413\u043E\u043B\u043E\u0441 \u0412\u043E\u0432\u0438. \u0414\u0440\u0456\u0431\u043D\u0430 \u043C\u0456\u0442\u043A\u0430 \u0417\u041B\u0406\u0412\u0410, \u0430 \u043D\u0435 \u0431\u0430\u043D\u0435\u0440 \u043F\u043E \u0446\u0435\u043D\u0442\u0440\u0443: \u0443 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0456 2 \u0446\u0435
-           \u0431\u0443\u0432 \u0431\u043B\u043E\u043A 51px \u043D\u0430 \u0432\u0441\u044E \u0448\u0438\u0440\u0438\u043D\u0443 \u2014 \u0440\u0456\u0432\u043D\u043E \u0442\u0430 \u0444\u043E\u0440\u043C\u0430, \u044F\u043A\u0443 \u0412\u043E\u0432\u0430 \u043D\u0430\u0437\u0432\u0430\u0432 2021-\u043C.
-           \u041F\u0440\u0438\u0431\u0438\u0440\u0430\u0442\u0438 \u043D\u0430\u0437\u0432\u0443 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430: \u043D\u0430 \u0414\u043E\u0448\u0446\u0456 \u0446\u0435 \u0432\u0436\u0435 \u0432\u0456\u0434\u043A\u043E\u0447\u0443\u0432\u0430\u043B\u0438 01.08. -->
-      <div class="hm-kicker">\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</div>
-
-      <!-- \u0411\u0415\u041D\u0422\u041E: \u0434\u0432\u0456 \u043F\u043B\u0438\u0442\u043A\u0438 1\xD71 \u0456 \u043E\u0434\u043D\u0430 2\xD71. \u041F\u043E\u0440\u043E\u0436\u043D\u0456 \u0441\u0435\u0431\u0435 \u043D\u0435 \u043C\u0430\u043B\u044E\u044E\u0442\u044C. -->
-      <div class="hm-bento" id="hm-bento">
-        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
-        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
-      </div>
-
-      <!-- \u0429\u041E \u041D\u041E\u0412\u041E\u0413\u041E \u2014 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0430 \u0441\u0442\u0440\u0456\u0447\u043A\u0430. \u041D\u043E\u0432\u0438\u043D\u0438 \u0441\u0442\u0430\u043B\u0438 \u041E\u0414\u041D\u0418\u041C \u0431\u043B\u043E\u043A\u043E\u043C
-           \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438, \u0430 \u043D\u0435 \u0441\u0430\u043C\u043E\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u043E\u044E (\u043F\u0440\u044F\u043C\u0430 \u0432\u0438\u043C\u043E\u0433\u0430 \u0412\u043E\u0432\u0438). -->
-      <section class="hm-sec" id="hm-news">
+      <!-- \u{1F534} \u0412\u0410\u0420\u0406\u0410\u041D\u0422 G \u2014 \xAB\u041D\u041E\u0412\u0418\u041D\u0418 \u041D\u0410 \u0412\u0415\u0421\u042C \u0415\u041A\u0420\u0410\u041D + \u0428\u0423\u0425\u041B\u042F\u0414\u0410\xBB (04.08).
+           \u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u0456\u0437 \u0447\u043E\u0442\u0438\u0440\u044C\u043E\u0445 \u0437\u0430\u0445\u043E\u0434\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C: \u0412\u043E\u0432\u0430 \u0449\u043E\u0440\u0430\u0437\u0443 \u043A\u0430\u0437\u0430\u0432, \u0449\u043E \u0437 \u0443\u0441\u044C\u043E\u0433\u043E
+           \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0434\u043E\u0431\u0430\u044E\u0442\u044C\u0441\u044F \u0421\u0410\u041C\u0415 \u043D\u043E\u0432\u0438\u043D\u0438 (\xAB\u0454\u0434\u0438\u043D\u0435, \u0449\u043E \u0437 \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u0434\u043E\u0431\u0430\u0454\u0442\u044C\u0441\u044F \u2014 \u0446\u0435
+           \u044F\u043A "\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E", \u0443\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438, \u044F\u043A \u043D\u043E\u0432\u0438\u043D\u0438 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0430\u044E\u0442\u044C\u0441\u044F\xBB), \u0430 \u0440\u0435\u0448\u0442\u0430
+           \u0449\u043E\u0440\u0430\u0437\u0443 \u0437\u0430\u0432\u0430\u0436\u0430\u043B\u0430. G \u0440\u043E\u0431\u0438\u0442\u044C \u0456\u0437 \u0446\u044C\u043E\u0433\u043E \u0432\u0438\u0441\u043D\u043E\u0432\u043E\u043A \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0442\u043E\u0433\u043E, \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438
+           \u0449\u0435 \u043E\u0434\u0438\u043D \u0440\u044F\u0434 \u043F\u043B\u0438\u0442\u043E\u043A: \u0433\u043E\u043B\u043E\u0432\u043D\u0430 = \u043D\u043E\u0432\u0438\u043D\u0438, \u0432\u0441\u0435 \u0456\u043D\u0448\u0435 \u2014 \u0443 \u0448\u0443\u0445\u043B\u044F\u0434\u0456 \u0437\u043D\u0438\u0437\u0443,
+           \u044F\u043A\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C, \u043A\u043E\u043B\u0438 \u0442\u0440\u0435\u0431\u0430. -->
+      <section class="hm-sec hm-in" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E</h3>
           <button class="hm-sec-link" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>
@@ -11567,8 +11488,10 @@ ${ev.description || ""}`
         <div class="hm-rail" id="cm-news-content">${skelRail(3)}</div>
       </section>
 
-      <!-- \u041F\u041E\u0420\u0423\u0427 \u2014 \u043F\u043E\u0434\u0456\u0457 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u043E, \u043C\u0456\u043D\u0456-\u043F\u043B\u0438\u0442\u043A\u0430\u043C\u0438 \u0434\u0430\u0442. -->
-      <section class="hm-sec" id="hm-events">
+      <!-- \u0410\u0444\u0456\u0448\u0430 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u043E\u0442\u043E\u0446\u0456: \u043F\u043E\u0434\u0456\u044F \u2014 \u0446\u0435 \u0442\u0435\u0436 \xAB\u0449\u043E \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F\xBB, \u0456 \u0432\u043E\u043D\u0430
+           \u043F\u043E\u0440\u0443\u0447 \u0456\u0437 \u043D\u043E\u0432\u0438\u043D\u0430\u043C\u0438 \u0447\u0438\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0435\u043D\u043D\u044F, \u0430 \u043D\u0435 \u044F\u043A \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u043F\u0440\u0438\u043B\u0430\u0434.
+           \u0421\u0435\u043A\u0446\u0456\u044F \u0445\u043E\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0446\u0456\u043B\u043A\u043E\u043C, \u044F\u043A\u0449\u043E \u043F\u043E\u0434\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043D\u0435\u043C\u0430\u0454. -->
+      <section class="hm-sec hm-in" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">\u0410\u0444\u0456\u0448\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430${ICONS.chevronRight}</button>
@@ -11576,19 +11499,30 @@ ${ev.description || ""}`
         <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
       </section>
 
-      <!-- \u26A0\uFE0F 04.08 \u2014 \u041E\u041A\u0420\u0415\u041C\u041E\u0407 \u0421\u0415\u041A\u0426\u0406\u0407 \u0422\u0415\u041B\u0415\u0424\u041E\u041D\u0406\u0412 \u0412\u041D\u0418\u0417\u0423 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415\u041C\u0410\u0404.
-           \u0412\u043E\u0432\u0430: \xAB\u0406 \u0437\u043D\u0438\u0437\u0443 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438, \u0443\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438. \u0426\u0435 \u0432\u0437\u0430\u0433\u0430\u043B\u0456 \u043D\u0435\u0433\u0430\u0440\u043D\u043E
-           \u0440\u043E\u0437\u0442\u0430\u0448\u043E\u0432\u0430\u043D\u043E \u0456 \u043D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\xBB. \u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456 \u043D\u043E\u043C\u0435\u0440\u0438 \u041D\u0415 \u0432\u0442\u0440\u0430\u0447\u0435\u043D\u0456 \u2014 \u0432\u043E\u043D\u0438 \u0441\u0442\u0430\u043B\u0438
-           \u0442\u0440\u0435\u0442\u044C\u043E\u044E \u043F\u043B\u0438\u0442\u043A\u043E\u044E \u0431\u0435\u043D\u0442\u043E (\u0434\u0438\u0432. home-bento.js), \u043F\u043E\u0440\u0443\u0447 \u0437 \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u043E\u043C \u0456
-           \u0434\u043E\u0448\u043A\u043E\u044E. \u0422\u043E\u0431\u0442\u043E \u043B\u0438\u0448\u0438\u043B\u0438\u0441\u044C \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456, \u0430\u043B\u0435 \u044F\u043A \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u043F\u0440\u0438\u043B\u0430\u0434\u0443, \u0430 \u043D\u0435 \u044F\u043A
-           \u0445\u0432\u0456\u0441\u0442 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438. -->
-      <div id="cm-contacts-content" hidden></div>
+      <!-- \u0413\u043E\u043B\u043E\u0432\u043D\u0430 \u043F\u043B\u0438\u0442\u043A\u0430-\u0441\u043B\u043E\u0442 \u043F\u0435\u0440\u0435\u0457\u0445\u0430\u043B\u0430 \u0412 \u041A\u0406\u041D\u0415\u0426\u042C \u043F\u043E\u0442\u043E\u043A\u0443 \u0456 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u041B\u0418\u0428\u0415 \u0434\u043B\u044F
+           \u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u043E\u0433\u043E: \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0437\u0431\u0456\u0440 \u0430\u0431\u043E \u043F\u043E\u0434\u0456\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u041D\u043E\u0432\u0438\u043D\u0438 \u0432\u043E\u043D\u0430 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435
+           \u043F\u043E\u043A\u0430\u0437\u0443\u0454 \u2014 \u0441\u0430\u043C\u0435 \u043D\u0430 \u0446\u0435 \u0412\u043E\u0432\u0430 \u0441\u043A\u0430\u0440\u0436\u0438\u0432\u0441\u044F (\xAB\u0432\u043E\u043D\u043E \u0434\u0443\u0431\u043B\u044E\u0454 \u043D\u043E\u0432\u0438\u043D\u0438\xBB). -->
+      <section id="hm-hero"></section>
 
-      <!-- \u0414\u0430\u043D\u0456 \u0414\u043E\u0448\u043A\u0438 \u043C\u0430\u043B\u044E\u044E\u0442\u044C \u043F\u043B\u0438\u0442\u043A\u0443 2\xD71 \u0432\u0438\u0449\u0435; \u043E\u043A\u0440\u0435\u043C\u043E\u0457 \u0441\u0435\u043A\u0446\u0456\u0457 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454. -->
-      <div id="cm-board-content" hidden></div>
-      <!-- \u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043C\u0430\u043B\u044E\u0454 \u043F\u043B\u0438\u0442\u043A\u0443 1\xD71; \u043F\u043E\u0433\u043E\u0434\u0430 \u2014 \u043A\u043D\u043E\u043F\u043A\u0443 \u0432 \u0440\u044F\u0434\u043A\u0443 \u0441\u0442\u0430\u043D\u0443. -->
-      <div id="cm-bus-content" hidden></div>
+      <div id="cm-contacts-content" hidden></div>
     </div>
+
+    <!-- \u0428\u0423\u0425\u041B\u042F\u0414\u0410. \u041F\u0440\u0438\u0431\u0438\u0442\u0430 \u043D\u0430\u0434 \u0442\u0430\u0431-\u0431\u0430\u0440\u043E\u043C. \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0430 \u2014 \u0441\u043C\u0443\u0436\u043A\u0430 \u0437 \u0442\u0440\u044C\u043E\u043C\u0430 \u0444\u0430\u043A\u0442\u0430\u043C\u0438;
+         \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0430 \u2014 \u043F\u043B\u0438\u0442\u043A\u0438. \u0412\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0422\u0410\u041F\u041E\u041C, \u0431\u0435\u0437 \u0436\u0435\u0441\u0442\u0443: \u0432\u043B\u0430\u0441\u043D\u0438\u0439 \u0441\u0432\u0430\u0439\u043F \u043D\u0430
+         \u0446\u044C\u043E\u043C\u0443 \u0435\u043A\u0440\u0430\u043D\u0456 \u043A\u043E\u043D\u0444\u043B\u0456\u043A\u0442\u0443\u0432\u0430\u0432 \u0431\u0438 \u0437 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0438\u043C\u0438 \u0441\u0442\u0440\u0456\u0447\u043A\u0430\u043C\u0438 \u043D\u043E\u0432\u0438\u043D, \u0430 \u0446\u0435\u0439
+         \u043A\u043B\u0430\u0441 \u0431\u0430\u0433\u0456\u0432 \u0443 \u043F\u0440\u043E\u0454\u043A\u0442\u0456 \u0432\u0436\u0435 \u043A\u043E\u0448\u0442\u0443\u0432\u0430\u0432 \u043E\u043A\u0440\u0435\u043C\u043E\u0433\u043E \u0431\u043B\u043E\u043A\u0430 \u0440\u043E\u0431\u043E\u0442\u0438 02.08. -->
+    <details class="hm-drawer" id="hm-drawer">
+      <summary>
+        <span class="hm-drawer-grip" aria-hidden="true"></span>
+        <span class="hm-drawer-peek" id="hm-drawer-peek">\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \xB7 \u0414\u043E\u0448\u043A\u0430 \xB7 \u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</span>
+      </summary>
+      <div class="hm-bento" id="hm-bento">
+        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
+        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
+      </div>
+    </details>
   `;
   }
   var _greetingWired = false;

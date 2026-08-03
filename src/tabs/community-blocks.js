@@ -568,18 +568,12 @@ export async function renderEventBlock() {
     // Тепер: немає подій громади — немає й секції (порожній контейнер, і
     // `renderEvList` його не малює).
 
-    if (!items.length) {
-      try {
-        const hres = await fetch('./data/holidays.json');
-        const hall = await hres.json();
-        const harr = Array.isArray(hall) ? hall : (hall.holidays || []);
-        items = harr
-          .filter(h => new Date(h.date + 'T00:00:00') >= today)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 5)
-          .map(h => ({ kind: 'holiday', id: h.id, date: h.date, title: h.title, category: h.category || 'Свято', emoji: h.cover_emoji, gradient: h.cover_gradient }));
-      } catch {}
-    }
+    // ⚠️ 04.08 — САМ КОД ФОЛБЕКУ ВИДАЛЕНО ТУТ.
+    // Попереднього разу (PR #760) я замінив лише КОМЕНТАР над ним і доповів
+    // Вові, що свята прибрано, — а `fetch('./data/holidays.json')` лишився
+    // працювати. Свята показувались на проді ще один деплой, і Вова побачив їх
+    // знову. Урок прямий: «замінив текст поруч» ≠ «прибрав поведінку»;
+    // перевіряти треба наслідок на екрані, а не свій діф.
 
     // Порожньо — секції немає ЗОВСІМ (не «порожній стан»): обіцяти афішу і
     // показувати напис «подій немає» щодня — гірше, ніж не обіцяти нічого.

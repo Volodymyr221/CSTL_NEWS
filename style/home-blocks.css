@@ -569,3 +569,68 @@
 .hm-onphoto .hm-status-date { color: rgba(255,255,255,0.78); }
 .hm-status-acc { margin-top: 2px; width: 38px; height: 38px; }
 .hm-wx { margin-top: 2px; height: 32px; }
+
+/* ═══ ВАРІАНТ G — ШУХЛЯДА ═════════════════════════════════════════════════════
+ * Прибита над таб-баром смуга: згорнута показує три слова, розгорнута — плитки.
+ *
+ * 🔴 ЧОМУ ТАП, А НЕ ЖЕСТ. Власний свайп угору на цьому екрані конфліктував би з
+ * горизонтальними стрічками новин і подій — палець не знав би, кого слухати.
+ * Цей клас багів у проєкті вже коштував окремого блока роботи 02.08 (два жести
+ * на сторінці оголошення). `<details>` дає відкриття тапом, клавіатуру і читач
+ * екрана безкоштовно і не тримає стану в модулі, який злітав би на перерендері.
+ *
+ * ГЕОМЕТРІЯ: згорнута 52px + safe-area; розгорнута — по вмісту, стеля 46vh, далі
+ * прокрутка всередині. Тіло сторінки отримує нижній відступ 52px, щоб останній
+ * блок не ховався під шухлядою.
+ */
+.hm-drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h, 56px) + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  background: var(--hm-card);
+  border-top: 1px solid var(--hm-line);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 24px rgba(16, 18, 22, 0.14);
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.hm-drawer > summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 12px;
+  min-height: 52px;
+  list-style: none;
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  background: var(--hm-card);
+}
+.hm-drawer > summary::-webkit-details-marker { display: none; }
+/* Рисочка-грабер — єдиний натяк, що це відкривається. Без неї смуга читається
+   як підпис, а не як елемент керування. */
+.hm-drawer-grip {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hm-line);
+}
+.hm-drawer-peek {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--hm-ink-mute);
+}
+.hm-drawer[open] .hm-drawer-peek { color: var(--hm-ink); }
+.hm-drawer .hm-bento { padding: 0 14px 16px; }
+
+/* Тіло сторінки не має ховатись під шухлядою. */
+.hm-body { padding-bottom: 72px; }
+
+/* Новини у варіанті G — головний зміст екрана, тож стрічка лишається стрічкою,
+   але картка ширша: на 390px видно одну повну і край наступної. */
+#hm-news .nc--tile { width: 300px; }
