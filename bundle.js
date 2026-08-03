@@ -6266,6 +6266,7 @@
     return !loc || loc === COMMUNITY_ALL;
   }
   var PHONE_ICON_SVG = ICONS.phone;
+  var PLUS_ICON_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   function phoneOf(p) {
@@ -6761,9 +6762,9 @@
     if (need && !have) {
       box.insertAdjacentHTML(
         "beforeend",
-        `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`
+        `<button class="bd-hero-msgs bd-hero-add" id="bd-hero-msgs" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">${PLUS_ICON_SVG}</button>`
       );
-      document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
+      document.getElementById("bd-hero-msgs")?.addEventListener("click", () => document.getElementById("board-trigger")?.click());
       paintUnreadBadge();
     } else if (!need && have) {
       have.remove();

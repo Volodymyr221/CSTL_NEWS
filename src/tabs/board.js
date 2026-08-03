@@ -66,6 +66,14 @@ function pluralAds(n) {
 // SVG-іконки для дій у картках і кнопках. Закладка/шер — з board-shared.js
 // (спільні з картками обговорень); іконки обговорень — у board-discussions.js.
 const PHONE_ICON_SVG = ICONS.phone; // дедуп — раніше локальна копія, ідентична community-blocks.js CONTACT_ICONS.default
+// 🔄 04.08 (замовлення Вови): кнопки помінялись місцями — «+» переїхав У ШАПКУ
+// (скляна кругла, меню розкривається ВНИЗ), а конверт повідомлень — на місце
+// нижнього FAB. Дослівно: «поміняй кнопку повідомлень з кнопкою підменю FAB…
+// зверху в такому самому стилі… тільки там має бути плюсик і при натисканні
+// донизу вилазить меню FAB, а знизу іконка повідомлень».
+// ⚠️ Розкладку дій Дошки вже перевертали двічі (01.08 і 02.08), і в документах
+// стояло «не міняй без нового слова Вови». Слово є — саме це повідомлення.
+const PLUS_ICON_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
@@ -1128,9 +1136,9 @@ function syncMsgFab() {
   const need = canSeeMessages();
   if (need && !have) {
     box.insertAdjacentHTML('beforeend',
-      `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`);
+      `<button class="bd-hero-msgs bd-hero-add" id="bd-hero-msgs" type="button" aria-label="Дії" aria-expanded="false">${PLUS_ICON_SVG}</button>`);
     document.getElementById('bd-hero-msgs')
-      ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
+      ?.addEventListener('click', () => document.getElementById('board-trigger')?.click());
     paintUnreadBadge();   // щойно створений конверт ще порожній — заповнити з кешу
   } else if (!need && have) {
     have.remove();

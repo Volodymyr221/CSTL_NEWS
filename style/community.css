@@ -5653,3 +5653,22 @@ textarea.cm-board-input.bm-invalid {
    поломка застосунку, а не як «спершу вибери причину». */
 .ad-rep-send:disabled { background: var(--board-press, #E4E4E1); color: #9A9A9A; cursor: default; }
 .ad-rep-send:not(:disabled):active { opacity: 0.85; }
+
+/* ═══ 04.08 — КНОПКИ ДОШКИ ПОМІНЯЛИСЬ МІСЦЯМИ (замовлення Вови) ═══════════════
+ * «+» тепер у шапці (скляна кругла, як був конверт), меню розкривається ВНИЗ;
+ * конверт повідомлень — на місці нижнього FAB, у тому ж бордовому крузі.
+ *
+ * ⚠️ Меню було прибите до НИЗУ (`bottom: таб-бар + FAB + відступи`). Тепер його
+ * якір — шапка: `top` рахується від низу багряного блоку. Обидва значення
+ * лишаються `fixed`, тобто меню не залежить від прокрутки списку.
+ */
+#board-content .board-fab.open .board-fab-menu {
+  top: calc(var(--header-h) + 96px);
+  bottom: auto;
+  align-items: flex-end;
+}
+/* Нижня кнопка стала конвертом — бейдж непрочитаних сідає в її правий верхній кут. */
+.board-trigger--msgs .cm-board-trigger-icon { position: relative; display: inline-flex; }
+.board-trigger--msgs .board-trigger-badge { top: -6px; right: -8px; }
+/* Верхня «+» — той самий скляний кружечок, що був у конверта; лише іконка інша. */
+.bd-hero-add .board-trigger-badge { display: none; }
