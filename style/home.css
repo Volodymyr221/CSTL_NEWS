@@ -240,3 +240,151 @@
     to   { opacity: 1; transform: none; }
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ПУЛЬС — СИСТЕМА ПЛИТОК (03.08, другий захід)
+
+   🔴 ЧОМУ ПЕРШИЙ ЗАХІД БУВ НЕПРАВИЛЬНИЙ. Слова Вови: «Ти змінив окремі блоки,
+   але не переосмислив сторінку… все ще виглядає як класичний список карток із
+   2021 року». І це правда: варіант 2 групував блоки ЗА ДЖЕРЕЛОМ (новини /
+   події / оголошення / телефони) і давав кожному ОДНАКОВУ білу картку на всю
+   ширину з однаковою сірою назвою секції. Одна форма на весь екран — це
+   відсутність ієрархії, скільки б кеглів у ній не було.
+
+   ЩО ЗМІНЮЄ ЦЕЙ БЛОК: ієрархія починає жити у ФОРМІ.
+     • головна плитка (hero) — велика, одна, щодня з різним вмістом;
+     • бенто — плитки 1×1 і 2×1 у сітці з двох колонок;
+     • стрічка (rail) — горизонтальний ряд карток однакової ширини.
+   Три різні форми замість однієї.
+
+   ⚠️ ДИСЦИПЛІНА КОЛЬОРУ: за замовчуванням плитка НЕЙТРАЛЬНА (біла). Акцентних
+   на екрані максимум ДВІ — головна і справді термінова. У проєкті вже було
+   чотири випадкові сірі (розбір у `base.css`); барвистий дашборд без правила
+   перетворюється на те саме.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── БЕНТО-СІТКА ─────────────────────────────────────────────────────────────
+ * Дві колонки. Плитка 1×1 займає одну, `--wide` — обидві.
+ * ГЕОМЕТРІЯ на 390px: поле 14px з боків, gap 10px → колонка
+ * (390 − 28 − 10) / 2 = 176px. Висота 1×1 фіксована 92px — саме стільки треба
+ * на мітку + велике число + підпис, і саме стільки дає рівний квадратний ритм.
+ */
+.hm-bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hm-gap-card);
+}
+.hm-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-height: 92px;
+  padding: 12px 13px;
+  background: var(--hm-card);
+  border: 1px solid var(--hm-line);
+  border-radius: var(--hm-r-card);
+  box-shadow: var(--hm-shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  /* ⚠️ Плитка — це <button>, а браузер за замовчуванням центрує текст у кнопках.
+     Через це «В дорозі» стояло по центру, а «7 оголошень» у сусідній плитці —
+     ліворуч (там вміст у flex-ряду). Знайдено скріншотом: дві плитки поруч
+     виглядали зверстаними різними людьми. */
+  text-align: left;
+}
+.hm-tile:active { background: var(--hm-press); }
+.hm-tile--wide { grid-column: 1 / -1; }
+.hm-tile[hidden] { display: none; }
+
+/* Мітка плитки — дрібна, КАПС, тиха. Вона називає ТИП даних, а не кричить. */
+.hm-tile-lab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--hm-ink-mute);
+}
+.hm-tile-lab svg { width: 13px; height: 13px; }
+/* Головне число/слово плитки. Саме воно читається за ті 3 секунди. */
+.hm-tile-big {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  color: var(--hm-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm-tile-sub {
+  font-size: var(--hm-t-meta);
+  font-weight: 600;
+  color: var(--hm-ink-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Акцентна плитка — рівно для того, що справді зараз важливе. */
+.hm-tile--accent { background: var(--hm-accent); border-color: var(--hm-accent); }
+.hm-tile--accent .hm-tile-lab,
+.hm-tile--accent .hm-tile-sub { color: rgba(255,255,255,0.78); }
+.hm-tile--accent .hm-tile-big { color: #fff; }
+.hm-tile--accent:active { background: var(--red-dark); }
+
+/* ── СТРІЧКА (rail) ──────────────────────────────────────────────────────────
+ * Горизонтальний ряд карток. Виходить за поле `.hm-body` від'ємним полем і
+ * повертає його своїм padding — щоб картка, яка не влізла, обрізалась КРАЄМ
+ * ЕКРАНА. Інакше видно «стінку» за 14px до краю, і незрозуміло, що ряд гортається.
+ *
+ * 🔴 РИЗИК, НАЗВАНИЙ УГОЛОС: це вкладений скролер, а їх у проєкті двічі
+ * прибирали як хворобу (31.07 — віджет новин, 03.08 — стрічка Дошки). Різниця
+ * принципова: там ховали ВЕРТИКАЛЬНУ глибину всередині вертикальної сторінки
+ * (6468px вмісту у вікні 465px), і жест конфліктував із прокруткою екрана.
+ * Тут — обмежений набір з явним виходом «усі →», і жест перпендикулярний.
+ * ⚠️ Умови, за яких це лишається здоровим: **не більше 8 карток** у стрічці
+ * і **завжди видиме посилання у повний список**. Порушиш — повернеться хвороба.
+ */
+.hm-rail {
+  display: flex;
+  gap: var(--hm-gap-card);
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-inline: calc(var(--hm-edge) * -1);
+  padding: 2px var(--hm-edge);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  /* `overscroll-behavior-x: contain` — щоб докрутивши стрічку до краю, палець
+     не потягнув за собою сторінку (на iOS це читається як «застрягло»). */
+  overscroll-behavior-x: contain;
+}
+.hm-rail::-webkit-scrollbar { display: none; }
+.hm-rail > * { scroll-snap-align: start; flex: 0 0 auto; }
+
+/* Хвіст стрічки — вихід у повний список. Стоїть ОСТАННІМ елементом, а не лише
+   посиланням у шапці: людина, яка догортала до кінця, вже у русі — їй природно
+   тапнути тут, а не повертатись очима вгору. */
+.hm-rail-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 92px;
+  border-radius: var(--hm-r-card);
+  background: var(--hm-card);
+  border: 1px dashed var(--hm-line);
+  color: var(--hm-accent);
+  font-size: var(--hm-t-meta);
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-rail-end svg { width: 16px; height: 16px; }

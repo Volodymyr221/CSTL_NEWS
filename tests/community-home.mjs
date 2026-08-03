@@ -54,25 +54,46 @@ const geo = await page.evaluate(() => {
     return { h: Math.round(r.height), top: Math.round(r.top + main.scrollTop) };
   };
   return {
-    top: box('.hm-top'),
+    top: box('.hm-status'),
+    hero: box('#hm-hero'),
     news: box('#hm-news'),
     contacts: box('#hm-contacts'),
-    hello: box('.hm-hello'),
+    hello: box('.hm-kicker'),
     total: Math.round(main.scrollHeight),
+    // Скільки РІЗНИХ форм на екрані. Це і є числова відповідь на «сторінка
+    // виглядає як список однакових карток»: у варіанті 2 форма була ОДНА.
+    shapes: ['.hm-hero', '.hm-tile', '.hm-rail > *', '.hm-tels']
+      .filter(s2 => document.querySelector(s2)).length,
+    // Декоративні пікселі на першому екрані: висота всього, що НЕ несе тексту.
+    // У варіанті 2 це було фото 200px = 27%.
+    decor: (() => {
+      const ph = document.querySelector('.hm-hero-photo');
+      // Фото головної плитки не рахуємо декором: воно ТЛО під змістом, а не
+      // самостійний банер. Декором лишається те, що не має тексту взагалі.
+      return ph && !ph.closest('.hm-hero').textContent.trim() ? Math.round(ph.getBoundingClientRect().height) : 0;
+    })(),
   };
 });
 
-ok('шапка не більша за третину екрана', geo.top && geo.top.h <= VIEW / 3,
-   `${geo.top?.h}px = ${(geo.top.h / VIEW * 100).toFixed(1)}% (було 560px = 76.6%)`);
+ok('рядок стану замість шапки-банера (<80px)', geo.top && geo.top.h < 80,
+   `${geo.top?.h}px (оригінал 560px = 76.6% · варіант 2 — 200px)`);
+ok('головна плитка на першому екрані', geo.hero && geo.hero.top < VIEW,
+   `починається на ${geo.hero?.top}px, висота ${geo.hero?.h}px`);
+// 🔴 Головна числова відповідь на закид «список однакових карток із 2021».
+ok('на екрані ЩОНАЙМЕНШЕ 3 різні форми блоків', geo.shapes >= 3,
+   `${geo.shapes} (варіант 2 мав 1 — усі блоки були білою карткою на всю ширину)`);
+ok('декоративних пікселів на першому екрані немає', geo.decor === 0,
+   `${geo.decor}px (варіант 2 — фото-банер 200px = 27%)`);
 // ГОЛОВНА перевірка потоку: до редизайну новини починались на 662px, тобто нижче
 // першого екрана. Поріг — сама видима зона: новини мусять ПОЧАТИСЬ у ній.
 ok('новини починаються на першому екрані', geo.news && geo.news.top < VIEW,
    `на ${geo.news?.top}px при видимій зоні ${VIEW}px (було 662px)`);
 ok('уся сторінка коротша за 2446px «до»', geo.total < 2446,
-   `${geo.total}px = ${(geo.total / VIEW).toFixed(1)} екрана (було 3.3)`);
+   `${geo.total}px = ${(geo.total / VIEW).toFixed(1)} екрана (оригінал 3.3 · варіант 2 — 2.4)`);
 ok('довідник телефонів не займає пів екрана', geo.contacts && geo.contacts.h < VIEW / 2,
    `${geo.contacts?.h}px (було 420px = 57.5%)`);
-ok('«ШО В СЕЛІ?» лишилось на екрані', !!geo.hello, 'голос Вови, не службовий заголовок');
+ok('«ШО В СЕЛІ?» лишилось на екрані', !!geo.hello,
+   'голос Вови; знято лише банерну форму — на Дошці зняття назви вже відкочували 01.08');
 
 // ── 2. Липка панель нічого не накриває ───────────────────────────────────────
 // Міряємо НАСЛІДОК: чи є на головній хоч один липкий/фіксований елемент, який
@@ -86,24 +107,29 @@ ok('на головній немає липких панелей поверх к
 // ── 3. Вкладені скролери й автоміни ──────────────────────────────────────────
 const moving = await page.evaluate(() => {
   const root = document.getElementById('cm-content');
-  const nested = [...root.querySelectorAll('*')].filter(e => {
+  const nestedY = [...root.querySelectorAll('*')].filter(e => {
     const cs = getComputedStyle(e);
-    return ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && e.scrollHeight > e.clientHeight + 1)
-        || ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && e.scrollWidth > e.clientWidth + 1);
+    return (cs.overflowY === 'auto' || cs.overflowY === 'scroll') && e.scrollHeight > e.clientHeight + 1;
   }).map(e => e.className.toString().slice(0, 30));
+  const railMax = Math.max(0, ...[...root.querySelectorAll('.hm-rail')].map(r => r.children.length));
   return {
-    nested,
+    nestedY, railMax,
     boardCards: root.querySelectorAll('.cmbw-card').length,   // карусель Дошки
     evSlides:   root.querySelectorAll('.cm-ev-slide').length, // карусель Подій
-    scaled: [...root.querySelectorAll('.cm-block')].filter(e => getComputedStyle(e).transform !== 'none').length,
+    scaled: [...root.querySelectorAll('.cm-block, .hm-card, .hm-tile')].filter(e => getComputedStyle(e).transform !== 'none').length,
   };
 });
 // ⚠️ Смуга «ЗАРАЗ» — теж горизонтальний скролер, але вона гортається ЛИШЕ коли
 // капсул більше, ніж влазить; на трьох капсулах прокрутки немає. Тому перевірка
 // не забороняє скролери взагалі, а ловить саме ті, що ховають вміст усередині
 // картки (це і був діагноз 9).
-ok('вкладених скролерів усередині карток немає',
-   moving.nested.filter(c => !c.includes('hm-now')).length === 0, JSON.stringify(moving.nested));
+// ⚠️ Горизонтальні стрічки (`hm-rail`) — легальні: жест перпендикулярний
+// прокрутці сторінки і набір обмежений (≤8 + вихід «усі»). Забороняємо саме
+// ВЕРТИКАЛЬНІ вкладені скролери — ті, що ховають глибину всередині картки
+// (діагноз 9 аудиту: 6468px вмісту у вікні 465px).
+ok('вертикальних вкладених скролерів немає',
+   moving.nestedY.length === 0, JSON.stringify(moving.nestedY));
+ok('стрічка не ховає список (≤8 карток)', moving.railMax <= 9, `найдовша стрічка: ${moving.railMax}`);
 ok('карусель Дошки знято', moving.boardCards === 0);
 ok('карусель Подій знято', moving.evSlides === 0);
 ok('фокус-скрол (scale кожного блока) знято', moving.scaled === 0);
@@ -134,15 +160,16 @@ ok('усі тап-цілі не менші за 44px', small.length === 0, JSON.
 // Рахуємо ВІДНОСНУ ЯСКРАВІСТЬ за WCAG, а не «на око»: `--hm-ink-mute` на білій
 // картці мусить тримати 4.5:1, інакше дата й локація стають декорацією.
 const contrast = await page.evaluate(() => {
+  // Тихий текст беремо з плитки події — це той самий токен `--hm-ink-mute`.
   const lum = ([r, g, b]) => {
     const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
     return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
   };
   const rgb = s => s.match(/\d+/g).slice(0, 3).map(Number);
-  const el = document.querySelector('.hm-ad-meta') || document.querySelector('.hm-ev-meta');
+  const el = document.querySelector('.hm-evt-meta') || document.querySelector('.hm-tile-sub');
   if (!el) return null;
   const fg = lum(rgb(getComputedStyle(el).color));
-  const card = el.closest('.hm-card');
+  const card = el.closest('.hm-evt, .hm-tile');
   const bg = lum(rgb(getComputedStyle(card).backgroundColor));
   const [hi, lo] = fg > bg ? [fg, bg] : [bg, fg];
   return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
@@ -150,12 +177,11 @@ const contrast = await page.evaluate(() => {
 ok('тихий текст тримає контраст WCAG 4.5:1', contrast !== null && contrast >= 4.5, `${contrast}:1`);
 
 // ── 6. Збори: немає даних → немає блока; є дані → є блок ─────────────────────
-const fundEmpty = await page.evaluate(() => {
-  const h = document.getElementById('hm-fund');
-  return { html: h.innerHTML.trim().length, shown: h.getBoundingClientRect().height };
-});
-ok('без активних зборів блока немає ЗОВСІМ', fundEmpty.html === 0 && fundEmpty.shown === 0,
-   `розмітка ${fundEmpty.html} символів, висота ${fundEmpty.shown}px`);
+// Збір тепер живе в ГОЛОВНІЙ ПЛИТЦІ (слот з пріоритетом), а не окремою секцією.
+const fundEmpty = await page.evaluate(() =>
+  document.querySelector('[data-hero]')?.dataset.hero || null);
+ok('без активних зборів головна плитка показує інше', fundEmpty && fundEmpty !== 'fund',
+   `у плитці зараз: ${fundEmpty}`);
 
 // КОНТРОЛЬ: та сама перевірка мусить ПОБАЧИТИ блок, коли дані є. Без цього
 // «блока немає» проходило б і на зламаному рендері, який не малює нічого ніколи.
@@ -176,11 +202,12 @@ await page2.waitForTimeout(3500);
 await page2.evaluate(() => window.switchTab && window.switchTab('community'));
 await page2.waitForTimeout(2000);
 const fundFull = await page2.evaluate(() => {
-  const h = document.getElementById('hm-fund');
-  const bar = h.querySelector('[role=progressbar]');
-  return { h: Math.round(h.getBoundingClientRect().height), pct: bar?.getAttribute('aria-valuenow') };
+  const h = document.querySelector('[data-hero]');
+  const bar = document.querySelector('#hm-hero [role=progressbar]');
+  return { kind: h?.dataset.hero, pct: bar?.getAttribute('aria-valuenow') };
 });
-ok('КОНТРОЛЬ: з активним збором блок зʼявляється', fundFull.h > 40, `${fundFull.h}px`);
+ok('КОНТРОЛЬ: активний збір ПІДНІМАЄТЬСЯ в головну плитку', fundFull.kind === 'fund',
+   `у плитці: ${fundFull.kind}`);
 ok('КОНТРОЛЬ: прогрес рахується правильно', fundFull.pct === '50', `aria-valuenow=${fundFull.pct} (50 з 100)`);
 
 // ── 7. Жодної помилки в консолі ──────────────────────────────────────────────

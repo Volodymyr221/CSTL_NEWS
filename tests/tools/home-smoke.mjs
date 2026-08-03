@@ -45,6 +45,13 @@ const dir = process.env.SHOT_DIR || '/tmp';
 // відкритою, перехоплювала тапи, і ВСІ наступні кроки «падали» на робочому коді.
 // Дев'ятий випадок у проєкті, коли бреше сама перевірка, а не код.
 const closeAll = async () => {
+  // ⚠️ Гейт правил Дошки (03.08) — блокуюче вікно `dismissible:false`, яке
+  // накриває екран при першому вході на вкладку. Крок «плитка Дошки → вкладка
+  // Дошка» його викликає, і далі він перехоплював УСІ тапи, через що падали
+  // наступні кроки. Приймаємо його так само, як це робить жива людина.
+  const gate = page.locator('.brules-ok');
+  if (await gate.count()) { await gate.click({ force: true }).catch(() => {}); await page.waitForTimeout(400); }
+
   for (let i = 0; i < 5; i++) {
     const open = await page.evaluate(() => {
       const art = document.querySelector('#article-modal.open');
@@ -75,28 +82,32 @@ const step = async (name, fn) => {
   console.log((errs.length > before ? '❌ ' : '✅ ') + name);
 };
 
-await step('тап по новині → стаття', async () => {
+await step('головна плитка → її вміст', async () => {
+  await page.locator('#hm-hero .hm-hero').click();
+  await page.waitForTimeout(700);
+});
+await step('тап по новині у стрічці → стаття', async () => {
   await page.locator('#hm-news [data-article-id]').first().click();
   await page.waitForTimeout(700);
 });
 await step('«Усі новини» → хаб', async () => {
-  await page.locator('[data-cm-news-all]').click();
+  await page.locator('[data-cm-news-all]').first().click();
   await page.waitForTimeout(900);
 });
 await step('тап по події → модалка', async () => {
   await page.locator('#hm-events [data-ev-id]').first().click();
   await page.waitForTimeout(700);
 });
-await step('тап по оголошенню → сторінка оголошення', async () => {
-  await page.locator('#hm-board [data-bw-id]').first().click();
+await step('плитка Дошки → вкладка Дошка', async () => {
+  await page.locator('#hm-t-board').click();
   await page.waitForTimeout(900);
 });
 await step('розкриття «Усі телефони»', async () => {
-  await page.locator('.hm-tel-more > summary').click();
+  await page.locator('.hm-tels > summary').click();
 });
-await step('капсула «ЗАРАЗ» → Автобуси', async () => {
-  const pill = page.locator('#hm-now .hm-pill').first();
-  if (await pill.count()) await pill.click();
+await step('плитка автобуса → Автобуси', async () => {
+  const t = page.locator('#hm-t-bus');
+  if (await t.count() && await t.isVisible()) await t.click();
 });
 await step('повернення на Громаду', async () => {
   await page.evaluate(() => window.switchTab && window.switchTab('community'));
