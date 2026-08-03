@@ -35,6 +35,7 @@ import {
   renderCommunityNews,
 } from './community-blocks.js';
 import { renderNowStrip, initHomeNow } from './home-now.js';
+import { renderFundBlock } from './home-fund.js';
 
 // ── Hero: 4 денних + 4 вечірніх фото Олики ───────────────────────────────────
 // Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
@@ -277,6 +278,7 @@ export function initCommunity() {
   // (`initHomeNow`), сам рендер — на кожне відкриття вкладки.
   if (!_nowWired) { initHomeNow(); _nowWired = true; }
   renderNowStrip();
+  renderFundBlock();
   renderWeatherBlock();
   renderBusBlock();
   renderBoardBlock();

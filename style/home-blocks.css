@@ -244,5 +244,108 @@
  * Порожній контейнер не малює НІЧОГО — ні рамки, ні відступу. Саме тому
  * `:empty { display: none }`, а не «сховати вміст»: інакше в ритмі секцій
  * лишалась би дірка 22px там, де активних зборів немає.
+ *
+ * 🔴 ЧОМУ БЛОК НЕ КРИЧИТЬ. Замовлення Вови було «добре помічався, але НЕ
+ * виглядав як реклама» — а це дві вимоги, що тягнуть у різні боки. Розвʼязка:
+ * помітність дає МІСЦЕ (другий блок на екрані, вище за новини), а не колір.
+ * Тому картка тут — та сама біла поверхня, що в новин і оголошень; від решти
+ * її відрізняє рівно одна деталь — вузька акцентна смуга ліворуч. Кольоровий
+ * банер на всю ширину помічають один раз, а далі прокручують не читаючи.
  */
+.hm-fund {
+  /* Смуга ліворуч — єдина «гучна» деталь блока. 3px: помітно боковим зором,
+     але не ділить картку навпіл, як робить 6-8px. */
+  border-left: 3px solid var(--hm-accent);
+}
+.hm-fund-in { padding: var(--hm-pad); }
+
+.hm-fund-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.hm-fund-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  margin-top: 2px;              /* оптичне вирівнювання по першому рядку назви */
+  color: var(--hm-accent);
+}
+.hm-fund-mark svg { width: 17px; height: 17px; }
+.hm-fund-title {
+  margin: 0;
+  font-size: var(--hm-t-lead);
+  font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: -0.2px;
+  color: var(--hm-ink);
+}
+/* Хто збирає — НЕ дрібний підпис під кнопкою, а другий рядок одразу під назвою.
+   Довіру дає імʼя організатора; ховати його в петит означало б будувати блок,
+   якому не можна вірити. */
+.hm-fund-org {
+  margin: 6px 0 0;
+  font-size: var(--hm-t-meta);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--hm-ink-body);
+}
+.hm-fund-ver { color: var(--hm-ink-mute); font-weight: 600; }
+.hm-fund-note {
+  margin: 7px 0 0;
+  font-size: var(--hm-t-body);
+  line-height: 1.4;
+  color: var(--hm-ink-body);
+}
+
+/* Числа — головний доказ. Тому зібране велике й темне, ціль і відсоток тихі. */
+.hm-fund-sums {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 12px;
+}
+.hm-fund-raised { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; color: var(--hm-ink); }
+.hm-fund-goal   { font-size: var(--hm-t-meta); font-weight: 600; color: var(--hm-ink-mute); }
+.hm-fund-pct    { margin-left: auto; font-size: var(--hm-t-meta); font-weight: 800; color: var(--hm-accent); }
+
+.hm-fund-bar {
+  margin-top: 7px;
+  height: 6px;
+  border-radius: var(--hm-r-pill);
+  background: var(--hm-press);
+  overflow: hidden;
+}
+.hm-fund-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hm-accent);
+}
+
+/* Кнопка НЕ на всю ширину: суцільна смуга-заклик — головна ознака рекламного
+   блока. Вміщена по вмісту кнопка читається як дія, а не як банер. */
+.hm-fund-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 13px;
+  padding: 0 18px;
+  min-height: 40px;
+  border-radius: var(--hm-r-pill);
+  background: var(--hm-accent);
+  color: #fff;
+  font-size: var(--hm-t-card);
+  font-weight: 700;
+  text-decoration: none;
+}
+.hm-fund-cta:active { background: var(--red-dark); }
+
+/* Межа відповідальності — той самий принцип, що в блоці безпеки Дошки 03.08:
+   платформа прямо каже, чим вона НЕ є. */
+.hm-fund-fine {
+  margin: 9px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--hm-ink-mute);
+}
 .hm-fund-wrap:empty { display: none; }

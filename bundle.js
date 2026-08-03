@@ -11714,6 +11714,90 @@ ${ev.description || ""}`
     window.addEventListener("cstl-posts-changed", () => renderNowStrip());
   }
 
+  // src/tabs/home-fund.js
+  var SRC = "./data/fundraisers.json";
+  var MAX_SHOWN = 2;
+  async function loadFundraisers() {
+    try {
+      const res = await fetch(SRC, { cache: "no-cache" });
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : data.items || [];
+      return items.filter(isPublishable);
+    } catch {
+      return [];
+    }
+  }
+  function isPublishable(it) {
+    return !!(it && it.active !== false && it.title && it.org && it.url);
+  }
+  function money(n) {
+    if (typeof n !== "number" || !isFinite(n))
+      return "";
+    return new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 }).format(n) + " \u20B4";
+  }
+  function progressOf(it) {
+    const { goal, raised } = it;
+    if (typeof goal !== "number" || typeof raised !== "number" || goal <= 0)
+      return null;
+    return Math.max(0, Math.min(100, Math.round(raised / goal * 100)));
+  }
+  function cardHtml2(it) {
+    const pct = progressOf(it);
+    const done = pct !== null && pct >= 100;
+    let sums = "";
+    if (pct !== null) {
+      sums = `<span class="hm-fund-raised">${money(it.raised)}</span>
+            <span class="hm-fund-goal">\u0437 ${money(it.goal)}</span>
+            <span class="hm-fund-pct">${pct}%</span>`;
+    } else if (typeof it.raised === "number") {
+      sums = `<span class="hm-fund-raised">${money(it.raised)}</span>
+            <span class="hm-fund-goal">\u0437\u0456\u0431\u0440\u0430\u043D\u043E</span>`;
+    }
+    const bar = pct !== null ? `
+    <div class="hm-fund-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="${pct}" aria-label="\u0417\u0456\u0431\u0440\u0430\u043D\u043E ${pct} \u0432\u0456\u0434\u0441\u043E\u0442\u043A\u0456\u0432">
+      <span style="width:${pct}%"></span>
+    </div>` : "";
+    return `
+    <article class="hm-card hm-fund" data-fund="${escapeHtml(String(it.id || it.title))}">
+      <div class="hm-fund-in">
+        <div class="hm-fund-head">
+          <span class="hm-fund-mark" aria-hidden="true">\u{1F397}</span>
+          <h4 class="hm-fund-title">${escapeHtml(it.title)}</h4>
+        </div>
+
+        <p class="hm-fund-org">${escapeHtml(it.org)}${it.verifiedBy ? ` \xB7 <span class="hm-fund-ver">\u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0443\u0454 ${escapeHtml(it.verifiedBy)}</span>` : ""}</p>
+
+        ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ""}
+
+        ${sums ? `<div class="hm-fund-sums">${sums}</div>` : ""}
+        ${bar}
+
+        <a class="hm-fund-cta" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+          ${done ? "\u0426\u0456\u043B\u044C \u0437\u0456\u0431\u0440\u0430\u043D\u043E \u2014 \u0434\u0435\u0442\u0430\u043B\u0456" : "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0442\u0438"}
+        </a>
+        <p class="hm-fund-fine">\u041A\u043E\u0448\u0442\u0438 \u0439\u0434\u0443\u0442\u044C \u043D\u0430\u043F\u0440\u044F\u043C\u0443 \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0442\u043E\u0440\u0443. CSTL LIFE \u043D\u0435 \u0437\u0431\u0438\u0440\u0430\u0454 \u0456 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454 \u0433\u0440\u043E\u0448\u0456.</p>
+      </div>
+    </article>`;
+  }
+  async function renderFundBlock() {
+    const host = document.getElementById("hm-fund");
+    if (!host)
+      return;
+    const items = (await loadFundraisers()).slice(0, MAX_SHOWN);
+    if (!items.length) {
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML = `
+    <div class="hm-sec">
+      <div class="hm-sec-head">
+        <h3 class="hm-sec-title">\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u0437\u0431\u043E\u0440\u0438</h3>
+      </div>
+      ${items.map(cardHtml2).join("")}
+    </div>`;
+  }
+
   // src/tabs/community.js
   var KOSTEL = "\u041A\u043E\u043B\u0435\u0433\u0456\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u0441\u0442\u0435\u043B \u0421\u0432\u044F\u0442\u043E\u0457 \u0422\u0440\u0456\u0439\u0446\u0456";
   var HERO_DAY = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.day-${i}.jpg`, caption: KOSTEL }));
@@ -11926,6 +12010,7 @@ ${ev.description || ""}`
       _nowWired = true;
     }
     renderNowStrip();
+    renderFundBlock();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();
@@ -16363,7 +16448,7 @@ END:VEVENT`
       return "";
     return `${MONTHS_GEN[dt.getMonth()]} ${y}`;
   }
-  function cardHtml2(p) {
+  function cardHtml3(p) {
     const name = p && p.name && p.name.trim() ? p.name.trim() : "\u0416\u0438\u0442\u0435\u043B\u044C \u0433\u0440\u043E\u043C\u0430\u0434\u0438";
     const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
     const av = avatarCircle({ name, url, cls: "pcard-av" });
@@ -16393,7 +16478,7 @@ END:VEVENT`
       variant: "sheet",
       className: "app-modal--top",
       // поверх кабінету/чату (інакше ховається під ними)
-      bodyHtml: cardHtml2(p || { uid }),
+      bodyHtml: cardHtml3(p || { uid }),
       onMount: (wrap) => {
         const avwrap = wrap.querySelector(".pcard-avwrap");
         const url = avwrap && avwrap.dataset.pcardPhoto;
