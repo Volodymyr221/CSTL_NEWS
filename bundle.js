@@ -6200,8 +6200,6 @@
       return text;
     if (nx === nt)
       return "";
-    if (nx.startsWith(nt) && nx.length - nt.length < 20)
-      return "";
     return text;
   }
   function renderCardDesc(p) {
@@ -6220,6 +6218,7 @@
         <div class="bd-ad-meta">
           <span class="bd-ad-type cat-c-${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
           <span class="bd-ad-time">${renderPostTime(p)}</span>
+          ${boardActionsHtml(p)}
         </div>
         <h3 class="bd-ad-title">${escapeHtml(p.title || p.text || "")}</h3>
         ${renderCardDesc(p)}
@@ -6228,7 +6227,6 @@
           ${renderPrice(p)}
         </div>
       </div>
-      ${boardActionsHtml(p)}
     </article>
   `;
   }

@@ -48,6 +48,17 @@ const r = await p.evaluate(() => {
       низ_фото_vs_низ_локації: (img && foot) ? Math.round(rc(img).bottom - rc(foot).bottom) : null,
       порожнеча_під_текстом: (body && img) ? Math.round(rc(c).bottom - 9 - rc(body).bottom) : null,
       опис_на_картці: !!c.querySelector('.bd-ad-desc'),
+      слак_під_описом: (() => {
+        const last = c.querySelector('.bd-ad-desc') || c.querySelector('.bd-ad-title');
+        const f = c.querySelector('.bd-ad-foot');
+        return (last && f) ? Math.round(rc(f).top - rc(last).bottom) : null;
+      })(),
+      дії_видно: (() => {
+        const a = c.querySelector('.bd-actions');
+        if (!a) return 'немає в розмітці';
+        const cs = getComputedStyle(a);
+        return cs.display === 'none' ? 'display:none' : `${Math.round(rc(a).width)}×${Math.round(rc(a).height)} opacity=${cs.opacity}`;
+      })(),
     };
   });
   const H = window.innerHeight;
