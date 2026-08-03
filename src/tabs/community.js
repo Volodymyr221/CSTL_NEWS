@@ -173,27 +173,14 @@ function renderSkeleton() {
     </div>
 
     <div class="hm-body">
-      <!-- ГОЛОВНА ПЛИТКА — СЛОТ, а не блок. Що в ній лежить, вирішує пріоритет
-           дня (див. src/tabs/home-hero.js), тому екран щодня різний. Це і є
-           «персональна домашня сторінка», а не сталий порядок віджетів. -->
-      <section id="hm-hero"></section>
-
-      <!-- Голос Вови. Дрібна мітка ЗЛІВА, а не банер по центру: у варіанті 2 це
-           був блок 51px на всю ширину — рівно та форма, яку Вова назвав 2021-м.
-           Прибирати назву не можна: на Дошці це вже відкочували 01.08. -->
-      <div class="hm-kicker">ШО В СЕЛІ?</div>
-
-      <!-- БЕНТО: дві плитки 1×1 і одна 2×1. Порожні себе не малюють. -->
-      <div class="hm-bento" id="hm-bento">
-        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
-        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
-        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
-      </div>
-
-      <!-- ЩО НОВОГО — горизонтальна стрічка. Новини стали ОДНИМ блоком
-           сторінки, а не самою сторінкою (пряма вимога Вови). -->
-      <section class="hm-sec" id="hm-news">
+      <!-- 🔴 ВАРІАНТ G — «НОВИНИ НА ВЕСЬ ЕКРАН + ШУХЛЯДА» (04.08).
+           Висновок із чотирьох заходів поспіль: Вова щоразу казав, що з усього
+           екрана подобаються САМЕ новини («єдине, що з цього подобається — це
+           як "Що нового", усі новини, як новини відображаються»), а решта
+           щоразу заважала. G робить із цього висновок замість того, щоб додати
+           ще один ряд плиток: головна = новини, все інше — у шухляді знизу,
+           яку відкривають, коли треба. -->
+      <section class="hm-sec hm-in" id="hm-news">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Що нового</h3>
           <button class="hm-sec-link" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>
@@ -201,8 +188,10 @@ function renderSkeleton() {
         <div class="hm-rail" id="cm-news-content">${skelRail(3)}</div>
       </section>
 
-      <!-- ПОРУЧ — події горизонтально, міні-плитками дат. -->
-      <section class="hm-sec" id="hm-events">
+      <!-- Афіша лишається в потоці: подія — це теж «що відбувається», і вона
+           поруч із новинами читається як продовження, а не як окремий прилад.
+           Секція ховається цілком, якщо подій громади немає. -->
+      <section class="hm-sec hm-in" id="hm-events">
         <div class="hm-sec-head">
           <h3 class="hm-sec-title">Афіша громади</h3>
           <button class="hm-sec-link" type="button" data-switch-tab="shotam">Афіша${ICONS.chevronRight}</button>
@@ -210,19 +199,30 @@ function renderSkeleton() {
         <div class="hm-rail" id="cm-event-content">${skelRail(3)}</div>
       </section>
 
-      <!-- ⚠️ 04.08 — ОКРЕМОЇ СЕКЦІЇ ТЕЛЕФОНІВ ВНИЗУ БІЛЬШЕ НЕМАЄ.
-           Вова: «І знизу контакти, усі телефони громади. Це взагалі негарно
-           розташовано і неправильно». Екстрені номери НЕ втрачені — вони стали
-           третьою плиткою бенто (див. home-bento.js), поруч з автобусом і
-           дошкою. Тобто лишились на екрані, але як частина приладу, а не як
-           хвіст сторінки. -->
-      <div id="cm-contacts-content" hidden></div>
+      <!-- Головна плитка-слот переїхала В КІНЕЦЬ потоку і лишається ЛИШЕ для
+           термінового: активний збір або подія сьогодні. Новини вона більше не
+           показує — саме на це Вова скаржився («воно дублює новини»). -->
+      <section id="hm-hero"></section>
 
-      <!-- Дані Дошки малюють плитку 2×1 вище; окремої секції більше немає. -->
-      <div id="cm-board-content" hidden></div>
-      <!-- Автобус малює плитку 1×1; погода — кнопку в рядку стану. -->
-      <div id="cm-bus-content" hidden></div>
+      <div id="cm-contacts-content" hidden></div>
     </div>
+
+    <!-- ШУХЛЯДА. Прибита над таб-баром. Згорнута — смужка з трьома фактами;
+         розгорнута — плитки. Відкривається ТАПОМ, без жесту: власний свайп на
+         цьому екрані конфліктував би з горизонтальними стрічками новин, а цей
+         клас багів у проєкті вже коштував окремого блока роботи 02.08. -->
+    <details class="hm-drawer" id="hm-drawer">
+      <summary>
+        <span class="hm-drawer-grip" aria-hidden="true"></span>
+        <span class="hm-drawer-peek" id="hm-drawer-peek">Автобус · Дошка · Екстрені</span>
+      </summary>
+      <div class="hm-bento" id="hm-bento">
+        <button class="hm-tile" id="hm-t-bus" type="button" hidden></button>
+        <button class="hm-tile" id="hm-t-msg" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-board" type="button" hidden></button>
+        <button class="hm-tile hm-tile--wide" id="hm-t-tel" type="button" hidden></button>
+      </div>
+    </details>
   `;
 }
 

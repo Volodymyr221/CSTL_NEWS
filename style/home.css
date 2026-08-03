@@ -388,3 +388,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .hm-rail-end svg { width: 16px; height: 16px; }
+
+/* ⚠️ `[hidden]` — це лише `display: none` у стилях браузера, і будь-яке власне
+   `display` його перебиває. Секція має `display: flex`, тому `sec.hidden = true`
+   з JS її НЕ ховало: на екрані лишався заголовок «АФІША ГРОМАДИ» над порожнечею
+   (знайдено скріншотом 04.08, після того як прибрали фолбек на свята). */
+.hm-sec[hidden] { display: none; }
