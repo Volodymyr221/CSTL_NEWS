@@ -11691,27 +11691,23 @@ ${ev.description || ""}`
   function paintCmNews(el, arts) {
     const top = digestOf(arts);
     if (!top.length) {
-      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+      el.innerHTML = '<div class="hm-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0438\u0439\u0434\u0435 \u043F\u0435\u0440\u0448\u0430 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>';
     } else {
-      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: "mini" })}</div>`;
+      el.innerHTML = newsCardsHtml(top, { variant: "mini" });
       [...el.querySelectorAll(".nc")].forEach((node, i) => {
         const b = node.querySelector(".nc-badge--geo");
         if (b)
           b.textContent = geoGroupOf(top[i]) || b.textContent;
       });
     }
-    const controls = document.getElementById("cm-news-controls");
-    if (controls) {
-      controls.innerHTML = `<button class="cm-news-all" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438${ICONS.chevronRight}</button>`;
-    }
     paintNewsBadge(arts);
   }
   function paintNewsBadge(arts) {
-    const bar = document.querySelector(".cm-news-board-bar");
-    if (!bar)
+    const head = document.querySelector("#cm-news-board .hm-sec-head");
+    if (!head)
       return;
     const n = countNewCommunity(arts);
-    const old = bar.querySelector(".cm-news-new");
+    const old = head.querySelector(".cm-news-new");
     if (!n) {
       if (old)
         old.remove();
@@ -11721,7 +11717,7 @@ ${ev.description || ""}`
     if (old)
       old.outerHTML = html;
     else
-      bar.insertAdjacentHTML("beforeend", html);
+      head.querySelector(".hm-kicker")?.insertAdjacentHTML("afterend", html);
   }
   function pluralNew(n) {
     const t = n % 100, o = n % 10;
@@ -11739,7 +11735,7 @@ ${ev.description || ""}`
       return;
     const arts = await ensureNewsLoaded();
     paintCmNews(el, arts);
-    const section = document.querySelector(".cm-block--news");
+    const section = document.getElementById("cm-news-board");
     if (!section || section.dataset.wired)
       return;
     section.dataset.wired = "1";

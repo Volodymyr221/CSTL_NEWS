@@ -1217,7 +1217,7 @@ function digestOf(arts) {
 function paintCmNews(el, arts) {
   const top = digestOf(arts);
   if (!top.length) {
-    el.innerHTML = '<div class="cm-block-empty">Новин поки немає</div>';
+    el.innerHTML = '<div class="hm-empty">Новини зʼявляться, щойно вийде перша за сьогодні</div>';
   } else {
     // ТРИ ОДНАКОВІ компактні картки — по одній з кожного розділу.
     //
@@ -1229,7 +1229,10 @@ function paintCmNews(el, arts) {
     // Вова подивився обидва варіанти скріншотами і вибрав компактний.
     // ➡️ Велика картка з фото лишається — але в ХАБІ, де вона відкриває цілий
     // екран новин і має на це право. Табло — це погляд, а не читання.
-    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: 'mini' })}</div>`;
+    // 04.08: обгортку `.cm-news-top3` знято — контейнер `#cm-news-content` уже
+    // сам `.hm-list` (колонка з проміжком), а зайвий вузол лише плодив би
+    // правила розкладки у двох файлах.
+    el.innerHTML = newsCardsHtml(top, { variant: 'mini' });
     // Мітка розділу — те, що робить дайджест дайджестом («щоб кожна новина несла
     // сенс», Вова). Пишемо назву РОЗДІЛУ, а не сире поле `geo`: у даних лежить
     // 'Олика' (стара назва Громади) і 'Світ', а читач знає три назви.
@@ -1238,27 +1241,26 @@ function paintCmNews(el, arts) {
       if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
     });
   }
-  // Нижня панель: замість трьох чіпів — один вхід у хаб.
-  const controls = document.getElementById('cm-news-controls');
-  if (controls) {
-    controls.innerHTML =
-      `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
-  }
+  // ⚠️ 04.08: нижньої панелі «Усі новини» тут БІЛЬШЕ НЕ МАЛЮЄМО — кнопка живе
+  // у заголовку секції (`data-cm-news-all` у розмітці `community.js`). Малювати
+  // її ще й звідси означало б дві однакові кнопки, одна з яких прихована.
   paintNewsBadge(arts);
 }
 
-// «N нових» у шапці віджета — на місці, де до 31.07 стояв фальшивий «LIVE».
+// «N нових» у заголовку секції — на місці, де до 31.07 стояв фальшивий «LIVE».
 // Окремою функцією, бо її кличе ще й подія `cstl-news-seen` (гасіння після хаба),
 // і перемальовувати заради цього весь віджет не треба.
+// ⚠️ 04.08 якір змінився: шапки-кнопки `.cm-news-board-bar` більше немає,
+// бейдж чіпляється до `.hm-kicker` секції новин.
 function paintNewsBadge(arts) {
-  const bar = document.querySelector('.cm-news-board-bar');
-  if (!bar) return;
+  const head = document.querySelector('#cm-news-board .hm-sec-head');
+  if (!head) return;
   const n = countNewCommunity(arts);
-  const old = bar.querySelector('.cm-news-new');
+  const old = head.querySelector('.cm-news-new');
   if (!n) { if (old) old.remove(); return; }
   const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
   if (old) old.outerHTML = html;
-  else bar.insertAdjacentHTML('beforeend', html);
+  else head.querySelector('.hm-kicker')?.insertAdjacentHTML('afterend', html);
 }
 
 // «1 нова · 2 нові · 5 нових» — українська має три форми, і «1 нових» різало б око.
@@ -1277,8 +1279,12 @@ export async function renderCommunityNews() {
   const arts = await ensureNewsLoaded();
   paintCmNews(el, arts);
 
-  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока
-  const section = document.querySelector('.cm-block--news');
+  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока.
+  // ⚠️ 04.08: якір `.cm-block--news` замінено на `#cm-news-board`. Клас зник
+  // разом зі старою розміткою головної, і делегат тихо перестав вішатись —
+  // тобто тап по новині НЕ відкривав би статтю. Спіймав стенд `news-widget.mjs`
+  // (саме той випадок, заради якого сторожі й тримають).
+  const section = document.getElementById('cm-news-board');
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   // 🔴 31.07: биті чужі фото → брендовий плейсхолдер 🏰. До цього обробник висів на
