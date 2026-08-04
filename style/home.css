@@ -480,6 +480,60 @@
 }
 .hm-fd-p-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+
+/* ══ КАРУСЕЛЬ НОВИН ПО КАТЕГОРІЯХ (04.08, вечір) ══════════════════════════════
+   Замовлення Вови: «щоб воно скролилось горизонтально по три карточки… з певним
+   інтервалом між категоріями Громада, Волинь, Україна та Світ».
+
+   🔴 ЧОМУ ЦЕ НЕ ТА КАРУСЕЛЬ, ЯКУ ПРИБИРАЛИ 31.07. Та була нескінченним
+   скролером: у вікні 465px ховалось 6933px вмісту, і побачити все можна було
+   лише гортанням. Тут рівно ТРИ сторінки по три картки — кожна показується
+   цілком і сама. Вміст не ховається, він чергується.
+
+   📐 Сторінка = 100% ширини доріжки, `scroll-snap` ловить її на місце. Прокрутку
+   виконує браузер (`scrollTo` зі `smooth`), а не наша анімація: інакше жест
+   пальцем і авто-рух борються за той самий елемент.
+   ⚠️ `overflow-y: hidden` обовʼязково: без нього горизонтальний скролер
+   перехоплює і вертикальний жест, і сторінка перестає гортатись пальцем по
+   картках новин. */
+.hm-nwrap { position: relative; }
+.hm-ntrack {
+  display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  /* ⚠️ Трек лишається В МЕЖАХ секції, без винесення за поля.
+     Перша версія робила `margin: 0 -20px; padding: 0 20px` — щоб сторінка
+     дорівнювала ширині ЕКРАНА. Заміряно: сторінка вийшла 322px замість 350,
+     тобто `flex-basis: 100%` рахувався не від того, від чого я думав, і
+     картки з обох боків обрізались. Простий варіант виявився і правильним:
+     сторінка = ширина секції, `scroll-snap` ставить її рівно. */
+  gap: var(--hm-pad);
+}
+.hm-ntrack::-webkit-scrollbar { display: none; }
+.hm-npage {
+  flex: 0 0 100%; scroll-snap-align: start; min-width: 0;
+}
+/* Назва категорії всередині сторінки — інакше при гортанні незрозуміло, що
+   змінилось: картки схожі, а підпис каже «це вже Волинь». */
+.hm-npage-h {
+  font: 700 10px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .72); text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+  margin-bottom: var(--hm-s2);
+}
+.hm-ndots { display: flex; justify-content: center; gap: 5px; margin-top: var(--hm-s3); }
+.hm-ndots i {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255, 255, 255, .32);
+  transition: width 200ms var(--hm-ease), background 200ms var(--hm-ease), border-radius 200ms var(--hm-ease);
+}
+.hm-ndots i.on { width: 16px; border-radius: 3px; background: rgba(255, 255, 255, .88); }
+@media (prefers-reduced-motion: reduce) {
+  .hm-ntrack { scroll-behavior: auto; }
+  .hm-ndots i { transition: none; }
+}
+
 /* ══ ОГОЛОШЕННЯ — РЯДОК (04.08, замість каруселі на корку) ════════════════════
    Фото 64px ліворуч, як у новин: на головній усі списки читаються однією
    формою, і око не перевчається на кожній секції. */
