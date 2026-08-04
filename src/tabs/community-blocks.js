@@ -1104,37 +1104,117 @@ function digestOf(arts) {
     .filter(Boolean);
 }
 
+// 🔴 04.08 (вечір) — КАРУСЕЛЬ ПО КАТЕГОРІЯХ, замовлення Вови: «щоб воно
+// скролилось горизонтально по три карточки протягом деякого часу з певним
+// інтервалом між категоріями Громада, Волинь, Україна та Світ».
+//
+// ⚠️ ЦЕ НЕ ПОВЕРНЕННЯ ТІЄЇ КАРУСЕЛІ, ЯКУ ПРИБИРАЛИ 31.07 — і різницю варто
+// назвати, бо на вигляд вони схожі. Там у вікні 465px ховалось 6933px вмісту:
+// скролер був НЕСКІНЧЕННИЙ, і побачити все можна було тільки гортанням.
+// Тут рівно ТРИ сторінки по три картки, кожна показується цілком і сама.
+// Тобто вміст не ховається — він чергується.
+//
+// 🛡 ЗАПОБІЖНИКИ РУХУ — ті самі, що в капсулах (`home-caps.js`):
+//   • `document.hidden` → стоп;  • поза екраном (`IntersectionObserver`) → стоп;
+//   • `prefers-reduced-motion` → авто-гортання не запускається взагалі;
+//   • дотик пальцем → пауза (людина читає — не смикаємо під рукою).
+const NEWS_PER_PAGE = 3;
+const NEWS_CYCLE_MS = 7000;   // довше за капсули: тут треба встигнути прочитати
+let _newsTimer = null, _newsIO = null;
+
 function paintCmNews(el, arts) {
-  const top = digestOf(arts);
-  if (!top.length) {
+  // Сторінка = категорія. Беремо по три найсвіжіші з кожної.
+  const pages = NEWS_GEO_GROUPS
+    .map(g => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) }))
+    .filter(p => p.items.length);
+
+  if (!pages.length) {
     el.innerHTML = '<div class="hm-empty">Новини зʼявляться, щойно вийде перша за сьогодні</div>';
-  } else {
-    // ТРИ ОДНАКОВІ компактні картки — по одній з кожного розділу.
-    //
-    // 🔴 ВЕЛИКУ ПЕРШУ З ФОТО ПРОБУВАЛИ І ВІДКИНУЛИ — вдруге за день, і обидва рази
-    // числом, а не на смак. Уранці 31.07 варіант «1 hero + 2 рядки» дав віджет
-    // 824px = 112.8% видимої зони. Увечері я зробив «велику» дешевшою (фото 200 →
-    // 120px, заголовок 2 рядки, без анонсу) — усе одно **547px = 74.8%**, тобто
-    // майже рівно те, з чим потік боровся вранці (було 567px = 77.6%).
-    // Вова подивився обидва варіанти скріншотами і вибрав компактний.
-    // ➡️ Велика картка з фото лишається — але в ХАБІ, де вона відкриває цілий
-    // екран новин і має на це право. Табло — це погляд, а не читання.
-    // 04.08: обгортку `.cm-news-top3` знято — контейнер `#cm-news-content` уже
-    // сам `.hm-list` (колонка з проміжком), а зайвий вузол лише плодив би
-    // правила розкладки у двох файлах.
-    el.innerHTML = newsCardsHtml(top, { variant: 'mini' });
-    // Мітка розділу — те, що робить дайджест дайджестом («щоб кожна новина несла
-    // сенс», Вова). Пишемо назву РОЗДІЛУ, а не сире поле `geo`: у даних лежить
-    // 'Олика' (стара назва Громади) і 'Світ', а читач знає три назви.
-    [...el.querySelectorAll('.nc')].forEach((node, i) => {
-      const b = node.querySelector('.nc-badge--geo');
-      if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
-    });
+    paintNewsBadge(arts);
+    return;
   }
-  // ⚠️ 04.08: нижньої панелі «Усі новини» тут БІЛЬШЕ НЕ МАЛЮЄМО — кнопка живе
-  // у заголовку секції (`data-cm-news-all` у розмітці `community.js`). Малювати
-  // її ще й звідси означало б дві однакові кнопки, одна з яких прихована.
+
+  el.innerHTML = `
+    <div class="hm-nwrap">
+      <div class="hm-ntrack" id="hm-ntrack">
+        ${pages.map(p => `
+          <section class="hm-npage" data-group="${escapeHtml(p.group)}">
+            <div class="hm-npage-h">${escapeHtml(p.group)}</div>
+            <div class="hm-list">${newsCardsHtml(p.items, { variant: 'mini' })}</div>
+          </section>`).join('')}
+      </div>
+      <div class="hm-ndots" aria-hidden="true">
+        ${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
+      </div>
+    </div>`;
+
+  // Мітка розділу на кожній картці — щоб і поза каруселлю було видно, звідки новина.
+  pages.forEach((p, pi) => {
+    const nodes = el.querySelectorAll(`.hm-npage[data-group="${CSS.escape(p.group)}"] .nc`);
+    nodes.forEach((node, i) => {
+      const b = node.querySelector('.nc-badge--geo');
+      if (b) b.textContent = geoGroupOf(p.items[i]) || b.textContent;
+    });
+  });
+
+  startNewsCarousel(el, pages.length);
   paintNewsBadge(arts);
+}
+
+// Авто-гортання сторінок. Прокрутку робить сам браузер (`scrollTo` зі `smooth`),
+// а не наша анімація: так жест пальцем і авто-рух не борються за той самий
+// елемент — це вже коштувало окремого блока роботи 02.08 у модалці оголошення.
+function startNewsCarousel(el, count) {
+  clearInterval(_newsTimer); _newsTimer = null;
+  if (_newsIO) { _newsIO.disconnect(); _newsIO = null; }
+
+  const track = el.querySelector('#hm-ntrack');
+  const dots = [...el.querySelectorAll('.hm-ndots i')];
+  if (!track || count < 2) return;
+
+  // Активна крапка — за реальним положенням прокрутки, а не за нашим лічильником:
+  // людина могла гортнути пальцем, і лічильник розійшовся б із тим, що на екрані.
+  const syncDots = () => {
+    const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    dots.forEach((d, j) => d.classList.toggle('on', j === i));
+  };
+  let raf = 0;
+  track.addEventListener('scroll', () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => { raf = 0; syncDots(); });
+  }, { passive: true });
+
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) return;
+
+  const step = () => {
+    if (document.hidden || track.dataset.paused === '1') return;
+    const w = track.clientWidth;
+    const next = Math.round(track.scrollLeft / Math.max(1, w)) + 1;
+    track.scrollTo({ left: (next >= count ? 0 : next) * w, behavior: 'smooth' });
+  };
+  _newsTimer = setInterval(step, NEWS_CYCLE_MS);
+
+  // Дотик — пауза на один повний цикл: людина читає саме цю сторінку.
+  let resume = null;
+  const pause = () => {
+    track.dataset.paused = '1';
+    clearTimeout(resume);
+    resume = setTimeout(() => { track.dataset.paused = '0'; }, NEWS_CYCLE_MS * 2);
+  };
+  track.addEventListener('touchstart', pause, { passive: true });
+  track.addEventListener('pointerdown', pause);
+
+  if ('IntersectionObserver' in window) {
+    _newsIO = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        // Поза екраном — стоп. Але не затираємо паузу від дотику.
+        if (!en.isIntersecting) track.dataset.paused = '1';
+        else if (!resume) track.dataset.paused = '0';
+      });
+    }, { threshold: 0 });
+    _newsIO.observe(track);
+  }
 }
 
 // «N нових» у заголовку секції — на місці, де до 31.07 стояв фальшивий «LIVE».

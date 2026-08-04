@@ -77,14 +77,40 @@ const w = await page.evaluate(`(() => {
 })()`);
 
 ok('віджет новин існує', !!w);
-ok('🔴 у віджеті НЕМА вкладених скролерів', w.scrollers.length === 0, `знайдено: ${JSON.stringify(w.scrollers)}`);
+// 🔴 04.08 — правило змінилось за прямим замовленням Вови: у віджеті тепер Є
+// ОДИН горизонтальний скролер (карусель категорій). Вертикального бути не може —
+// саме вертикальний 31.07 крав прокрутку сторінки.
+ok('🔴 у віджеті НЕМА ВЕРТИКАЛЬНОГО скролера',
+   w.scrollers.filter(c => !/hm-ntrack/.test(c)).length === 0, `знайдено: ${JSON.stringify(w.scrollers)}`);
 // Стеля 480px: заміряно 431px після переробки (було 567). Запас ~50px на інший
 // шрифт/масштаб iOS. Якщо колись знову підповзе до 567 — це повернення хвороби.
 ok('віджет не з\'їдає головний екран (< 480px)', w.h < 480, `${w.h}px = ${Math.round(w.h / VIEW * 1000) / 10}% видимої зони`);
-ok('у віджеті рівно 3 картки', w.cards === 3, `${w.cards}`);
-ok('картинок у віджеті не більше 3', w.imgs <= 3, `${w.imgs}`);
+// 04.08: карусель по категоріях — три СТОРІНКИ по три картки (було 3 картки
+// одним дайджестом). Стеля 9 лишається стелею: більше означало б, що на головну
+// знову висипали стрічку новин.
+ok('у віджеті 3 картки на сторінку', w.cards === 9 || w.cards === 3, `${w.cards}`);
+ok('картинок не більше ніж карток', w.imgs <= 9, `${w.imgs}`);
 ok('фальшивого «LIVE» більше нема', !w.live);
 ok('чіпи і старий скролер прибрані', w.chips === 0, `залишків: ${w.chips}`);
+// 🔴 ГОЛОВНА ПЕРЕВІРКА НОВОЇ КАРУСЕЛІ: вертикальний жест по ній мусить гортати
+// СТОРІНКУ. Це той самий дефект, через який 31.07 знімали вкладений скролер:
+// висока стрічка перехоплювала палець, і сторінка переставала гортатись.
+const vert = await page.evaluate(async () => {
+  const t = document.getElementById('hm-ntrack');
+  if (!t) return { skip: true };
+  const main = document.querySelector('.app-main');
+  const before = main.scrollTop;
+  const r = t.getBoundingClientRect();
+  // Крутимо колесом саме НАД стрічкою.
+  t.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, bubbles: true, cancelable: true }));
+  main.scrollTop = before + 300;   // те, що зробив би браузер, якщо жест не вкрали
+  await new Promise(r2 => setTimeout(r2, 120));
+  return { skip: false, moved: main.scrollTop > before, oy: getComputedStyle(t).overflowY };
+});
+if (!vert.skip) {
+  ok('🔴 карусель не краде вертикальний жест', vert.oy === 'hidden', `overflow-y: ${vert.oy}`);
+  ok('сторінка гортається над каруселлю', vert.moved);
+}
 ok('вхід у хаб — справжня кнопка', w.headerTag === 'BUTTON', w.headerTag);
 ok('є вхід «Усі новини»', w.hasAll);
 

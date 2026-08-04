@@ -11519,22 +11519,97 @@
     // дедуп — раніше байт-в-байт копія з board.js PHONE_ICON_SVG
   };
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
-  function digestOf(arts) {
-    return NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g)[0]).filter(Boolean);
-  }
+  var NEWS_PER_PAGE = 3;
+  var NEWS_CYCLE_MS = 7e3;
+  var _newsTimer = null;
+  var _newsIO = null;
   function paintCmNews(el, arts) {
-    const top = digestOf(arts);
-    if (!top.length) {
+    const pages2 = NEWS_GEO_GROUPS.map((g) => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) })).filter((p) => p.items.length);
+    if (!pages2.length) {
       el.innerHTML = '<div class="hm-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0438\u0439\u0434\u0435 \u043F\u0435\u0440\u0448\u0430 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>';
-    } else {
-      el.innerHTML = newsCardsHtml(top, { variant: "mini" });
-      [...el.querySelectorAll(".nc")].forEach((node, i) => {
+      paintNewsBadge(arts);
+      return;
+    }
+    el.innerHTML = `
+    <div class="hm-nwrap">
+      <div class="hm-ntrack" id="hm-ntrack">
+        ${pages2.map((p) => `
+          <section class="hm-npage" data-group="${escapeHtml(p.group)}">
+            <div class="hm-npage-h">${escapeHtml(p.group)}</div>
+            <div class="hm-list">${newsCardsHtml(p.items, { variant: "mini" })}</div>
+          </section>`).join("")}
+      </div>
+      <div class="hm-ndots" aria-hidden="true">
+        ${pages2.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
+      </div>
+    </div>`;
+    pages2.forEach((p, pi) => {
+      const nodes = el.querySelectorAll(`.hm-npage[data-group="${CSS.escape(p.group)}"] .nc`);
+      nodes.forEach((node, i) => {
         const b = node.querySelector(".nc-badge--geo");
         if (b)
-          b.textContent = geoGroupOf(top[i]) || b.textContent;
+          b.textContent = geoGroupOf(p.items[i]) || b.textContent;
       });
-    }
+    });
+    startNewsCarousel(el, pages2.length);
     paintNewsBadge(arts);
+  }
+  function startNewsCarousel(el, count) {
+    clearInterval(_newsTimer);
+    _newsTimer = null;
+    if (_newsIO) {
+      _newsIO.disconnect();
+      _newsIO = null;
+    }
+    const track = el.querySelector("#hm-ntrack");
+    const dots = [...el.querySelectorAll(".hm-ndots i")];
+    if (!track || count < 2)
+      return;
+    const syncDots = () => {
+      const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+      dots.forEach((d, j) => d.classList.toggle("on", j === i));
+    };
+    let raf = 0;
+    track.addEventListener("scroll", () => {
+      if (raf)
+        return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        syncDots();
+      });
+    }, { passive: true });
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (still)
+      return;
+    const step = () => {
+      if (document.hidden || track.dataset.paused === "1")
+        return;
+      const w = track.clientWidth;
+      const next = Math.round(track.scrollLeft / Math.max(1, w)) + 1;
+      track.scrollTo({ left: (next >= count ? 0 : next) * w, behavior: "smooth" });
+    };
+    _newsTimer = setInterval(step, NEWS_CYCLE_MS);
+    let resume = null;
+    const pause = () => {
+      track.dataset.paused = "1";
+      clearTimeout(resume);
+      resume = setTimeout(() => {
+        track.dataset.paused = "0";
+      }, NEWS_CYCLE_MS * 2);
+    };
+    track.addEventListener("touchstart", pause, { passive: true });
+    track.addEventListener("pointerdown", pause);
+    if ("IntersectionObserver" in window) {
+      _newsIO = new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting)
+            track.dataset.paused = "1";
+          else if (!resume)
+            track.dataset.paused = "0";
+        });
+      }, { threshold: 0 });
+      _newsIO.observe(track);
+    }
   }
   function paintNewsBadge(arts) {
     const head = document.querySelector("#cm-news-board .hm-sec-head");
@@ -11691,18 +11766,6 @@
       <div id="hm-fund-body"></div>
     </section>
 
-    <!-- \u2550\u2550 \u0423 \u0421\u0422\u0420\u0406\u0427\u0426\u0406 \u0413\u0420\u041E\u041C\u0410\u0414\u0418 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-         \u{1F195} 04.08. \u0414\u0430\u0439\u0434\u0436\u0435\u0441\u0442 \u0421\u0442\u0440\u0456\u0447\u043A\u0438 \u2014 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0441\u043E\u0446\u0456\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043C\u0430\u0439\u0434\u0430\u043D\u0447\u0438\u043A\u0430
-         \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u0414\u043E \u0446\u044C\u043E\u0433\u043E \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0457 \u041D\u0415 \u0411\u0423\u041B\u041E \u0412\u0418\u0414\u041D\u041E, \u0449\u043E \u0442\u0430\u043C \u0443\u0437\u0430\u0433\u0430\u043B\u0456 \u0449\u043E\u0441\u044C
-         \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F. \u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u0430\u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0431\u0430\u0437\u0438 \u2192 \u0441\u0435\u043A\u0446\u0456\u0457 \u043D\u0435\u043C\u0430\u0454 \u0437\u043E\u0432\u0441\u0456\u043C. -->
-    <section id="hm-feed" class="hm-sec" hidden>
-      <div class="hm-sec-head">
-        <h2 class="hm-kicker">\u0423 \u0441\u0442\u0440\u0456\u0447\u0446\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">\u0421\u0442\u0440\u0456\u0447\u043A\u0430 \u2192</button>
-      </div>
-      <div id="hm-feed-body" class="hm-list"></div>
-    </section>
-
     <!-- \u2550\u2550 \u041D\u041E\u0412\u0418\u041D\u0418 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
          \u0413\u043E\u043B\u043E\u0432\u043D\u0430 \u0442\u043E\u0447\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0434\u043E \u043D\u043E\u0432\u0438\u043D: \u043E\u043A\u0440\u0435\u043C\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \xAB\u041D\u043E\u0432\u0438\u043D\u0438\xBB \u043D\u0435\u043C\u0430\u0454.
          \xAB\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438\xBB \u2192 \u043D\u0430\u044F\u0432\u043D\u0438\u0439 openNewsHub \u0411\u0415\u0417 \u0437\u043C\u0456\u043D\u0438 \u0439\u043E\u0433\u043E \u043B\u043E\u0433\u0456\u043A\u0438. -->
@@ -11715,6 +11778,18 @@
         ${skeletonRows(3)}
       </div>
       <div id="cm-news-controls" hidden></div>
+    </section>
+
+    <!-- \u2550\u2550 \u0423 \u0421\u0422\u0420\u0406\u0427\u0426\u0406 \u0413\u0420\u041E\u041C\u0410\u0414\u0418 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+         \u{1F195} 04.08. \u0414\u0430\u0439\u0434\u0436\u0435\u0441\u0442 \u0421\u0442\u0440\u0456\u0447\u043A\u0438 \u2014 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0441\u043E\u0446\u0456\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043C\u0430\u0439\u0434\u0430\u043D\u0447\u0438\u043A\u0430
+         \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u0414\u043E \u0446\u044C\u043E\u0433\u043E \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0457 \u041D\u0415 \u0411\u0423\u041B\u041E \u0412\u0418\u0414\u041D\u041E, \u0449\u043E \u0442\u0430\u043C \u0443\u0437\u0430\u0433\u0430\u043B\u0456 \u0449\u043E\u0441\u044C
+         \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F. \u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u0430\u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0431\u0430\u0437\u0438 \u2192 \u0441\u0435\u043A\u0446\u0456\u0457 \u043D\u0435\u043C\u0430\u0454 \u0437\u043E\u0432\u0441\u0456\u043C. -->
+    <section id="hm-feed" class="hm-sec" hidden>
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">\u0423 \u0441\u0442\u0440\u0456\u0447\u0446\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
+        <button class="hm-more" type="button" data-switch-tab="shotam">\u0421\u0442\u0440\u0456\u0447\u043A\u0430 \u2192</button>
+      </div>
+      <div id="hm-feed-body" class="hm-list"></div>
     </section>
 
     <!-- \u2550\u2550 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
