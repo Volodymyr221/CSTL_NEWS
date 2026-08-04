@@ -41,7 +41,7 @@ CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md
 
 Згідно з `NEW_SESSION_PROMPT.md`, прочитай у такому порядку:
 
-1. `CSTL NEWS VOVA/HOT_RULES.md` — 8 болючих правил що порушуються найчастіше (читай ПЕРШИМ)
+1. `CSTL NEWS VOVA/HOT_RULES.md` — 11 болючих правил що порушуються найчастіше (читай ПЕРШИМ)
 2. `CSTL NEWS VOVA/START_HERE.md`
 3. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md` — поточний стан: що зроблено, що в процесі, що далі
 4. `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md` — майстер-список задач по вкладках
