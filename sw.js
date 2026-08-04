@@ -22,6 +22,7 @@ const STATIC_ASSETS = [
   './style/account.css',
   './style/messages.css',
   './style/sidebar.css',
+  './style/home.css',          // 🆕 04.08 — головна як Home Dashboard
   './bundle.js',
   './logo.png',
   './icons/castle-icon.png',   // лого центральної кнопки ГРОМАДА — precache, щоб не зникало після bump CACHE
