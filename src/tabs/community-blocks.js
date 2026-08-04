@@ -1056,70 +1056,11 @@ const CONTACT_COLORS = {
   utility:   '#B45309',
 };
 
-export async function renderContactsBlock() {
-  const el = document.getElementById('cm-contacts-content');
-  if (!el) return;
-
-  try {
-    const res  = await fetch('./data/community.json');
-    const data = await res.json();
-    const list = data.contacts || [];
-
-    if (!list.length) {
-      el.innerHTML = '<div class="hm-empty">Контактів немає</div>';
-      return;
-    }
-
-    const telOf = p => p.replace(/[^\d+]/g, '');
-
-    // Г-10 (Рома 08.07): МІСЦЕВІ вгорі (головна цінність громади), ЕКСТРЕНІ внизу
-    // компактно (101/102/103 усі знають). Блок нижчий. «Швидка 103» (group hero)
-    // тепер звичайна плитка серед екстрених — без великої картки.
-    const local     = list.filter(c => c.group === 'local');
-    const emergency = list.filter(c => c.group === 'emergency' || c.group === 'hero' || c.priority === 'critical');
-    // Порядок екстрених (Вова 14.07): 101 → 102 → 103 → 104 → 112, далі решта
-    // (Волиньобленерго) у порядку даних. Сортуємо в коді — не залежить від даних.
-    const EMERG_ORDER = ['101', '102', '103', '104', '112'];
-    const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
-    emergency.sort((a, b) => emergRank(a) - emergRank(b));
-
-    // ── 🔴 04.08: ТРИ ЕКСТРЕНІ НА ВИДНОТІ, РЕШТА ПІД РОЗКРИТТЯМ ────────────────
-    // Було 427px = 58.4% видимої зони на статичний довідник, потрібний кілька
-    // разів на рік — найбільший «мертвий» блок сторінки (діагноз №3 аудиту).
-    //
-    // 🔑 ЧОМУ САМЕ <details>, А НЕ СВІЙ ПЕРЕМИКАЧ: працює без JS, дає клавіатуру
-    // і читача екрана безкоштовно, і — головне — не тримає стану в модулі.
-    // Свій стан тут злітав би: `initCommunity()` перебудовує #cm-content цілком.
-    //
-    // ⚠️ Нагорі саме ЕКСТРЕНІ, а не місцеві (це зміна порядку від 08.07):
-    // довідник відкривають у двох випадках — «треба подзвонити в сільраду»
-    // (людина шукає свідомо, розкриє) і «щось сталося» (секунди). Другий
-    // випадок виграє.
-    const EMERG_TOP = 3;
-    const topEmerg = emergency.slice(0, EMERG_TOP);
-    const restAll  = [...emergency.slice(EMERG_TOP), ...local];
-
-    const rowHtml = c => `
-      <a class="hm-card hm-card--tap hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
-        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-        <span class="hm-tel-tx">
-          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
-          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
-        </span>
-      </a>`;
-
-    const topHtml = topEmerg.map(rowHtml).join('');
-    const restHtml = restAll.length ? `
-      <details class="hm-tel-more">
-        <summary class="hm-tel-sum">Усі телефони громади (${restAll.length})</summary>
-        <div class="hm-list hm-tel-rest">${restAll.map(rowHtml).join('')}</div>
-      </details>` : '';
-
-    el.innerHTML = topHtml + restHtml;
-  } catch {
-    el.innerHTML = '<div class="hm-empty">Контакти недоступні</div>';
-  }
-}
+// 🗑 renderContactsBlock ПЕРЕЇХАЛА 04.08 у `src/tabs/home-contacts.js`.
+// Причина — не обсяг коду, а зміна СУТІ блока: екстрені служби (101/102/103)
+// відділено від контактів громади, бо під заголовком «Телефони громади» вони
+// казали неправду (скарга Вови). Разом із цим зʼявились категорії, розкриття
+// і швидкі дії — це вже окрема система, а не рендер списку.
 
 // ── Блок НОВИНИ у вкладці «Громада» ──────────────────────────────────────────
 // 🔴 ПЕРЕРОБЛЕНО 31.07 (потік /byyou). Було: 3 кнопки-фільтри + ПРОКРУТКА карток
