@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Макети рядка входу в розділ</title>
+
+<!-- Справжній style.css — той самий каскад, що в застосунку (див. news-tile.html). -->
+<link rel="stylesheet" href="../../../style.css">
+
+<style>
+  html, body { margin: 0; height: 100%; background: #2A2520; }
+  .mk { position: relative; min-height: 100vh; }
+
+  /* Форма плитки — ВАРІАНТ Г, уже вибраний Вовою. Макет входу показується
+     поверх уже прийнятого рішення, а не поверх старого вигляду. */
+  .mk .nc--tile {
+    border-radius: var(--hm-r-card);
+    border: 1px solid var(--board-line);
+    box-shadow: var(--hm-shadow);
+    overflow: hidden;
+  }
+
+  /* ── А — КАПС, ТИХІШИЙ ЗА НАЗВУ ───────────────────────────────────────────
+     Найпряміше прочитання замовлення: просто капс. Розводимо лише розміром і
+     яскравістю. 🔴 Саме тут і живе ризик «двох капсів поруч». */
+  .mk--a .hm-more {
+    font: 800 11px/1 system-ui, sans-serif;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(255,255,255,.92);
+  }
+
+  /* ── Б — КАПС-ЧІП ─────────────────────────────────────────────────────────
+     Вхід отримує ВЛАСНУ ПОВЕРХНЮ і стає обʼєктом, а назва лишається текстом.
+     Тоді два капси не сперечаються: різні не букви, а РІВНІ. Плюс площа
+     дотику росте — а це буквально те, що просив Вова («легко перейти»). */
+  .mk--b .hm-more {
+    font: 800 10.5px/1 system-ui, sans-serif;
+    letter-spacing: .11em; text-transform: uppercase;
+    color: #fff;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.26);
+    border-radius: 999px;
+    padding: 7px 12px; margin: -3px 0;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .mk--b .hm-more:active { background: rgba(255,255,255,.26); opacity: 1; }
+
+  /* ── В — ПЕРЕВЕРНУТА ІЄРАРХІЯ ─────────────────────────────────────────────
+     Назва секції стає гучною (15px, білою), вхід — тихим капсом 10px. Обидва
+     капсом, але кеглі рознесені так, що читаються як заголовок і посилання,
+     а не як дві однакові мітки. */
+  .mk--c .hm-kicker {
+    font: 800 15px/1 system-ui, sans-serif;
+    letter-spacing: .06em;
+    color: #fff;
+  }
+  .mk--c .hm-more {
+    font: 700 10px/1 system-ui, sans-serif;
+    letter-spacing: .13em; text-transform: uppercase;
+    color: rgba(255,255,255,.72);
+  }
+
+  /* ── Г — ВХІД СМУГОЮ ПІД БЛОКОМ ───────────────────────────────────────────
+     Вхід іде з рядка назви геть — двох капсів поруч не буває взагалі. Смуга
+     на всю ширину: найбільша площа дотику з усіх варіантів.
+     🔴 Ціна названа чесно: +44px на КОЖЕН блок. */
+  .mk--d .hm-sec-head .hm-more { display: none; }
+  .mk--d .hm-allrow {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; margin-top: var(--hm-s3);
+    padding: 12px 0; border: 1px solid rgba(255,255,255,.22);
+    border-radius: var(--hm-r-card); background: rgba(255,255,255,.10);
+    font: 800 11px/1 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase;
+    color: #fff; appearance: none; -webkit-appearance: none; cursor: pointer;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .mk:not(.mk--d) .hm-allrow { display: none; }
+
+  .mk-tag {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 5;
+    font: 700 11px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(255,255,255,.9); text-align: center; padding: 10px 0;
+    background: rgba(0,0,0,.35);
+  }
+</style>
+</head>
+<body>
+<div id="cm-content" class="hm mk">
+  <div class="mk-tag" id="tag"></div>
+  <div class="hm-bg" aria-hidden="true"><img src="../../../photos/olyka-bg.jpg" alt=""></div>
+  <div style="height:52px"></div>
+
+  <!-- НОВИНИ -->
+  <section id="cm-news-board" class="hm-sec">
+    <div class="hm-sec-head">
+      <h2 class="hm-kicker">Новини</h2>
+      <button class="hm-more" type="button">Усі новини →</button>
+    </div>
+    <div id="cm-news-content" class="hm-list">
+      <div class="hm-nwrap">
+        <div class="hm-ncat">Громада</div>
+        <div class="hm-ntrack" id="hm-ntrack"></div>
+        <div class="hm-ndots"><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+    <button class="hm-allrow" type="button">Усі новини →</button>
+  </section>
+
+  <!-- ОГОЛОШЕННЯ -->
+  <section class="hm-sec">
+    <div class="hm-sec-head">
+      <h2 class="hm-kicker">Оголошення</h2>
+      <button class="hm-more" type="button">Дошка →</button>
+    </div>
+    <div class="hm-list" id="mk-board"></div>
+    <button class="hm-allrow" type="button">Уся дошка →</button>
+  </section>
+
+  <!-- АВТОБУСИ -->
+  <section class="hm-sec">
+    <div class="hm-sec-head">
+      <h2 class="hm-kicker">Автобуси</h2>
+      <button class="hm-more" type="button">Розклад →</button>
+    </div>
+    <div class="hm-list" id="mk-bus"></div>
+    <button class="hm-allrow" type="button">Увесь розклад →</button>
+  </section>
+</div>
+
+<script>
+  const NEWS = [
+    { img: '../../../photos/olyka.day-1.jpg', cat: 'Культура', src: 'Район.Ківерці',
+      title: 'Культурна спадщина та креативні індустрії: в Олиці стартує новий проєкт',
+      exc: 'У межах реалізації Швейцарсько-українського проєкту UCORD громада отримає підтримку.',
+      time: '31 липня' },
+    { img: '../../../photos/olyka.evening-1.jpg', cat: 'Громада', src: 'Волинь Post',
+      title: 'Завершено ремонт дороги на вулиці Луцькій',
+      exc: 'В межах програми відновлення інфраструктури підрядник здав ділянку завдовжки 1,2 км.',
+      time: '30 липня' },
+  ];
+  document.getElementById('hm-ntrack').innerHTML = NEWS.map(it => `
+    <article class="nc nc--tile">
+      <img class="nc-img" src="${it.img}" alt="">
+      <div class="nc-body">
+        <div class="nc-meta"><span class="nc-badge nc-badge--cat">${it.cat}</span><span class="nc-src">${it.src}</span></div>
+        <h2 class="nc-title">${it.title}</h2>
+        <p class="nc-excerpt">${it.exc}</p>
+        <div class="nc-foot">${it.time}</div>
+      </div>
+    </article>`).join('');
+
+  // Оголошення — та сама розмітка `.hm-card.hm-ad`, що в застосунку.
+  document.getElementById('mk-board').innerHTML = [
+    { ic: '🏠', cat: 'Нерухомість', name: 'Продам будинок у центрі Олики', loc: 'Олика', t: '2 год' },
+    { ic: '🚜', cat: 'Послуги', name: 'Послуги трактора, оранка городів', loc: 'Олика', t: '5 год' },
+  ].map(a => `
+    <article class="hm-card hm-card--tap hm-ad">
+      <span class="hm-ad-ph hm-ad-ph--none">${a.ic}</span>
+      <span class="hm-ad-body">
+        <span class="cm-board-cat hm-ad-cat">${a.ic} ${a.cat}</span>
+        <span class="hm-ad-name">${a.name}</span>
+        <span class="hm-ad-meta"><span class="hm-ad-loc">${a.loc}</span><span>${a.t}</span></span>
+      </span>
+    </article>`).join('');
+
+  document.getElementById('mk-bus').innerHTML = `
+    <article class="hm-card hm-card--tap" style="padding:14px 16px">
+      <div style="font:700 15px/1.2 system-ui">Олика → Луцьк</div>
+      <div style="font:400 13px/1.4 system-ui;color:#6E727A;margin-top:4px">Найближчий рейс о 14:20 · через 38 хв</div>
+    </article>`;
+
+  const v = (new URLSearchParams(location.search).get('v') || 'a').toLowerCase();
+  document.getElementById('cm-content').classList.add('mk--' + v);
+  document.getElementById('tag').textContent =
+    ({ a: 'А — капс, тихіший за назву', b: 'Б — капс-чіп', c: 'В — перевернута ієрархія',
+       d: 'Г — вхід смугою під блоком' })[v] || v;
+</script>
+</body>
+</html>

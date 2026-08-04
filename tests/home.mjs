@@ -144,6 +144,71 @@ const ev = await p.evaluate(()=>({
 ok('🔴 секції подій на головній немає', !ev.sec && !ev.cont);
 ok('🔴 кнопки «Афіша», що вела у Стрічку, немає', !ev.afisha);
 
+// 5.15 🔴 ПЛИТКА НОВИНИ МАЄ ВЛАСНУ ПОВЕРХНЮ (04.08).
+// Скарга Вови: «чому вони квадратні?». Заміряно тоді: радіус 0, обідок 0,
+// тінь none — бо спільне правило поверхні в `news-card.css` охоплювало три
+// варіанти, а четвертий не потрапив у жодне, і `home.css` виставляв колір
+// обідка, якого не існує. Це вже ТРЕТІЙ випадок тієї самої хвороби (01.08 те
+// саме сталось із `.nc--mini`), тому міряємо НАСЛІДОК на живій сторінці, а не
+// наявність правила у файлі.
+// ⚠️ Стрічку спершу ставимо в нуль: карусель гортається сама, і перша картка
+// встигає виїхати за ліве поле — вимір тоді бреше (спіймано власним
+// інструментом `tests/tools/news-tile-audit.mjs`).
+await p.$eval('#cm-news-board', el => el.scrollIntoView({ block: 'center' }));
+await p.$eval('#hm-ntrack', el => { el.scrollLeft = 0; });
+await p.waitForTimeout(400);
+const tile = await p.evaluate(()=>{
+  const c = document.querySelector('#hm-ntrack > .nc');
+  if (!c) return null;
+  const s = getComputedStyle(c);
+  const img = c.querySelector('.nc-img');
+  return {
+    radius: parseFloat(s.borderTopLeftRadius) || 0,
+    border: parseFloat(s.borderTopWidth) || 0,
+    shadow: s.boxShadow && s.boxShadow !== 'none',
+    clips:  s.overflow === 'hidden',
+    // Гео-мітка дублювала підпис `.hm-ncat` рівно над стрічкою.
+    geo:    !!c.querySelector('.nc-badge--geo:not([hidden])') &&
+            getComputedStyle(c.querySelector('.nc-badge--geo')).display !== 'none',
+    imgR:   img ? parseFloat(getComputedStyle(img).borderTopLeftRadius) || 0 : -1,
+  };
+});
+ok('🔴 плитка новини НЕ квадратна (радіус > 0)', tile && tile.radius > 0, tile ? `${tile.radius}px` : 'плитки нема');
+ok('🔴 у плитки є обідок (не лише його колір)', tile && tile.border > 0, tile ? `${tile.border}px` : '—');
+ok('плитка має тінь головної', tile && tile.shadow);
+ok('🔴 картка обрізає фото (інакше з-під кута визирне прямий ріг)', tile && tile.clips);
+ok('фото власного радіуса не має — його дає картка', tile && tile.imgR === 0, tile ? `${tile.imgR}px` : '—');
+ok('🔴 гео-мітка на плитці не дублює підпис стрічки', tile && !tile.geo);
+
+// 5.16 🔴 ВХІД У РОЗДІЛ — КАПСОМ У КОЖНІЙ СЕКЦІЇ (замовлення Вови 04.08:
+// «назву усі новини треба зробити великими буквами, і так в кожному блоці»).
+// Міряємо обчислений `text-transform`, а не текст у розмітці: капс, зроблений
+// руками в рядку («УСІ НОВИНИ»), виглядав би так само, але розʼїхався б у
+// першій же секції, яку додадуть пізніше.
+const heads = await p.evaluate(()=>
+  [...document.querySelectorAll('#cm-content .hm-sec')]
+    .filter(s => !s.hasAttribute('hidden'))
+    .map(s => {
+      const m = s.querySelector('.hm-more');
+      if (!m) return { sec: s.id, none: true };
+      const cs = getComputedStyle(m);
+      const r = m.getBoundingClientRect();
+      return {
+        sec: s.id, caps: cs.textTransform === 'uppercase',
+        surface: cs.backgroundColor !== 'rgba(0, 0, 0, 0)',
+        area: Math.round(r.width * r.height),
+      };
+    }));
+const withMore = heads.filter(h => !h.none);
+ok('🔴 вхід у розділ капсом у КОЖНІЙ секції, де він є',
+   withMore.length > 0 && withMore.every(h => h.caps),
+   withMore.map(h => `${h.sec}:${h.caps?'капс':'НІ'}`).join(' '));
+ok('вхід має власну поверхню (не другий капс у рядку)',
+   withMore.every(h => h.surface));
+// Порівнюємо з тим, що було до переробки: 116×19 = 2204px².
+ok('площа дотику входу більша за колишні 2204px²',
+   withMore.every(h => h.area > 2204), withMore.map(h => h.area + 'px²').join(' '));
+
 // 5.2 🔴 ФОТО НА ФОНІ НЕ НАКРИВАЄ ВМІСТ.
 // Перша версія мала z-index: 0 — і фото лягло ПОВЕРХ усього непозиціонованого
 // (шапка, назви секцій зникли). Міряємо НАСЛІДОК: що реально під пальцем у

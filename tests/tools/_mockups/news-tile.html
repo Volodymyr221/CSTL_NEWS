@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Макети форми плитки новини</title>
+
+<!-- 🔴 ПІДКЛЮЧЕНО СПРАВЖНІЙ style.css, а не бутафорські копії правил.
+     Причина: 04.08 скляні капсули налаштували на мокапі зі світлішим верхом,
+     а на реальному темному фоні контраст вийшов 1.15 — тобто макет на власному
+     CSS показав те, чого на сторінці не буде. Тут каскад той самий: base.css →
+     news-card.css → home.css у тому ж порядку, що в застосунку. Побачене
+     дорівнює тому, що вийде. -->
+<link rel="stylesheet" href="../../../style.css">
+
+<style>
+  /* Обгортка макета — імітує вкладку «Громада» без застосунку. */
+  html, body { margin: 0; height: 100%; background: #2A2520; }
+  body { overflow: hidden; }
+  .mk { position: relative; min-height: 100vh; }
+
+  /* ── ВАРІАНТ А — «як картка Дошки» ────────────────────────────────────────
+     Та сама поверхня, що в `.hm-card` (оголошення й автобуси на цій же
+     сторінці): радіус 14, обідок 1px, тіні немає. Нових мов не додає. */
+  .mk--a .nc--tile {
+    border-radius: var(--hm-r-card);
+    border: 1px solid var(--board-line);
+    overflow: hidden;
+  }
+
+  /* ── ВАРІАНТ Б — «підняте скло» ───────────────────────────────────────────
+     Більший радіус, обідка немає, працює двошарова тінь: картка ЛЕЖИТЬ НА
+     фото, а не вирізана з нього. Тінь підсилена проти токена головної, бо той
+     калібрований під світлий фон і на фото його просто не видно. */
+  .mk--b .nc--tile {
+    border-radius: 18px;
+    border: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18), 0 12px 28px rgba(0,0,0,.28);
+  }
+
+  /* ── ВАРІАНТ В — «фото в рамці» ───────────────────────────────────────────
+     Два вкладені радіуси: картка 16, фото всередині 10 з відступом. Читається
+     як доглянута продуктова картка. Ціна названа чесно: фото вужчає на 16px і
+     втрачає майже 10% площі, а елементів, які можуть розʼїхатись, стає більше. */
+  .mk--c .nc--tile {
+    border-radius: 16px;
+    border: 1px solid var(--board-line);
+    overflow: hidden;
+    padding: 8px 8px 0;
+  }
+  .mk--c .nc--tile .nc-img { border-radius: var(--hm-r-tile); }
+  .mk--c .nc--tile .nc-body { padding: 10px 4px 12px; }
+
+  /* ── ВАРІАНТ Г — «та сама картка, що вся головна» ─────────────────────────
+     🔴 Знайдено вже ПІСЛЯ перших трьох варіантів, вимірюванням: примітив
+     `.hm-card` (оголошення й автобуси на цій же сторінці) має радіус 14 +
+     обідок 1px + двошарову тінь `--hm-shadow`. Тобто «А» був майже правильний,
+     але без тіні — і саме тіні бракувало, щоб новина стала тим самим обʼєктом,
+     що сусідні блоки, а не схожим на нього.
+     Це не четвертий смак, це відсутність четвертої мови. */
+  .mk--d .nc--tile {
+    border-radius: var(--hm-r-card);
+    border: 1px solid var(--board-line);
+    box-shadow: var(--hm-shadow);
+    overflow: hidden;
+  }
+
+  /* Підпис варіанта — тільки в макеті. */
+  .mk-tag {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 5;
+    font: 700 11px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(255,255,255,.9); text-align: center; padding: 10px 0;
+    background: rgba(0,0,0,.35);
+  }
+</style>
+</head>
+<body>
+<div id="cm-content" class="hm mk">
+  <div class="mk-tag" id="tag"></div>
+
+  <!-- Фото на фоні — те саме, що на живій сторінці. -->
+  <div class="hm-bg" aria-hidden="true"><img src="../../../photos/olyka-bg.jpg" alt=""></div>
+
+  <div style="height:58px"></div>
+
+  <section id="cm-news-board" class="hm-sec">
+    <div class="hm-sec-head">
+      <h2 class="hm-kicker">Новини</h2>
+      <button class="hm-more" type="button">Усі новини →</button>
+    </div>
+    <div id="cm-news-content" class="hm-list">
+      <div class="hm-nwrap">
+        <div class="hm-ncat">Громада</div>
+        <div class="hm-ntrack" id="hm-ntrack"></div>
+        <div class="hm-ndots"><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Дані навмисно РЕАЛЬНОГО вигляду: довгі кириличні заголовки й описи — саме
+  // на них ламається розкладка, а не на «Lorem ipsum».
+  const ITEMS = [
+    { img: '../../../photos/olyka.day-1.jpg', cat: 'Культура', src: 'Район.Ківерці',
+      title: 'Культурна спадщина та креативні індустрії: в Олиці стартує новий проєкт',
+      exc: 'У межах реалізації Швейцарсько-українського проєкту UCORD громада отримає підтримку.',
+      time: '31 липня' },
+    { img: '../../../photos/olyka.evening-1.jpg', cat: 'Громада', src: 'Волинь Post',
+      title: 'Завершено ремонт дороги на вулиці Луцькій',
+      exc: 'В межах програми відновлення інфраструктури підрядник здав ділянку завдовжки 1,2 км.',
+      time: '30 липня' },
+    { img: '', cat: 'Освіта', src: 'Конкурент',
+      title: 'Школа Олики отримала нове обладнання для кабінету фізики',
+      exc: 'Обладнання придбали коштом обласного бюджету та благодійного внеску мешканців.',
+      time: '29 липня' },
+  ];
+
+  const card = it => `
+    <article class="nc nc--tile">
+      ${it.img
+        ? `<img class="nc-img" src="${it.img}" alt="">`
+        : `<div class="nc-img nc-img--mono" aria-hidden="true">К</div>`}
+      <div class="nc-body">
+        <div class="nc-meta">
+          <span class="nc-badge nc-badge--cat">${it.cat}</span>
+          <span class="nc-src">${it.src}</span>
+        </div>
+        <h2 class="nc-title">${it.title}</h2>
+        <p class="nc-excerpt">${it.exc}</p>
+        <div class="nc-foot">${it.time}</div>
+      </div>
+    </article>`;
+
+  document.getElementById('hm-ntrack').innerHTML = ITEMS.map(card).join('');
+
+  const v = (new URLSearchParams(location.search).get('v') || 'a').toLowerCase();
+  document.getElementById('cm-content').classList.add('mk--' + v);
+  document.getElementById('tag').textContent =
+    ({ a: 'А — як картка Дошки', b: 'Б — підняте скло', c: 'В — фото в рамці',
+       d: 'Г — та сама картка, що вся головна' })[v] || v;
+</script>
+</body>
+</html>

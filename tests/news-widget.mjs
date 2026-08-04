@@ -396,9 +396,18 @@ ok('ключ cstl_news_seen_ts на місці', /cstl_news_seen_ts/.test(NEWS))
 //
 // Дозволено рівно одне: екран задає ТОКЕНИ `--nc-*` на своєму контейнері.
 // Заборонено: правило, яке через контейнер екрана чіпає ВЛАСТИВОСТІ картки.
+// 🔴 04.08 — `home.css` ДОДАНО ДО ПЕРЕВІРКИ, і це не профілактика.
+// Сторож стеріг хаб і `community.css`, а головна лишалась поза оглядом. Саме там
+// і завелось `#cm-content.hm .nc { background: …; border-color: … }` — екран
+// задавав ВЛАСТИВОСТІ картки. Наслідок був видимий оком: `border-color` без
+// `border-width` означає, що обідка немає взагалі, і плитка новини приїхала
+// квадратною. Вова: «чому вони квадратні?».
+// ➡️ Урок не про home.css, а про сам сторож: він перелічував екрани поіменно,
+// тож кожен НОВИЙ екран автоматично опинявся поза наглядом.
 const CARD_CSS = projectFile('style/news-card.css');
 const HUB_CSS  = projectFile('style/news-hub.css');
 const CM_CSS   = projectFile('style/community.css');
+const HOME_CSS = projectFile('style/home.css');
 
 // Правило = селектор + тіло. Шукаємо тіла, де є хоч одна звичайна властивість
 // (рядок виду `щось: значення`, який НЕ починається з `--`).
@@ -410,18 +419,20 @@ const overrides = css => {
     const sel = m[1].trim().replace(/\s+/g, ' ');
     // Нас цікавлять лише СКОУПЛЕНІ під чужий контейнер правила: у селекторі є
     // пробіл-нащадок і клас екрана перед `.nc`.
-    if (!/(\.nh-list|\.cm-news-top3|#cm-news-content|\.nh-screen)\s+\.nc/.test(sel)) continue;
+    if (!/(\.nh-list|\.cm-news-top3|#cm-news-content|\.nh-screen|#cm-content|\.hm)\s+\.nc/.test(sel)) continue;
     const props = m[2].split(';').map(s => s.trim())
       .filter(s => s && !s.startsWith('--') && /^[a-z-]+\s*:/.test(s));
     if (props.length) out.push(`${sel} { ${props.join('; ')} }`);
   }
   return out;
 };
-const badHub = overrides(HUB_CSS), badCm = overrides(CM_CSS);
+const badHub = overrides(HUB_CSS), badCm = overrides(CM_CSS), badHome = overrides(HOME_CSS);
 ok('🔴 хаб НЕ перевизначає властивості картки (лише токени)',
    badHub.length === 0, badHub.join(' | ') || 'чисто');
 ok('🔴 табло НЕ перевизначає властивості картки (лише токени)',
    badCm.length === 0, badCm.join(' | ') || 'чисто');
+ok('🔴 головна НЕ перевизначає властивості картки (лише токени)',
+   badHome.length === 0, badHome.join(' | ') || 'чисто');
 
 // 🔴 КОНТРОЛЬ: без нього перевірка вище була б зелена і на порожньому файлі.
 // Підсовуємо їй рівно те правило, яке вона має ловити.
