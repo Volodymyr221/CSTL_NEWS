@@ -49,13 +49,10 @@ window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
 // Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
 onAuthChange(() => { renderBusBlock(); });
 
-// Віджет Дошки (повна переробка 13.07, рішення Вови): стрічка ПАР карток з
-// автопрокруткою. Слайд «Розмови» видалено — Обговорення мають власну вкладку.
-let _bwTimer  = null;   // інтервал автопрокрутки пар
-let _bwResume = null;   // таймаут відновлення автопрокрутки після дотику
-const BW_STEP_MS   = 5000;  // період автозміни пари (мс)
-const BW_RESUME_MS = 8000;  // пауза після дотику пальцем (мс)
-const BW_MAX_CARDS = 16;    // максимум випадкових оголошень у стрічці (Вова 13.07)
+// ⚠️ 04.08: стан автопрокрутки віджета Дошки (`_bwTimer`, `_bwResume`,
+// `BW_STEP_MS`, `BW_RESUME_MS`, `BW_MAX_CARDS`) видалено разом із самою
+// каруселлю — вона була єдиним вкладеним скролером сторінки і одним із
+// чотирьох автоматичних рухів. Деталі — у шапці «Блок 4» нижче.
 
 // Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
 let _evItems = [];
@@ -684,47 +681,59 @@ function switchCmBusCard(el) {
   }, 80);
 }
 
-// ── Блок 4: Віджет Дошки — «шматочок живої Дошки» (переробка 13.07, Вова) ────
-// Темний корок (як вкладка Дошка, Д-21), горизонтальна стрічка ПАР карток-стікерів
-// (фото · тег категорії · заголовок · локація · дата) + автопрокрутка по 2 картки.
-// Тап по картці → зум оголошення; шапка / «Всі оголошення» → вкладка Дошка.
+// ── Блок 4: Віджет Дошки ─────────────────────────────────────────────────────
+// 🔴 ПЕРЕРОБЛЕНО 04.08 (аудит + замовлення Вови «дошку оголошень ти розміщаєш
+// по-старому»). Було: темний «корок» + ГОРИЗОНТАЛЬНА СТРІЧКА пар карток-стікерів
+// з автопрокруткою кожні 5с, крапками-індикаторами і масштабуванням при гортанні.
+//
+// Три причини прибрати, і жодна з них не «смак»:
+//   1. це був ЄДИНИЙ вкладений скролер сторінки — той самий клас проблеми, який
+//      31.07 прибирали з віджета новин (там у вікні 465px ховалось 6933px);
+//   2. автопрокрутка — один із чотирьох автоматичних рухів, через які сторінка
+//      ніколи не стояла на місці (діагноз №4 аудиту 03.08);
+//   3. подвійний заголовок: секція вже називається «Оголошення», а всередині
+//      віджета стояла ще й плашка «АКТУАЛЬНІ ОГОЛОШЕННЯ ГРОМАДИ».
+//
+// Стало: три РЯДКИ у спільній мові головної (.hm-card), тап → та сама зум-модалка
+// оголошення. Перехід на вкладку Дошка живе в заголовку секції («Дошка →»).
+// ⚠️ Разом із каруселлю пішли `.cmbw-strip` / `.cmbw-dots` / `.cmbw-edge` /
+// `.cmbw-foot` і весь код автопрокрутки (~120 рядків). CSS цих класів лишився в
+// community.css — його чіпає ще прев'ю подачі оголошення.
 
 const BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-const BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
 
-function bwStopAuto() {
-  clearInterval(_bwTimer);  _bwTimer  = null;
-  clearTimeout(_bwResume);  _bwResume = null;
-}
+// Скільки оголошень показує головна. Три — щоб секція читалась як «є життя»,
+// але не перетворювалась на другу Дошку.
+const BOARD_ROWS = 3;
 
-// Одна картка стрічки — міні-версія реальної картки вкладки Дошка.
-// Без фото обкладинки НЕМА — картка просто нижча, як на вкладці Дошка
-// (рішення Вови 13.07, замінило плейсхолдер-обкладинку).
-// Вміст загорнуто у .cmbw-in — саме її масштабує карусель (JS нижче),
-// щоб снап-геометрія зовнішньої картки лишалась незмінною.
-function bwCardHtml(p) {
+// Оголошення поточного рендеру — читає делегований слухач (він вішається один раз).
+let _boardAds = [];
+
+// Один РЯДОК оголошення у мові головної: фото 64px ліворуч, категорія,
+// заголовок у два рядки, локація і час.
+// 🔑 `cardTitleText` не копіюємо: 9 із 19 оголошень назви не мають, і саме тому
+// на самій Дошці заголовок беруть як перше речення тексту. Тут та сама логіка.
+function bwRowHtml(p) {
   const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
-  const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
+  const raw = (p.title && p.title.trim()) || (p.text || '').trim();
+  const title = raw.length > 70 ? raw.slice(0, 70).replace(/\s+\S*$/, '') + '…' : (raw || 'Оголошення');
   const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
   const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
   const color = catColor(p.category);
   const cover = photo
-    ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-    : '';
+    ? `<span class="hm-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>`
+    : `<span class="hm-ad-ph hm-ad-ph--none">${catIcon(p.category)}</span>`;
   return `
-    <article class="cmbw-card" data-bw-id="${p.id}">
-      <div class="cmbw-in">
-        <span class="cmbw-pin" aria-hidden="true"></span>
-        ${cover}
-        <div class="cmbw-body">
-          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
-          <div class="cmbw-name">${escapeHtml(title)}</div>
-          <div class="cmbw-meta">
-            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
-            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ''}
-          </div>
-        </div>
-      </div>
+    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
+      ${cover}
+      <span class="hm-ad-body">
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)} hm-ad-cat">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
+        <span class="hm-ad-name">${escapeHtml(title)}</span>
+        <span class="hm-ad-meta">
+          ${locLabel ? `<span class="hm-ad-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
+          ${ts ? `<span>${formatTime(ts)}</span>` : ''}
+        </span>
+      </span>
     </article>`;
 }
 
@@ -741,10 +750,9 @@ function bwShuffle(arr) {
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
-  bwStopAuto();   // перерендер — старий інтервал більше не тримаємо
 
   try {
-    // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло
+    // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло.
     let posts = [], usedSupabase = false;
     if (isSupabaseReady()) {
       const p = await fetchPublishedPosts();
@@ -755,141 +763,38 @@ export async function renderBoardBlock() {
       posts = ((await boardRes.json()).posts) || [];
     }
 
-    // 2. Лише оголошення (type board), УСЯ громада без фільтра НП.
-    //    Порядок — ВИПАДКОВИЙ при кожному рендері (рішення Вови 13.07): віджет не
-    //    дублює «свіжі вгорі» вкладки, а дає рівний шанс УСІМ оголошенням, включно
-    //    зі старими — кожне відкриття Громади показує інший набір і порядок.
+    // 2. Лише оголошення (type board), уся громада без фільтра населеного пункту.
+    //    Порядок ВИПАДКОВИЙ (рішення Вови 13.07): віджет не дублює «свіжі вгорі»
+    //    вкладки, а дає рівний шанс усім оголошенням — кожне відкриття Громади
+    //    показує інший набір.
     const ads = posts.filter(p => (p.type || 'board') === 'board');
-    const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+    const shown = bwShuffle(ads).slice(0, BOARD_ROWS);
 
-    const cards = shown.map(bwCardHtml).join('');
-
-    // .cm-loading знято → padding контейнера зникає, шапка/низ дістають країв
-    // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
     el.classList.remove('cm-loading');
-    el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити всі оголошення громади">
-        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">АКТУАЛЬНІ ОГОЛОШЕННЯ ГРОМАДИ</span>
-      </div>
-      ${ads.length
-        ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
-           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
-           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
-           <span class="cmbw-dots" aria-hidden="true"></span>
-           <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
-             <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
-           </div>`
-        : '<div class="cmbw-empty">На дошці поки порожньо — подайте перше оголошення!</div>'}
-    `;
+    el.innerHTML = ads.length
+      ? shown.map(bwRowHtml).join('')
+      : '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення</div>';
 
-    // 3. Тапи: картка → зум САМЕ цього оголошення; шапка / «Всі» → вкладка Дошка.
-    el.addEventListener('click', e => {
-      const card = e.target.closest('[data-bw-id]');
-      if (card) {
-        const post = ads.find(p => p.id === Number(card.dataset.bwId));
-        if (post) { openAdModalStandalone(post); return; }
-      }
-      if (e.target.closest('[data-bw-more]') || e.target.closest('[data-bw-head]')) {
-        if (typeof window.switchTab === 'function') window.switchTab('board');
-      }
-    });
-
-    // 4. Стрічка: карусель-масштаб карток, крапки-індикатори пар, автопрокрутка.
-    const strip = el.querySelector('#cmbw-strip');
-    if (strip) {
-      // Снап-цілі = позиції початку кожної ПАРИ (непарні картки) у КООРДИНАТАХ
-      // СКРОЛУ: перша пара = 0 (картка «вліво»); наступні = зсув від першої мінус
-      // scroll-margin-left 12px (CSS дає його всім парам крім першої, щоб минула
-      // картка визирала зліва). offsetLeft беремо ЯК РІЗНИЦЮ з першою карткою —
-      // він рахується від offsetParent із власним зсувом, різниця його прибирає.
-      const snapTargets = () => {
-        const kids = [...strip.children];
-        if (!kids.length) return [];
-        const base = kids[0].offsetLeft;
-        return kids.filter((_, i) => i % 2 === 0)
-          .map(c => Math.max(0, c.offsetLeft - base - 12));
-      };
-      const targets0 = snapTargets();
-
-      // Крапки-індикатори пар у шапці — як свайп-крапки віджета автобусів
-      // (рішення Вови 13.07, замінили лічильник «N оголошень»).
-      const dotsWrap = el.querySelector('.cmbw-dots');
-      if (dotsWrap && targets0.length > 1) {
-        dotsWrap.innerHTML = targets0
-          .map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join('');
-      }
-      const dotEls = dotsWrap ? [...dotsWrap.children] : [];
-
-      // Карусель: центральна пара — повний розмір, обрізані бічні картки менші.
-      // Масштаб = частка видимої ширини картки (плавно росте/спадає при гортанні).
-      // Скейлиться внутрішня .cmbw-in — зовнішня картка (снап) не рухається.
-      const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
-      const updateFx = () => {
-        const kids = [...strip.children];
-        if (!kids.length) return;
-        const base  = kids[0].offsetLeft;
-        const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
-        kids.forEach(c => {
-          const l    = c.offsetLeft - base + padL;
-          const vis  = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
-          const frac = Math.min(1, vis / c.offsetWidth);
-          if (c.firstElementChild) c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
-        });
-        if (dotEls.length) {   // активна крапка = найближча снап-ціль
-          const targets = snapTargets();
-          let ai = 0, best = Infinity;
-          targets.forEach((t, i) => {
-            const d = Math.abs(t - strip.scrollLeft);
-            if (d < best) { best = d; ai = i; }
-          });
-          dotEls.forEach((d, i) => d.classList.toggle('cmbw-dot--active', i === ai));
-        }
-      };
-      let fxRaf = 0;
-      strip.addEventListener('scroll', () => {
-        if (fxRaf) return;
-        fxRaf = requestAnimationFrame(() => { fxRaf = 0; updateFx(); });
-      }, { passive: true });
-      updateFx();
-
-      // Автопрокрутка: кожні BW_STEP_MS — наступна ПАРА (снап робить CSS),
-      // в кінці — плавно на початок. Дотик/крапка → пауза, відновлення через
-      // BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
-      if (targets0.length > 1) {
-        const tick = () => {
-          if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
-          if (document.hidden) return;
-          const targets = snapTargets(); if (!targets.length) return;
-          const max  = strip.scrollWidth - strip.clientWidth;
-          const next = targets.find(t => t > strip.scrollLeft + 8);
-          strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
-        };
-        const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
-        const pauseAuto = () => {
-          clearInterval(_bwTimer); _bwTimer = null;
-          clearTimeout(_bwResume);
-          _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-        };
-        strip.addEventListener('touchstart', pauseAuto, { passive: true });
-        strip.addEventListener('pointerdown', pauseAuto);
-        if (dotsWrap) dotsWrap.addEventListener('click', e => {
-          const d = e.target.closest('[data-bw-dot]');
-          if (!d) return;
-          e.stopPropagation();   // шапка теж клікабельна — крапка не має відкривати вкладку
-          pauseAuto();
-          const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
-          strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: 'smooth' });
-        });
-        startAuto();
-      }
+    // 3. Тап по рядку → зум САМЕ цього оголошення (та сама модалка, що на Дошці).
+    if (!el.dataset.wired) {
+      el.dataset.wired = '1';
+      el.addEventListener('click', e => {
+        const card = e.target.closest('[data-bw-id]');
+        if (!card) return;
+        const id = Number(card.dataset.bwId);
+        const post = (_boardAds || []).find(p => p.id === id);
+        if (post) openAdModalStandalone(post);
+      });
     }
+    // Список живе поза замиканням слухача: слухач вішається ОДИН раз, а дані
+    // перечитуються при кожному рендері. Інакше після оновлення блока тап
+    // відкривав би оголошення з першого завантаження (той самий клас помилки,
+    // що виправляли у «Стрічці» 28.07 — слухач памʼятав стан на момент відкриття).
+    _boardAds = ads;
   } catch {
-    el.innerHTML = '<div class="cmbw-empty">Дошка тимчасово недоступна</div>';
+    el.innerHTML = '<div class="hm-empty">Дошка тимчасово недоступна</div>';
   }
 }
-
-
 // ── Блок 5: Найближча подія громади ───────────────────────────────────────────
 // Раніше тут був фільтр isLocalEvent() по списку OTG_VILLAGES — він шукав
 // підрядок «олика» у location, але ламався на відмінках («Олицький замок» не
@@ -966,16 +871,62 @@ export async function renderEventBlock() {
     }
 
     if (!items.length) {
-      el.innerHTML = '<div class="cm-block-empty">Поки немає запланованих подій у громаді</div>';
+      el.innerHTML = '<div class="hm-empty">Поки немає запланованих подій у громаді</div>';
       return;
     }
 
+    // 🔴 04.08 — КАРУСЕЛЬ ЗНЯТО. Було: 5 слайдів, автоматична зміна кожні 6с,
+    // крапки-індикатори, фіолетовий градієнт свята. Тобто з пʼяти подій людина
+    // бачила ОДНУ, решту треба було дочекатись — і це був один із чотирьох
+    // автоматичних рухів сторінки (діагноз №4 аудиту 03.08).
+    // Плюс фіолетовий був сьомою візуальною мовою на екрані.
+    // Стало: ТРИ рядки в тій самій мові, що новини й оголошення. Видно одразу
+    // три замість однієї, ніщо не рухається саме.
     _evItems = items;
-    _evIdx   = 0;
-    renderEvCarousel(el);
+    el.innerHTML = items.slice(0, EVENT_ROWS).map(evRowHtml).join('');
+
+    // Тап → та сама картка події, що була (openShotamModal). Перехід не змінено.
+    if (!el.dataset.wired) {
+      el.dataset.wired = '1';
+      el.addEventListener('click', e => {
+        const row = e.target.closest('[data-ev-id]');
+        if (!row) return;
+        const it = (_evItems || []).find(x => String(x.id) === row.dataset.evId);
+        if (it && it.kind === 'event') openShotamModal(it.id);
+      });
+    }
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Події недоступні</div>';
+    el.innerHTML = '<div class="hm-empty">Події недоступні</div>';
   }
+}
+
+// Скільки подій показує головна. Три — рівно стільки, скільки вміщується без
+// того, щоб секція почала змагатися з новинами за увагу.
+const EVENT_ROWS = 3;
+
+// Один РЯДОК події. Ліворуч — дата стовпчиком (число + місяць): це те, за чим
+// подію шукають очима, і воно читається швидше за будь-яку іконку.
+// ⚠️ Свята (kind: 'holiday') не мають картки для відкриття — вони не клікабельні
+// і тому не отримують `data-ev-id`. Мовчазний тап у нікуди гірший за його
+// відсутність.
+const EV_MONTHS_SHORT = ['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
+function evRowHtml(it) {
+  const d = new Date(it.date + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((d - today) / 86400000);
+  const when = days === 0 ? 'сьогодні' : days === 1 ? 'завтра' : `через ${days} дн.`;
+  const isEvent = it.kind === 'event';
+  return `
+    <article class="hm-card${isEvent ? ' hm-card--tap' : ''} hm-ev"${isEvent ? ` data-ev-id="${escapeHtml(String(it.id))}"` : ''}>
+      <span class="hm-ev-date">
+        <span class="hm-ev-d">${d.getDate()}</span>
+        <span class="hm-ev-m">${EV_MONTHS_SHORT[d.getMonth()]}</span>
+      </span>
+      <span class="hm-ev-body">
+        <span class="hm-ev-ttl">${escapeHtml(it.title)}</span>
+        <span class="hm-ev-meta">${escapeHtml(when)}${it.time ? ' · ' + escapeHtml(it.time) : ''}${it.location ? ' · ' + escapeHtml(it.location) : ''}</span>
+      </span>
+    </article>`;
 }
 
 // Одна картка каруселі — подія (табло-стиль) або свято (cover_emoji + градієнт).
@@ -1115,7 +1066,7 @@ export async function renderContactsBlock() {
     const list = data.contacts || [];
 
     if (!list.length) {
-      el.innerHTML = '<div class="cm-block-empty">Контактів немає</div>';
+      el.innerHTML = '<div class="hm-empty">Контактів немає</div>';
       return;
     }
 
@@ -1132,43 +1083,41 @@ export async function renderContactsBlock() {
     const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
     emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
-    // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
-    const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">Місцеві</div>
-        <div class="cm-contact-rows">
-          ${local.map(c => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    // ── 🔴 04.08: ТРИ ЕКСТРЕНІ НА ВИДНОТІ, РЕШТА ПІД РОЗКРИТТЯМ ────────────────
+    // Було 427px = 58.4% видимої зони на статичний довідник, потрібний кілька
+    // разів на рік — найбільший «мертвий» блок сторінки (діагноз №3 аудиту).
+    //
+    // 🔑 ЧОМУ САМЕ <details>, А НЕ СВІЙ ПЕРЕМИКАЧ: працює без JS, дає клавіатуру
+    // і читача екрана безкоштовно, і — головне — не тримає стану в модулі.
+    // Свій стан тут злітав би: `initCommunity()` перебудовує #cm-content цілком.
+    //
+    // ⚠️ Нагорі саме ЕКСТРЕНІ, а не місцеві (це зміна порядку від 08.07):
+    // довідник відкривають у двох випадках — «треба подзвонити в сільраду»
+    // (людина шукає свідомо, розкриє) і «щось сталося» (секунди). Другий
+    // випадок виграє.
+    const EMERG_TOP = 3;
+    const topEmerg = emergency.slice(0, EMERG_TOP);
+    const restAll  = [...emergency.slice(EMERG_TOP), ...local];
 
-    // ── ЕКСТРЕНІ (внизу) — компактна сітка маленьких плиток (3 в ряд) ──────────
-    const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">Екстрені</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map(c => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
+    const rowHtml = c => `
+      <a class="hm-card hm-card--tap hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-tx">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
 
-    el.innerHTML = localHtml + emergencyHtml;
+    const topHtml = topEmerg.map(rowHtml).join('');
+    const restHtml = restAll.length ? `
+      <details class="hm-tel-more">
+        <summary class="hm-tel-sum">Усі телефони громади (${restAll.length})</summary>
+        <div class="hm-list hm-tel-rest">${restAll.map(rowHtml).join('')}</div>
+      </details>` : '';
+
+    el.innerHTML = topHtml + restHtml;
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
+    el.innerHTML = '<div class="hm-empty">Контакти недоступні</div>';
   }
 }
 

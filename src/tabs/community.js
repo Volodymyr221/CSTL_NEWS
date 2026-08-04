@@ -51,6 +51,7 @@ import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
 import { renderHomeNow } from './home-now.js';
 import { renderHomeFund } from './home-fund.js';
+import { renderHomeFeed } from './home-feed.js';
 import {
   renderWeatherBlock,
   renderBusBlock,
@@ -111,6 +112,14 @@ function renderSkeleton() {
   el.classList.add('hm');
 
   el.innerHTML = `
+    <!-- ══ ФОТО НА ФОНІ (варіант «Д», вибір Вови 04.08) ═══════════════════════
+         Зафіксоване позаду всього; контент їде поверх. Вуаль і розмиття — у
+         style/home.css, там же пояснено, чому текст ніколи не лежить на
+         голому фото. aria-hidden — це декорація, читачу екрана вона не потрібна. -->
+    <div class="hm-bg" aria-hidden="true">
+      <img src="./photos/olyka.day-1.jpg" alt="">
+    </div>
+
     <!-- ══ ШАПКА: ЗАРАЗ ══════════════════════════════════════════════════════
          Одна бордова площина: дата · привітання · аватар · погода · 7 днів.
          Аватар усередині потоку шапки, а не прибитий поверх контенту, як було
@@ -148,6 +157,18 @@ function renderSkeleton() {
       <div id="hm-fund-body"></div>
     </section>
 
+    <!-- ══ У СТРІЧЦІ ГРОМАДИ ═══════════════════════════════════════════════════
+         🆕 04.08. Дайджест Стрічки — головного соціального майданчика
+         застосунку. До цього з головної НЕ БУЛО ВИДНО, що там узагалі щось
+         відбувається. Порожньо або немає бази → секції немає зовсім. -->
+    <section id="hm-feed" class="hm-sec" hidden>
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">У стрічці громади</h2>
+        <button class="hm-more" type="button" data-switch-tab="shotam">Стрічка →</button>
+      </div>
+      <div id="hm-feed-body" class="hm-list"></div>
+    </section>
+
     <!-- ══ НОВИНИ ══════════════════════════════════════════════════════════════
          Головна точка входу до новин: окремої вкладки «Новини» немає.
          «Усі новини» → наявний openNewsHub БЕЗ зміни його логіки. -->
@@ -162,11 +183,18 @@ function renderSkeleton() {
       <div id="cm-news-controls" hidden></div>
     </section>
 
-    <!-- ══ ПОДІЇ ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ ПОДІЇ ═══════════════════════════════════════════════════════════════
+         🔴 04.08 — КНОПКУ «АФІША →» ПРИБРАНО, і це виправлення брехні, а не
+         спрощення. Вкладки «Події» в застосунку НЕМАЄ: функція initEvents з
+         events.js не імпортується ніде, а перехід на events перекидає на
+         shotam, тобто у СТРІЧКУ — див. src/app.js рядок 34. Кнопка «Афіша →»
+         вела людину в стрічку постів: назва обіцяла одне, застосунок робив
+         інше. Тап по самій події працює як працював — картку відкриває
+         openShotamModal з events.js.
+         ⚠️ Повертати кнопку можна ЛИШЕ разом зі справжнім екраном Подій. -->
     <section class="hm-sec" id="hm-events">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">Події громади</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">Афіша →</button>
+        <h2 class="hm-kicker">Найближчі події</h2>
       </div>
       <div id="cm-event-content" class="hm-list">${skeletonRows(2)}</div>
     </section>
@@ -233,6 +261,7 @@ export function initCommunity() {
   renderWeatherBlock();     // → шапка (і наповнює кеш _wxData для модалки)
   renderHomeNow();          // → смуга «Зараз»
   renderHomeFund();         // → збір (порожньо = секція лишається hidden)
+  renderHomeFeed();         // → дайджест Стрічки (порожньо = секція hidden)
   renderCommunityNews();
   renderEventBlock();
   renderBoardBlock();

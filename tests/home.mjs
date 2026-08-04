@@ -81,7 +81,8 @@ await p.goBack(); await p.waitForTimeout(700);
 ok('назад повертає на Громаду', await p.evaluate(()=>document.querySelector('.app-main')?.dataset.tab==='community'));
 
 // 5. Переходи по вкладках із секцій
-for (const [sel,tab,name] of [['#hm-events .hm-more','shotam','Афіша'],['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
+// ⚠️ «Афіші» тут НЕМАЄ навмисно — див. окрему перевірку нижче.
+for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
   await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(400);
   const has = await p.evaluate(s=>!!document.querySelector(s), sel);
   if (!has) { ok(`кнопка «${name}» існує`, false); continue; }
@@ -93,6 +94,37 @@ for (const [sel,tab,name] of [['#hm-events .hm-more','shotam','Афіша'],['#h
   ok(`«${name}» веде на вкладку ${tab}`, await p.evaluate(()=>document.querySelector('.app-main')?.dataset.tab)===tab);
 }
 await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(500);
+
+// 5.1 🔴 СЕКЦІЯ ПОДІЙ НЕ ОБІЦЯЄ ТОГО, ЧОГО НЕМАЄ.
+// Вкладки «Події» в застосунку не існує: initEvents не імпортується, а перехід
+// на events перекидає на shotam (Стрічку). До 04.08 у секції стояла кнопка
+// «Афіша →», яка вела людину в стрічку постів — назва обіцяла афішу, застосунок
+// відкривав інше. Кнопку прибрано, і цей сторож не дає повернути її назад
+// доти, доки не зʼявиться справжній екран Подій.
+const ev = await p.evaluate(()=>{
+  const s = document.getElementById('hm-events');
+  return { has: !!s, more: !!s?.querySelector('.hm-more'),
+           rows: s?.querySelectorAll('.hm-ev').length || 0,
+           carousel: !!s?.querySelector('.cm-ev-dot, .cm-ev-track') };
+});
+ok('секція подій є', ev.has);
+ok('🔴 у подіях НЕМА кнопки, що веде не туди', !ev.more);
+ok('події показані рядками, а не по одній', ev.rows >= 2, `${ev.rows} рядків`);
+ok('каруселі подій більше нема', !ev.carousel);
+
+// 5.2 🔴 ФОТО НА ФОНІ НЕ НАКРИВАЄ ВМІСТ.
+// Перша версія мала z-index: 0 — і фото лягло ПОВЕРХ усього непозиціонованого
+// (шапка, назви секцій зникли). Міряємо НАСЛІДОК: що реально під пальцем у
+// точці заголовка секції — текст чи фон.
+const bgz = await p.evaluate(()=>{
+  const bg = document.querySelector('.hm-bg');
+  const k = document.querySelector('#cm-news-board .hm-kicker');
+  const r = k.getBoundingClientRect();
+  const at = document.elementFromPoint(r.left + 4, r.top + r.height/2);
+  return { z: getComputedStyle(bg).zIndex, hitsBg: at === bg || bg.contains(at), tag: at?.className };
+});
+ok('🔴 фон лежить ПІД вмістом (z-index відʼємний)', bgz.z === '-1', `z-index: ${bgz.z}`);
+ok('🔴 заголовок секції не накритий фоном', !bgz.hitsBg, `під пальцем: "${bgz.tag}"`);
 
 // 6. Блоки наповнились
 const filled = await p.evaluate(()=>{
