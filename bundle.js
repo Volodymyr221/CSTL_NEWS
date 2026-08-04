@@ -7501,7 +7501,7 @@
       body.style.paddingTop = h + BOARD_BODY_GAP + "px";
   }
   function fitBoardAuthors() {
-    const MAX2 = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
+    const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
     const range = document.createRange();
     document.querySelectorAll(".cm-board-foot--card").forEach((foot) => {
       if (!foot.clientWidth)
@@ -7513,7 +7513,7 @@
       const fcs = getComputedStyle(foot);
       const gap = parseFloat(fcs.columnGap) || parseFloat(fcs.gap) || 0;
       const avail = foot.clientWidth - (actions ? actions.offsetWidth : 0) - gap - PAD;
-      let size = MAX2;
+      let size = MAX;
       nameEl.style.fontSize = size + "px";
       range.selectNodeContents(nameEl);
       while (size > MIN && range.getBoundingClientRect().width > avail) {
@@ -10507,34 +10507,46 @@
   }
 
   // src/tabs/home-feed.js
-  var MAX = 2;
-  function preview(text) {
-    const t = (text || "").replace(/\s+/g, " ").trim();
-    if (t.length <= 110)
-      return t;
-    const cut = t.slice(0, 110);
-    const sp = cut.lastIndexOf(" ");
-    return (sp > 60 ? cut.slice(0, sp) : cut) + "\u2026";
-  }
+  var MAX_CIRCLES = 6;
+  var FRESH_H = 24;
   function initial(name) {
     const n = (name || "").trim();
     return n ? n[0].toUpperCase() : "\u2022";
   }
-  function postRowHtml(p) {
+  function preview(text) {
+    const t = (text || "").replace(/\s+/g, " ").trim();
+    if (t.length <= 150)
+      return t;
+    const cut = t.slice(0, 150);
+    const sp = cut.lastIndexOf(" ");
+    return (sp > 90 ? cut.slice(0, sp) : cut) + "\u2026";
+  }
+  function circleHtml(page, fresh) {
+    const name = page.name || "\u041A\u0430\u043D\u0430\u043B";
+    const inner = page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="" loading="lazy">` : `<span class="hm-fd-c-tx">${escapeHtml(initial(name))}</span>`;
+    return `
+    <span class="hm-fd-c${fresh ? " hm-fd-c--new" : ""}">
+      <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${inner}</span></span>
+      <span class="hm-fd-c-name">${escapeHtml(name)}</span>
+    </span>`;
+  }
+  function postHtml(p) {
     const page = p.pages || {};
     const name = page.name || "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
     const txt = preview(p.text);
     const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
-    const ava = page.avatar_url ? `<img class="hm-fd-ava-img" src="${escapeHtml(page.avatar_url)}" alt="">` : `<span class="hm-fd-ava-tx">${escapeHtml(initial(name))}</span>`;
+    const ava = page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;
     return `
-    <article class="hm-card hm-card--tap hm-fd" data-feed-post="${escapeHtml(String(p.id))}">
-      <span class="hm-fd-ava">${ava}</span>
-      <span class="hm-fd-body">
-        <span class="hm-fd-who">${escapeHtml(name)}</span>
-        ${txt ? `<span class="hm-fd-txt">${escapeHtml(txt)}</span>` : ""}
-        <span class="hm-fd-when">${escapeHtml(formatTime(p.created_at))}</span>
+    <article class="hm-card hm-card--tap hm-fd-post">
+      <span class="hm-fd-p-head">
+        <span class="hm-fd-p-av">${ava}</span>
+        <span class="hm-fd-p-who">
+          <span class="hm-fd-p-name">${escapeHtml(name)}</span>
+          <span class="hm-fd-p-when">${escapeHtml(formatTime(p.created_at))}</span>
+        </span>
       </span>
-      ${img ? `<span class="hm-fd-thumb"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ""}
+      ${txt ? `<span class="hm-fd-p-txt">${escapeHtml(txt)}</span>` : ""}
+      ${img ? `<span class="hm-fd-p-img"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ""}
     </article>`;
   }
   async function renderHomeFeed() {
@@ -10547,14 +10559,25 @@
       return;
     }
     try {
-      const posts2 = await fetchPagePosts(null, MAX);
+      const [pages2, posts2] = await Promise.all([
+        fetchPages(),
+        fetchPagePosts(null, 12)
+      ]);
       if (!posts2.length) {
         sec.hidden = true;
         body.innerHTML = "";
         return;
       }
+      const freshBy = /* @__PURE__ */ new Set();
+      const edge = Date.now() - FRESH_H * 3600 * 1e3;
+      for (const p of posts2) {
+        if (new Date(p.created_at).getTime() >= edge)
+          freshBy.add(p.page_id);
+      }
+      const ordered = [...pages2].sort((a, b) => (freshBy.has(b.id) ? 1 : 0) - (freshBy.has(a.id) ? 1 : 0));
+      const circles = ordered.slice(0, MAX_CIRCLES);
       sec.hidden = false;
-      body.innerHTML = posts2.map(postRowHtml).join("");
+      body.innerHTML = (circles.length ? `<div class="hm-fd-circles">${circles.map((pg) => circleHtml(pg, freshBy.has(pg.id))).join("")}</div>` : "") + postHtml(posts2[0]);
       body.classList.add("hm-appear");
     } catch {
       sec.hidden = true;
@@ -10567,123 +10590,6 @@
           window.switchTab("shotam");
       });
     }
-  }
-
-  // src/tabs/events.js
-  var CATEGORY_COLORS2 = {
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
-    "Kino_Castle": "#722F37",
-    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
-    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
-    // коричневий — нейтральний для свят (державних і релігійних)
-  };
-  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var allEvents = [];
-  function formatFullDate(dateStr) {
-    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
-  }
-  function catColor2(category) {
-    return CATEGORY_COLORS2[category] || "#722F37";
-  }
-  function buildIcsContent(ev) {
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-    return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//CSTL LIFE//UA",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
-      `SUMMARY:${esc(ev.title)}`,
-      `DESCRIPTION:${esc(ev.description)}`,
-      `LOCATION:${esc(ev.location)}`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT1H",
-      "ACTION:DISPLAY",
-      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
-  }
-  function downloadIcs(ev) {
-    const ics = buildIcsContent(ev);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
-  function openShotamModal(id) {
-    const ev = allEvents.find((e) => e.id === id);
-    if (!ev)
-      return;
-    const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
-    const catC = catColor2(ev.category);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
-    }
-    let cover;
-    if (ev.image) {
-      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
-      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
-    </div>
-    ${cover}
-    <div class="article-body">${bodyHtml}</div>`;
-    const shareBtn = document.getElementById("modal-share-btn");
-    const remindBtn = document.getElementById("modal-remind-btn");
-    const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: ev.title,
-        text: `\u{1F4C5} ${ev.title}
-${when}${ev.location ? " \xB7 " + ev.location : ""}
-
-${ev.description || ""}`
-      });
-    if (remindBtn) {
-      remindBtn.hidden = false;
-      remindBtn.onclick = () => {
-        if (!isLoggedIn()) {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
-          });
-          return;
-        }
-        downloadIcs(ev);
-      };
-    }
-    if (saveBtn)
-      saveBtn.hidden = true;
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
   }
 
   // src/tabs/news-hub.js
@@ -10873,8 +10779,6 @@ ${ev.description || ""}`
   onAuthChange(() => {
     renderBusBlock();
   });
-  var _evItems = [];
-  var _evTimer = null;
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
   var _wxData = null;
@@ -11387,75 +11291,6 @@ ${ev.description || ""}`
       el.innerHTML = '<div class="hm-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
-  async function renderEventBlock() {
-    const el = document.getElementById("cm-event-content");
-    if (!el)
-      return;
-    if (_evTimer) {
-      clearInterval(_evTimer);
-      _evTimer = null;
-    }
-    try {
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      let items = [];
-      try {
-        const res = await fetch("./data/events.json");
-        const events = await res.json();
-        items = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((e) => ({ kind: "event", id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
-      } catch {
-      }
-      if (!items.length) {
-        try {
-          const hres = await fetch("./data/holidays.json");
-          const hall = await hres.json();
-          const harr = Array.isArray(hall) ? hall : hall.holidays || [];
-          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", id: h.id, date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
-        } catch {
-        }
-      }
-      if (!items.length) {
-        el.innerHTML = '<div class="hm-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
-        return;
-      }
-      _evItems = items;
-      el.innerHTML = items.slice(0, EVENT_ROWS).map(evRowHtml).join("");
-      if (!el.dataset.wired) {
-        el.dataset.wired = "1";
-        el.addEventListener("click", (e) => {
-          const row = e.target.closest("[data-ev-id]");
-          if (!row)
-            return;
-          const it = (_evItems || []).find((x) => String(x.id) === row.dataset.evId);
-          if (it && it.kind === "event")
-            openShotamModal(it.id);
-        });
-      }
-    } catch {
-      el.innerHTML = '<div class="hm-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
-    }
-  }
-  var EVENT_ROWS = 3;
-  var EV_MONTHS_SHORT = ["\u0441\u0456\u0447", "\u043B\u044E\u0442", "\u0431\u0435\u0440", "\u043A\u0432\u0456", "\u0442\u0440\u0430", "\u0447\u0435\u0440", "\u043B\u0438\u043F", "\u0441\u0435\u0440", "\u0432\u0435\u0440", "\u0436\u043E\u0432", "\u043B\u0438\u0441", "\u0433\u0440\u0443"];
-  function evRowHtml(it) {
-    const d = /* @__PURE__ */ new Date(it.date + "T00:00:00");
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    const days = Math.round((d - today) / 864e5);
-    const when = days === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : days === 1 ? "\u0437\u0430\u0432\u0442\u0440\u0430" : `\u0447\u0435\u0440\u0435\u0437 ${days} \u0434\u043D.`;
-    const isEvent = it.kind === "event";
-    return `
-    <article class="hm-card${isEvent ? " hm-card--tap" : ""} hm-ev"${isEvent ? ` data-ev-id="${escapeHtml(String(it.id))}"` : ""}>
-      <span class="hm-ev-date">
-        <span class="hm-ev-d">${d.getDate()}</span>
-        <span class="hm-ev-m">${EV_MONTHS_SHORT[d.getMonth()]}</span>
-      </span>
-      <span class="hm-ev-body">
-        <span class="hm-ev-ttl">${escapeHtml(it.title)}</span>
-        <span class="hm-ev-meta">${escapeHtml(when)}${it.time ? " \xB7 " + escapeHtml(it.time) : ""}${it.location ? " \xB7 " + escapeHtml(it.location) : ""}</span>
-      </span>
-    </article>`;
-  }
   var CONTACT_ICONS = {
     ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
     fire: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17a2.5 2.5 0 0 0 2.5-2.5c0-1.5-.5-2-2-3.5C10 9.5 8.5 8 8.5 6c0 0-2 2-2 5a5 5 0 0 0 5 5 5 5 0 0 0 5-5c0-3-3-7-5-9 0 2-2 4.5-3.5 6.5z"/></svg>',
@@ -11693,22 +11528,6 @@ ${ev.description || ""}`
       <div id="cm-news-controls" hidden></div>
     </section>
 
-    <!-- \u2550\u2550 \u041F\u041E\u0414\u0406\u0407 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-         \u{1F534} 04.08 \u2014 \u041A\u041D\u041E\u041F\u041A\u0423 \xAB\u0410\u0424\u0406\u0428\u0410 \u2192\xBB \u041F\u0420\u0418\u0411\u0420\u0410\u041D\u041E, \u0456 \u0446\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u044F \u0431\u0440\u0435\u0445\u043D\u0456, \u0430 \u043D\u0435
-         \u0441\u043F\u0440\u043E\u0449\u0435\u043D\u043D\u044F. \u0412\u043A\u043B\u0430\u0434\u043A\u0438 \xAB\u041F\u043E\u0434\u0456\u0457\xBB \u0432 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 \u041D\u0415\u041C\u0410\u0404: \u0444\u0443\u043D\u043A\u0446\u0456\u044F initEvents \u0437
-         events.js \u043D\u0435 \u0456\u043C\u043F\u043E\u0440\u0442\u0443\u0454\u0442\u044C\u0441\u044F \u043D\u0456\u0434\u0435, \u0430 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 events \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u043D\u0430
-         shotam, \u0442\u043E\u0431\u0442\u043E \u0443 \u0421\u0422\u0420\u0406\u0427\u041A\u0423 \u2014 \u0434\u0438\u0432. src/app.js \u0440\u044F\u0434\u043E\u043A 34. \u041A\u043D\u043E\u043F\u043A\u0430 \xAB\u0410\u0444\u0456\u0448\u0430 \u2192\xBB
-         \u0432\u0435\u043B\u0430 \u043B\u044E\u0434\u0438\u043D\u0443 \u0432 \u0441\u0442\u0440\u0456\u0447\u043A\u0443 \u043F\u043E\u0441\u0442\u0456\u0432: \u043D\u0430\u0437\u0432\u0430 \u043E\u0431\u0456\u0446\u044F\u043B\u0430 \u043E\u0434\u043D\u0435, \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0440\u043E\u0431\u0438\u0432
-         \u0456\u043D\u0448\u0435. \u0422\u0430\u043F \u043F\u043E \u0441\u0430\u043C\u0456\u0439 \u043F\u043E\u0434\u0456\u0457 \u043F\u0440\u0430\u0446\u044E\u0454 \u044F\u043A \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432 \u2014 \u043A\u0430\u0440\u0442\u043A\u0443 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454
-         openShotamModal \u0437 events.js.
-         \u26A0\uFE0F \u041F\u043E\u0432\u0435\u0440\u0442\u0430\u0442\u0438 \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u043E\u0436\u043D\u0430 \u041B\u0418\u0428\u0415 \u0440\u0430\u0437\u043E\u043C \u0437\u0456 \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u0456\u043C \u0435\u043A\u0440\u0430\u043D\u043E\u043C \u041F\u043E\u0434\u0456\u0439. -->
-    <section class="hm-sec" id="hm-events">
-      <div class="hm-sec-head">
-        <h2 class="hm-kicker">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457</h2>
-      </div>
-      <div id="cm-event-content" class="hm-list">${skeletonRows(2)}</div>
-    </section>
-
     <!-- \u2550\u2550 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
     <section class="hm-sec" id="hm-board">
       <div class="hm-sec-head">
@@ -11765,7 +11584,6 @@ ${ev.description || ""}`
     renderHomeFund();
     renderHomeFeed();
     renderCommunityNews();
-    renderEventBlock();
     renderBoardBlock();
     renderBusBlock();
     renderContactsBlock();

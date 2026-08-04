@@ -95,22 +95,17 @@ for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-
 }
 await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(500);
 
-// 5.1 🔴 СЕКЦІЯ ПОДІЙ НЕ ОБІЦЯЄ ТОГО, ЧОГО НЕМАЄ.
-// Вкладки «Події» в застосунку не існує: initEvents не імпортується, а перехід
-// на events перекидає на shotam (Стрічку). До 04.08 у секції стояла кнопка
-// «Афіша →», яка вела людину в стрічку постів — назва обіцяла афішу, застосунок
-// відкривав інше. Кнопку прибрано, і цей сторож не дає повернути її назад
-// доти, доки не зʼявиться справжній екран Подій.
-const ev = await p.evaluate(()=>{
-  const s = document.getElementById('hm-events');
-  return { has: !!s, more: !!s?.querySelector('.hm-more'),
-           rows: s?.querySelectorAll('.hm-ev').length || 0,
-           carousel: !!s?.querySelector('.cm-ev-dot, .cm-ev-track') };
-});
-ok('секція подій є', ev.has);
-ok('🔴 у подіях НЕМА кнопки, що веде не туди', !ev.more);
-ok('події показані рядками, а не по одній', ev.rows >= 2, `${ev.rows} рядків`);
-ok('каруселі подій більше нема', !ev.carousel);
+// 5.1 🔴 СЕКЦІЇ ПОДІЙ НА ГОЛОВНІЙ НЕМАЄ (рішення Вови 04.08 «події прибрати»).
+// Причина була не в даних: вести з неї не було куди — вкладки Подій у
+// застосунку не існує, і кнопка «Афіша →» вела людину у Стрічку.
+// Сторож не дає повернути секцію назад доти, доки не зʼявиться справжній екран.
+const ev = await p.evaluate(()=>({
+  sec: !!document.getElementById('hm-events'),
+  cont: !!document.getElementById('cm-event-content'),
+  afisha: [...document.querySelectorAll('#cm-content .hm-more')].some(b => /афіш/i.test(b.textContent)),
+}));
+ok('🔴 секції подій на головній немає', !ev.sec && !ev.cont);
+ok('🔴 кнопки «Афіша», що вела у Стрічку, немає', !ev.afisha);
 
 // 5.2 🔴 ФОТО НА ФОНІ НЕ НАКРИВАЄ ВМІСТ.
 // Перша версія мала z-index: 0 — і фото лягло ПОВЕРХ усього непозиціонованого
@@ -130,12 +125,11 @@ ok('🔴 заголовок секції не накритий фоном', !bgz
 const filled = await p.evaluate(()=>{
   const t = id => (document.getElementById(id)?.textContent||'').trim();
   const sk = id => document.getElementById(id)?.querySelector('.hm-sk-row');
-  return { news:t('cm-news-content').length, ev:t('cm-event-content').length,
+  return { news:t('cm-news-content').length,
     board:t('cm-board-content').length, bus:t('cm-bus-content').length, cont:t('cm-contacts-content').length,
-    stuck:['cm-news-content','cm-event-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
+    stuck:['cm-news-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
 });
 ok('новини наповнились', filled.news>40, String(filled.news));
-ok('події наповнились', filled.ev>10, String(filled.ev));
 ok('оголошення наповнились', filled.board>10, String(filled.board));
 ok('автобуси наповнились', filled.bus>10, String(filled.bus));
 ok('контакти наповнились', filled.cont>10, String(filled.cont));
