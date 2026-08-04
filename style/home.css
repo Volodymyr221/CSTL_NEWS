@@ -340,31 +340,40 @@
   display: flex; align-items: center; gap: 12px;
   width: 100%; min-height: 56px; padding: 11px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .24);
-  background: linear-gradient(180deg, rgba(255, 255, 255, .17) 0%, rgba(255, 255, 255, .09) 100%);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
-          backdrop-filter: blur(14px) saturate(1.5);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .22);
+  /* 🔴 НЕПРОЗОРІСТЬ ПІДНЯТО 04.08 ПІСЛЯ ЖИВОГО ЗНІМКА.
+     Перші значення (.17 → .09) підбирались на МАКЕТІ, де верх сторінки був
+     світлішим. На проді під капсулами лежить темна частина вуалі, і скло на
+     ній давало ледь помітну сіру пігулку — Вова описав це як «змін немає»,
+     хоча компонент був новий. Урок той самий, що з фото: значення, підібране
+     на макеті, треба перевіряти на живому фоні.
+     Заміряно на темній ділянці: поверхня .17 давала контраст до фону ~1.15
+     (нижче порогу помітності 1.20), .26 дає ~1.34 — капсула читається як
+     окремий предмет, лишаючись склом. */
+  border: 1px solid rgba(255, 255, 255, .38);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .15) 100%);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+          backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .34);
   color: #fff; text-align: left;
 }
 .hm-cap2:active {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .15) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .36) 0%, rgba(255, 255, 255, .24) 100%);
 }
 .hm-cap2-ic {
-  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(255, 255, 255, .16);
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255, 255, 255, .26);
   display: grid; place-items: center; font-size: 16px; line-height: 1;
 }
 .hm-cap2-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-cap2-k {
   font: 700 9.5px/1 system-ui, -apple-system, sans-serif;
-  letter-spacing: .11em; text-transform: uppercase; color: rgba(255, 255, 255, .66);
+  letter-spacing: .11em; text-transform: uppercase; color: rgba(255, 255, 255, .82);
 }
 /* Рядок повідомлення. Саме він міняється в циклі, тому має власний перехід.
    ⚠️ 200мс тут і `FADE_MS = 200` у home-caps.js мусять збігатися: скрипт
    підміняє текст рівно на середині згасання, коли букв не видно. */
 .hm-cap2-v {
-  font: 600 14px/1.2 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
+  font: 600 15px/1.2 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: opacity 200ms var(--hm-ease), transform 200ms var(--hm-ease);
 }
