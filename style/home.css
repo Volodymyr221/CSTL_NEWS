@@ -109,6 +109,153 @@
 }
 .hm-more:active { opacity: .55; }
 
+/* ══ ШАПКА «ЗАРАЗ» ════════════════════════════════════════════════════════════
+   Варіант «Б» — вибір Вови 04.08 з трьох показаних макетів.
+   Одна бордова площина: дата · привітання · аватар · погода · 7 днів.
+
+   🔑 ЧОМУ БОРДОВА, А НЕ ФОТО. Фото костелу за ті самі ~168px не додає нової
+   інформації (його видно щодня), а бренд-площина дає характер безкоштовно —
+   і це та сама мова, що у віджеті автобусів, який Вова назвав вдалим.
+   ⚠️ Колір НЕ свій: `--brand-grad` з base.css. Заведеш тут окремий бордовий —
+   і при наступній зміні бренду головна лишиться іншого відтінку.
+
+   📐 Заокруглення лише знизу (22px): шапка «виростає» з системної шапки
+   застосунку, а не лежить окремою плиткою. */
+.hm-top {
+  background: var(--brand-grad);
+  color: #fff;
+  padding: var(--hm-s6) var(--hm-pad) var(--hm-s5);
+  border-radius: 0 0 22px 22px;
+}
+.hm-top-row { display: flex; align-items: flex-start; gap: var(--hm-s3); }
+.hm-top-col { flex: 1 1 auto; min-width: 0; }
+
+.hm-date {
+  font: 600 12px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .09em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .62);
+}
+/* Привітання — один рядок. Довге ім'я обрізається трикрапкою, а не переносить
+   рядок: висота шапки мусить бути передбачуваною.
+   ⚠️ До 04.08 тут працював JS-підбір розміру шрифту в циклі (`fitGreeting`,
+   27px → 19px по 1px, з читанням scrollWidth на кожному кроці — тобто до
+   восьми примусових перерахунків розкладки поспіль). Обрізка робить те саме
+   без жодного виміру. */
+.hm-hi {
+  font: 700 26px/1.16 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.02em; color: #fff; margin: var(--hm-s2) 0 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Аватар — 44px тап-ціль (Apple HIG), видимий кружечок менший.
+   Стоїть У ПОТОЦІ шапки, а не прибитий поверх сторінки: стара `.cm-acc-pin`
+   висіла над контентом на всьому скролі й накривала картки. */
+.hm-ava {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  position: relative;   /* якір для ::before — видимого кружечка всередині тап-цілі */
+  flex: 0 0 auto; width: 44px; height: 44px; margin: -3px -6px 0 0;
+  padding: 3px; border: 0; background: none;
+  display: grid; place-items: center; color: #fff;
+}
+.hm-ava::before {
+  content: ''; position: absolute; width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .28);
+}
+.hm-ava > * { position: relative; }
+.hm-ava:active::before { background: rgba(255, 255, 255, .26); }
+.hm-ava-txt { font: 600 15px/1 system-ui, -apple-system, sans-serif; }
+/* Іконка-людина показується лише коли немає ініціала (гість). */
+.hm-ava-txt:not(:empty) + .hm-ava-ic { display: none; }
+
+/* ── Погода в шапці ──────────────────────────────────────────────────────────
+   Була ПЕРЕДОСТАННІМ блоком сторінки (початок на 1839px = 2.5 екрана прокрутки),
+   хоча це найдешевша і найчастіше потрібна інформація дня. Тепер — тут.
+   Розділова лінія зверху замість другої картки: шапка лишається однією площиною. */
+.hm-wx {
+  margin-top: var(--hm-s4); padding-top: var(--hm-s4);
+  border-top: 1px solid rgba(255, 255, 255, .15);
+}
+.hm-wx-main { display: flex; align-items: center; gap: var(--hm-s3); }
+.hm-wx-t {
+  font: 300 34px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.03em; color: #fff;
+}
+.hm-wx-txt { min-width: 0; }
+.hm-wx-desc { font: 400 13.5px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-wx-sub  { font: 400 12px/1.3 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .72); margin-top: 2px; }
+
+/* Ряд 7 днів. Не карусель і не скролер — сім рівних колонок на ширину екрана:
+   днів рівно сім, вони влазять, і ховати їх за жестом немає причини. */
+.hm-wx-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: var(--hm-s3); }
+.hm-wx-day {
+  appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 0; border-radius: 9px; color: rgba(255, 255, 255, .8);
+}
+.hm-wx-day:active { background: rgba(255, 255, 255, .12); }
+.hm-wx-day--today { color: #fff; background: rgba(255, 255, 255, .1); }
+.hm-wx-wd   { font: 600 10px/1 system-ui, -apple-system, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.hm-wx-icon { font-size: 15px; line-height: 1; }
+.hm-wx-max  { font: 600 11.5px/1 system-ui, -apple-system, sans-serif; }
+
+/* Скелет погоди — та сама висота, що готовий блок, інакше шапка сіпнеться,
+   коли прийдуть дані. */
+.hm-wx-sk { height: 96px; border-radius: 10px; background: rgba(255, 255, 255, .1); }
+.hm-wx-err { font: 400 13px/1.35 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .7); }
+
+/* ══ СМУГА «ЗАРАЗ» ════════════════════════════════════════════════════════════
+   Капсули одразу під шапкою. Ряд горизонтальний, бо капсул буває 0-3 і вони
+   різної ширини — сітка тут дала б дірки.
+   ⚠️ Це НЕ скролер: якщо капсули не влазять, вони переносяться (`flex-wrap`).
+   Вкладених скролерів на головній не заводимо — саме їх прибирали 31.07. */
+.hm-now {
+  display: flex; flex-wrap: wrap; gap: var(--hm-s2);
+  padding: var(--hm-s4) var(--hm-pad) 0;
+}
+.hm-now[hidden] { display: none; }
+.hm-cap {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 34px; padding: 0 var(--hm-s3);
+  background: var(--board-card); border: 1px solid var(--board-line);
+  border-radius: var(--hm-r-pill);
+  font: 600 13px/1 system-ui, -apple-system, sans-serif; color: var(--ink);
+  white-space: nowrap;
+}
+.hm-cap:active { background: var(--board-press); }
+.hm-cap b { font-weight: 700; color: var(--red); }
+/* Акцентна капсула — та, що з відліком часу. Рівно одна на смузі:
+   якщо виділити всі, не виділено жодної. */
+.hm-cap--on { background: var(--brand-grad-sm); border-color: transparent; color: #fff; }
+.hm-cap--on b { color: #fff; }
+.hm-cap--on:active { background: var(--brand-grad-press); }
+.hm-cap-ic { font-size: 14px; line-height: 1; }
+
+/* ══ ЗБІР ═════════════════════════════════════════════════════════════════════
+   Помітність дає МІСЦЕ (одразу під смугою «Зараз»), а не колір: кричущий банер
+   у стрічці громади читається як реклама — рівно те, чого просив уникнути Вова.
+   Поверхня звичайна біла, бордові лише смужка прогресу і сума. */
+.hm-fund { display: block; padding: var(--hm-s4); text-decoration: none; color: inherit; }
+.hm-fund-top { display: flex; gap: var(--hm-s3); align-items: flex-start; }
+.hm-fund-ic {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--hm-r-tile);
+  background: var(--brand-tint); display: grid; place-items: center; font-size: 17px;
+}
+.hm-fund-txt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hm-fund-ttl { display: block; }
+.hm-fund-org { display: block; }
+.hm-fund-bar {
+  height: 6px; border-radius: 3px; background: #EDEAE6;
+  margin-top: var(--hm-s3); overflow: hidden;
+}
+.hm-fund-bar i { display: block; height: 100%; background: var(--brand-grad-sm); border-radius: 3px; }
+.hm-fund-nums {
+  display: flex; justify-content: space-between; margin-top: var(--hm-s2);
+  font: 600 12px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+.hm-fund-nums b { color: var(--ink); }
+
 /* ══ ПРИМІТИВ КАРТКИ ══════════════════════════════════════════════════════════ */
 .hm-card {
   background: var(--board-card);

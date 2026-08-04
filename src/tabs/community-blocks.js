@@ -116,37 +116,49 @@ export async function renderWeatherBlock() {
 
     setWeatherTitle(cityName);
 
+    // 🔴 04.08 — ПОГОДА ЖИВЕ В ШАПЦІ ГОЛОВНОЇ, а не окремим блоком унизу.
+    // Була ПЕРЕДОСТАННЬОЮ секцією, початок на 1839px: щоб побачити температуру,
+    // треба було прогорнути 2.5 екрана (а з шапки застосунку погоду прибрали
+    // 08.07, тобто вгорі її не було ніде).
+    // ⚠️ Змінилась ЛИШЕ подача. Кеш `_wxData`, ряд 7 днів і перехід
+    // `openWeatherDayModal(i)` — ті самі, тому модалка по годинах зі скрабером
+    // працює як працювала. Саме тому id контейнера лишився `cm-weather-content`.
     const forecastHtml = day.time.map((dateStr, i) => {
       const d = new Date(dateStr + 'T00:00:00');
-      const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
+      const wd = i === 0 ? 'Сьог' : WEEKDAYS_UA[d.getDay()];
       const dayInfo = weatherCodeInfo(day.weather_code[i]);
+      const tMax = Math.round(day.temperature_2m_max[i]);
       return `
-        <button type="button" class="cm-fc-day${i === 0 ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
+        <button type="button" class="hm-wx-day${i === 0 ? ' hm-wx-day--today' : ''}" data-wx-day="${i}"
+                aria-label="${escapeHtml(wd)}, до ${tMax} градусів">
+          <span class="hm-wx-wd">${escapeHtml(wd)}</span>
+          <span class="hm-wx-icon">${dayInfo.icon}</span>
+          <span class="hm-wx-max">${tMax}°</span>
         </button>
       `;
     }).join('');
 
+    el.classList.remove('hm-wx--loading');
     el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}°</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">Відчувається як ${feels}°</div>
+      <div class="hm-wx-main">
+        <div class="hm-wx-t">${temp}°</div>
+        <div class="hm-wx-txt">
+          <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
+          <div class="hm-wx-sub">${escapeHtml(cityName || 'Олика')} · відчувається ${feels}°</div>
         </div>
       </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
+      <div class="hm-wx-days">${forecastHtml}</div>
     `;
 
-    // Клік на день → модалка «по годинах» (температура + опади).
+    // Клік на день → модалка «по годинах» (температура + опади). Не змінювалось.
     el.querySelectorAll('[data-wx-day]').forEach(btn => {
       btn.addEventListener('click', () => openWeatherDayModal(+btn.dataset.wxDay));
     });
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Погода тимчасово недоступна</div>';
+    // Помилка погоди не ламає шапку: рядок замість блоку, решта сторінки жива
+    // (кожен блок головної падає самостійно).
+    el.classList.remove('hm-wx--loading');
+    el.innerHTML = '<div class="hm-wx-err">Погода тимчасово недоступна</div>';
   }
 }
 
