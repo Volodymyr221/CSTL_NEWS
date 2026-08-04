@@ -49,12 +49,48 @@ const page = await ctx.newPage();
 // Мережа назовні не потрібна: статті лежать у репозиторії. Фото Олики НЕ глушимо —
 // саме вони й займають місце, яке ми міряємо.
 await page.route('**://*.supabase.co/**', r => r.abort());
-await page.route('**://api.open-meteo.com/**', r => r.abort());
+
+// 🔴 ПОГОДУ ПІДМІНЯЄМО, А НЕ ГЛУШИМО. Порожній блок погоди має ІНШУ висоту, ніж
+// заповнений, — а шапка головної тепер тримає погоду, тож глушіння дало б
+// заниження висоти шапки і брехливе «стало». Дані фіксовані (не з мережі), щоб
+// вимір був відтворюваним: та сама температура і ті самі 7 днів щоразу.
+const day = n => Array.from({ length: n }, (_, i) => {
+  const d = new Date(Date.now() + i * 864e5);
+  return d.toISOString().slice(0, 10);
+});
+const hours = day(1).flatMap(d => Array.from({ length: 24 }, (_, h) => `${d}T${String(h).padStart(2, '0')}:00`));
+await page.route('**://api.open-meteo.com/**', r => r.fulfill({
+  contentType: 'application/json',
+  body: JSON.stringify({
+    utc_offset_seconds: 10800,
+    current: { temperature_2m: 18.4, weather_code: 3, apparent_temperature: 17.2 },
+    hourly: {
+      time: hours,
+      temperature_2m: hours.map((_, i) => 14 + (i % 12)),
+      precipitation_probability: hours.map((_, i) => (i * 7) % 100),
+      weather_code: hours.map(() => 3),
+    },
+    daily: {
+      time: day(7),
+      weather_code: [3, 1, 61, 0, 2, 3, 80],
+      temperature_2m_max: [24, 26, 21, 27, 25, 23, 20],
+      temperature_2m_min: [13, 14, 12, 15, 14, 13, 11],
+    },
+  }),
+}));
+// Назву міста теж підміняємо — інакше вимір чекав би Nominatim із мережі.
+await page.route('**://nominatim.openstreetmap.org/**', r => r.fulfill({
+  contentType: 'application/json',
+  body: JSON.stringify({ address: { village: 'Олика' } }),
+}));
 
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(2500);
 await page.evaluate(() => window.switchTab && window.switchTab('community'));
-await page.waitForTimeout(2500);
+// ⚠️ 7с, а не 2.5: погода в шапці має фолбек на координати Олики через 4с (діалог
+// геолокації в headless не відповідає ніколи). Знімок на 5-й секунді ловив би
+// СКЕЛЕТ і занижував висоту шапки — тобто «стало» вийшло б брехливо кращим.
+await page.waitForTimeout(7000);
 
 // ── 1. Блоки: висота · частка видимої зони · де починається ──────────────────
 const blocks = await page.evaluate(() => {
@@ -62,7 +98,7 @@ const blocks = await page.evaluate(() => {
   if (!root) return [];
   const base = root.getBoundingClientRect().top + (root.closest('.app-main')?.scrollTop || 0);
   // Беремо прямих «смислових» дітей: секції та іменовані контейнери.
-  const nodes = [...root.querySelectorAll(':scope > section, :scope > div, :scope > .cm-sheet > section, :scope > .cm-sheet > header')];
+  const nodes = [...root.querySelectorAll(':scope > header, :scope > section, :scope > div, :scope > .cm-sheet > section, :scope > .cm-sheet > header')];
   return nodes.map(n => {
     const r = n.getBoundingClientRect();
     const scrollTop = n.closest('.app-main')?.scrollTop || 0;

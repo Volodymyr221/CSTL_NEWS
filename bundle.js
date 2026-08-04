@@ -182,9 +182,17 @@
         resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" });
         return;
       }
+      let settled = false;
+      const finish2 = (v) => {
+        if (!settled) {
+          settled = true;
+          resolve(v);
+        }
+      };
+      setTimeout(() => finish2({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }), 4e3);
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
-        () => resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }),
+        (pos) => finish2({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
+        () => finish2({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }),
         { timeout: 5e3, maximumAge: 6e5 }
       );
     });
@@ -10824,12 +10832,14 @@ ${ev.description || ""}`
       return;
     try {
       const { lat, lon, city: knownCity } = await getCoords();
-      const [weatherRes, cityName] = await Promise.all([
-        fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
-        ),
-        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
+      const cityP = knownCity ? Promise.resolve(knownCity) : Promise.race([
+        getCityName(lat, lon).catch(() => null),
+        new Promise((r) => setTimeout(() => r(null), 3e3))
       ]);
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
+      );
+      const cityName = await cityP || "\u041E\u043B\u0438\u043A\u0430";
       const data = await weatherRes.json();
       _wxData = { ...data, city: cityName };
       const cur = data.current;

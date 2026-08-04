@@ -178,9 +178,24 @@ export function getCoords() {
       resolve({ ...OLYKA_COORDS, city: 'Олика' });
       return;
     }
+    // 🔴 ВЛАСНИЙ СТОРОЖ ЧАСУ (04.08). Опція `timeout: 5000` нижче рахує лише
+    // ПОШУК позиції — вона не рахує час, поки людина не відповіла на діалог
+    // «дозволити геолокацію». Якщо діалог просто проігнорувати (або якщо
+    // браузер його не показує, як headless у стендах), НЕ приходить ЖОДЕН з
+    // двох колбеків — і promise висить вічно.
+    // Наслідок був видимий: 04.08 погода в шапці головної лишалась скелетом
+    // назавжди — не «повільно», а ніколи. Знайдено контрольним знімком.
+    // 4000 — свідомий компроміс: рідний таймаут (5000) спрацював би пізніше,
+    // але чекати на нього тут нема сенсу. Олика — типовий дефолт САМЕ цього
+    // застосунку (він про одну громаду), тож показати погоду Олики через 4с
+    // краще, ніж тримати порожню шапку. Хто справді не в Олиці — дасть дозвіл
+    // один раз, і браузер відповість миттєво з кешу (`maximumAge: 600000`).
+    let settled = false;
+    const finish = v => { if (!settled) { settled = true; resolve(v); } };
+    setTimeout(() => finish({ ...OLYKA_COORDS, city: 'Олика' }), 4000);
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
-      ()  => resolve({ ...OLYKA_COORDS, city: 'Олика' }),
+      pos => finish({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
+      ()  => finish({ ...OLYKA_COORDS, city: 'Олика' }),
       { timeout: 5000, maximumAge: 600000 }
     );
   });

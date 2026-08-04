@@ -96,16 +96,26 @@ export async function renderWeatherBlock() {
 
   try {
     const { lat, lon, city: knownCity } = await getCoords();
-    const [weatherRes, cityName] = await Promise.all([
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-        `&current=temperature_2m,weather_code,apparent_temperature` +
-        `&hourly=temperature_2m,precipitation_probability,weather_code` +
-        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-        `&forecast_days=7&timezone=auto`
-      ),
-      knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
-    ]);
+    // 🔴 04.08 — НАЗВА МІСТА БІЛЬШЕ НЕ ТРИМАЄ ПОГОДУ.
+    // Було `Promise.all([погода, getCityName()])`, тобто температура не
+    // показувалась, поки не відповість Nominatim (OpenStreetMap) — а він
+    // сторонній, без таймауту і буває недоступний. Знайдено 04.08 контрольним
+    // знімком: погода вічно висіла скелетом, хоча Open-Meteo вже відповів.
+    // Тепер місто має власний таймаут 3с і фолбек «Олика»: це підпис, а не дані.
+    const cityP = knownCity
+      ? Promise.resolve(knownCity)
+      : Promise.race([
+          getCityName(lat, lon).catch(() => null),
+          new Promise(r => setTimeout(() => r(null), 3000)),
+        ]);
+    const weatherRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weather_code,apparent_temperature` +
+      `&hourly=temperature_2m,precipitation_probability,weather_code` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&forecast_days=7&timezone=auto`
+    );
+    const cityName = (await cityP) || 'Олика';
     const data = await weatherRes.json();
     _wxData = { ...data, city: cityName }; // кеш для модалки по годинах
     const cur  = data.current;
