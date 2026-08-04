@@ -96,16 +96,26 @@ export async function renderWeatherBlock() {
 
   try {
     const { lat, lon, city: knownCity } = await getCoords();
-    const [weatherRes, cityName] = await Promise.all([
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-        `&current=temperature_2m,weather_code,apparent_temperature` +
-        `&hourly=temperature_2m,precipitation_probability,weather_code` +
-        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-        `&forecast_days=7&timezone=auto`
-      ),
-      knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
-    ]);
+    // 🔴 04.08 — НАЗВА МІСТА БІЛЬШЕ НЕ ТРИМАЄ ПОГОДУ.
+    // Було `Promise.all([погода, getCityName()])`, тобто температура не
+    // показувалась, поки не відповість Nominatim (OpenStreetMap) — а він
+    // сторонній, без таймауту і буває недоступний. Знайдено 04.08 контрольним
+    // знімком: погода вічно висіла скелетом, хоча Open-Meteo вже відповів.
+    // Тепер місто має власний таймаут 3с і фолбек «Олика»: це підпис, а не дані.
+    const cityP = knownCity
+      ? Promise.resolve(knownCity)
+      : Promise.race([
+          getCityName(lat, lon).catch(() => null),
+          new Promise(r => setTimeout(() => r(null), 3000)),
+        ]);
+    const weatherRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weather_code,apparent_temperature` +
+      `&hourly=temperature_2m,precipitation_probability,weather_code` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&forecast_days=7&timezone=auto`
+    );
+    const cityName = (await cityP) || 'Олика';
     const data = await weatherRes.json();
     _wxData = { ...data, city: cityName }; // кеш для модалки по годинах
     const cur  = data.current;
@@ -116,37 +126,49 @@ export async function renderWeatherBlock() {
 
     setWeatherTitle(cityName);
 
+    // 🔴 04.08 — ПОГОДА ЖИВЕ В ШАПЦІ ГОЛОВНОЇ, а не окремим блоком унизу.
+    // Була ПЕРЕДОСТАННЬОЮ секцією, початок на 1839px: щоб побачити температуру,
+    // треба було прогорнути 2.5 екрана (а з шапки застосунку погоду прибрали
+    // 08.07, тобто вгорі її не було ніде).
+    // ⚠️ Змінилась ЛИШЕ подача. Кеш `_wxData`, ряд 7 днів і перехід
+    // `openWeatherDayModal(i)` — ті самі, тому модалка по годинах зі скрабером
+    // працює як працювала. Саме тому id контейнера лишився `cm-weather-content`.
     const forecastHtml = day.time.map((dateStr, i) => {
       const d = new Date(dateStr + 'T00:00:00');
-      const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
+      const wd = i === 0 ? 'Сьог' : WEEKDAYS_UA[d.getDay()];
       const dayInfo = weatherCodeInfo(day.weather_code[i]);
+      const tMax = Math.round(day.temperature_2m_max[i]);
       return `
-        <button type="button" class="cm-fc-day${i === 0 ? ' cm-fc-day--today' : ''}" data-wx-day="${i}">
-          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
-          <span class="cm-fc-date">${d.getDate()}</span>
-          <span class="cm-fc-icon">${dayInfo.icon}</span>
+        <button type="button" class="hm-wx-day${i === 0 ? ' hm-wx-day--today' : ''}" data-wx-day="${i}"
+                aria-label="${escapeHtml(wd)}, до ${tMax} градусів">
+          <span class="hm-wx-wd">${escapeHtml(wd)}</span>
+          <span class="hm-wx-icon">${dayInfo.icon}</span>
+          <span class="hm-wx-max">${tMax}°</span>
         </button>
       `;
     }).join('');
 
+    el.classList.remove('hm-wx--loading');
     el.innerHTML = `
-      <div class="cm-weather-main">
-        <div class="cm-weather-icon">${info.icon}</div>
-        <div class="cm-weather-temp">${temp}°</div>
-        <div class="cm-weather-text">
-          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
-          <div class="cm-weather-feels">Відчувається як ${feels}°</div>
+      <div class="hm-wx-main">
+        <div class="hm-wx-t">${temp}°</div>
+        <div class="hm-wx-txt">
+          <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
+          <div class="hm-wx-sub">${escapeHtml(cityName || 'Олика')} · відчувається ${feels}°</div>
         </div>
       </div>
-      <div class="cm-weather-forecast">${forecastHtml}</div>
+      <div class="hm-wx-days">${forecastHtml}</div>
     `;
 
-    // Клік на день → модалка «по годинах» (температура + опади).
+    // Клік на день → модалка «по годинах» (температура + опади). Не змінювалось.
     el.querySelectorAll('[data-wx-day]').forEach(btn => {
       btn.addEventListener('click', () => openWeatherDayModal(+btn.dataset.wxDay));
     });
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Погода тимчасово недоступна</div>';
+    // Помилка погоди не ламає шапку: рядок замість блоку, решта сторінки жива
+    // (кожен блок головної падає самостійно).
+    el.classList.remove('hm-wx--loading');
+    el.innerHTML = '<div class="hm-wx-err">Погода тимчасово недоступна</div>';
   }
 }
 
@@ -1195,7 +1217,7 @@ function digestOf(arts) {
 function paintCmNews(el, arts) {
   const top = digestOf(arts);
   if (!top.length) {
-    el.innerHTML = '<div class="cm-block-empty">Новин поки немає</div>';
+    el.innerHTML = '<div class="hm-empty">Новини зʼявляться, щойно вийде перша за сьогодні</div>';
   } else {
     // ТРИ ОДНАКОВІ компактні картки — по одній з кожного розділу.
     //
@@ -1207,7 +1229,10 @@ function paintCmNews(el, arts) {
     // Вова подивився обидва варіанти скріншотами і вибрав компактний.
     // ➡️ Велика картка з фото лишається — але в ХАБІ, де вона відкриває цілий
     // екран новин і має на це право. Табло — це погляд, а не читання.
-    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: 'mini' })}</div>`;
+    // 04.08: обгортку `.cm-news-top3` знято — контейнер `#cm-news-content` уже
+    // сам `.hm-list` (колонка з проміжком), а зайвий вузол лише плодив би
+    // правила розкладки у двох файлах.
+    el.innerHTML = newsCardsHtml(top, { variant: 'mini' });
     // Мітка розділу — те, що робить дайджест дайджестом («щоб кожна новина несла
     // сенс», Вова). Пишемо назву РОЗДІЛУ, а не сире поле `geo`: у даних лежить
     // 'Олика' (стара назва Громади) і 'Світ', а читач знає три назви.
@@ -1216,27 +1241,26 @@ function paintCmNews(el, arts) {
       if (b) b.textContent = geoGroupOf(top[i]) || b.textContent;
     });
   }
-  // Нижня панель: замість трьох чіпів — один вхід у хаб.
-  const controls = document.getElementById('cm-news-controls');
-  if (controls) {
-    controls.innerHTML =
-      `<button class="cm-news-all" type="button" data-cm-news-all>Усі новини${ICONS.chevronRight}</button>`;
-  }
+  // ⚠️ 04.08: нижньої панелі «Усі новини» тут БІЛЬШЕ НЕ МАЛЮЄМО — кнопка живе
+  // у заголовку секції (`data-cm-news-all` у розмітці `community.js`). Малювати
+  // її ще й звідси означало б дві однакові кнопки, одна з яких прихована.
   paintNewsBadge(arts);
 }
 
-// «N нових» у шапці віджета — на місці, де до 31.07 стояв фальшивий «LIVE».
+// «N нових» у заголовку секції — на місці, де до 31.07 стояв фальшивий «LIVE».
 // Окремою функцією, бо її кличе ще й подія `cstl-news-seen` (гасіння після хаба),
 // і перемальовувати заради цього весь віджет не треба.
+// ⚠️ 04.08 якір змінився: шапки-кнопки `.cm-news-board-bar` більше немає,
+// бейдж чіпляється до `.hm-kicker` секції новин.
 function paintNewsBadge(arts) {
-  const bar = document.querySelector('.cm-news-board-bar');
-  if (!bar) return;
+  const head = document.querySelector('#cm-news-board .hm-sec-head');
+  if (!head) return;
   const n = countNewCommunity(arts);
-  const old = bar.querySelector('.cm-news-new');
+  const old = head.querySelector('.cm-news-new');
   if (!n) { if (old) old.remove(); return; }
   const html = `<span class="cm-news-new">${n} ${pluralNew(n)}</span>`;
   if (old) old.outerHTML = html;
-  else bar.insertAdjacentHTML('beforeend', html);
+  else head.querySelector('.hm-kicker')?.insertAdjacentHTML('afterend', html);
 }
 
 // «1 нова · 2 нові · 5 нових» — українська має три форми, і «1 нових» різало б око.
@@ -1255,8 +1279,12 @@ export async function renderCommunityNews() {
   const arts = await ensureNewsLoaded();
   paintCmNews(el, arts);
 
-  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока
-  const section = document.querySelector('.cm-block--news');
+  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока.
+  // ⚠️ 04.08: якір `.cm-block--news` замінено на `#cm-news-board`. Клас зник
+  // разом зі старою розміткою головної, і делегат тихо перестав вішатись —
+  // тобто тап по новині НЕ відкривав би статтю. Спіймав стенд `news-widget.mjs`
+  // (саме той випадок, заради якого сторожі й тримають).
+  const section = document.getElementById('cm-news-board');
   if (!section || section.dataset.wired) return;
   section.dataset.wired = '1';
   // 🔴 31.07: биті чужі фото → брендовий плейсхолдер 🏰. До цього обробник висів на

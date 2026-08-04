@@ -1,0 +1,226 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Громада — макети першого екрана</title>
+<!--
+  МАКЕТ, НЕ ЗАСТОСУНОК. Три відповіді на одне питання: яку роль грає ВЕРХ сторінки.
+  Питання поставлене саме так, бо 03.08 обидві крайності вже відхилені —
+  «фото тлом усієї сторінки» (#759) і «фото лише в плитці» (#762).
+
+  НИЗ у всіх трьох ОДНАКОВИЙ (смуга «Зараз» → збір → новини) — щоб порівнювався
+  саме верх, а не все підряд. Варіант обирається через ?v=a|b|c.
+
+  Дані справжні: заголовки з data/articles.json, телефони з data/community.json.
+-->
+<style>
+  /* Токени беремо з style/base.css — макет говорить мовою продукту, а не своєю. */
+  :root{
+    --brand-grad: radial-gradient(130% 100% at 26% 0%, rgba(150,32,50,.26) 0%, rgba(150,32,50,0) 60%),
+                  linear-gradient(162deg,#5E1723 0%,#4A121C 48%,#2E0C14 100%);
+    --red:#722F37;
+    --app-bg:#ECEEF1; --board-bg:#E6E6E3; --board-card:#FFF; --board-line:#C4C4C1;
+    --ink:#2A2520; --ink-soft:#5F5448; --ink-mute:#9C9080;
+    /* Тихий текст 4.83:1 — перевірено 03.08; #767A82 давав 4.31 і не проходив WCAG 4.5 */
+    --quiet:#6E727A;
+    /* Шкала відступів — 4-кратна, без «на око» */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s7:32px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  body{width:390px;height:844px;overflow:hidden;background:var(--app-bg);
+       font:400 15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;
+       color:var(--ink)}
+
+  /* Шапка застосунку (56px) і таб-бар (57px) — щоб макет мав чесну видиму зону 731px */
+  .chrome-top{height:56px;background:rgba(236,238,241,.94);border-bottom:1px solid rgba(0,0,0,.06);
+              display:flex;align-items:center;justify-content:center;gap:8px}
+  .chrome-top b{font:800 15px/1 system-ui;letter-spacing:.14em;color:var(--red)}
+  .stamp{font:500 10px/1 system-ui;color:#A9A399}
+  .chrome-bot{position:absolute;left:0;right:0;bottom:0;height:57px;background:rgba(255,255,255,.92);
+              border-top:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-around;
+              font:600 9.5px/1 system-ui;color:#9A958E;backdrop-filter:blur(12px)}
+  .chrome-bot i{display:block;width:20px;height:20px;margin:0 auto 4px;border-radius:6px;background:#D6D3CE}
+  .chrome-bot .on{color:var(--red)} .chrome-bot .on i{background:var(--red)}
+  .screen{height:731px;overflow:hidden;position:relative}
+
+  /* ─────────────── ВЕРХ: три варіанти ─────────────── */
+
+  /* A — ТИХА ШАПКА. Фото вгорі немає зовсім: максимум повітря, дані одразу.
+       Погода — великою цифрою, бо це найдешевша і найчастіше потрібна річ дня. */
+  .hdr-a{padding:var(--s6) var(--s5) var(--s5)}
+  .hdr-a .date{font:600 12px/1 system-ui;letter-spacing:.09em;text-transform:uppercase;color:var(--quiet)}
+  .hdr-a .hi{font:700 27px/1.15 system-ui;letter-spacing:-.02em;margin-top:var(--s2)}
+  .hdr-a .wx{display:flex;align-items:baseline;gap:var(--s2);margin-top:var(--s4)}
+  .hdr-a .wx .t{font:300 44px/1 system-ui;letter-spacing:-.03em}
+  .hdr-a .wx .d{font:400 14px/1.3 system-ui;color:var(--quiet)}
+  .hdr-a .ava{position:absolute;top:var(--s6);right:var(--s5);width:38px;height:38px;border-radius:50%;
+              background:var(--brand-grad);display:grid;place-items:center;color:#fff;font:600 14px/1 system-ui}
+
+  /* B — БОРДОВА ШАПКА. Мова автобусного віджета, який Вові подобається:
+       насичена бренд-площина, білий текст. Фото немає, характер дає колір. */
+  .hdr-b{background:var(--brand-grad);color:#fff;padding:var(--s6) var(--s5) var(--s5);
+         border-radius:0 0 22px 22px}
+  .hdr-b .date{font:600 12px/1 system-ui;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.62)}
+  .hdr-b .hi{font:700 26px/1.15 system-ui;letter-spacing:-.02em;margin-top:var(--s2);color:#fff}
+  .hdr-b .wx{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s4);
+             padding-top:var(--s4);border-top:1px solid rgba(255,255,255,.15)}
+  .hdr-b .wx .t{font:300 34px/1 system-ui;letter-spacing:-.03em;color:#fff}
+  .hdr-b .wx .d{font:400 13px/1.35 system-ui;color:rgba(255,255,255,.75)}
+  .hdr-b .ava{position:absolute;top:var(--s6);right:var(--s5);width:38px;height:38px;border-radius:50%;
+              background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);
+              display:grid;place-items:center;color:#fff;font:600 14px/1 system-ui}
+
+  /* C — ФОТО-СМУГА. Костел лишається, але 168px замість 560: обкладинка, не банер.
+       Текст читається завдяки градієнту знизу, а не затемненню всього кадру. */
+  .hdr-c{position:relative;height:168px;overflow:hidden}
+  .hdr-c img{width:100%;height:100%;object-fit:cover;object-position:50% 42%}
+  .hdr-c .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,10,14,.42) 0%,rgba(20,10,14,0) 38%,rgba(20,10,14,.72) 100%)}
+  .hdr-c .txt{position:absolute;left:var(--s5);right:var(--s5);bottom:var(--s4);color:#fff}
+  .hdr-c .date{font:600 11px/1 system-ui;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.78)}
+  .hdr-c .hi{font:700 24px/1.15 system-ui;letter-spacing:-.02em;margin-top:6px;text-shadow:0 1px 12px rgba(0,0,0,.4)}
+  .hdr-c .ava{position:absolute;top:var(--s4);right:var(--s5);width:36px;height:36px;border-radius:50%;
+              background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(8px);
+              display:grid;place-items:center;color:#fff;font:600 13px/1 system-ui}
+  .wx-c{display:flex;align-items:baseline;gap:var(--s2);padding:var(--s4) var(--s5) 0}
+  .wx-c .t{font:300 30px/1 system-ui;letter-spacing:-.03em}
+  .wx-c .d{font:400 13px/1.3 system-ui;color:var(--quiet)}
+
+  /* ─────────────── НИЗ: однаковий у всіх трьох ─────────────── */
+
+  /* Смуга «ЗАРАЗ» — капсули. Малюється ЛИШЕ коли є що сказати: «0 непрочитаних»
+     не інформація. Горизонтальна, бо цих капсул буває 0-3 і вони різної ширини. */
+  .now{display:flex;gap:var(--s2);padding:var(--s4) var(--s5) 0;overflow:hidden}
+  .cap{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 var(--s3);
+       background:var(--board-card);border:1px solid var(--board-line);border-radius:17px;
+       font:600 13px/1 system-ui;color:var(--ink);white-space:nowrap}
+  .cap b{font-weight:700;color:var(--red)}
+  .cap.on{background:var(--brand-grad);border-color:transparent;color:#fff}
+  .cap.on b{color:#fff}
+
+  .sec{padding:var(--s6) var(--s5) 0}
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--s3)}
+  .sec-h h2{font:700 12px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--quiet)}
+  .sec-h a{font:600 13px/1 system-ui;color:var(--red);text-decoration:none}
+
+  /* ЗБІР — довіра без реклами: рядок, а не банер. Бордова лише смужка прогресу
+     і сума; поверхня біла, як у решти. Немає зборів → блока немає ЗОВСІМ. */
+  .fund{background:var(--board-card);border:1px solid var(--board-line);border-radius:14px;padding:var(--s4)}
+  .fund .top{display:flex;gap:var(--s3);align-items:flex-start}
+  .fund .ic{width:34px;height:34px;border-radius:10px;background:#F6E9EB;display:grid;place-items:center;
+            font-size:17px;flex:0 0 auto}
+  .fund .ttl{font:700 15px/1.25 system-ui;letter-spacing:-.01em}
+  .fund .org{font:400 12px/1.3 system-ui;color:var(--quiet);margin-top:3px}
+  .fund .bar{height:6px;border-radius:3px;background:#EDEAE6;margin-top:var(--s3);overflow:hidden}
+  .fund .bar i{display:block;height:100%;width:64%;background:var(--brand-grad);border-radius:3px}
+  .fund .nums{display:flex;justify-content:space-between;margin-top:var(--s2);
+              font:600 12px/1 system-ui;color:var(--quiet)}
+  .fund .nums b{color:var(--ink)}
+
+  /* НОВИНИ — те, що Вові подобається. Мова .nc--mini збережена: рядок,
+     фото 64px, мітка розділу, джерело. Велику картку з фото не робимо
+     (31.07 заміряно 547px = 74.8% екрана, вибрано компактну). */
+  .news{display:flex;flex-direction:column;gap:var(--s2)}
+  .nc{display:flex;gap:var(--s3);background:var(--board-card);border:1px solid var(--board-line);
+      border-radius:14px;padding:var(--s3)}
+  .nc .ph{width:64px;height:64px;border-radius:10px;flex:0 0 auto;background:#DFDCD7;
+          display:grid;place-items:center;font-size:20px;color:#B6B1A9}
+  .nc .body{min-width:0;display:flex;flex-direction:column;justify-content:center}
+  .nc .geo{font:700 10px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+  .nc h3{font:600 14px/1.3 system-ui;letter-spacing:-.01em;margin-top:5px;
+         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .nc .src{font:400 11.5px/1 system-ui;color:var(--quiet);margin-top:6px}
+  .tag{position:fixed;left:0;top:0;background:#111;color:#fff;font:700 11px/1 system-ui;
+       padding:5px 9px;border-radius:0 0 8px 0;z-index:9;letter-spacing:.05em}
+</style>
+
+<div class="chrome-top"><b>CSTL LIFE</b><span class="stamp">v768 · 04.08 09:12</span></div>
+<div class="screen" id="screen"></div>
+<div class="chrome-bot">
+  <div><i></i>Стрічка</div><div><i></i>Обговорення</div>
+  <div class="on"><i></i>Громада</div><div><i></i>Дошка</div><div><i></i>Автобуси</div>
+</div>
+
+<script>
+const V = (new URLSearchParams(location.search).get('v') || 'a').toLowerCase();
+
+const HDR = {
+  a: `<header class="hdr-a">
+        <div class="ava">В</div>
+        <div class="date">вівторок · 4 серпня</div>
+        <div class="hi">Добрий ранок, Вова</div>
+        <div class="wx"><span class="t">18°</span><span class="d">хмарно з проясненням<br>Олика · відчувається 17°</span></div>
+      </header>`,
+  b: `<header class="hdr-b">
+        <div class="ava">В</div>
+        <div class="date">вівторок · 4 серпня</div>
+        <div class="hi">Добрий ранок, Вова</div>
+        <div class="wx"><span class="t">18°</span><span class="d">хмарно з проясненням<br>Олика · відчувається 17°</span></div>
+      </header>`,
+  c: `<header class="hdr-c">
+        <img src="../../../photos/olyka.day-1.jpg" alt="">
+        <div class="veil"></div>
+        <div class="ava">В</div>
+        <div class="txt">
+          <div class="date">вівторок · 4 серпня</div>
+          <div class="hi">Добрий ранок, Вова</div>
+        </div>
+      </header>
+      <div class="wx-c"><span class="t">18°</span><span class="d">хмарно · Олика</span></div>`,
+};
+
+// Низ — однаковий. Дані справжні (articles.json / community.json).
+const BODY = `
+  <div class="now">
+    <span class="cap on">🚌 Луцьк · <b>12 хв</b></span>
+    <span class="cap">💬 <b>2</b> нові</span>
+    <span class="cap">📌 <b>3</b> мої</span>
+  </div>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Актуальний збір</h2><a>Усі →</a></div>
+    <div class="fund">
+      <div class="top">
+        <div class="ic">🪖</div>
+        <div>
+          <div class="ttl">На РЕБ для 14-ї бригади</div>
+          <div class="org">Олицька громада · збирає Рада ветеранів</div>
+        </div>
+      </div>
+      <div class="bar"><i></i></div>
+      <div class="nums"><span><b>64 200 ₴</b> зібрано</span><span>ціль 100 000 ₴</span></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Новини</h2><a>Усі новини →</a></div>
+    <div class="news">
+      <article class="nc">
+        <div class="ph">🏰</div>
+        <div class="body">
+          <div class="geo">Громада</div>
+          <h3>Культурна спадщина та креативні індустрії: в Олицькій громаді розроблять стратегію</h3>
+          <div class="src">Район.Ківерці</div>
+        </div>
+      </article>
+      <article class="nc">
+        <div class="ph">🏰</div>
+        <div class="body">
+          <div class="geo">Волинь</div>
+          <h3>На Волині за рік збільшилася кількість ФОПів</h3>
+          <div class="src">Волинь Post</div>
+        </div>
+      </article>
+      <article class="nc">
+        <div class="ph">🏰</div>
+        <div class="body">
+          <div class="geo">Україна та Світ</div>
+          <h3>Застосунок Telegram зникав із магазину App Store в Україні та світі</h3>
+          <div class="src">Українська правда</div>
+        </div>
+      </article>
+    </div>
+  </section>`;
+
+document.getElementById('screen').innerHTML = (HDR[V] || HDR.a) + BODY;
+document.body.insertAdjacentHTML('beforeend',
+  `<div class="tag">ВАРІАНТ ${V.toUpperCase()}</div>`);
+</script>

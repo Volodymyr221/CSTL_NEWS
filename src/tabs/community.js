@@ -1,18 +1,58 @@
 // src/tabs/community.js
-// Модуль «Громада» — головна вкладка-дашборд.
-// Тонкий entry-point: скелетон + greeting + диспетчер render-блоків.
-// Render-блоки винесено у community-blocks.js, модалка — у community-modal.js.
+// ГОЛОВНА СТОРІНКА — Home Dashboard («Громада»).
 //
-// Порядок на вкладці:
-//   Hero фото → Greeting (дата + Добрий ранок/вечір) → Дошка → Погода
-//   → Світло → Автобус → Подія громади → Контакти.
+// 🔴 ПЕРЕБУДОВАНО 04.08.2026 (потік /byyou, замовлення Вови). Було: фото костелу
+// 560px = 76.6% видимої зони, привітання 412px, липка панель «ШО В СЕЛІ?» поверх
+// карток, довідник телефонів 420px, ЧОТИРИ автоматичні рухи одночасно.
+// Перша реальна інформація починалась на 606px — НИЖЧЕ першого екрана.
+// Заміряно `tests/tools/home-audit.mjs`, розбір — `_ai-tools/AUDIT_GROMADA_2026-08.md`.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// ПРИНЦИП: ТРИ ТЕМПИ, а не набір віджетів. Розмір блока = частота потреби.
+//
+//   ЗАРАЗ     щогодини → шапка (дата · привітання · погода · аватар) + капсули
+//   СЬОГОДНІ  щодня    → збір · новини · події · оголошення
+//   ЗАВЖДИ    довідка  → телефони одним рядком + розкриття
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔑 ЧОМУ ШАПКА БОРДОВА (вибір Вови 04.08 з трьох макетів — варіант «Б»)
+// Три варіанти верху показувались знімками ДО написання коду
+// (`tests/tools/_mockups/home-variants.html`): А — тиха шапка без фото,
+// Б — бордова, В — фото-смуга 168px. Вова вибрав Б.
+// ⚠️ Це не «прибрали фото щоб було модно»: 03.08 обидві крайності вже
+// відхилялись — «фото тлом усієї сторінки» (PR #759) і «фото лише в плитці»
+// (PR #762). Бордова площина дає характер БЕЗ витрат висоти, і це та сама мова,
+// що у віджеті автобусів, який Вова назвав вдалим.
+//
+// 🌤 ПОГОДА ПЕРЕЇХАЛА В ШАПКУ. Була ПЕРЕДОСТАННІМ блоком, початок на 1839px —
+// щоб побачити температуру, треба було прогорнути 2.5 екрана (а з шапки
+// застосунку погоду прибрали ще 08.07, тобто вгорі її не було НІДЕ).
+// ⚠️ Нічого не втрачено: `renderWeatherBlock()` як і раніше наповнює кеш
+// `_wxData`, ряд 7 днів лишився, тап по дню відкриває ту саму
+// `openWeatherDayModal(i)`. Змінилась лише подача.
+//
+// 🛑 ЩО ПРИБРАНО І ЧОМУ (це прибирає 3 з 4 автоматичних рухів сторінки):
+//   • hero-ротатор 4 фото / 6с — фото костелу більше не займає перший екран;
+//   • `initCenterFocus()` — масштабував КОЖЕН блок за відстанню до центру
+//     (scale 1 → 0.95). На 50+ це ускладнює прицілювання пальцем по картці,
+//     що «дихає»; разом із трьома каруселями давало відчуття, що сторінка
+//     ніколи не стоїть на місці;
+//   • липка панель «ШО В СЕЛІ?» — 75px лежали ПОВЕРХ карток на всіх чотирьох
+//     контрольних знімках 03.08.
+//
+// ✅ ЩО НЕ ЧІПАЛИ (вимога Вови «не ламай бізнес-логіку»): id контейнерів блоків
+// (`cm-news-content`, `cm-board-content`, `cm-event-content`, `cm-bus-content`,
+// `cm-weather-content`, `cm-contacts-content`) — render-функції в
+// `community-blocks.js` шукають саме їх; кнопка кабінету `[data-account-btn]`;
+// делегування `[data-switch-tab]`.
 
-import { escapeHtml, sunTimes } from '../core/utils.js';
+import { escapeHtml } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
+import { renderHomeNow } from './home-now.js';
+import { renderHomeFund } from './home-fund.js';
 import {
   renderWeatherBlock,
-  renderPowerBlock,
   renderBusBlock,
   renderBoardBlock,
   renderEventBlock,
@@ -20,413 +60,188 @@ import {
   renderCommunityNews,
 } from './community-blocks.js';
 
-// ── Hero: 4 денних + 4 вечірніх фото Олики, fade 0.55s, інтервал 6s ──────────
-// Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
-// Ручного гортання НЕМАЄ (рішення Роми 08.07): без свайпу і крапок — лише авто.
-// Кожне фото несе ПІДПИС — показується під «Олика» замість статичного слогана
-// (рішення Роми 08.07: підпис = що зображено). Зараз усі 8 кадрів — костел
-// (Вова лишив лише його); нові фото — просто додати {src, caption}.
-const KOSTEL = 'Колегіальний костел Святої Трійці';
-const HERO_DAY     = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.day-${i}.jpg`,     caption: KOSTEL }));
-const HERO_EVENING = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.evening-${i}.jpg`, caption: KOSTEL }));
-
-let _heroInterval = null;
-let _heroIndex = 0;
-let _heroIsDay = null;   // поточний режим — щоб зловити схід/захід прямо на тіку
-
-// Вечірній набір вмикається за 2 ГОДИНИ ДО заходу сонця (рішення Роми 08.07):
-// золота година + сутінки виглядають як «вечір», не як день.
-const EVENING_LEAD_MS = 2 * 60 * 60 * 1000;
-
-function isDaytime(now = new Date()) {
-  const t = sunTimes(now);
-  if (!t) return true;                       // fail-soft: без розрахунку — день
-  return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
-}
-
-function heroSet() { return isDaytime() ? HERO_DAY : HERO_EVENING; }
-
-function heroImgsHtml() {
-  return heroSet().map((it, i) => `
-    <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? 'eager' : 'lazy'}">
-  `).join('');
-}
-
-// Підпис під «Олика» = що на АКТИВНОМУ фото (міняється разом зі слайдом)
-function syncHeroCaption() {
-  const sub = document.querySelector('.cm-hero-sub');
-  const it = heroSet()[_heroIndex];
-  if (sub && it) sub.textContent = it.caption;
-}
-
-function showHeroSlide(idx) {
-  const wrap = document.querySelector('.cm-hero');
-  if (!wrap) return;
-  const n = heroSet().length;
-  _heroIndex = (idx + n) % n;
-  wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
-    img.classList.toggle('active', i === _heroIndex);
-  });
-  syncHeroCaption();
-}
-
-// Тік кожні 6с: наступний слайд. Якщо тим часом сонце зійшло/зайшло —
-// перезбираємо картинки на інший набір прямо на льоту, без перезавантаження.
-function startHeroRotator() {
-  if (_heroInterval) clearInterval(_heroInterval);
-  _heroIndex = 0;
-  _heroIsDay = isDaytime();
-  _heroInterval = setInterval(() => {
-    const wrap = document.querySelector('.cm-hero');
-    if (!wrap) { clearInterval(_heroInterval); _heroInterval = null; return; }
-    const day = isDaytime();
-    if (day !== _heroIsDay) {
-      _heroIsDay = day;
-      _heroIndex = 0;
-      // <img> — перші діти .cm-hero, overlay/градієнт лишаються на місці
-      wrap.querySelectorAll('.cm-hero-img').forEach(img => img.remove());
-      wrap.insertAdjacentHTML('afterbegin', heroImgsHtml());
-      syncHeroCaption();
-      return;
-    }
-    showHeroSlide(_heroIndex + 1);
-  }, 6000);
-}
-
-// ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────
+// ── Привітання ───────────────────────────────────────────────────────────────
 
 function getGreeting() {
-  // Підзаголовок («Ось що головне…») видалено 08.07 (рішення Роми) — лише дата+вітання.
   const h = new Date().getHours();
   let hello;
   if (h >= 5  && h < 11)      hello = 'Добрий ранок';
   else if (h >= 11 && h < 17) hello = 'Добридень';
   else if (h >= 17 && h < 22) hello = 'Добрий вечір';
   else                        hello = 'Доброї ночі';
-  // Персоналізація: якщо юзер вписав ім'я в особистому кабінеті — вітаємо по імені.
+  // Персоналізація: ім'я з кабінету. Гість — «громадо» (не «Житель»: це
+  // технічна заглушка профілю, людині вона нічого не каже).
   let who = 'громадо';
   if (isLoggedIn()) {
     const name = (currentUserName() || '').trim().split(/\s+/)[0];
     if (name && name !== 'Житель') who = name;
   }
-  return { text: `${hello}, ${who}!` };
+  return `${hello}, ${who}`;
 }
 
-// Оновити вітання наживо, коли профіль/ім'я підвантажились (onAuthChange).
+// Ім'я підвантажується асинхронно (профіль) — оновлюємо текст на місці.
 function updateGreetingName() {
-  const el = document.querySelector('.cm-greeting-text');
-  if (el) el.textContent = getGreeting().text;
-  fitGreeting();
+  const el = document.querySelector('.hm-hi');
+  if (el) el.textContent = getGreeting();
 }
 
-// Привітання — ОДИН рядок (рішення Вови 15.07): міряємо реальну ширину тексту
-// і зменшуємо шрифт від базового до мінімуму, поки не влізе (nowrap у CSS).
-// Мінімум 19px — «щоб не здавалось маленьким»; довші імена все одно влазять.
-const GREET_FONT_MAX = 27, GREET_FONT_MIN = 19;
-function fitGreeting() {
-  const el = document.querySelector('.cm-greeting-text');
-  if (!el) return;
-  let size = GREET_FONT_MAX;
-  el.style.fontSize = size + 'px';
-  // scrollWidth > clientWidth = текст обрізається → крок униз на 1px.
-  while (size > GREET_FONT_MIN && el.scrollWidth > el.clientWidth) {
-    size -= 1;
-    el.style.fontSize = size + 'px';
-  }
-}
-
-function formatTodayHeader() {
+function formatToday() {
   const d = new Date();
   const wd = ['неділя','понеділок','вівторок','середа','четвер','пʼятниця','субота'][d.getDay()];
   const m  = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][d.getMonth()];
   return `${wd} · ${d.getDate()} ${m}`;
 }
 
-// ── Скелетон-каркас вкладки ──────────────────────────────────────────────────
+// Ініціал для аватара-заглушки. `refreshAccountButtons()` замінить на фото,
+// якщо воно є, — тут лише те, що видно до її відпрацювання.
+function avatarInitial() {
+  if (!isLoggedIn()) return '';
+  const n = (currentUserName() || '').trim();
+  return n && n !== 'Житель' ? n[0].toUpperCase() : '';
+}
+
+// ── Каркас ───────────────────────────────────────────────────────────────────
+// Порядок секцій = порядок спадання частоти потреби:
+//   шапка (щогодини) → «Зараз» (щогодини) → збір → новини → події →
+//   оголошення (щодня) → телефони (довідка).
 
 function renderSkeleton() {
   const el = document.getElementById('cm-content');
   if (!el) return;
-
-  const greeting = getGreeting();
-  const todayStr = formatTodayHeader();
+  el.classList.add('hm');
 
   el.innerHTML = `
-    <!-- Кнопка кабінету — ПРИБИТА (хореографія Вови 16.07: «іконка нікуди не
-         дівається»). Окремий sticky-елемент нульової висоти: кнопка стоїть у
-         правому верхньому куті контенту від старту до кінця скролу — привітання
-         їде геть, «ШО В СЕЛІ?» приїжджає, а вона на місці. -->
-    <div class="cm-acc-pin">
-      <button class="cm-greet-account" type="button" data-account-btn aria-label="Кабінет">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
-      </button>
-    </div>
-
-    <!-- Стик-зона вітання: висота = вітання + запас «залипання» (padding-bottom).
-         .cm-greeting всередині — position:sticky, тому браузер тримає його
-         на КОМПОЗИТОРІ (без JS-скролу) → нуль дьоргання на iOS. Коли зона
-         дозникає (проскролили padding-bottom) — вітання відпускається й їде вгору. -->
-    <div class="cm-greeting-stick">
-      <section class="cm-greeting">
-        <div class="cm-greeting-col">
-          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+    <!-- ══ ШАПКА: ЗАРАЗ ══════════════════════════════════════════════════════
+         Одна бордова площина: дата · привітання · аватар · погода · 7 днів.
+         Аватар усередині потоку шапки, а не прибитий поверх контенту, як було
+         (.cm-acc-pin): прибита кнопка накривала картки на всьому скролі. -->
+    <header class="hm-top">
+      <div class="hm-top-row">
+        <div class="hm-top-col">
+          <div class="hm-date">${escapeHtml(formatToday())}</div>
+          <h1 class="hm-hi">${escapeHtml(getGreeting())}</h1>
         </div>
-      </section>
-      <!-- Розпірка запасу «залипання»: РЕАЛЬНИЙ блок (не padding!) — інакше
-           sticky у Chromium не тримає (padding контейнера не рахується у діапазон
-           залипання). Її висота = скільки px вітання ігнорує скрол. -->
-      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
-    </div>
-
-    <section class="cm-hero">
-      ${heroImgsHtml()}
-      <!-- Фрост-смугу (.cm-hero-blurband) прибрано 16.07 (Вова, редизайн «лист»):
-           непрозорий тілесний лист налягає на фото і повністю її закриває. -->
-      <div class="cm-hero-overlay">
-        <!-- Підпис фото (Вова 20.07, варіант Б): два дрібні рядки в стилі підпису
-             журналу — «ОЛИКА» (розріджені капітелі) + назва пам'ятки курсивом під нею.
-             Делікатний, не назва блоку; читабельність на день/ніч через тінь + легке
-             затемнення внизу фото. «ШО В СЕЛІ?» живе окремо нижче (cm-sec-head). -->
-        <div class="cm-hero-caption">
-          <span class="cm-hero-title">Олика</span>
-          <span class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</span>
-        </div>
+        <button class="hm-ava" type="button" data-account-btn aria-label="Кабінет">
+          <span class="hm-ava-txt">${escapeHtml(avatarInitial())}</span>
+          <svg class="hm-ava-ic" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+        </button>
       </div>
-    </section>
-    <div class="cm-hero-spacer"></div>
-
-    <!-- ЛИСТ (Вова 16.07, редизайн «як сучасний iOS-додаток»): тілесна картка
-         на всю ширину, що НАЛЯГАЄ на фото (заокруглені верхні кути + глибока тінь
-         угору). Усередині — язичок «ШО В СЕЛІ?» (випуклий виступ листа на фото)
-         і всі блоки. Хореографія збережена: sec-head sticky → доїжджає до шапки,
-         залипає і стає блюр-панеллю (--stuck), блоки пірнають під неї.
-         Кнопки кабінету тут НЕМА — вона окремо прибита (.cm-acc-pin). -->
-    <div class="cm-sheet">
-    <!-- Прикріплений до шапки блюр-рядок (Правка 1): fixed, не їде зі скролом; opacity скрабиться. -->
-    <div class="cm-topbar-blur" aria-hidden="true"></div>
-    <div id="cm-sec-sentinel" aria-hidden="true"></div>
-    <header class="cm-sec-head" id="cm-sec-head">
-      <div class="cm-sec-head-in">
-        <h2>ШО В СЕЛІ?</h2>
-        <!-- Підзаголовок ЗНОВУ в липкій шапці (Вова 16.07, вечір): заголовок і
-             підзаголовок — одне ціле, обидва лишаються на блюрі коли шапка залипає.
-             Раніше був у тілі блоку → відскролювався геть, на блюрі лишався лише h2. -->
-        <p class="cm-sheet-sub">Ось що головне у нас сьогодні</p>
+      <!-- Погоду малює renderWeatherBlock() — id збережено навмисно, щоб кеш
+           _wxData і модалка по годинах лишились тими самими. -->
+      <div id="cm-weather-content" class="hm-wx hm-wx--loading">
+        <div class="hm-wx-sk"></div>
       </div>
     </header>
 
-    <!-- Порядок блоків (рішення Роми 08.07):
-         Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
+    <!-- ══ СМУГА «ЗАРАЗ» ═══════════════════════════════════════════════════════
+         Капсули: найближчий автобус · непрочитані · мої оголошення.
+         🔴 Малюється, ЛИШЕ якщо є що сказати — «0 непрочитаних» не інформація.
+         Порожньо → секції немає зовсім (не порожня смуга висотою 50px). -->
+    <div id="hm-now" class="hm-now" hidden></div>
 
-    <!-- 🔴 31.07: шапка стала справжньою <button>. Раніше це був <div>, по якому
-         нічого не тапалось; тепер увесь віджет веде в хаб новин, і клавіатурі та
-         читачу екрана потрібен реальний елемент керування, а не клікабельний блок. -->
-    <section id="cm-news-board" class="cm-block cm-block--news">
-      <button class="cm-news-board-bar" type="button" data-cm-news-open>
-        <span class="cm-news-board-label">Табло новин</span>
-      </button>
-      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
-      <div id="cm-news-controls" class="cm-news-controls"></div>
+    <!-- ══ ЗБІР ════════════════════════════════════════════════════════════════
+         Немає активних зборів → секції немає ЗОВСІМ (вимога Вови). -->
+    <section id="hm-fund" class="hm-sec" hidden>
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Актуальний збір</h2>
+      </div>
+      <div id="hm-fund-body"></div>
     </section>
 
-    <!-- Віджет Дошки (повна переробка 13.07, рішення Вови): шапка тепер
-         усередині віджета (рендерить renderBoardBlock), стара «Дошка громади» прибрана. -->
-    <section class="cm-block cm-block--board">
-      <div id="cm-board-content" class="cm-loading">Завантаження…</div>
+    <!-- ══ НОВИНИ ══════════════════════════════════════════════════════════════
+         Головна точка входу до новин: окремої вкладки «Новини» немає.
+         «Усі новини» → наявний openNewsHub БЕЗ зміни його логіки. -->
+    <section id="cm-news-board" class="hm-sec">
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Новини</h2>
+        <button class="hm-more" type="button" data-cm-news-all>Усі новини →</button>
+      </div>
+      <div id="cm-news-content" class="hm-list">
+        ${skeletonRows(3)}
+      </div>
+      <div id="cm-news-controls" hidden></div>
     </section>
 
-    <section class="cm-block cm-block--event">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Найближчі події громади</h3>
-        <button class="cm-block-link" data-switch-tab="shotam">Афіша →</button>
-      </header>
-      <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
+    <!-- ══ ПОДІЇ ═══════════════════════════════════════════════════════════════ -->
+    <section class="hm-sec" id="hm-events">
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Події громади</h2>
+        <button class="hm-more" type="button" data-switch-tab="shotam">Афіша →</button>
+      </div>
+      <div id="cm-event-content" class="hm-list">${skeletonRows(2)}</div>
     </section>
 
-    <section class="cm-block cm-block--bus">
-      <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
-      <footer class="cm-block-footer">
-        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ →</button>
-      </footer>
+    <!-- ══ ОГОЛОШЕННЯ ══════════════════════════════════════════════════════════ -->
+    <section class="hm-sec" id="hm-board">
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Оголошення</h2>
+        <button class="hm-more" type="button" data-switch-tab="board">Дошка →</button>
+      </div>
+      <div id="cm-board-content" class="hm-list">${skeletonRows(3)}</div>
     </section>
 
-    <section class="cm-block cm-block--weather">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Погода в Олиці</h3>
-      </header>
-      <div id="cm-weather-content" class="cm-block-body cm-loading">Завантаження…</div>
+    <!-- ══ АВТОБУСИ ════════════════════════════════════════════════════════════ -->
+    <section class="hm-sec" id="hm-bus">
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Автобуси</h2>
+        <button class="hm-more" type="button" data-switch-tab="buses">Розклад →</button>
+      </div>
+      <div id="cm-bus-content" class="hm-list">${skeletonRows(1)}</div>
     </section>
 
-    <!-- Блок Світло — приховано 16.05.2026 (світло наразі не відключають).
-         Щоб повернути: розкоментувати секцію + повернути renderPowerBlock() у initCommunity. -->
-    <!--
-    <section class="cm-block cm-block--power">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Світло зараз</h3>
-        <button class="cm-block-link" data-switch-tab="power">Графік →</button>
-      </header>
-      <div id="cm-power-content" class="cm-block-body cm-loading">Завантаження…</div>
+    <!-- ══ ТЕЛЕФОНИ (довідка) ══════════════════════════════════════════════════
+         Було 420px = 57.5% видимої зони на статичний довідник, потрібний
+         кілька разів на рік. Стало: екстрені на видноті + решта під розкриттям. -->
+    <section class="hm-sec" id="cm-contacts">
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">Телефони громади</h2>
+      </div>
+      <div id="cm-contacts-content" class="hm-list">${skeletonRows(1)}</div>
     </section>
-    -->
-
-    <section id="cm-contacts" class="cm-block cm-block--contacts">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Корисні контакти</h3>
-      </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">Завантаження…</div>
-    </section>
-    </div><!-- /.cm-sheet -->
   `;
+}
+
+// Скелет рядка = форма того, що прийде (фото 64px + три смужки тексту).
+// ⚠️ Розміри мусять збігатися з реальною карткою, інакше при появі даних
+// сторінка сіпнеться — а це рівно те, від чого ми йдемо.
+function skeletonRows(n) {
+  const row = `
+    <div class="hm-card hm-sk-row" aria-hidden="true">
+      <div class="hm-sk hm-sk-ph"></div>
+      <div class="hm-sk-lines">
+        <div class="hm-sk hm-sk-l1"></div>
+        <div class="hm-sk hm-sk-l2"></div>
+        <div class="hm-sk hm-sk-l3"></div>
+      </div>
+    </div>`;
+  return row.repeat(n);
 }
 
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
 let _greetingWired = false;
-// Фрост-підкладку (wireHeroBlur, рішення Роми 08.07) видалено 16.07 (Вова,
-// редизайн «лист»): непрозорий тілесний лист налягає на фото і повністю закривав
-// би площину блюру — backdrop-filter працював би даремно (батарея/GPU).
-
-// ── Фокус-скрол «ШО В СЕЛІ?» (Вова 15.07) ────────────────────────────────────
-// Блок, чий центр ближче до центру екрана, — повний розмір + глибша тінь;
-// сусіди делікатно менші (−5%) і трохи прозоріші. Безперервне відображення від
-// відстані до центру (не перемикач) → блоки плавно «дихають» при скролі.
-// Лише transform+opacity (композитор, нуль reflow); рахунок — один кадр на скрол
-// (rAF-guard, passive). Вимикається при prefers-reduced-motion (доступність).
-let _focusWired = false;
-function initCenterFocus() {
-  if (_focusWired) return;
-  const main = document.querySelector('.app-main');
-  if (!main) return;
-  // Фокус-масштаб — це РУХ (вимикаємо при reduced-motion); прилипання заголовка
-  // «ШО В СЕЛІ?» — стан розмітки (скляний фон = читабельність) — працює завжди.
-  const allowMotion = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  _focusWired = true;
-
-  let raf = null;
-  let _stickyTop = null;   // кеш sticky-top секції (top:-16); читаємо раз, не щокадру
-  let _secRestTop = null;  // позиція заголовка «ШО В СЕЛІ?» у спокої (scrollTop≈0) — база для згасання кольору на весь скрол
-  let _maskW = 0;   // ширина, для якої вже збудовано маску (ОДИН раз на ширину — не щоскрол → без миготіння)
-  // Маска-СИЛУЕТ «тіло+язичок» ОДНИМ шляхом (data-URI, надійно рендериться на iOS) з м'яким
-  // верхнім краєм (feGaussianBlur по Y, фіксована легка глибина sd — язичок суцільний у спокої,
-  // край рівномірно м'який на язичку і по боках). Будуємо ЛИШЕ при зміні ширини → без миготіння.
-  // y=0 — верх язичка, y=17 — верх тіла листа. Плечі r24, язичок 175/r17.
-  const buildSheetMask = (w) => {
-    const H = 6000, rB = 24, pw = 175, ph = 17, r = 17, sd = 1.5;   // sd 2.5→1.5 (Вова 19.07): щільніший верхній край язичка — менше просвітлення
-    const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-    const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  };
-  const apply = () => {
-    raf = null;
-    if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
-    const vh = main.clientHeight;
-    const viewCenter = vh / 2;
-
-    // Весь ефект СКРАБИТЬСЯ пропорційно зсуву заголовка «ШО В СЕЛІ?» від позиції
-    // у спокої до фіксації під шапкою (progColor, Вова 19.07): 0 у спокої → 1 на
-    // фіксації; при скролі донизу — плавно назад. Рахунок щокадру (rAF) прив'язаний
-    // до позиції скролу → плавно, без ривків, симетрично.
-    const sec = document.getElementById('cm-sec-head');
-    const hdr = document.querySelector('.app-header');
-    if (sec) {
-      const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
-      // Лінія пінінгу = низ шапки + sticky-top секції (top:-16 → фіксується вище).
-      // Кешуємо top раз (getComputedStyle щокадру = зайвий reflow).
-      if (_stickyTop === null) _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
-      const pinLine = pinY + _stickyTop;
-      const secTop = sec.getBoundingClientRect().top;
-      // ВЕСЬ ефект (колір листа, блюр листа, блюр-рядок під шапкою, біління тексту) прив'язаний
-      // до progColor — зсуву заголовка від позиції У СПОКОЇ (Вова 19.07): у спокої (scrollTop≈0)
-      // progColor=0 → нічого не застосовано (язичок темний, без блюру/просвітлення); плавно 0→1
-      // зі скролу до фіксації під шапкою. Раніше блюр-рядок висів на окремому prog (база — абсолютна
-      // відстань до шапки, FADE=140px) → у спокої був частково видимий (~15%), язичок «просвічувався».
-      // progColor цього уникає: база — позиція заголовка у спокої (перезчитуємо щоразу, коли ми вгорі).
-      if (main.scrollTop < 4) _secRestTop = secTop;
-      const startY = _secRestTop != null ? _secRestTop : secTop;
-      const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
-      // ДВА РІЗНІ ТЕМПИ (Вова 19.07):
-      // • БЛЮР+КОЛІР ЛИСТА (скло під блоком) — наростають ОДРАЗУ щойно блок рушив угору
-      //   (на progColor): блок піднімається → фон під ним плавно блюриться з першого пікселя.
-      // • БІЛІННЯ НАЗВИ + блюр-рядок під шапкою — ПІЗНІШЕ (мертва зона START): вмикаються лише
-      //   коли надпис уже трохи вище, щоб «зарано» не змінювались. prog: 0 до START → 0; далі 0→1.
-      const START = 0.4;
-      const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
-      const sheet = document.querySelector('.cm-sheet');
-      if (sheet) {
-        sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // блюр-рядок під шапкою: пізніше (мертва зона), 0 поки надпис не піднявся вище
-        // Скло листа (progColor): колір беж 0.82→0 (згасає з руху); блюр фону — БАЗА 6px
-        // уже В СПОКОЇ (Вова 19.07: «додати блюр у спокої + зменшити насиченість кольору»),
-        // наростає до 11px на фіксації. 6 + 5*progColor.
-        sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
-        sheet.style.setProperty('--sheet-blur', (6 + 5 * progColor).toFixed(1) + 'px');
-        // Маска-силует — будуємо ОДИН раз на ширину (фіксований м'який край) → без миготіння.
-        const w = sheet.clientWidth;
-        if (w && w !== _maskW) {
-          _maskW = w;
-          sheet.style.setProperty('--sheet-mask', buildSheetMask(w));
-        }
-      }
-      // Білий колір тексту НАЗВИ — пізніше (prog, мертва зона START): поки надпис не піднявся
-      // вище START — не білий; далі біліє плавно до фіксації (Вова 19.07).
-      sec.classList.toggle('cm-sec-head--stuck', prog >= 0.4);
-    }
-    if (!allowMotion) return;
-    let best = null, bestDist = Infinity;
-    document.querySelectorAll('#cm-content .cm-block').forEach(b => {
-      const r = b.getBoundingClientRect();
-      // Блок повністю поза екраном — скидаємо стилі й не рахуємо далі.
-      if (r.bottom < -80 || r.top > vh + 80) {
-        if (b.dataset.cf) { b.style.transform = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
-        return;
-      }
-      const blockCenter = (r.top + r.bottom) / 2;
-      const dist = Math.abs(blockCenter - viewCenter);
-      // Табло новин (перший блок): піднімаючись ЗНИЗУ до центру — не звужується
-      // (одразу звичайний розмір, Вова 16.07); звужується лише коли пройшло центр
-      // угору (ховається під шапку). Решта блоків — симетрично, як було.
-      // scaleDist керує ЛИШЕ масштабом; справжня dist лишається для детекту фокуса,
-      // щоб табло не «хапало» підсвітку сидячи внизу.
-      const scaleDist = (b.id === 'cm-news-board' && blockCenter > viewCenter) ? 0 : dist;
-      const t = Math.min(1, scaleDist / (vh * 0.55));    // 0 у центрі → 1 далеко
-      // Лише масштаб + тінь фокуса. БЕЗ прозорості (виправлення Вови 16.07 —
-      // блоки лишаються такими як є, не «вицвітають»).
-      b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
-      b.dataset.cf = '1';
-      if (dist < bestDist) { bestDist = dist; best = b; }
-    });
-    document.querySelectorAll('#cm-content .cm-block--focus').forEach(b => { if (b !== best) b.classList.remove('cm-block--focus'); });
-    if (best) best.classList.add('cm-block--focus');
-  };
-  const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
-  main.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
-  window.addEventListener('cstl-tab-changed', onScroll);   // повернулись на Громаду → перерахунок
-  onScroll();   // початковий стан одразу після рендеру
-}
 
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
-  startHeroRotator();
-  initCenterFocus();          // фокус-скрол блоків «ШО В СЕЛІ?» (Вова 15.07)
-  refreshAccountButtons();    // кнопка кабінету біля привітання: фото/іконка
-  // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
+  refreshAccountButtons();
   if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
   updateGreetingName();
-  // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
-  renderWeatherBlock();
-  // renderPowerBlock(); — Світло приховано (16.05.2026, не актуально)
-  renderBusBlock();
-  renderBoardBlock();
-  renderEventBlock();
-  renderContactsBlock();
+
+  // Блоки вантажаться паралельно — кожен оновлює свою секцію, коли готовий.
+  // Помилка одного не ламає інші (кожен має власний catch).
+  renderWeatherBlock();     // → шапка (і наповнює кеш _wxData для модалки)
+  renderHomeNow();          // → смуга «Зараз»
+  renderHomeFund();         // → збір (порожньо = секція лишається hidden)
   renderCommunityNews();
+  renderEventBlock();
+  renderBoardBlock();
+  renderBusBlock();
+  renderContactsBlock();
 }
 
-// B-21 fix: event delegation замість inline onclick="switchTab(...)" (XSS hardening).
-// Один listener на #cm-content ловить click на будь-якому [data-switch-tab] всередині блоків.
+// B-21 fix: делегування замість inline onclick (XSS hardening). Один слухач на
+// #cm-content ловить click на будь-якому [data-switch-tab] всередині блоків.
 function attachSwitchTabDelegation() {
   const root = document.getElementById('cm-content');
   if (!root) return;

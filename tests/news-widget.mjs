@@ -62,7 +62,7 @@ const { ctx, page } = await openCommunity();
 // ── 1. Віджет Громади ───────────────────────────────────────────────────────
 const w = await page.evaluate(`(() => {
   const count = ${COUNT_SCROLLERS};
-  const n = document.querySelector('.cm-block--news');
+  const n = document.getElementById('cm-news-board');
   if (!n) return null;
   return {
     scrollers: count(n),
@@ -71,7 +71,7 @@ const w = await page.evaluate(`(() => {
     imgs: n.querySelectorAll('img').length,
     live: /LIVE/.test(n.textContent),
     chips: n.querySelectorAll('.cm-news-chip, .cm-news-filters, .cm-news-feed').length,
-    headerTag: (n.querySelector('.cm-news-board-bar') || {}).tagName,
+    headerTag: (n.querySelector('[data-cm-news-all]') || {}).tagName,
     hasAll: !!n.querySelector('[data-cm-news-all]'),
   };
 })()`);
@@ -85,15 +85,15 @@ ok('у віджеті рівно 3 картки', w.cards === 3, `${w.cards}`);
 ok('картинок у віджеті не більше 3', w.imgs <= 3, `${w.imgs}`);
 ok('фальшивого «LIVE» більше нема', !w.live);
 ok('чіпи і старий скролер прибрані', w.chips === 0, `залишків: ${w.chips}`);
-ok('шапка віджета — справжня кнопка', w.headerTag === 'BUTTON', w.headerTag);
+ok('вхід у хаб — справжня кнопка', w.headerTag === 'BUTTON', w.headerTag);
 ok('є вхід «Усі новини»', w.hasAll);
 
 // ── 2. КОНТРОЛЬ: вимір справді ловить скролер ───────────────────────────────
 // Повертаємо віджету те, що прибрали (вкладений скролер) — перевірка МУСИТЬ упасти.
 const ctrl = await page.evaluate(`(() => {
   const count = ${COUNT_SCROLLERS};
-  const n = document.querySelector('.cm-block--news');
-  const box = n.querySelector('.cm-news-top3');
+  const n = document.getElementById('cm-news-board');
+  const box = document.getElementById('cm-news-content');
   box.style.maxHeight = '200px';
   box.style.overflowY = 'auto';
   const found = count(n);
@@ -105,7 +105,7 @@ ok('🔴 КОНТРОЛЬ: на навмисно зламаному віджет
 ok('КОНТРОЛЬ: після відкату скролерів знову 0', ctrl.afterRestore === 0);
 
 // ── 3. Хаб ──────────────────────────────────────────────────────────────────
-await page.locator('.cm-news-board-bar').click();
+await page.locator('#cm-news-board [data-cm-news-all]').click();
 await page.waitForTimeout(800);
 
 const h = await page.evaluate(`(() => {
@@ -121,7 +121,7 @@ const h = await page.evaluate(`(() => {
   };
 })()`);
 
-ok('тап по віджету відкриває хаб', !!h);
+ok('«Усі новини» відкриває хаб', !!h);
 ok('🔴 у хабі РІВНО ОДИН скролер (проблему не переселили)',
    h.scrollers.length === 1 && h.listIsScroller, `${JSON.stringify(h.scrollers)}`);
 ok('у хабі три категорії', h.tabs === 3, `${h.tabs}`);
@@ -215,7 +215,7 @@ ok('мітка body.nh-open знята разом із хабом',
 // Підняття модалки scoped під `body.nh-open`, тож стаття, відкрита з ВІДЖЕТА,
 // мусить лишитись рівно такою, якою була: починатись під шапкою застосунку.
 // Без цієї перевірки «полагодив хаб — непомітно змінив Громаду» пройшло б тихо.
-await page.locator('.cm-block--news [data-article-id]').first().click();
+await page.locator('#cm-news-board [data-article-id]').first().click();
 await page.waitForTimeout(700);
 const fromWidget = await page.evaluate(() => {
   const m = document.getElementById('article-modal');
@@ -241,7 +241,7 @@ await page.evaluate(() => {
   if (b) b.click();
 });
 await page.waitForTimeout(500);
-await page.locator('.cm-news-board-bar').click();
+await page.locator('#cm-news-board [data-cm-news-all]').click();
 await page.waitForTimeout(900);
 
 const look = await page.evaluate(() => {
