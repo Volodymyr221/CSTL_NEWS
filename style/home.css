@@ -8,7 +8,7 @@
    Сторінка ділиться не на «віджети», а на ТРИ ТЕМПИ — за частотою зміни:
 
      ЗАРАЗ     міняється щогодини  → шапка + капсули. Компактно, вгорі.
-     СЬОГОДНІ  міняється щодня     → збір · новини · події · оголошення. Головна площа.
+     СЬОГОДНІ  міняється щодня     → збір · стрічка · новини · оголошення. Головна площа.
      ЗАВЖДИ    довідка             → телефони. Один рядок + розкриття.
 
    **Розмір блока = частота потреби.** До 04.08 було рівно навпаки: фото костелу
@@ -80,9 +80,96 @@
    базовому `--app-bg` картка дає 1.122:1 (на межі помітності), на `--board-bg` —
    1.264:1. Це вже перевірене число, не нове рішення. */
 #cm-content.hm {
-  background: var(--board-bg);
+  background: transparent;   /* крізь контент видно фото — див. .hm-bg нижче */
   padding-bottom: var(--hm-s7);
+  position: relative; z-index: 1;
 }
+
+/* ══ ФОТО НА ФОНІ (варіант «Д», вибір Вови 04.08) ══════════════════════════════
+   Замовлення дослівно: «щоб взаді на фоні були фотографії і щоб воно було
+   по-сучасному… але так, щоб воно не зливалося зі шрифтом, з написами, з
+   блоками різними».
+
+   🔴 «НЕ ЗЛИВАЛОСЯ» — ЦЕ ПРО КОНТРАСТ, А НЕ ПРО СМАК. Тому діє одне жорстке
+   правило: **жодна буква не лежить на голому фото.** Між фотографією і текстом
+   завжди або вуаль (щільний градієнт нижче), або непрозора картка.
+   Три рубежі захисту:
+     1. `blur(2px)` — фото віддає настрій, а не деталі. Дрібний контраст гілок і
+        вікон, який «рябить» під текстом, зникає ще до вуалі.
+     2. вуаль (точні числа — біля самого правила нижче) темніє донизу, бо
+        донизу більшає дрібного тексту.
+     3. картки лишаються НЕПРОЗОРО білими. Скляні картки на фото виглядають
+        ефектно на макеті й нечитабельно на сонці — це не той компроміс.
+
+   ⚠️ `position: fixed`, а не `background-attachment: fixed`: другий на iOS
+   Safari смикається при інерційній прокрутці. Фото стоїть, контент їде поверх.
+   ⚠️ Фон лежить у `#cm-content`, тому живе рівно стільки, скільки відкрита
+   Громада: сховали вкладку (`display:none`) — зник і він.
+   ⚠️ Ніякого `will-change`/`transform` на предках: вони зробили б цей `fixed`
+   прив'язаним до предка, і фото поїхало б разом зі скролом. */
+/* 🔴 `z-index: -1`, а НЕ 0. Це не косметика — з нулем фото накривало половину
+   сторінки, і знайшлось це лише контрольним знімком.
+   Механіка: у межах одного контексту накладання браузер малює спершу звичайні
+   блоки в потоці, і аж потім — ПОЗИЦІОНОВАНІ елементи з `z-index: 0/auto`.
+   Тобто `.hm-bg` (fixed, z-index 0) лягав ПОВЕРХ усього непозиціонованого:
+   шапки, заголовків секцій, порожніх станів. Картки при цьому лишались
+   видимими (вони позиціоновані й ідуть пізніше в DOM) — через це баг і виглядав
+   як «зникли підписи», а не як «фон поверх усього».
+   Відʼємний z-index кладе фон під увесь вміст контексту раз і назавжди. */
+.hm-bg {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;   /* фон нічого не перехоплює */
+  overflow: hidden;
+  background: #1A0A0E;    /* поки фото вантажиться — темне, а не біле блимання */
+}
+.hm-bg img {
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%;
+  filter: blur(2px) saturate(.88);
+  /* Масштаб 1.06 — щоб розмиття не показало прозорі краї по периметру. */
+  transform: scale(1.06);
+}
+/* Щільність вуалі — компроміс, який довелось міряти двічі.
+   Перша спроба 0.72 → 0.94 давала бездоганний контраст і майже НЕ показувала
+   фото: сторінка виглядала просто темною, а замовлення було «щоб взаді на фоні
+   були фотографії». Друга — 0.58 → 0.88: костел проглядається між секціями,
+   а текст лишається читабельним, бо його підстраховує `text-shadow` нижче.
+   ⚠️ Донизу щільніше НАВМИСНО: чим нижче, тим більше дрібного тексту. */
+.hm-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(24, 10, 14, .58) 0%,
+    rgba(24, 10, 14, .74) 46%,
+    rgba(20, 8, 12, .88) 100%);
+}
+/* Фон вкладки під час «гумового» відскоку — щоб на межі не блиснуло світле. */
+.app-main[data-tab="community"] { background: #1A0A0E; }
+
+/* ── Що змінює темна поверхня ────────────────────────────────────────────────
+   Картки лишаються білими (див. вище), а от усе, що лежить ПРЯМО на фоні —
+   назви секцій, посилання, порожні стани — стає світлим. */
+/* 🔴 Текст, що лежить ПРЯМО на фото, має ДВА рубежі: вуаль (вище) і власну
+   тінь. Тінь потрібна саме тому, що фото — не рівна площина: під однією
+   назвою секції може опинитись темна крона, під іншою — світле небо, і
+   середній контраст нічого не гарантує. Тінь робить букву читабельною на
+   будь-якій ділянці кадру, не затемнюючи всю сторінку. */
+#cm-content.hm .hm-kicker,
+#cm-content.hm .hm-more,
+#cm-content.hm .hm-empty,
+#cm-content.hm .hm-error,
+#cm-content.hm .hm-tel-sum { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+
+#cm-content.hm .hm-kicker { color: rgba(255, 255, 255, .82); }
+#cm-content.hm .hm-more   { color: #fff; }
+#cm-content.hm .hm-empty,
+#cm-content.hm .hm-error  { color: rgba(255, 255, 255, .78); }
+/* Скелет на темному — світліші смуги, інакше він невидимий. */
+#cm-content.hm .hm-sk {
+  background: linear-gradient(90deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.16) 42%, rgba(255,255,255,.08) 84%);
+  background-size: 260px 100%;
+}
+/* Шапка на фото вуалі більше не потребує власного градієнта на всю площину —
+   але лишається бордовою, бо це бренд. Тінь під нею відділяє її від фото. */
+#cm-content.hm .hm-top { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
 
 /* Секція = заголовок + вміст. Проміжок між секціями — один і той самий. */
 .hm-sec { padding: var(--hm-s6) var(--hm-pad) 0; }
@@ -266,6 +353,155 @@
   font: 600 12px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
 }
 .hm-fund-nums b { color: var(--ink); }
+
+/* ══ БЛОК «ЖИТТЯ ГРОМАДИ» — ДАЙДЖЕСТ СТРІЧКИ ══════════════════════════════════
+   Два яруси: ряд кружечків каналів + останній допис карткою.
+   🔑 Чому не рядки, як у новин: три однакові списки підряд перетворюють головну
+   на суцільний перелік, і Стрічка серед них не читається як щось інше. А вона
+   інша — це люди і канали, а не заголовки.
+   📐 Кружечки — сітка на 6 колонок, БЕЗ горизонтальної прокрутки: вкладені
+   скролери на головній прибирали двічі, третій не заводимо. */
+.hm-fd-circles {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: var(--hm-s2); margin-bottom: var(--hm-s3);
+}
+.hm-fd-c { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+/* Кільце — та сама позначка «є нове», що у Стрічці. Малюється як підкладка під
+   аватаром (padding + фон), а не рамкою: рамка з'їдала б розмір самого фото. */
+.hm-fd-c-ring {
+  width: 46px; height: 46px; border-radius: 50%; padding: 2px;
+  background: transparent; display: grid; place-items: center;
+}
+.hm-fd-c--new .hm-fd-c-ring { background: var(--brand-grad-sm); }
+.hm-fd-c-av {
+  width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+  background: rgba(255, 255, 255, .16); border: 1.5px solid rgba(255, 255, 255, .3);
+  display: grid; place-items: center; color: #fff;
+}
+.hm-fd-c-av img { width: 100%; height: 100%; object-fit: cover; }
+.hm-fd-c-tx { font: 700 16px/1 system-ui, -apple-system, sans-serif; }
+/* Назва каналу — один рядок із обрізкою: канали бувають із довгими іменами,
+   а колонка вузька (390 − 40 полів) / 6 ≈ 58px. */
+.hm-fd-c-name {
+  max-width: 100%; font: 500 9.5px/1.15 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .8); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+}
+
+/* Останній допис — картка з фото на всю ширину. Одна публікація, показана
+   добре, каже про життя громади більше, ніж три обрізані рядки. */
+.hm-fd-post { display: block; padding: var(--hm-s3); }
+.hm-fd-p-head { display: flex; align-items: center; gap: var(--hm-s2); }
+.hm-fd-p-av {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  background: var(--brand-grad-sm); display: grid; place-items: center; color: #fff;
+}
+.hm-fd-p-av img { width: 100%; height: 100%; object-fit: cover; }
+.hm-fd-p-tx { font: 700 14px/1 system-ui, -apple-system, sans-serif; }
+.hm-fd-p-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-fd-p-name { font: 700 13px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink); }
+.hm-fd-p-when { font: 400 11px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+.hm-fd-p-txt {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font: 400 13.5px/1.4 system-ui, -apple-system, sans-serif; color: var(--ink-soft);
+  margin-top: var(--hm-s2);
+}
+/* Фото допису — 16:9. Фіксована пропорція, а не висота за картинкою: інакше
+   поява фото після завантаження зсувала б усе, що нижче. */
+.hm-fd-p-img {
+  display: block; margin-top: var(--hm-s3); border-radius: var(--hm-r-tile);
+  overflow: hidden; background: #DDD9D3; aspect-ratio: 16 / 9;
+}
+.hm-fd-p-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ══ ОГОЛОШЕННЯ — РЯДОК (04.08, замість каруселі на корку) ════════════════════
+   Фото 64px ліворуч, як у новин: на головній усі списки читаються однією
+   формою, і око не перевчається на кожній секції. */
+.hm-ad { display: flex; gap: var(--hm-s3); padding: var(--hm-s3); }
+.hm-ad-ph {
+  flex: 0 0 auto; width: 64px; height: 64px; border-radius: var(--hm-r-tile);
+  background: #DFDCD7 center/cover no-repeat;
+  display: grid; place-items: center; font-size: 22px;
+}
+.hm-ad-ph--none { background-color: #EDEBE7; }
+.hm-ad-body { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+.hm-ad-cat { align-self: flex-start; }
+.hm-ad-name {
+  font: 600 14px/1.3 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
+  color: var(--ink); margin-top: 5px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hm-ad-meta {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--hm-s2);
+  font: 400 11.5px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); margin-top: 6px;
+}
+.hm-ad-loc { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
+.hm-ad-loc svg { flex: 0 0 auto; }
+
+/* ══ ПОДІЯ — РЯДОК (04.08, замість каруселі з 5 слайдів) ══════════════════════
+   Ліворуч дата стовпчиком: саме за нею подію шукають очима. */
+.hm-ev { display: flex; gap: var(--hm-s3); padding: var(--hm-s3); align-items: center; }
+.hm-ev-date {
+  flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--hm-r-tile);
+  background: var(--brand-tint); color: var(--red);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.hm-ev-d { font: 700 18px/1 system-ui, -apple-system, sans-serif; letter-spacing: -.02em; }
+.hm-ev-m { font: 600 10px/1 system-ui, -apple-system, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.hm-ev-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-ev-ttl {
+  font: 600 14px/1.3 system-ui, -apple-system, sans-serif; letter-spacing: -.01em; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hm-ev-meta { font: 400 12px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+
+/* ══ ТЕЛЕФОНИ — ТРИ НА ВИДНОТІ, РЕШТА ПІД РОЗКРИТТЯМ ═════════════════════════
+   Було 427px = 58.4% видимої зони на довідник, потрібний кілька разів на рік. */
+.hm-tel { display: flex; align-items: center; gap: var(--hm-s3); padding: var(--hm-s3); text-decoration: none; }
+.hm-tel-ic {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--hm-r-tile);
+  background: var(--brand-tint); display: grid; place-items: center; color: var(--red);
+}
+.hm-tel-ic svg { width: 18px; height: 18px; }
+.hm-tel-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-tel-name { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
+.hm-tel-num  { font: 400 12.5px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+
+.hm-tel-more { margin-top: var(--hm-s2); }
+.hm-tel-sum {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 var(--hm-s4);
+  border: 1px solid rgba(255, 255, 255, .22); border-radius: var(--hm-r-pill);
+  background: rgba(255, 255, 255, .08);
+  font: 600 13px/1 system-ui, -apple-system, sans-serif; color: #fff;
+}
+.hm-tel-sum::-webkit-details-marker { display: none; }
+.hm-tel-sum::after {
+  content: '▾'; font-size: 11px; transition: transform var(--hm-dur) var(--hm-ease);
+}
+.hm-tel-more[open] .hm-tel-sum::after { transform: rotate(180deg); }
+.hm-tel-sum:active { background: rgba(255, 255, 255, .16); }
+.hm-tel-rest { margin-top: var(--hm-s2); }
+
+/* ══ ОДНА МОВА КАРТОК НА ВСЮ ГОЛОВНУ ══════════════════════════════════════════
+   🔴 Аудит 04.08 знайшов на одному екрані СІМ візуальних мов: бордова шапка ·
+   кремові новини · фіолетова карусель події · сірий «корок» оголошень · темна
+   картка автобуса · зелені контакти · помаранчеві екстрені.
+   Вова: «щоб воно не зливалося зі шрифтом, з написами, з блоками різними».
+
+   🔬 Кремовий — заміряно, не на око: картка новини була `#FAF8EF`, теплота
+   (R−B) = **11**, при фоні сторінки теплотою **3**. Це рівно та хвороба, яку
+   лікували на Дошці 29.07 — там сторож `tests/board-cream.mjs` тримає поріг 6
+   і прямо називає `#FAF8EF` найслабшим кремовим. Тепле майже-біле на холодному
+   тлі читається брудно-жовтим.
+   ⚠️ Правило scoped під `#cm-content` — та сама картка `.nc` живе ще й у хабі
+   новин, і його вигляд це рішення не стосується. */
+#cm-content.hm .nc {
+  background: var(--board-card);
+  border-color: var(--board-line);
+}
 
 /* ══ ПРИМІТИВ КАРТКИ ══════════════════════════════════════════════════════════ */
 .hm-card {

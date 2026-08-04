@@ -1,0 +1,250 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Громада — фото на фоні, варіанти</title>
+<!--
+  МАКЕТ. Три різні відповіді на замовлення Вови 04.08: «щоб взаді на фоні були
+  фотографії і щоб воно було по-сучасному… але так, щоб воно не зливалося зі
+  шрифтом, з написами, з блоками різними».
+
+  🔴 «Не зливалося» — це не про смак, це про КОНТРАСТ. Тому в усіх трьох
+  варіантах діє одне правило: текст ніколи не лежить на голому фото. Між фото і
+  буквами завжди або вуаль (scrim — темний градієнт), або непрозора картка.
+
+  Заразом у всіх трьох виправлено те, що знайшов аудит: одна мова карток
+  (кремові #FAF8EF прибрані), без каруселей і без вкладених скролерів,
+  плюс НОВИЙ віджет Стрічки.
+
+  Варіант обирається через ?v=g|d|e
+-->
+<style>
+  :root{
+    --brand-grad: radial-gradient(130% 100% at 26% 0%, rgba(150,32,50,.26) 0%, rgba(150,32,50,0) 60%),
+                  linear-gradient(162deg,#5E1723 0%,#4A121C 48%,#2E0C14 100%);
+    --red:#722F37; --board-bg:#E6E6E3; --board-card:#FFF; --board-line:#C4C4C1;
+    --ink:#2A2520; --ink-soft:#5F5448; --quiet:#6E727A;
+    --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+  body{width:390px;height:844px;overflow:hidden;background:var(--board-bg);
+       font:400 15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;color:var(--ink)}
+  .chrome-top{height:56px;background:rgba(236,238,241,.94);border-bottom:1px solid rgba(0,0,0,.06);
+              display:flex;align-items:center;justify-content:center;gap:8px;position:relative;z-index:5}
+  .chrome-top b{font:800 15px/1 system-ui;letter-spacing:.14em;color:var(--red)}
+  .stamp{font:500 10px/1 system-ui;color:#A9A399}
+  .chrome-bot{position:absolute;left:0;right:0;bottom:0;height:57px;background:rgba(255,255,255,.94);
+              border-top:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-around;
+              font:600 9.5px/1 system-ui;color:#9A958E;z-index:5;backdrop-filter:blur(12px)}
+  .chrome-bot i{display:block;width:20px;height:20px;margin:0 auto 4px;border-radius:6px;background:#D6D3CE}
+  .chrome-bot .on{color:var(--red)} .chrome-bot .on i{background:var(--red)}
+  .screen{height:731px;overflow:hidden;position:relative}
+  .scroll{height:100%;overflow:hidden;position:relative;z-index:2}
+
+  /* ── СПІЛЬНА МОВА КАРТОК (виправлення з аудиту: одна форма, БІЛА поверхня) ── */
+  .sec{padding:var(--s6) var(--s5) 0}
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--s3)}
+  .sec-h h2{font:700 12px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--quiet)}
+  .sec-h a{font:600 13px/1 system-ui;color:var(--red);text-decoration:none}
+  .list{display:flex;flex-direction:column;gap:var(--s2)}
+  .card{background:var(--board-card);border:1px solid var(--board-line);border-radius:14px;
+        box-shadow:0 1px 2px rgba(24,20,16,.04),0 6px 16px rgba(24,20,16,.05)}
+  .row{display:flex;gap:var(--s3);padding:var(--s3)}
+  .ph{width:64px;height:64px;border-radius:10px;flex:0 0 auto;background:#DFDCD7;
+      display:grid;place-items:center;font-size:20px;color:#B6B1A9;overflow:hidden}
+  .ph img{width:100%;height:100%;object-fit:cover}
+  .bd{min-width:0;display:flex;flex-direction:column;justify-content:center}
+  .kick{font:700 10px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+  .ttl{font:600 14px/1.3 system-ui;letter-spacing:-.01em;margin-top:5px;
+       display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .meta{font:400 11.5px/1 system-ui;color:var(--quiet);margin-top:6px}
+
+  /* Віджет СТРІЧКИ — новий. Аватар кружечком + автор + рядок допису + фото. */
+  .fd .ava{width:38px;height:38px;border-radius:50%;flex:0 0 auto;background:var(--brand-grad);
+           display:grid;place-items:center;color:#fff;font:700 15px/1 system-ui}
+  .fd .who{font:700 13px/1 system-ui}
+  .fd .txt{font:400 13px/1.35 system-ui;color:var(--ink-soft);margin-top:4px;
+           display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .fd .when{font:400 11px/1 system-ui;color:var(--quiet);margin-top:6px}
+  .fd .thumb{width:52px;height:52px;border-radius:9px;flex:0 0 auto;background:#DDD9D3;
+             display:grid;place-items:center;font-size:17px;color:#B6B1A9}
+
+  /* Капсули «Зараз» */
+  .now{display:flex;gap:var(--s2);padding:var(--s4) var(--s5) 0;flex-wrap:wrap}
+  .cap{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 var(--s3);
+       background:var(--board-card);border:1px solid var(--board-line);border-radius:17px;
+       font:600 13px/1 system-ui;white-space:nowrap}
+  .cap b{color:var(--red)}
+  .cap.on{background:var(--brand-grad);border-color:transparent;color:#fff}
+  .cap.on b{color:#fff}
+
+  /* ══ Г — ФОТО В ШАПЦІ ══════════════════════════════════════════════════════
+     Фото займає лише шапку (230px). Під ним — звичайна щільна сторінка.
+     Вуаль двошарова: зверху легка (щоб небо не вибілювало дату), знизу щільна
+     під текст. Це найбезпечніший варіант: жоден контент не лежить на фото. */
+  .g-top{position:relative;height:230px;overflow:hidden;border-radius:0 0 22px 22px}
+  .g-top img{width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+  .g-veil{position:absolute;inset:0;
+          background:linear-gradient(180deg,rgba(28,10,16,.55) 0%,rgba(28,10,16,.15) 34%,rgba(28,10,16,.82) 100%)}
+  .g-in{position:absolute;inset:auto 0 0 0;padding:0 var(--s5) var(--s5);color:#fff}
+
+  /* ══ Д — ФОТО ФОНОМ УСІЄЇ СТОРІНКИ ══════════════════════════════════════════
+     Фото зафіксоване позаду, контент їде поверх. Щоб НЕ зливалось:
+     (1) на фото лежить постійна темна вуаль + розмиття;
+     (2) картки НЕПРОЗОРІ білі — текст ніколи не на фото;
+     (3) назви секцій білі з тінню.
+     Це найефектніший варіант і найризикованіший: сторінка стає темною. */
+  .d-bg{position:absolute;inset:0;z-index:0}
+  .d-bg img{width:100%;height:100%;object-fit:cover;filter:blur(1.5px) saturate(.85)}
+  .d-bg::after{content:'';position:absolute;inset:0;
+               background:linear-gradient(180deg,rgba(24,10,14,.72) 0%,rgba(24,10,14,.86) 46%,rgba(20,8,12,.94) 100%)}
+  .d .sec-h h2{color:rgba(255,255,255,.72)}
+  .d .sec-h a{color:#fff}
+  .d .cap{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(8px)}
+  .d .cap b{color:#fff}
+  .d-hdr{padding:var(--s6) var(--s5) 0;color:#fff}
+
+  /* ══ Е — ФОТО ПЕРЕХОДИТЬ У БОРДОВИЙ ═════════════════════════════════════════
+     Фото вгорі (170px) без різкої межі: воно ВТІКАЄ у бренд-градієнт, і текст
+     лежить уже на суцільному бордовому. Компроміс: фото є, але жодна буква
+     на ньому не стоїть — тобто злитися нічому. */
+  .e-top{position:relative;background:var(--brand-grad);border-radius:0 0 22px 22px;overflow:hidden}
+  .e-photo{position:absolute;left:0;right:0;top:0;height:190px}
+  .e-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 38%}
+  .e-photo::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(46,12,20,.30) 0%,rgba(46,12,20,.55) 45%,rgba(46,12,20,1) 100%)}
+  .e-in{position:relative;padding:var(--s6) var(--s5) var(--s5);color:#fff}
+  .e-in .pad{height:96px}
+
+  .date{font:600 12px/1 system-ui;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+  .hi{font:700 25px/1.14 system-ui;letter-spacing:-.02em;margin-top:var(--s2);color:#fff;
+      text-shadow:0 1px 14px rgba(0,0,0,.35)}
+  .wx{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s4);padding-top:var(--s4);
+      border-top:1px solid rgba(255,255,255,.18)}
+  .wx .t{font:300 34px/1 system-ui;letter-spacing:-.03em}
+  .wx .d1{display:block;font:400 13.5px/1.25 system-ui}
+  .wx .d2{display:block;font:400 12px/1.3 system-ui;color:rgba(255,255,255,.75);margin-top:2px}
+  .ava-top{position:absolute;top:var(--s6);right:var(--s5);width:38px;height:38px;border-radius:50%;
+           background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.34);
+           display:grid;place-items:center;color:#fff;font:600 14px/1 system-ui;backdrop-filter:blur(6px)}
+  .tag{position:fixed;left:0;top:0;background:#111;color:#fff;font:700 11px/1 system-ui;
+       padding:5px 9px;border-radius:0 0 8px 0;z-index:9;letter-spacing:.05em}
+</style>
+
+<div class="chrome-top"><b>CSTL LIFE</b><span class="stamp">v769 · 04.08 11:40</span></div>
+<div class="screen" id="screen"></div>
+<div class="chrome-bot">
+  <div><i></i>Стрічка</div><div><i></i>Обговорення</div>
+  <div class="on"><i></i>Громада</div><div><i></i>Дошка</div><div><i></i>Автобуси</div>
+</div>
+
+<script>
+const V = (new URLSearchParams(location.search).get('v') || 'g').toLowerCase();
+const PHOTO = '../../../photos/olyka.day-1.jpg';
+
+const HEAD_INNER = `
+  <div class="date">вівторок · 4 серпня</div>
+  <div class="hi">Добрий ранок, Вова</div>
+  <div class="wx">
+    <span class="t">18°</span>
+    <span><span class="d1">Хмарно з проясненням</span><span class="d2">Олика · відчувається 17°</span></span>
+  </div>`;
+
+// Низ однаковий у трьох варіантах: «Зараз» → Стрічка (НОВЕ) → Новини → Оголошення
+const BODY = `
+  <div class="now">
+    <span class="cap on">🚌 Луцьк · <b>12 хв</b></span>
+    <span class="cap">💬 <b>2</b> нові</span>
+    <span class="cap">📌 <b>3</b> мої</span>
+  </div>
+
+  <section class="sec">
+    <div class="sec-h"><h2>У стрічці громади</h2><a>Стрічка →</a></div>
+    <div class="list">
+      <article class="card row fd">
+        <div class="ava">О</div>
+        <div class="bd">
+          <div class="who">Олицька громада</div>
+          <div class="txt">Завтра о 10:00 — прибирання біля костелу. Беріть рукавиці, інвентар буде.</div>
+          <div class="when">2 год тому · 14 ❤</div>
+        </div>
+        <div class="thumb">🖼</div>
+      </article>
+      <article class="card row fd">
+        <div class="ava">К</div>
+        <div class="bd">
+          <div class="who">Kino_Castle</div>
+          <div class="txt">У пʼятницю показ просто неба. Починаємо, щойно стемніє.</div>
+          <div class="when">5 год тому · 31 ❤</div>
+        </div>
+        <div class="thumb">🖼</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Новини</h2><a>Усі новини →</a></div>
+    <div class="list">
+      <article class="card row">
+        <div class="ph">🏰</div>
+        <div class="bd">
+          <div class="kick">Громада</div>
+          <div class="ttl">Культурна спадщина та креативні індустрії: в Олицькій громаді розроблять стратегію</div>
+          <div class="meta">Район.Ківерці · 31 липня</div>
+        </div>
+      </article>
+      <article class="card row">
+        <div class="ph">🏰</div>
+        <div class="bd">
+          <div class="kick">Волинь</div>
+          <div class="ttl">На Волині за рік збільшилася кількість ФОПів</div>
+          <div class="meta">Волинь Post · 6 год тому</div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Оголошення</h2><a>Дошка →</a></div>
+    <div class="list">
+      <article class="card row">
+        <div class="ph">🚜</div>
+        <div class="bd">
+          <div class="kick">Шукаю</div>
+          <div class="ttl">Шукаю людину з трактором — привезти землю</div>
+          <div class="meta">Олика · 11 травня</div>
+        </div>
+      </article>
+    </div>
+  </section>`;
+
+const V_HTML = {
+  g: `<div class="scroll">
+        <header class="g-top">
+          <img src="${PHOTO}" alt="">
+          <div class="g-veil"></div>
+          <div class="ava-top">В</div>
+          <div class="g-in">${HEAD_INNER}</div>
+        </header>
+        ${BODY}
+      </div>`,
+  d: `<div class="d-bg"><img src="${PHOTO}" alt=""></div>
+      <div class="scroll d">
+        <header class="d-hdr" style="position:relative">
+          <div class="ava-top">В</div>
+          ${HEAD_INNER}
+        </header>
+        ${BODY}
+      </div>`,
+  e: `<div class="scroll">
+        <header class="e-top">
+          <div class="e-photo"><img src="${PHOTO}" alt=""></div>
+          <div class="ava-top">В</div>
+          <div class="e-in"><div class="pad"></div>${HEAD_INNER}</div>
+        </header>
+        ${BODY}
+      </div>`,
+};
+
+document.getElementById('screen').innerHTML = V_HTML[V] || V_HTML.g;
+document.body.insertAdjacentHTML('beforeend', `<div class="tag">ВАРІАНТ ${V.toUpperCase()}</div>`);
+</script>

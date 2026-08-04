@@ -11,8 +11,15 @@
 // ПРИНЦИП: ТРИ ТЕМПИ, а не набір віджетів. Розмір блока = частота потреби.
 //
 //   ЗАРАЗ     щогодини → шапка (дата · привітання · погода · аватар) + капсули
-//   СЬОГОДНІ  щодня    → збір · новини · події · оголошення
+//   СЬОГОДНІ  щодня    → збір · стрічка громади · новини · оголошення
 //   ЗАВЖДИ    довідка  → телефони одним рядком + розкриття
+//
+// 🗑 СЕКЦІЇ «ПОДІЇ» НА ГОЛОВНІЙ БІЛЬШЕ НЕМАЄ (рішення Вови 04.08: «події
+// прибрати»). Причина не в даних, а в тому, що вести з неї не було куди:
+// вкладки Подій у застосунку не існує, і кнопка «Афіша →» вела у Стрічку.
+// ⚠️ Функція renderEventBlock і картка події (openShotamModal) у
+// community-blocks.js ЛИШИЛИСЬ — вони знадобляться, якщо екран Подій зроблять.
+// Просто ніхто їх не кличе.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔑 ЧОМУ ШАПКА БОРДОВА (вибір Вови 04.08 з трьох макетів — варіант «Б»)
@@ -51,11 +58,11 @@ import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
 import { renderHomeNow } from './home-now.js';
 import { renderHomeFund } from './home-fund.js';
+import { renderHomeFeed } from './home-feed.js';
 import {
   renderWeatherBlock,
   renderBusBlock,
   renderBoardBlock,
-  renderEventBlock,
   renderContactsBlock,
   renderCommunityNews,
 } from './community-blocks.js';
@@ -111,6 +118,14 @@ function renderSkeleton() {
   el.classList.add('hm');
 
   el.innerHTML = `
+    <!-- ══ ФОТО НА ФОНІ (варіант «Д», вибір Вови 04.08) ═══════════════════════
+         Зафіксоване позаду всього; контент їде поверх. Вуаль і розмиття — у
+         style/home.css, там же пояснено, чому текст ніколи не лежить на
+         голому фото. aria-hidden — це декорація, читачу екрана вона не потрібна. -->
+    <div class="hm-bg" aria-hidden="true">
+      <img src="./photos/olyka.day-1.jpg" alt="">
+    </div>
+
     <!-- ══ ШАПКА: ЗАРАЗ ══════════════════════════════════════════════════════
          Одна бордова площина: дата · привітання · аватар · погода · 7 днів.
          Аватар усередині потоку шапки, а не прибитий поверх контенту, як було
@@ -148,6 +163,18 @@ function renderSkeleton() {
       <div id="hm-fund-body"></div>
     </section>
 
+    <!-- ══ У СТРІЧЦІ ГРОМАДИ ═══════════════════════════════════════════════════
+         🆕 04.08. Дайджест Стрічки — головного соціального майданчика
+         застосунку. До цього з головної НЕ БУЛО ВИДНО, що там узагалі щось
+         відбувається. Порожньо або немає бази → секції немає зовсім. -->
+    <section id="hm-feed" class="hm-sec" hidden>
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">У стрічці громади</h2>
+        <button class="hm-more" type="button" data-switch-tab="shotam">Стрічка →</button>
+      </div>
+      <div id="hm-feed-body" class="hm-list"></div>
+    </section>
+
     <!-- ══ НОВИНИ ══════════════════════════════════════════════════════════════
          Головна точка входу до новин: окремої вкладки «Новини» немає.
          «Усі новини» → наявний openNewsHub БЕЗ зміни його логіки. -->
@@ -160,15 +187,6 @@ function renderSkeleton() {
         ${skeletonRows(3)}
       </div>
       <div id="cm-news-controls" hidden></div>
-    </section>
-
-    <!-- ══ ПОДІЇ ═══════════════════════════════════════════════════════════════ -->
-    <section class="hm-sec" id="hm-events">
-      <div class="hm-sec-head">
-        <h2 class="hm-kicker">Події громади</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">Афіша →</button>
-      </div>
-      <div id="cm-event-content" class="hm-list">${skeletonRows(2)}</div>
     </section>
 
     <!-- ══ ОГОЛОШЕННЯ ══════════════════════════════════════════════════════════ -->
@@ -233,8 +251,8 @@ export function initCommunity() {
   renderWeatherBlock();     // → шапка (і наповнює кеш _wxData для модалки)
   renderHomeNow();          // → смуга «Зараз»
   renderHomeFund();         // → збір (порожньо = секція лишається hidden)
+  renderHomeFeed();         // → дайджест Стрічки (порожньо = секція hidden)
   renderCommunityNews();
-  renderEventBlock();
   renderBoardBlock();
   renderBusBlock();
   renderContactsBlock();

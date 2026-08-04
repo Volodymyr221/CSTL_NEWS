@@ -81,7 +81,8 @@ await p.goBack(); await p.waitForTimeout(700);
 ok('назад повертає на Громаду', await p.evaluate(()=>document.querySelector('.app-main')?.dataset.tab==='community'));
 
 // 5. Переходи по вкладках із секцій
-for (const [sel,tab,name] of [['#hm-events .hm-more','shotam','Афіша'],['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
+// ⚠️ «Афіші» тут НЕМАЄ навмисно — див. окрему перевірку нижче.
+for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
   await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(400);
   const has = await p.evaluate(s=>!!document.querySelector(s), sel);
   if (!has) { ok(`кнопка «${name}» існує`, false); continue; }
@@ -94,16 +95,41 @@ for (const [sel,tab,name] of [['#hm-events .hm-more','shotam','Афіша'],['#h
 }
 await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(500);
 
+// 5.1 🔴 СЕКЦІЇ ПОДІЙ НА ГОЛОВНІЙ НЕМАЄ (рішення Вови 04.08 «події прибрати»).
+// Причина була не в даних: вести з неї не було куди — вкладки Подій у
+// застосунку не існує, і кнопка «Афіша →» вела людину у Стрічку.
+// Сторож не дає повернути секцію назад доти, доки не зʼявиться справжній екран.
+const ev = await p.evaluate(()=>({
+  sec: !!document.getElementById('hm-events'),
+  cont: !!document.getElementById('cm-event-content'),
+  afisha: [...document.querySelectorAll('#cm-content .hm-more')].some(b => /афіш/i.test(b.textContent)),
+}));
+ok('🔴 секції подій на головній немає', !ev.sec && !ev.cont);
+ok('🔴 кнопки «Афіша», що вела у Стрічку, немає', !ev.afisha);
+
+// 5.2 🔴 ФОТО НА ФОНІ НЕ НАКРИВАЄ ВМІСТ.
+// Перша версія мала z-index: 0 — і фото лягло ПОВЕРХ усього непозиціонованого
+// (шапка, назви секцій зникли). Міряємо НАСЛІДОК: що реально під пальцем у
+// точці заголовка секції — текст чи фон.
+const bgz = await p.evaluate(()=>{
+  const bg = document.querySelector('.hm-bg');
+  const k = document.querySelector('#cm-news-board .hm-kicker');
+  const r = k.getBoundingClientRect();
+  const at = document.elementFromPoint(r.left + 4, r.top + r.height/2);
+  return { z: getComputedStyle(bg).zIndex, hitsBg: at === bg || bg.contains(at), tag: at?.className };
+});
+ok('🔴 фон лежить ПІД вмістом (z-index відʼємний)', bgz.z === '-1', `z-index: ${bgz.z}`);
+ok('🔴 заголовок секції не накритий фоном', !bgz.hitsBg, `під пальцем: "${bgz.tag}"`);
+
 // 6. Блоки наповнились
 const filled = await p.evaluate(()=>{
   const t = id => (document.getElementById(id)?.textContent||'').trim();
   const sk = id => document.getElementById(id)?.querySelector('.hm-sk-row');
-  return { news:t('cm-news-content').length, ev:t('cm-event-content').length,
+  return { news:t('cm-news-content').length,
     board:t('cm-board-content').length, bus:t('cm-bus-content').length, cont:t('cm-contacts-content').length,
-    stuck:['cm-news-content','cm-event-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
+    stuck:['cm-news-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
 });
 ok('новини наповнились', filled.news>40, String(filled.news));
-ok('події наповнились', filled.ev>10, String(filled.ev));
 ok('оголошення наповнились', filled.board>10, String(filled.board));
 ok('автобуси наповнились', filled.bus>10, String(filled.bus));
 ok('контакти наповнились', filled.cont>10, String(filled.cont));

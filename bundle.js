@@ -1277,8 +1277,8 @@
     if (!r.ok)
       return { ok: false, error: r.error };
     const data = r.data;
-    const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
-    await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview }).eq("id", threadId);
+    const preview2 = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
+    await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview2 }).eq("id", threadId);
     supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
     const [signed] = await signChatPhotos([data]);
     return { ok: true, message: signed || data };
@@ -5205,7 +5205,7 @@
           const n = c.unread;
           const top = c.last;
           const more = c.threads.length - 1;
-          const preview = top?.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
+          const preview2 = top?.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
           const archived = convArchived(c);
           return `
           <div class="pm-thread-row" data-row="${escapeHtml(c.key)}">
@@ -5221,7 +5221,7 @@
                   <span class="pm-thread-time">${threadListTime(top?.last_message_at)}</span>
                 </div>
                 <div class="pm-thread-post">${escapeHtml(threadPostTitle(top))}${more > 0 ? `<span class="pm-thread-more">+${more}</span>` : ""}</div>
-                <div class="pm-thread-last">${escapeHtml(preview)}</div>
+                <div class="pm-thread-last">${escapeHtml(preview2)}</div>
               </div>
               ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ""}
             </button>
@@ -10506,121 +10506,90 @@
     }
   }
 
-  // src/tabs/events.js
-  var CATEGORY_COLORS2 = {
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
-    "Kino_Castle": "#722F37",
-    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
-    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
-    // коричневий — нейтральний для свят (державних і релігійних)
-  };
-  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var allEvents = [];
-  function formatFullDate(dateStr) {
-    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  // src/tabs/home-feed.js
+  var MAX_CIRCLES = 6;
+  var FRESH_H = 24;
+  function initial(name) {
+    const n = (name || "").trim();
+    return n ? n[0].toUpperCase() : "\u2022";
   }
-  function catColor2(category) {
-    return CATEGORY_COLORS2[category] || "#722F37";
+  function preview(text) {
+    const t = (text || "").replace(/\s+/g, " ").trim();
+    if (t.length <= 150)
+      return t;
+    const cut = t.slice(0, 150);
+    const sp = cut.lastIndexOf(" ");
+    return (sp > 90 ? cut.slice(0, sp) : cut) + "\u2026";
   }
-  function buildIcsContent(ev) {
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-    return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//CSTL LIFE//UA",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
-      `SUMMARY:${esc(ev.title)}`,
-      `DESCRIPTION:${esc(ev.description)}`,
-      `LOCATION:${esc(ev.location)}`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT1H",
-      "ACTION:DISPLAY",
-      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
+  function circleHtml(page, fresh) {
+    const name = page.name || "\u041A\u0430\u043D\u0430\u043B";
+    const inner = page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="" loading="lazy">` : `<span class="hm-fd-c-tx">${escapeHtml(initial(name))}</span>`;
+    return `
+    <span class="hm-fd-c${fresh ? " hm-fd-c--new" : ""}">
+      <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${inner}</span></span>
+      <span class="hm-fd-c-name">${escapeHtml(name)}</span>
+    </span>`;
   }
-  function downloadIcs(ev) {
-    const ics = buildIcsContent(ev);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  function postHtml(p) {
+    const page = p.pages || {};
+    const name = page.name || "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
+    const txt = preview(p.text);
+    const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
+    const ava = page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;
+    return `
+    <article class="hm-card hm-card--tap hm-fd-post">
+      <span class="hm-fd-p-head">
+        <span class="hm-fd-p-av">${ava}</span>
+        <span class="hm-fd-p-who">
+          <span class="hm-fd-p-name">${escapeHtml(name)}</span>
+          <span class="hm-fd-p-when">${escapeHtml(formatTime(p.created_at))}</span>
+        </span>
+      </span>
+      ${txt ? `<span class="hm-fd-p-txt">${escapeHtml(txt)}</span>` : ""}
+      ${img ? `<span class="hm-fd-p-img"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ""}
+    </article>`;
   }
-  function openShotamModal(id) {
-    const ev = allEvents.find((e) => e.id === id);
-    if (!ev)
+  async function renderHomeFeed() {
+    const sec = document.getElementById("hm-feed");
+    const body = document.getElementById("hm-feed-body");
+    if (!sec || !body)
       return;
-    const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
+    if (!isSupabaseReady()) {
+      sec.hidden = true;
       return;
-    const catC = catColor2(ev.category);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
     }
-    let cover;
-    if (ev.image) {
-      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
+    try {
+      const [pages2, posts2] = await Promise.all([
+        fetchPages(),
+        fetchPagePosts(null, 12)
+      ]);
+      if (!posts2.length) {
+        sec.hidden = true;
+        body.innerHTML = "";
+        return;
+      }
+      const freshBy = /* @__PURE__ */ new Set();
+      const edge = Date.now() - FRESH_H * 3600 * 1e3;
+      for (const p of posts2) {
+        if (new Date(p.created_at).getTime() >= edge)
+          freshBy.add(p.page_id);
+      }
+      const ordered = [...pages2].sort((a, b) => (freshBy.has(b.id) ? 1 : 0) - (freshBy.has(a.id) ? 1 : 0));
+      const circles = ordered.slice(0, MAX_CIRCLES);
+      sec.hidden = false;
+      body.innerHTML = (circles.length ? `<div class="hm-fd-circles">${circles.map((pg) => circleHtml(pg, freshBy.has(pg.id))).join("")}</div>` : "") + postHtml(posts2[0]);
+      body.classList.add("hm-appear");
+    } catch {
+      sec.hidden = true;
+      body.innerHTML = "";
     }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
-      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
-    </div>
-    ${cover}
-    <div class="article-body">${bodyHtml}</div>`;
-    const shareBtn = document.getElementById("modal-share-btn");
-    const remindBtn = document.getElementById("modal-remind-btn");
-    const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: ev.title,
-        text: `\u{1F4C5} ${ev.title}
-${when}${ev.location ? " \xB7 " + ev.location : ""}
-
-${ev.description || ""}`
+    if (!sec.dataset.wired) {
+      sec.dataset.wired = "1";
+      sec.addEventListener("click", () => {
+        if (typeof window.switchTab === "function")
+          window.switchTab("shotam");
       });
-    if (remindBtn) {
-      remindBtn.hidden = false;
-      remindBtn.onclick = () => {
-        if (!isLoggedIn()) {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
-          });
-          return;
-        }
-        downloadIcs(ev);
-      };
     }
-    if (saveBtn)
-      saveBtn.hidden = true;
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
   }
 
   // src/tabs/news-hub.js
@@ -10810,14 +10779,6 @@ ${ev.description || ""}`
   onAuthChange(() => {
     renderBusBlock();
   });
-  var _bwTimer = null;
-  var _bwResume = null;
-  var BW_STEP_MS = 5e3;
-  var BW_RESUME_MS = 8e3;
-  var BW_MAX_CARDS = 16;
-  var _evItems = [];
-  var _evIdx = 0;
-  var _evTimer = null;
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
   var _wxData = null;
@@ -11261,34 +11222,27 @@ ${ev.description || ""}`
     }, 80);
   }
   var BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-  var BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
-  function bwStopAuto() {
-    clearInterval(_bwTimer);
-    _bwTimer = null;
-    clearTimeout(_bwResume);
-    _bwResume = null;
-  }
-  function bwCardHtml(p) {
+  var BOARD_ROWS = 3;
+  var _boardAds = [];
+  function bwRowHtml(p) {
     const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo;
-    const title = p.title && p.title.trim() || (p.text || "").trim().slice(0, 60) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    const raw = p.title && p.title.trim() || (p.text || "").trim();
+    const title = raw.length > 70 ? raw.slice(0, 70).replace(/\s+\S*$/, "") + "\u2026" : raw || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
     const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
     const color = catColor(p.category);
-    const cover = photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : "";
+    const cover = photo ? `<span class="hm-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>` : `<span class="hm-ad-ph hm-ad-ph--none">${catIcon(p.category)}</span>`;
     return `
-    <article class="cmbw-card" data-bw-id="${p.id}">
-      <div class="cmbw-in">
-        <span class="cmbw-pin" aria-hidden="true"></span>
-        ${cover}
-        <div class="cmbw-body">
-          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
-          <div class="cmbw-name">${escapeHtml(title)}</div>
-          <div class="cmbw-meta">
-            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
-            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
-          </div>
-        </div>
-      </div>
+    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
+      ${cover}
+      <span class="hm-ad-body">
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)} hm-ad-cat">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
+        <span class="hm-ad-name">${escapeHtml(title)}</span>
+        <span class="hm-ad-meta">
+          ${locLabel ? `<span class="hm-ad-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
+          ${ts ? `<span>${formatTime(ts)}</span>` : ""}
+        </span>
+      </span>
     </article>`;
   }
   function bwShuffle(arr) {
@@ -11303,7 +11257,6 @@ ${ev.description || ""}`
     const el = document.getElementById("cm-board-content");
     if (!el)
       return;
-    bwStopAuto();
     try {
       let posts2 = [], usedSupabase = false;
       if (isSupabaseReady()) {
@@ -11318,304 +11271,25 @@ ${ev.description || ""}`
         posts2 = (await boardRes.json()).posts || [];
       }
       const ads = posts2.filter((p) => (p.type || "board") === "board");
-      const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
-      const cards = shown.map(bwCardHtml).join("");
+      const shown = bwShuffle(ads).slice(0, BOARD_ROWS);
       el.classList.remove("cm-loading");
-      el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438">
-        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">\u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0406 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</span>
-      </div>
-      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
-           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
-           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
-           <span class="cmbw-dots" aria-hidden="true"></span>
-           <div class="cmbw-foot" data-bw-more role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-             <span>\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>${BW_ARROW_SVG}
-           </div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
-    `;
-      el.addEventListener("click", (e) => {
-        const card = e.target.closest("[data-bw-id]");
-        if (card) {
-          const post = ads.find((p) => p.id === Number(card.dataset.bwId));
-          if (post) {
+      el.innerHTML = ads.length ? shown.map(bwRowHtml).join("") : '<div class="hm-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</div>';
+      if (!el.dataset.wired) {
+        el.dataset.wired = "1";
+        el.addEventListener("click", (e) => {
+          const card = e.target.closest("[data-bw-id]");
+          if (!card)
+            return;
+          const id = Number(card.dataset.bwId);
+          const post = (_boardAds || []).find((p) => p.id === id);
+          if (post)
             openAdModalStandalone(post);
-            return;
-          }
-        }
-        if (e.target.closest("[data-bw-more]") || e.target.closest("[data-bw-head]")) {
-          if (typeof window.switchTab === "function")
-            window.switchTab("board");
-        }
-      });
-      const strip = el.querySelector("#cmbw-strip");
-      if (strip) {
-        const snapTargets = () => {
-          const kids = [...strip.children];
-          if (!kids.length)
-            return [];
-          const base = kids[0].offsetLeft;
-          return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
-        };
-        const targets0 = snapTargets();
-        const dotsWrap = el.querySelector(".cmbw-dots");
-        if (dotsWrap && targets0.length > 1) {
-          dotsWrap.innerHTML = targets0.map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join("");
-        }
-        const dotEls = dotsWrap ? [...dotsWrap.children] : [];
-        const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
-        const updateFx = () => {
-          const kids = [...strip.children];
-          if (!kids.length)
-            return;
-          const base = kids[0].offsetLeft;
-          const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
-          kids.forEach((c) => {
-            const l = c.offsetLeft - base + padL;
-            const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
-            const frac = Math.min(1, vis / c.offsetWidth);
-            if (c.firstElementChild)
-              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
-          });
-          if (dotEls.length) {
-            const targets = snapTargets();
-            let ai = 0, best = Infinity;
-            targets.forEach((t, i) => {
-              const d = Math.abs(t - strip.scrollLeft);
-              if (d < best) {
-                best = d;
-                ai = i;
-              }
-            });
-            dotEls.forEach((d, i) => d.classList.toggle("cmbw-dot--active", i === ai));
-          }
-        };
-        let fxRaf = 0;
-        strip.addEventListener("scroll", () => {
-          if (fxRaf)
-            return;
-          fxRaf = requestAnimationFrame(() => {
-            fxRaf = 0;
-            updateFx();
-          });
-        }, { passive: true });
-        updateFx();
-        if (targets0.length > 1) {
-          const tick = () => {
-            if (!document.contains(strip)) {
-              bwStopAuto();
-              return;
-            }
-            if (document.hidden)
-              return;
-            const targets = snapTargets();
-            if (!targets.length)
-              return;
-            const max = strip.scrollWidth - strip.clientWidth;
-            const next = targets.find((t) => t > strip.scrollLeft + 8);
-            strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
-          };
-          const startAuto = () => {
-            clearInterval(_bwTimer);
-            _bwTimer = setInterval(tick, BW_STEP_MS);
-          };
-          const pauseAuto = () => {
-            clearInterval(_bwTimer);
-            _bwTimer = null;
-            clearTimeout(_bwResume);
-            _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-          };
-          strip.addEventListener("touchstart", pauseAuto, { passive: true });
-          strip.addEventListener("pointerdown", pauseAuto);
-          if (dotsWrap)
-            dotsWrap.addEventListener("click", (e) => {
-              const d = e.target.closest("[data-bw-dot]");
-              if (!d)
-                return;
-              e.stopPropagation();
-              pauseAuto();
-              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
-              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
-            });
-          startAuto();
-        }
+        });
       }
+      _boardAds = ads;
     } catch {
-      el.innerHTML = '<div class="cmbw-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+      el.innerHTML = '<div class="hm-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
-  }
-  function pluralUA(n, one, few, many) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20))
-      return few;
-    return many;
-  }
-  function eventCountdown(ev, now) {
-    const eventDay = /* @__PURE__ */ new Date(ev.date + "T00:00:00");
-    const todayDay = new Date(now);
-    todayDay.setHours(0, 0, 0, 0);
-    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-    if (dayDiff === 0) {
-      if (!ev.time)
-        return "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406";
-      const dt = /* @__PURE__ */ new Date(ev.date + "T" + ev.time + ":00");
-      const diffMs = dt - now;
-      if (diffMs <= 0)
-        return "\u0417\u0410\u0420\u0410\u0417";
-      if (diffMs < 60 * 6e4)
-        return `\u0427\u0415\u0420\u0415\u0417 ${Math.max(1, Math.floor(diffMs / 6e4))} \u0425\u0412`;
-      const h = Math.floor(diffMs / 36e5);
-      const m = Math.floor(diffMs % 36e5 / 6e4);
-      return m > 0 ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
-    }
-    if (dayDiff === 1)
-      return "\u0417\u0410\u0412\u0422\u0420\u0410";
-    if (dayDiff < 7)
-      return `\u0427\u0415\u0420\u0415\u0417 ${dayDiff} ${pluralUA(dayDiff, "\u0414\u0415\u041D\u042C", "\u0414\u041D\u0406", "\u0414\u041D\u0406\u0412")}`;
-    if (dayDiff < 14)
-      return "\u0427\u0415\u0420\u0415\u0417 \u0422\u0418\u0416\u0414\u0415\u041D\u042C";
-    if (dayDiff < 30) {
-      const w = Math.floor(dayDiff / 7);
-      return `\u0427\u0415\u0420\u0415\u0417 ${w} ${pluralUA(w, "\u0422\u0418\u0416\u0414\u0415\u041D\u042C", "\u0422\u0418\u0416\u041D\u0406", "\u0422\u0418\u0416\u041D\u0406\u0412")}`;
-    }
-    const months = Math.floor(dayDiff / 30);
-    return `\u0427\u0415\u0420\u0415\u0417 ${months} ${pluralUA(months, "\u041C\u0406\u0421\u042F\u0426\u042C", "\u041C\u0406\u0421\u042F\u0426\u0406", "\u041C\u0406\u0421\u042F\u0426\u0406\u0412")}`;
-  }
-  async function renderEventBlock() {
-    const el = document.getElementById("cm-event-content");
-    if (!el)
-      return;
-    if (_evTimer) {
-      clearInterval(_evTimer);
-      _evTimer = null;
-    }
-    try {
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      let items = [];
-      try {
-        const res = await fetch("./data/events.json");
-        const events = await res.json();
-        items = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((e) => ({ kind: "event", id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
-      } catch {
-      }
-      if (!items.length) {
-        try {
-          const hres = await fetch("./data/holidays.json");
-          const hall = await hres.json();
-          const harr = Array.isArray(hall) ? hall : hall.holidays || [];
-          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", id: h.id, date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
-        } catch {
-        }
-      }
-      if (!items.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
-        return;
-      }
-      _evItems = items;
-      _evIdx = 0;
-      renderEvCarousel(el);
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
-    }
-  }
-  function evSlideHtml(it, now) {
-    const eventDay = /* @__PURE__ */ new Date(it.date + "T00:00:00");
-    const todayDay = new Date(now);
-    todayDay.setHours(0, 0, 0, 0);
-    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-    const isUrgent = dayDiff <= 1;
-    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-    const catStr = escapeHtml(it.category || "");
-    const countdown = escapeHtml(eventCountdown(it, now));
-    if (it.kind === "holiday") {
-      const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : "";
-      return `
-      <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-ev-id="${it.id}">
-          <div class="evh-top">
-            <span class="tablo-countdown">${countdown}</span>
-            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
-          </div>
-          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || "\u{1F389}")}</div>
-          <div class="evh-title">${escapeHtml(it.title)}</div>
-          <div class="evh-meta tablo-soft">${dateStr}</div>
-        </article>
-      </div>
-    `;
-    }
-    const timeStr = it.time ? escapeHtml(it.time) : "";
-    const locStr = it.location ? escapeHtml(it.location) : "";
-    const thumb = it.image ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">` : "";
-    return `
-    <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}${it.image ? " evh-card--photo" : ""}" data-ev-id="${it.id}">
-        ${thumb}
-        <div class="evh-top">
-          <span class="tablo-countdown">${countdown}</span>
-          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
-        </div>
-        <div class="evh-time tablo-time-mono">
-          <span class="evh-date tablo-time-accent">${dateStr}</span>
-          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ""}
-        </div>
-        <div class="evh-title">${escapeHtml(it.title)}</div>
-        ${locStr ? `<div class="evh-meta tablo-soft">\u{1F4CD} ${locStr}</div>` : ""}
-      </article>
-    </div>
-  `;
-  }
-  function renderEvCarousel(el) {
-    const now = /* @__PURE__ */ new Date();
-    const slides = _evItems.map((it) => evSlideHtml(it, now)).join("");
-    const dots = _evItems.length > 1 ? `<div class="cm-ev-dots">${_evItems.map((_, i) => `<span class="cm-ev-dot${i === _evIdx ? " active" : ""}" data-ev-idx="${i}"></span>`).join("")}</div>` : "";
-    el.innerHTML = `
-    <div class="cm-ev-carousel" id="cm-ev-carousel">
-      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
-      ${dots}
-    </div>
-  `;
-    el.querySelectorAll(".cm-ev-dot").forEach((dot) => {
-      dot.addEventListener("click", (e) => {
-        e.stopPropagation();
-        _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
-        updateEvPosition(el);
-        startEvRotator(el);
-      });
-    });
-    el.querySelectorAll(".evh-card[data-ev-id]").forEach((card) => {
-      card.addEventListener("click", () => {
-        const id = Number(card.dataset.evId);
-        if (Number.isFinite(id))
-          openShotamModal(id);
-      });
-    });
-    startEvRotator(el);
-  }
-  function updateEvPosition(el) {
-    const track = el.querySelector(".cm-ev-track");
-    if (track)
-      track.style.transform = `translateX(-${_evIdx * 100}%)`;
-    el.querySelectorAll(".cm-ev-dot").forEach((d, i) => d.classList.toggle("active", i === _evIdx));
-  }
-  function startEvRotator(el) {
-    if (_evTimer) {
-      clearInterval(_evTimer);
-      _evTimer = null;
-    }
-    if (_evItems.length < 2)
-      return;
-    _evTimer = setInterval(() => {
-      if (!document.getElementById("cm-ev-carousel")) {
-        clearInterval(_evTimer);
-        _evTimer = null;
-        return;
-      }
-      _evIdx = (_evIdx + 1) % _evItems.length;
-      updateEvPosition(el);
-    }, 6e3);
   }
   var CONTACT_ICONS = {
     ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -11637,7 +11311,7 @@ ${ev.description || ""}`
       const data = await res.json();
       const list = data.contacts || [];
       if (!list.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
       const telOf = (p) => p.replace(/[^\d+]/g, "");
@@ -11649,39 +11323,26 @@ ${ev.description || ""}`
         return i === -1 ? 99 : i;
       };
       emergency.sort((a, b) => emergRank(a) - emergRank(b));
-      const localHtml = local.length ? `
-      <div class="cm-contact-group cm-contact-group--local">
-        <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
-        <div class="cm-contact-rows">
-          ${local.map((c) => `
-            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-row-text">
-                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
-                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
-              </span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</div>
-        <div class="cm-contact-grid-3">
-          ${emergency.map((c) => `
-            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
-      el.innerHTML = localHtml + emergencyHtml;
+      const EMERG_TOP = 3;
+      const topEmerg = emergency.slice(0, EMERG_TOP);
+      const restAll = [...emergency.slice(EMERG_TOP), ...local];
+      const rowHtml = (c) => `
+      <a class="hm-card hm-card--tap hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
+        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+        <span class="hm-tel-tx">
+          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
+          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
+        </span>
+      </a>`;
+      const topHtml = topEmerg.map(rowHtml).join("");
+      const restHtml = restAll.length ? `
+      <details class="hm-tel-more">
+        <summary class="hm-tel-sum">\u0423\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 (${restAll.length})</summary>
+        <div class="hm-list hm-tel-rest">${restAll.map(rowHtml).join("")}</div>
+      </details>` : "";
+      el.innerHTML = topHtml + restHtml;
     } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+      el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
@@ -11796,6 +11457,14 @@ ${ev.description || ""}`
       return;
     el.classList.add("hm");
     el.innerHTML = `
+    <!-- \u2550\u2550 \u0424\u041E\u0422\u041E \u041D\u0410 \u0424\u041E\u041D\u0406 (\u0432\u0430\u0440\u0456\u0430\u043D\u0442 \xAB\u0414\xBB, \u0432\u0438\u0431\u0456\u0440 \u0412\u043E\u0432\u0438 04.08) \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+         \u0417\u0430\u0444\u0456\u043A\u0441\u043E\u0432\u0430\u043D\u0435 \u043F\u043E\u0437\u0430\u0434\u0443 \u0432\u0441\u044C\u043E\u0433\u043E; \u043A\u043E\u043D\u0442\u0435\u043D\u0442 \u0457\u0434\u0435 \u043F\u043E\u0432\u0435\u0440\u0445. \u0412\u0443\u0430\u043B\u044C \u0456 \u0440\u043E\u0437\u043C\u0438\u0442\u0442\u044F \u2014 \u0443
+         style/home.css, \u0442\u0430\u043C \u0436\u0435 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043E, \u0447\u043E\u043C\u0443 \u0442\u0435\u043A\u0441\u0442 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043B\u0435\u0436\u0438\u0442\u044C \u043D\u0430
+         \u0433\u043E\u043B\u043E\u043C\u0443 \u0444\u043E\u0442\u043E. aria-hidden \u2014 \u0446\u0435 \u0434\u0435\u043A\u043E\u0440\u0430\u0446\u0456\u044F, \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u0432\u043E\u043D\u0430 \u043D\u0435 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430. -->
+    <div class="hm-bg" aria-hidden="true">
+      <img src="./photos/olyka.day-1.jpg" alt="">
+    </div>
+
     <!-- \u2550\u2550 \u0428\u0410\u041F\u041A\u0410: \u0417\u0410\u0420\u0410\u0417 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
          \u041E\u0434\u043D\u0430 \u0431\u043E\u0440\u0434\u043E\u0432\u0430 \u043F\u043B\u043E\u0449\u0438\u043D\u0430: \u0434\u0430\u0442\u0430 \xB7 \u043F\u0440\u0438\u0432\u0456\u0442\u0430\u043D\u043D\u044F \xB7 \u0430\u0432\u0430\u0442\u0430\u0440 \xB7 \u043F\u043E\u0433\u043E\u0434\u0430 \xB7 7 \u0434\u043D\u0456\u0432.
          \u0410\u0432\u0430\u0442\u0430\u0440 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u043F\u043E\u0442\u043E\u043A\u0443 \u0448\u0430\u043F\u043A\u0438, \u0430 \u043D\u0435 \u043F\u0440\u0438\u0431\u0438\u0442\u0438\u0439 \u043F\u043E\u0432\u0435\u0440\u0445 \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0443, \u044F\u043A \u0431\u0443\u043B\u043E
@@ -11833,6 +11502,18 @@ ${ev.description || ""}`
       <div id="hm-fund-body"></div>
     </section>
 
+    <!-- \u2550\u2550 \u0423 \u0421\u0422\u0420\u0406\u0427\u0426\u0406 \u0413\u0420\u041E\u041C\u0410\u0414\u0418 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+         \u{1F195} 04.08. \u0414\u0430\u0439\u0434\u0436\u0435\u0441\u0442 \u0421\u0442\u0440\u0456\u0447\u043A\u0438 \u2014 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0441\u043E\u0446\u0456\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u043C\u0430\u0439\u0434\u0430\u043D\u0447\u0438\u043A\u0430
+         \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443. \u0414\u043E \u0446\u044C\u043E\u0433\u043E \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0457 \u041D\u0415 \u0411\u0423\u041B\u041E \u0412\u0418\u0414\u041D\u041E, \u0449\u043E \u0442\u0430\u043C \u0443\u0437\u0430\u0433\u0430\u043B\u0456 \u0449\u043E\u0441\u044C
+         \u0432\u0456\u0434\u0431\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F. \u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u0430\u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0431\u0430\u0437\u0438 \u2192 \u0441\u0435\u043A\u0446\u0456\u0457 \u043D\u0435\u043C\u0430\u0454 \u0437\u043E\u0432\u0441\u0456\u043C. -->
+    <section id="hm-feed" class="hm-sec" hidden>
+      <div class="hm-sec-head">
+        <h2 class="hm-kicker">\u0423 \u0441\u0442\u0440\u0456\u0447\u0446\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
+        <button class="hm-more" type="button" data-switch-tab="shotam">\u0421\u0442\u0440\u0456\u0447\u043A\u0430 \u2192</button>
+      </div>
+      <div id="hm-feed-body" class="hm-list"></div>
+    </section>
+
     <!-- \u2550\u2550 \u041D\u041E\u0412\u0418\u041D\u0418 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
          \u0413\u043E\u043B\u043E\u0432\u043D\u0430 \u0442\u043E\u0447\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0434\u043E \u043D\u043E\u0432\u0438\u043D: \u043E\u043A\u0440\u0435\u043C\u043E\u0457 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \xAB\u041D\u043E\u0432\u0438\u043D\u0438\xBB \u043D\u0435\u043C\u0430\u0454.
          \xAB\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438\xBB \u2192 \u043D\u0430\u044F\u0432\u043D\u0438\u0439 openNewsHub \u0411\u0415\u0417 \u0437\u043C\u0456\u043D\u0438 \u0439\u043E\u0433\u043E \u043B\u043E\u0433\u0456\u043A\u0438. -->
@@ -11845,15 +11526,6 @@ ${ev.description || ""}`
         ${skeletonRows(3)}
       </div>
       <div id="cm-news-controls" hidden></div>
-    </section>
-
-    <!-- \u2550\u2550 \u041F\u041E\u0414\u0406\u0407 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
-    <section class="hm-sec" id="hm-events">
-      <div class="hm-sec-head">
-        <h2 class="hm-kicker">\u041F\u043E\u0434\u0456\u0457 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
-      </div>
-      <div id="cm-event-content" class="hm-list">${skeletonRows(2)}</div>
     </section>
 
     <!-- \u2550\u2550 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
@@ -11910,8 +11582,8 @@ ${ev.description || ""}`
     renderWeatherBlock();
     renderHomeNow();
     renderHomeFund();
+    renderHomeFeed();
     renderCommunityNews();
-    renderEventBlock();
     renderBoardBlock();
     renderBusBlock();
     renderContactsBlock();
