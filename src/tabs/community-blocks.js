@@ -1123,84 +1123,102 @@ const NEWS_CYCLE_MS = 7000;   // довше за капсули: тут треб
 let _newsTimer = null, _newsIO = null;
 
 function paintCmNews(el, arts) {
-  // Сторінка = категорія. Беремо по три найсвіжіші з кожної.
-  const pages = NEWS_GEO_GROUPS
+  // Стрічка плиток, згрупована за категоріями: спершу Громада, далі Волинь,
+  // далі Україна та Світ. Підпис над стрічкою міняється за тим, яка картка
+  // зараз у вікні — тобто «інтервал між категоріями» лишився, але тепер він
+  // природний: гортаєш і проходиш категорії, а не чекаєш перемикання сторінки.
+  const groups = NEWS_GEO_GROUPS
     .map(g => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) }))
     .filter(p => p.items.length);
 
-  if (!pages.length) {
+  if (!groups.length) {
     el.innerHTML = '<div class="hm-empty">Новини зʼявляться, щойно вийде перша за сьогодні</div>';
     paintNewsBadge(arts);
     return;
   }
 
+  // Плаский список карток + мапа «індекс картки → категорія» для підпису.
+  const flat = [];
+  groups.forEach(g => g.items.forEach(a => flat.push({ a, group: g.group })));
+
   el.innerHTML = `
     <div class="hm-nwrap">
+      <div class="hm-ncat" id="hm-ncat">${escapeHtml(flat[0].group)}</div>
       <div class="hm-ntrack" id="hm-ntrack">
-        ${pages.map(p => `
-          <section class="hm-npage" data-group="${escapeHtml(p.group)}">
-            <div class="hm-npage-h">${escapeHtml(p.group)}</div>
-            <div class="hm-list">${newsCardsHtml(p.items, { variant: 'mini' })}</div>
-          </section>`).join('')}
+        ${flat.map(x => newsCardsHtml([x.a], { variant: 'tile' })).join('')}
       </div>
       <div class="hm-ndots" aria-hidden="true">
-        ${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
+        ${groups.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
       </div>
     </div>`;
 
-  // Мітка розділу на кожній картці — щоб і поза каруселлю було видно, звідки новина.
-  pages.forEach((p, pi) => {
-    const nodes = el.querySelectorAll(`.hm-npage[data-group="${CSS.escape(p.group)}"] .nc`);
-    nodes.forEach((node, i) => {
-      const b = node.querySelector('.nc-badge--geo');
-      if (b) b.textContent = geoGroupOf(p.items[i]) || b.textContent;
-    });
+  // Мітка розділу на самій картці — щоб і поза стрічкою було видно, звідки новина.
+  [...el.querySelectorAll('.nc')].forEach((node, i) => {
+    const b = node.querySelector('.nc-badge--geo');
+    if (b) b.textContent = geoGroupOf(flat[i].a) || b.textContent;
   });
 
-  startNewsCarousel(el, pages.length);
+  startNewsCarousel(el, flat, groups);
   paintNewsBadge(arts);
 }
 
 // Авто-гортання сторінок. Прокрутку робить сам браузер (`scrollTo` зі `smooth`),
 // а не наша анімація: так жест пальцем і авто-рух не борються за той самий
 // елемент — це вже коштувало окремого блока роботи 02.08 у модалці оголошення.
-function startNewsCarousel(el, count) {
+function startNewsCarousel(el, flat, groups) {
   clearInterval(_newsTimer); _newsTimer = null;
   if (_newsIO) { _newsIO.disconnect(); _newsIO = null; }
 
   const track = el.querySelector('#hm-ntrack');
+  const catEl = el.querySelector('#hm-ncat');
   const dots = [...el.querySelectorAll('.hm-ndots i')];
-  if (!track || count < 2) return;
+  if (!track || flat.length < 2) return;
 
-  // Активна крапка — за реальним положенням прокрутки, а не за нашим лічильником:
-  // людина могла гортнути пальцем, і лічильник розійшовся б із тим, що на екрані.
-  const syncDots = () => {
-    const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-    dots.forEach((d, j) => d.classList.toggle('on', j === i));
+  const cards = [...track.querySelectorAll('.nc')];
+  const groupNames = groups.map(g => g.group);
+
+  // Яка картка зараз у вікні — рахуємо за реальним положенням прокрутки, а не
+  // за власним лічильником: людина могла гортнути пальцем, і лічильник
+  // розійшовся б із тим, що на екрані.
+  const visibleIndex = () => {
+    const left = track.scrollLeft;
+    let best = 0, bestD = Infinity;
+    cards.forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft - track.offsetLeft - left);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  };
+  const sync = () => {
+    const i = visibleIndex();
+    const g = flat[i] ? flat[i].group : groupNames[0];
+    if (catEl && catEl.textContent !== g) catEl.textContent = g;
+    const gi = groupNames.indexOf(g);
+    dots.forEach((d, j) => d.classList.toggle('on', j === gi));
   };
   let raf = 0;
   track.addEventListener('scroll', () => {
     if (raf) return;
-    raf = requestAnimationFrame(() => { raf = 0; syncDots(); });
+    raf = requestAnimationFrame(() => { raf = 0; sync(); });
   }, { passive: true });
+  sync();
 
   const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (still) return;
 
   const step = () => {
     if (document.hidden || track.dataset.paused === '1') return;
-    const w = track.clientWidth;
-    const next = Math.round(track.scrollLeft / Math.max(1, w)) + 1;
-    track.scrollTo({ left: (next >= count ? 0 : next) * w, behavior: 'smooth' });
+    const next = visibleIndex() + 1;
+    const target = next >= cards.length ? cards[0] : cards[next];
+    track.scrollTo({ left: target.offsetLeft - track.offsetLeft, behavior: 'smooth' });
   };
   _newsTimer = setInterval(step, NEWS_CYCLE_MS);
 
-  // Дотик — пауза на один повний цикл: людина читає саме цю сторінку.
   let resume = null;
   const pause = () => {
     track.dataset.paused = '1';
     clearTimeout(resume);
-    resume = setTimeout(() => { track.dataset.paused = '0'; }, NEWS_CYCLE_MS * 2);
+    resume = setTimeout(() => { track.dataset.paused = '0'; resume = null; }, NEWS_CYCLE_MS * 2);
   };
   track.addEventListener('touchstart', pause, { passive: true });
   track.addEventListener('pointerdown', pause);
@@ -1208,7 +1226,6 @@ function startNewsCarousel(el, count) {
   if ('IntersectionObserver' in window) {
     _newsIO = new IntersectionObserver(entries => {
       entries.forEach(en => {
-        // Поза екраном — стоп. Але не затираємо паузу від дотику.
         if (!en.isIntersecting) track.dataset.paused = '1';
         else if (!resume) track.dataset.paused = '0';
       });
