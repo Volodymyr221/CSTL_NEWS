@@ -11524,37 +11524,33 @@
   var _newsTimer = null;
   var _newsIO = null;
   function paintCmNews(el, arts) {
-    const pages2 = NEWS_GEO_GROUPS.map((g) => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) })).filter((p) => p.items.length);
-    if (!pages2.length) {
+    const groups = NEWS_GEO_GROUPS.map((g) => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) })).filter((p) => p.items.length);
+    if (!groups.length) {
       el.innerHTML = '<div class="hm-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0438\u0439\u0434\u0435 \u043F\u0435\u0440\u0448\u0430 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>';
       paintNewsBadge(arts);
       return;
     }
+    const flat = [];
+    groups.forEach((g) => g.items.forEach((a) => flat.push({ a, group: g.group })));
     el.innerHTML = `
     <div class="hm-nwrap">
+      <div class="hm-ncat" id="hm-ncat">${escapeHtml(flat[0].group)}</div>
       <div class="hm-ntrack" id="hm-ntrack">
-        ${pages2.map((p) => `
-          <section class="hm-npage" data-group="${escapeHtml(p.group)}">
-            <div class="hm-npage-h">${escapeHtml(p.group)}</div>
-            <div class="hm-list">${newsCardsHtml(p.items, { variant: "mini" })}</div>
-          </section>`).join("")}
+        ${flat.map((x) => newsCardsHtml([x.a], { variant: "tile" })).join("")}
       </div>
       <div class="hm-ndots" aria-hidden="true">
-        ${pages2.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
+        ${groups.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
       </div>
     </div>`;
-    pages2.forEach((p, pi) => {
-      const nodes = el.querySelectorAll(`.hm-npage[data-group="${CSS.escape(p.group)}"] .nc`);
-      nodes.forEach((node, i) => {
-        const b = node.querySelector(".nc-badge--geo");
-        if (b)
-          b.textContent = geoGroupOf(p.items[i]) || b.textContent;
-      });
+    [...el.querySelectorAll(".nc")].forEach((node, i) => {
+      const b = node.querySelector(".nc-badge--geo");
+      if (b)
+        b.textContent = geoGroupOf(flat[i].a) || b.textContent;
     });
-    startNewsCarousel(el, pages2.length);
+    startNewsCarousel(el, flat, groups);
     paintNewsBadge(arts);
   }
-  function startNewsCarousel(el, count) {
+  function startNewsCarousel(el, flat, groups) {
     clearInterval(_newsTimer);
     _newsTimer = null;
     if (_newsIO) {
@@ -11562,12 +11558,31 @@
       _newsIO = null;
     }
     const track = el.querySelector("#hm-ntrack");
+    const catEl = el.querySelector("#hm-ncat");
     const dots = [...el.querySelectorAll(".hm-ndots i")];
-    if (!track || count < 2)
+    if (!track || flat.length < 2)
       return;
-    const syncDots = () => {
-      const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-      dots.forEach((d, j) => d.classList.toggle("on", j === i));
+    const cards = [...track.querySelectorAll(".nc")];
+    const groupNames = groups.map((g) => g.group);
+    const visibleIndex = () => {
+      const left = track.scrollLeft;
+      let best = 0, bestD = Infinity;
+      cards.forEach((c, i) => {
+        const d = Math.abs(c.offsetLeft - track.offsetLeft - left);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      });
+      return best;
+    };
+    const sync = () => {
+      const i = visibleIndex();
+      const g = flat[i] ? flat[i].group : groupNames[0];
+      if (catEl && catEl.textContent !== g)
+        catEl.textContent = g;
+      const gi = groupNames.indexOf(g);
+      dots.forEach((d, j) => d.classList.toggle("on", j === gi));
     };
     let raf = 0;
     track.addEventListener("scroll", () => {
@@ -11575,18 +11590,19 @@
         return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        syncDots();
+        sync();
       });
     }, { passive: true });
+    sync();
     const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (still)
       return;
     const step = () => {
       if (document.hidden || track.dataset.paused === "1")
         return;
-      const w = track.clientWidth;
-      const next = Math.round(track.scrollLeft / Math.max(1, w)) + 1;
-      track.scrollTo({ left: (next >= count ? 0 : next) * w, behavior: "smooth" });
+      const next = visibleIndex() + 1;
+      const target = next >= cards.length ? cards[0] : cards[next];
+      track.scrollTo({ left: target.offsetLeft - track.offsetLeft, behavior: "smooth" });
     };
     _newsTimer = setInterval(step, NEWS_CYCLE_MS);
     let resume = null;
@@ -11595,6 +11611,7 @@
       clearTimeout(resume);
       resume = setTimeout(() => {
         track.dataset.paused = "0";
+        resume = null;
       }, NEWS_CYCLE_MS * 2);
     };
     track.addEventListener("touchstart", pause, { passive: true });
