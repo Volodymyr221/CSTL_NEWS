@@ -172,6 +172,35 @@ ok('автобуси наповнились', filled.bus>10, String(filled.bus))
 ok('контакти наповнились', filled.cont>10, String(filled.cont));
 ok('жоден блок не завис на скелеті', filled.stuck.length===0, filled.stuck.join(', '));
 
+// 7. 🔴 ТЕЛЕФОНИ: ЕКСТРЕНІ ВІДДІЛЕНІ ВІД ГРОМАДИ.
+// Скарга Вови 04.08: під заголовком «Телефони громади» стояли 101/102/103,
+// які до громади не належать — заголовок казав неправду. Сторож не дає
+// злити ці два списки назад в один.
+const ct = await p.evaluate(()=>{
+  const c = document.getElementById('cm-contacts-content');
+  const sos = [...c.querySelectorAll('.hm-sos-b')];
+  const last = sos[sos.length-1];
+  return {
+    sos: sos.length,
+    номери: sos.map(b=>b.querySelector('.hm-sos-n').textContent.trim()),
+    групи: [...c.querySelectorAll('.hm-cgrp')].length,
+    контакти: [...c.querySelectorAll('.hm-ct')].length,
+    // Чи веде екстрена плитка одразу в дзвінок (а не на проміжний екран).
+    tel: sos.every(b => (b.getAttribute('href')||'').startsWith('tel:')),
+    // 🔴 Сітка не має вилазити за екран: `1fr` без minmax(0,…) розпирався
+    // назвами служб і виносив пʼяту плитку за правий край.
+    влазить: !last || last.getBoundingClientRect().right <= window.innerWidth + 1,
+    копія: !!c.querySelector('[data-copy]'),
+  };
+});
+ok('екстрені служби окремим блоком', ct.sos >= 3, `${ct.sos} плиток`);
+ok('порядок екстрених — 101,102,103…', ct.номери[0] === '101' && ct.номери[1] === '102', ct.номери.join(','));
+ok('тап по екстреній веде в дзвінок', ct.tel);
+ok('🔴 сітка екстрених не вилазить за екран', ct.влазить);
+ok('контакти громади згруповані', ct.групи > 0, `${ct.групи} груп`);
+ok('у групах є контакти', ct.контакти > 0, `${ct.контакти}`);
+ok('є швидка дія «копіювати»', ct.копія);
+
 ok('помилок у консолі нема', errs.length===0, errs.slice(0,3).join(' | '));
 const bad = R.filter(r=>!r).length;
 console.log(`\n${bad?'❌':'✅'} ${R.length-bad}/${R.length} перевірок пройдено`);

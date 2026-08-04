@@ -512,34 +512,107 @@
 }
 .hm-ev-meta { font: 400 12px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
 
-/* ══ ТЕЛЕФОНИ — ТРИ НА ВИДНОТІ, РЕШТА ПІД РОЗКРИТТЯМ ═════════════════════════
-   Було 427px = 58.4% видимої зони на довідник, потрібний кілька разів на рік. */
-.hm-tel { display: flex; align-items: center; gap: var(--hm-s3); padding: var(--hm-s3); text-decoration: none; }
-.hm-tel-ic {
-  flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--hm-r-tile);
-  background: var(--brand-tint); display: grid; place-items: center; color: var(--red);
-}
-.hm-tel-ic svg { width: 18px; height: 18px; }
-.hm-tel-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.hm-tel-name { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
-.hm-tel-num  { font: 400 12.5px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+/* ══ ТЕЛЕФОНИ: ЕКСТРЕНІ ОКРЕМО, ГРОМАДА ОКРЕМО ════════════════════════════════
+   Скарга Вови 04.08: «заголовок "Телефони громади", а зверху екстрені служби,
+   які не мають відношення саме до громади». Заголовок казав неправду —
+   101/102/103 це загальнодержавні номери, а не контакти Олики.
+   Тепер це дві РІЗНІ речі з різною поведінкою, і виглядають вони теж по-різному. */
 
-.hm-tel-more { margin-top: var(--hm-s2); }
-.hm-tel-sum {
+.hm-csec + .hm-csec { margin-top: var(--hm-s5); }
+.hm-csec-h {
+  display: flex; align-items: baseline; gap: 6px;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .78); text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+  margin-bottom: var(--hm-s2);
+}
+.hm-csec-n {
+  margin-left: auto; font-weight: 500; letter-spacing: .02em;
+  text-transform: none; color: rgba(255, 255, 255, .58);
+}
+
+/* ── Екстрені: сітка однакових плиток ────────────────────────────────────────
+   📐 Номер ПЕРШИЙ і великий, назва під ним дрібна — навпаки, ніж у звичайному
+   контакті. Причина: у цьому блоці людина шукає «102», а не «Поліція»; у
+   критичний момент вона ціляється в цифру, яку знає напам'ять.
+   Тап веде одразу в дзвінок — жодного проміжного екрана. */
+.hm-sos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+/* 🔴 `minmax(0, 1fr)`, а НЕ просто `1fr`. Це не педантизм: `1fr` означає
+   `minmax(auto, 1fr)`, тобто колонка не може стати вужчою за свій ВМІСТ.
+   Назви «Швидка допомога» і «Аварійна газу» розпирали колонки, сітка виростала
+   ширшою за екран, і пʼята плитка (112) виїжджала за правий край.
+   Знайдено контрольним знімком 04.08 — у розмітці все виглядало правильно. */
+.hm-sos-b {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 58px; padding: 8px 2px; border-radius: 14px; text-decoration: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .08) 100%);
+  border: 1px solid rgba(255, 255, 255, .22);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  color: #fff;
+}
+.hm-sos-b:active { background: rgba(255, 255, 255, .26); }
+.hm-sos-n { font: 700 17px/1 system-ui, -apple-system, sans-serif; letter-spacing: -.01em; }
+/* Назва служби у п'яти колонках по ~66px — саме тому 9px і перенос заборонено:
+   «Аварійна газу» інакше розповзлась би на три рядки і зламала висоту сітки. */
+.hm-sos-t {
+  font: 500 9px/1.1 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .72); text-align: center;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Групи контактів громади ─────────────────────────────────────────────────
+   `<details>` — щоб працювало без JS, з клавіатурою і читачем екрана, і щоб
+   стан не жив у модулі (він злітав би: `initCommunity()` перебудовує сторінку). */
+.hm-cgrp { margin-bottom: var(--hm-s2); }
+.hm-cgrp-sum {
   list-style: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 44px; padding: 0 var(--hm-s4);
-  border: 1px solid rgba(255, 255, 255, .22); border-radius: var(--hm-r-pill);
-  background: rgba(255, 255, 255, .08);
-  font: 600 13px/1 system-ui, -apple-system, sans-serif; color: #fff;
+  display: flex; align-items: center; gap: 10px;
+  min-height: 46px; padding: 0 var(--hm-s3);
+  border-radius: var(--hm-r-card);
+  background: var(--board-card); border: 1px solid var(--board-line);
+  box-shadow: var(--hm-shadow);
+  font: 600 14px/1 system-ui, -apple-system, sans-serif; color: var(--ink);
 }
-.hm-tel-sum::-webkit-details-marker { display: none; }
-.hm-tel-sum::after {
-  content: '▾'; font-size: 11px; transition: transform var(--hm-dur) var(--hm-ease);
+.hm-cgrp-sum::-webkit-details-marker { display: none; }
+.hm-cgrp-sum:active { background: var(--board-press); }
+.hm-cgrp-ic { font-size: 16px; line-height: 1; }
+.hm-cgrp-t { flex: 1 1 auto; min-width: 0; }
+/* Лічильник у групі + стрілка. Стрілка повертається при розкритті — це єдиний
+   натяк на те, що рядок взагалі можна відкрити. */
+.hm-cgrp-n {
+  font: 600 12px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
 }
-.hm-tel-more[open] .hm-tel-sum::after { transform: rotate(180deg); }
-.hm-tel-sum:active { background: rgba(255, 255, 255, .16); }
-.hm-tel-rest { margin-top: var(--hm-s2); }
+.hm-cgrp-sum::after {
+  content: '▾'; font-size: 11px; color: var(--hm-quiet);
+  transition: transform var(--hm-dur) var(--hm-ease);
+}
+.hm-cgrp[open] .hm-cgrp-sum::after { transform: rotate(180deg); }
+.hm-cgrp-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 0 0 0; }
+
+/* ── Один контакт ────────────────────────────────────────────────────────────
+   Ліворуч — назва/номер (уся площа веде в дзвінок), праворуч — швидкі дії.
+   ⚠️ Дії ОКРЕМИМИ кнопками поза посиланням: вкладати <button> у <a> не можна,
+   і тап по «копіювати» не має набирати номер. */
+.hm-ct {
+  display: flex; align-items: stretch; gap: 2px;
+  background: var(--board-card); border: 1px solid var(--board-line);
+  border-radius: var(--hm-r-card); box-shadow: var(--hm-shadow); overflow: hidden;
+}
+.hm-ct-main {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  padding: 10px var(--hm-s3); text-decoration: none;
+}
+.hm-ct-main:active { background: var(--board-press); }
+.hm-ct-name  { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
+.hm-ct-phone { font: 500 13px/1 system-ui, -apple-system, sans-serif; color: var(--red); }
+.hm-ct-meta  { font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+.hm-ct-acts { display: flex; flex: 0 0 auto; }
+.hm-ct-act {
+  appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
+  width: 44px; display: grid; place-items: center; font-size: 15px;
+  color: var(--hm-quiet); text-decoration: none;
+}
+.hm-ct-act:active { background: var(--board-press); }
 
 /* ══ ОДНА МОВА КАРТОК НА ВСЮ ГОЛОВНУ ══════════════════════════════════════════
    🔴 Аудит 04.08 знайшов на одному екрані СІМ візуальних мов: бордова шапка ·

@@ -10835,6 +10835,145 @@
     }
   }
 
+  // src/tabs/home-contacts.js
+  var AUTO_OPEN_MAX = 6;
+  var EMERGENCY_ORDER = ["101", "102", "103", "104", "112"];
+  var CATEGORIES = [
+    { keys: ["gov", "admin"], icon: "\u{1F3DB}", title: "\u041E\u0440\u0433\u0430\u043D\u0438 \u0432\u043B\u0430\u0434\u0438" },
+    { keys: ["medical"], icon: "\u{1F3E5}", title: "\u041C\u0435\u0434\u0438\u0446\u0438\u043D\u0430" },
+    { keys: ["utility"], icon: "\u26A1", title: "\u041A\u043E\u043C\u0443\u043D\u0430\u043B\u044C\u043D\u0456 \u0441\u043B\u0443\u0436\u0431\u0438" },
+    { keys: ["post"], icon: "\u{1F4E6}", title: "\u041F\u043E\u0448\u0442\u0430" },
+    { keys: ["edu"], icon: "\u{1F393}", title: "\u041E\u0441\u0432\u0456\u0442\u0430" },
+    { keys: ["safety"], icon: "\u{1F46E}", title: "\u0411\u0435\u0437\u043F\u0435\u043A\u0430" }
+  ];
+  var OTHER = { icon: "\u{1F4C7}", title: "\u0406\u043D\u0448\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438" };
+  var telOf = (p) => String(p || "").replace(/[^\d+]/g, "");
+  function plural3(n, one, few, many) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return many;
+    if (o === 1)
+      return one;
+    if (o >= 2 && o <= 4)
+      return few;
+    return many;
+  }
+  function emergencyHtml(list) {
+    const rank = (c) => {
+      const i = EMERGENCY_ORDER.indexOf(String(c.phone || "").trim());
+      return i === -1 ? 99 : i;
+    };
+    const sorted = [...list].sort((a, b) => rank(a) - rank(b));
+    return `
+    <div class="hm-sos">
+      ${sorted.map((c) => `
+        <a class="hm-sos-b" href="tel:${escapeHtml(telOf(c.phone))}">
+          <span class="hm-sos-n">${escapeHtml(c.phone)}</span>
+          <span class="hm-sos-t">${escapeHtml(c.name)}</span>
+        </a>`).join("")}
+    </div>`;
+  }
+  function contactHtml(c) {
+    const tel = telOf(c.phone);
+    const meta = [c.hours, c.address].filter(Boolean).map(escapeHtml).join(" \xB7 ");
+    return `
+    <div class="hm-ct">
+      <a class="hm-ct-main" href="tel:${escapeHtml(tel)}">
+        <span class="hm-ct-name">${escapeHtml(c.name)}</span>
+        <span class="hm-ct-phone">${escapeHtml(c.phone)}</span>
+        ${meta ? `<span class="hm-ct-meta">${meta}</span>` : ""}
+      </a>
+      <span class="hm-ct-acts">
+        <button class="hm-ct-act" type="button" data-copy="${escapeHtml(c.phone)}" aria-label="\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u043C\u0435\u0440">\u29C9</button>
+        ${c.address ? `<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener noreferrer" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0456">\u{1F4CD}</a>` : ""}
+      </span>
+    </div>`;
+  }
+  function groupHtml(g, open) {
+    return `
+    <details class="hm-cgrp"${open ? " open" : ""}>
+      <summary class="hm-cgrp-sum">
+        <span class="hm-cgrp-ic" aria-hidden="true">${g.icon}</span>
+        <span class="hm-cgrp-t">${escapeHtml(g.title)}</span>
+        <span class="hm-cgrp-n">${g.items.length}</span>
+      </summary>
+      <div class="hm-cgrp-body">${g.items.map(contactHtml).join("")}</div>
+    </details>`;
+  }
+  function groupContacts(list) {
+    const groups = [];
+    const used = /* @__PURE__ */ new Set();
+    for (const cat of CATEGORIES) {
+      const items = list.filter((c) => cat.keys.includes(c.category));
+      items.forEach((c) => used.add(c));
+      if (items.length)
+        groups.push({ ...cat, items });
+    }
+    const rest = list.filter((c) => !used.has(c));
+    if (rest.length)
+      groups.push({ ...OTHER, items: rest });
+    return groups;
+  }
+  async function renderContactsBlock() {
+    const el = document.getElementById("cm-contacts-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/community.json");
+      const data = await res.json();
+      const list = data.contacts || [];
+      if (!list.length) {
+        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        return;
+      }
+      const isEmergency = (c) => c.group === "emergency" || c.group === "hero" || c.priority === "critical";
+      const sos = list.filter((c) => isEmergency(c) && EMERGENCY_ORDER.includes(String(c.phone || "").trim()));
+      const local = list.filter((c) => !sos.includes(c));
+      const groups = groupContacts(local);
+      const openAll = local.length <= AUTO_OPEN_MAX;
+      el.innerHTML = (sos.length ? `
+        <div class="hm-csec">
+          <div class="hm-csec-h"><span aria-hidden="true">\u{1F6A8}</span> \u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456 \u0441\u043B\u0443\u0436\u0431\u0438</div>
+          ${emergencyHtml(sos)}
+        </div>` : "") + (groups.length ? `
+        <div class="hm-csec">
+          <div class="hm-csec-h"><span aria-hidden="true">\u{1F3D8}</span> \u0421\u043B\u0443\u0436\u0431\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438
+            <span class="hm-csec-n">${local.length} ${plural3(local.length, "\u043A\u043E\u043D\u0442\u0430\u043A\u0442", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432")}</span>
+          </div>
+          ${groups.map((g) => groupHtml(g, openAll)).join("")}
+        </div>` : "");
+      if (!el.dataset.wired) {
+        el.dataset.wired = "1";
+        el.addEventListener("click", async (e) => {
+          const btn = e.target.closest("[data-copy]");
+          if (!btn)
+            return;
+          e.preventDefault();
+          const num = btn.dataset.copy;
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(num);
+            } else {
+              const ta = document.createElement("textarea");
+              ta.value = num;
+              ta.style.position = "fixed";
+              ta.style.opacity = "0";
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              ta.remove();
+            }
+            showToast(`\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E: ${num}`);
+          } catch {
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438", 0, "error");
+          }
+        });
+      }
+    } catch {
+      el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -11379,49 +11518,6 @@
     default: ICONS.phone
     // дедуп — раніше байт-в-байт копія з board.js PHONE_ICON_SVG
   };
-  async function renderContactsBlock() {
-    const el = document.getElementById("cm-contacts-content");
-    if (!el)
-      return;
-    try {
-      const res = await fetch("./data/community.json");
-      const data = await res.json();
-      const list = data.contacts || [];
-      if (!list.length) {
-        el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
-        return;
-      }
-      const telOf = (p) => p.replace(/[^\d+]/g, "");
-      const local = list.filter((c) => c.group === "local");
-      const emergency = list.filter((c) => c.group === "emergency" || c.group === "hero" || c.priority === "critical");
-      const EMERG_ORDER = ["101", "102", "103", "104", "112"];
-      const emergRank = (c) => {
-        const i = EMERG_ORDER.indexOf(String(c.phone || "").trim());
-        return i === -1 ? 99 : i;
-      };
-      emergency.sort((a, b) => emergRank(a) - emergRank(b));
-      const EMERG_TOP = 3;
-      const topEmerg = emergency.slice(0, EMERG_TOP);
-      const restAll = [...emergency.slice(EMERG_TOP), ...local];
-      const rowHtml = (c) => `
-      <a class="hm-card hm-card--tap hm-tel" href="tel:${escapeHtml(telOf(c.phone))}">
-        <span class="hm-tel-ic">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-        <span class="hm-tel-tx">
-          <span class="hm-tel-name">${escapeHtml(c.name)}</span>
-          <span class="hm-tel-num">${escapeHtml(c.phone)}</span>
-        </span>
-      </a>`;
-      const topHtml = topEmerg.map(rowHtml).join("");
-      const restHtml = restAll.length ? `
-      <details class="hm-tel-more">
-        <summary class="hm-tel-sum">\u0423\u0441\u0456 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 (${restAll.length})</summary>
-        <div class="hm-list hm-tel-rest">${restAll.map(rowHtml).join("")}</div>
-      </details>` : "";
-      el.innerHTML = topHtml + restHtml;
-    } catch {
-      el.innerHTML = '<div class="hm-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
-    }
-  }
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
   function digestOf(arts) {
     return NEWS_GEO_GROUPS.map((g) => articlesOfGroup(arts, g)[0]).filter(Boolean);
@@ -11644,7 +11740,7 @@
          \u043A\u0456\u043B\u044C\u043A\u0430 \u0440\u0430\u0437\u0456\u0432 \u043D\u0430 \u0440\u0456\u043A. \u0421\u0442\u0430\u043B\u043E: \u0435\u043A\u0441\u0442\u0440\u0435\u043D\u0456 \u043D\u0430 \u0432\u0438\u0434\u043D\u043E\u0442\u0456 + \u0440\u0435\u0448\u0442\u0430 \u043F\u0456\u0434 \u0440\u043E\u0437\u043A\u0440\u0438\u0442\u0442\u044F\u043C. -->
     <section class="hm-sec" id="cm-contacts">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">\u0422\u0435\u043B\u0435\u0444\u043E\u043D\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
+        <h2 class="hm-kicker">\u0422\u0435\u043B\u0435\u0444\u043E\u043D\u0438</h2>
       </div>
       <div id="cm-contacts-content" class="hm-list">${skeletonRows(1)}</div>
     </section>
