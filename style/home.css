@@ -173,6 +173,7 @@
 
 /* Секція = заголовок + вміст. Проміжок між секціями — один і той самий. */
 .hm-sec { padding: var(--hm-s6) var(--hm-pad) 0; }
+
 .hm-sec[hidden] { display: none; }
 /* ⚠️ Явне правило вище ПОТРІБНЕ: 03.08 порожня секція лишалась видимою при
    `hidden`, бо `display:flex` на класі сильніший за атрибут. Урок дня. */
@@ -302,33 +303,88 @@
 .hm-wx-sk { height: 96px; border-radius: 10px; background: rgba(255, 255, 255, .1); }
 .hm-wx-err { font: 400 13px/1.35 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .7); }
 
-/* ══ СМУГА «ЗАРАЗ» ════════════════════════════════════════════════════════════
-   Капсули одразу під шапкою. Ряд горизонтальний, бо капсул буває 0-3 і вони
-   різної ширини — сітка тут дала б дірки.
-   ⚠️ Це НЕ скролер: якщо капсули не влазять, вони переносяться (`flex-wrap`).
-   Вкладених скролерів на головній не заводимо — саме їх прибирали 31.07. */
-.hm-now {
-  display: flex; flex-wrap: wrap; gap: var(--hm-s2);
+/* ══ КАПСУЛИ-СТАТУСИ ══════════════════════════════════════════════════════════
+   Замовлення Вови 04.08: прибрати старі дрібні пігулки і зробити один
+   універсальний компонент — більший, скляний, який циклічно змінює
+   повідомлення. Компонування «Б» (три широкі рядки) — вибір із трьох макетів.
+
+   🔑 ЧОМУ САМЕ СКЛО, А НЕ ЩЕ ОДНА БІЛА КАРТКА. Капсули лежать ПРЯМО на фото
+   костелу — це єдине місце сторінки, де фон видно найкраще. Біла плашка тут
+   закрила б кадр; скло показує його крізь себе і водночас дає поверхню для
+   тексту. Нижче — три речі, без яких скло на фото не читається:
+     1. `backdrop-filter: blur(14px) saturate(1.5)` — розмиває саме те, що ПІД
+        капсулою, тож дрібний контраст листя не «рябить» під буквами;
+     2. градієнт зверху вниз (0.17 → 0.09) — імітує світло, що падає згори;
+        рівна заливка виглядає як мутна плівка, а не як скло;
+     3. `inset 0 1px 0` — тонка світла лінія по верхньому краю. Це та сама
+        фізика, що на Дошці 28.07: на темному «вище» = підсвічений край.
+
+   ⚠️ Є `background` І `backdrop-filter`: у браузерах без підтримки другого
+   (старі Android WebView) лишається напівпрозора підкладка, і текст читається.
+   Без цього запасу капсула стала б прозорою наскрізь. */
+.hm-caps {
+  display: flex; flex-direction: column; gap: var(--hm-s2);
   padding: var(--hm-s4) var(--hm-pad) 0;
+  /* 🔴 ЗАПАС ЗНИЗУ — замовлення Вови 04.08: «все, що починається від "У стрічці
+     громади", опусти на низ трохи». Разом із власним відступом секції (24px)
+     дає 40px — помітний розрив, а не діра.
+     ⚠️ Відступ саме ТУТ, а не правилом `.hm-caps + .hm-sec`: наступним у
+     розмітці стоїть секція збору, яка найчастіше `hidden`, і сусідній селектор
+     віддавав би запас невидимому елементу. Заміряно: очікували 40, отримали 24. */
+  padding-bottom: var(--hm-s4);
 }
-.hm-now[hidden] { display: none; }
-.hm-cap {
+.hm-caps[hidden] { display: none; }
+
+.hm-cap2 {
   appearance: none; -webkit-appearance: none; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 34px; padding: 0 var(--hm-s3);
-  background: var(--board-card); border: 1px solid var(--board-line);
-  border-radius: var(--hm-r-pill);
-  font: 600 13px/1 system-ui, -apple-system, sans-serif; color: var(--ink);
-  white-space: nowrap;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 56px; padding: 11px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .17) 0%, rgba(255, 255, 255, .09) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+          backdrop-filter: blur(14px) saturate(1.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .22);
+  color: #fff; text-align: left;
 }
-.hm-cap:active { background: var(--board-press); }
-.hm-cap b { font-weight: 700; color: var(--red); }
-/* Акцентна капсула — та, що з відліком часу. Рівно одна на смузі:
-   якщо виділити всі, не виділено жодної. */
-.hm-cap--on { background: var(--brand-grad-sm); border-color: transparent; color: #fff; }
-.hm-cap--on b { color: #fff; }
-.hm-cap--on:active { background: var(--brand-grad-press); }
-.hm-cap-ic { font-size: 14px; line-height: 1; }
+.hm-cap2:active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .15) 100%);
+}
+.hm-cap2-ic {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  display: grid; place-items: center; font-size: 16px; line-height: 1;
+}
+.hm-cap2-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-cap2-k {
+  font: 700 9.5px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .11em; text-transform: uppercase; color: rgba(255, 255, 255, .66);
+}
+/* Рядок повідомлення. Саме він міняється в циклі, тому має власний перехід.
+   ⚠️ 200мс тут і `FADE_MS = 200` у home-caps.js мусять збігатися: скрипт
+   підміняє текст рівно на середині згасання, коли букв не видно. */
+.hm-cap2-v {
+  font: 600 14px/1.2 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: opacity 200ms var(--hm-ease), transform 200ms var(--hm-ease);
+}
+.hm-cap2-v.swap { opacity: 0; transform: translateY(-6px); }
+
+/* Крапки — скільки повідомлень у циклі і котре зараз. Активна витягується в
+   рисочку, а не просто світлішає: форму видно навіть краєм ока. */
+.hm-cap2-dots { display: flex; gap: 3px; margin-top: 5px; }
+.hm-cap2-dots i {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(255, 255, 255, .3);
+  transition: width 200ms var(--hm-ease), background 200ms var(--hm-ease), border-radius 200ms var(--hm-ease);
+}
+.hm-cap2-dots i.on { width: 10px; border-radius: 2px; background: rgba(255, 255, 255, .85); }
+
+/* Вимкнений рух — цикл не запускається взагалі (див. home-caps.js), а тут
+   знімаємо переходи, щоб нічого не «поїхало» навіть від зміни класу. */
+@media (prefers-reduced-motion: reduce) {
+  .hm-cap2-v, .hm-cap2-dots i { transition: none; }
+}
 
 /* ══ ЗБІР ═════════════════════════════════════════════════════════════════════
    Помітність дає МІСЦЕ (одразу під смугою «Зараз»), а не колір: кричущий банер

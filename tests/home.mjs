@@ -95,6 +95,43 @@ for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-
 }
 await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(500);
 
+// 5.0 🔴 КАПСУЛИ-СТАТУСИ: ЖИВІ ЧИСЛА І ДИСЦИПЛІНОВАНИЙ РУХ.
+// Компонент циклічно змінює повідомлення — тобто повертає на сторінку рух,
+// якого ми щойно позбулись (було 4 автоматичні рухи, стало 0). Сторож стежить
+// саме за тим, щоб цей рух лишався керованим, а числа — справжніми.
+const caps = await p.evaluate(()=>{
+  const box = document.getElementById('hm-caps');
+  const list = [...document.querySelectorAll('.hm-cap2')];
+  return {
+    є: !!box, n: list.length,
+    порожня: box && !box.hidden && list.length === 0,
+    тексти: list.map(c => c.querySelector('.hm-cap2-v')?.textContent || ''),
+    крапки: document.querySelectorAll('.hm-cap2-dots i').length,
+    старі: !!document.getElementById('hm-now'),
+  };
+});
+ok('старої смуги «Зараз» більше немає', !caps.старі);
+ok('капсули намальовані', caps.n > 0, `${caps.n} шт`);
+ok('🔴 порожньої коробки капсул не буває', !caps.порожня);
+// Кожне повідомлення мусить містити ЧИСЛО — це статус, а не гасло.
+ok('у кожній капсулі є число', caps.тексти.every(t => /\d/.test(t)), caps.тексти.join(' | '));
+ok('крапки циклу намальовані', caps.крапки > 0, `${caps.крапки}`);
+
+// Рух: текст мусить справді змінитись. Це наслідок, а не наявність setInterval.
+const capBefore = await p.evaluate(()=>[...document.querySelectorAll('.hm-cap2-v')].map(v=>v.textContent));
+await p.waitForTimeout(7200);
+const capAfter = await p.evaluate(()=>[...document.querySelectorAll('.hm-cap2-v')].map(v=>v.textContent));
+ok('🔴 цикл справді міняє повідомлення',
+   capBefore.some((t,i)=>t !== capAfter[i]), `${capBefore.join('/')} → ${capAfter.join('/')}`);
+
+// Запобіжник: капсули поза екраном мусять ставати на паузу.
+await p.evaluate(()=>{ const m=document.querySelector('.app-main'); m.scrollTop = m.scrollHeight; });
+await p.waitForTimeout(900);
+const paused = await p.evaluate(()=>[...document.querySelectorAll('.hm-cap2')].map(c=>c.dataset.paused));
+ok('🔴 поза екраном цикл спиняється', paused.every(v=>v==='1'), `paused: ${paused.join(',')}`);
+await p.evaluate(()=>{ const m=document.querySelector('.app-main'); m.scrollTop = 0; });
+await p.waitForTimeout(600);
+
 // 5.1 🔴 СЕКЦІЇ ПОДІЙ НА ГОЛОВНІЙ НЕМАЄ (рішення Вови 04.08 «події прибрати»).
 // Причина була не в даних: вести з неї не було куди — вкладки Подій у
 // застосунку не існує, і кнопка «Афіша →» вела людину у Стрічку.

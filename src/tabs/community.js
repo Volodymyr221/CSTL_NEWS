@@ -56,7 +56,7 @@
 import { escapeHtml } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
-import { renderHomeNow } from './home-now.js';
+import { renderHomeCaps } from './home-caps.js';
 import { renderHomeFund } from './home-fund.js';
 import { renderHomeFeed } from './home-feed.js';
 import {
@@ -162,11 +162,13 @@ function renderSkeleton() {
       </div>
     </header>
 
-    <!-- ══ СМУГА «ЗАРАЗ» ═══════════════════════════════════════════════════════
-         Капсули: найближчий автобус · непрочитані · мої оголошення.
-         🔴 Малюється, ЛИШЕ якщо є що сказати — «0 непрочитаних» не інформація.
-         Порожньо → секції немає зовсім (не порожня смуга висотою 50px). -->
-    <div id="hm-now" class="hm-now" hidden></div>
+    <!-- ══ КАПСУЛИ-СТАТУСИ ════════════════════════════════════════════════════
+         Скляні капсули розділів, кожна циклічно змінює повідомлення.
+         Замінили смугу «Зараз» (🚌 Олика · 11 хв / 📌 мої 7) на замовлення Вови
+         04.08: «ці капсули треба забрати… треба продумати і зробити те, що
+         найбільше підходить». Компонування «Б» — вибір із трьох макетів.
+         🔴 Порожньо → смуги немає зовсім. Деталі й запобіжники руху — home-caps.js. -->
+    <div id="hm-caps" class="hm-caps" hidden></div>
 
     <!-- ══ ЗБІР ════════════════════════════════════════════════════════════════
          Немає активних зборів → секції немає ЗОВСІМ (вимога Вови). -->
@@ -263,7 +265,7 @@ export function initCommunity() {
   // Блоки вантажаться паралельно — кожен оновлює свою секцію, коли готовий.
   // Помилка одного не ламає інші (кожен має власний catch).
   renderWeatherBlock();     // → шапка (і наповнює кеш _wxData для модалки)
-  renderHomeNow();          // → смуга «Зараз»
+  renderHomeCaps();         // → капсули-статуси розділів
   renderHomeFund();         // → збір (порожньо = секція лишається hidden)
   renderHomeFeed();         // → дайджест Стрічки (порожньо = секція hidden)
   renderCommunityNews();
