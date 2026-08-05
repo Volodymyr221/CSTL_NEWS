@@ -1107,31 +1107,38 @@ function myActiveAdsCount() {
   return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== 'chat' ? 1 : 0), 0);
 }
 
-// 🔴 Синхронізація ІСНУВАННЯ конверта в шапці (02.08 — він переїхав туди з низу).
+// 🔴 Синхронізація ІСНУВАННЯ входу в листування.
 //
-// Було (30.07): кнопка стояла завжди, а `myActiveAdsCount()` лише морфив картинку
-// між «олівцем» і «конвертом». Тепер конверта може не бути зовсім, тож синхронізувати
-// треба саму його наявність.
+// Історія місця: 30.07 кнопка стояла завжди, а `myActiveAdsCount()` лише морфив
+// картинку між «олівцем» і «конвертом»; 02.08 конверт переїхав у шапку; 05.08
+// (рішення Вови, варіант «А») листування повернулось пунктом FAB-меню, бо місце
+// в шапці забрав фільтр категорій. Незмінне одне: входу може не бути ЗОВСІМ,
+// тож синхронізувати треба саму його наявність, а не лише вигляд.
 //
 // Навіщо це окремо від рендера: після публікації оголошення список освіжається через
 // `refreshBoardKeepingPlace()`, який СВІДОМО перемальовує лише картки (щоб не смикнути
 // прокрутку). Без цього виклику людина подала б перше оголошення — і не побачила б
-// кнопку листування до наступного повного рендеру, тобто рівно тоді, коли їй уперше
+// входу в листування до наступного повного рендеру, тобто рівно тоді, коли їй уперше
 // можуть написати.
+//
+// ⚠️ Слухач вішається на щойно вставлений пункт ОКРЕМО, бо загальний обробник
+// `.board-fab-item` роздається в `wireBoard()` по вже наявних вузлах — пункт,
+// доданий пізніше, лишився б мертвим на дотик.
 // ⚠️ Гард `discOpen` лишається: в Обговорень своя шапка й свій FAB, і ця логіка їх
 // не стосується (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
 function syncMsgFab() {
   if (discOpen) return;
-  const box = document.querySelector('#board-content .bd-hero-actions');
-  if (!box) return;
-  const have = document.getElementById('bd-hero-msgs');
+  const menu = document.getElementById('board-fab-menu');
+  if (!menu) return;
+  const have = menu.querySelector('[data-fab="messages"]');
   const need = canSeeMessages();
   if (need && !have) {
-    box.insertAdjacentHTML('beforeend',
-      `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`);
-    document.getElementById('bd-hero-msgs')
-      ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
-    paintUnreadBadge();   // щойно створений конверт ще порожній — заповнити з кешу
+    menu.insertAdjacentHTML('beforeend', msgFabItemHtml());
+    menu.querySelector('[data-fab="messages"]')?.addEventListener('click', () => {
+      closeFab();
+      requireAuth('переглянути повідомлення', openThreadsList);
+    });
+    paintUnreadBadge();   // щойно створений бейдж ще порожній — заповнити з кешу
   } else if (!need && have) {
     have.remove();
   }
@@ -1178,7 +1185,25 @@ function renderFab() {
   // Той самий розподіл у Facebook: Marketplace має велику кнопку продажу, а
   // Messenger — іконку у верхній панелі.
   //
-  // ⚠️ Пункт «Повідомлення» сюди НЕ повертається — тепер це конверт у шапці.
+  // 🔴 05.08 — ПУНКТ «ПОВІДОМЛЕННЯ» ПОВЕРНУВСЯ СЮДИ (рішення Вови, варіант «А»),
+  // і це свідомий відкат рядка вище: місце конверта в шапці забрав фільтр категорій.
+  //
+  // ⚠️ Аргумент #737 («головна дія — в зоні великого пальця») НЕ скасований, він
+  // виконується як і раніше: сам круг лишається «подати оголошення» — і як пункт
+  // меню, і як текст на розгорнутій кнопці. Змінилось лише те, що листування знову
+  // досяжне звідси.
+  //
+  // 🔴 ЧОМУ «ПОВІДОМЛЕННЯ» ОСТАННІ В РОЗМІТЦІ, А НЕ ПЕРШІ.
+  // Меню стоїть НАД кнопкою (`.board-fab-menu { bottom: … + 56px + 14px }`) і
+  // викладається звичайним `column`, тобто ОСТАННІЙ пункт малюється найнижчим —
+  // найближче до пальця й до самої кнопки. Каскад появи в CSS іде тим самим
+  // порядком (`:nth-child(4)` має найменшу затримку — заготовка саме під
+  // четвертий пункт, який тут стояв до 02.08).
+  //
+  // ⚠️ Пункт існує лише за `canSeeMessages()` — тим самим правилом, за яким
+  // показувався конверт: людині без оголошень і без жодної розмови нема чого
+  // відкривати, а порожній екран «Повідомлення» виглядав би поламаним.
+  // Наявність пункту синхронізує `syncMsgFab()` — рендер тут не єдине джерело.
   return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
@@ -1195,13 +1220,31 @@ function renderFab() {
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
+        ${canSeeMessages() ? msgFabItemHtml() : ''}
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
+}
+
+// Пункт «Повідомлення» у FAB-меню. Окремою функцією, бо його вставляє і рендер
+// (`renderFab`), і точкова синхронізація (`syncMsgFab`) — двом копіям розмітки
+// одного пункту в цьому файлі вже було місце, і саме на такому розходженні
+// проєкт горів (два списки антиспаму).
+// ⚠️ Бейдж має ВЛАСНИЙ id: `paintUnreadBadge()` малює і його, і той, що на самій
+// кнопці. Число на кружечку пункту, а не в плашці з текстом — рішення Вови 30.07:
+// у плашки `white-space: nowrap`, тож число всередині неї робило пункт ширшим на
+// кожне нове повідомлення, і меню «дихало» від стану.
+function msgFabItemHtml() {
+  return `
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
+          <span class="board-fab-label">Повідомлення</span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}<span class="board-fab-badge" id="board-fab-msg-badge"></span></span>
+        </button>`;
 }
 
 // «Чи показувати кнопку повідомлень». Обидві половинки — без мережі: оголошення
@@ -1281,16 +1324,16 @@ function renderHeader() {
   const discHead = '';
 
   const showCategories = activeType === 'board';
-  // 🔴 01.08 — КНОПКА-ЛІЙКА З ВИПАДНИМ МЕНЮ КАТЕГОРІЙ ВИДАЛЕНА.
-  // Її замінив видимий ряд чіпів `bd-types` (нижче): той самий фільтр
-  // (`activeCategory`), але без зайвого тапу і з лічильниками.
-  // ⚠️ Спершу я лишив її «для Обговорень» — і це було помилкою в моєму ж коментарі:
-  // блок будувався під умовою `showCategories`, тобто існував ТІЛЬКИ на Дошці, і
-  // після заміни став кодом, який не виконується ніколи. Разом із ним пішли
-  // `activeIcon`, `activeColorCls`, `CARET_SVG` і `menuItem` — вони жили лише тут.
-  // Наслідок: `wireMenuButton('bd-cat-filter', …)` тепер не знаходить кнопки і
-  // мовчки виходить (у нього є `if (!btn || !menu) return`), тож виклик прибрано теж.
-  // CSS-правила `.bd-cat-*` НЕ чіпаю — це не мій слід і вони нікому не заважають.
+  // 🕘 ІСТОРІЯ ФІЛЬТРА КАТЕГОРІЙ — три стани, щоб наступна сесія не ходила по колу:
+  //   • до 01.08 — кнопка-лійка з випадним меню в рядку пошуку (`bd-cat-filter`);
+  //   • 01.08    — її замінив видимий ряд чіпів `bd-types` (без зайвого тапу, з лічильниками);
+  //   • 05.08    — ряд знято, фільтр знову за кнопкою, але вже у ШАПЦІ (`#bd-cat-btn`),
+  //                на місці конверта; підстава — 71px висоти, розбір у `heroHtml` нижче.
+  // ⚠️ Стан фільтра весь цей час ОДИН і той самий — `activeCategory`. Міняється
+  // лише орган керування, тому жодна з трьох змін не чіпала фільтрацію.
+  // ⚠️ 01.08 разом із лійкою пішли `activeIcon`, `activeColorCls`, `CARET_SVG` і
+  // `menuItem` — вони жили лише в ній і назад не потрібні: нова кнопка малює
+  // назву + число, без іконки категорії (на 97px вільних у hero вона не влазить).
 
   // Д-11 + Д-12: шапка Дошки — рядок «лічильник (зліва) + фільтр локації (справа)».
   // Лічильник рахує поточний відфільтрований список.
@@ -1325,6 +1368,32 @@ function renderHeader() {
   // Кнопка «+» ТУТ, а не лише у FAB: у дошки оголошень головна дія — ПОДАТИ, а не
   // гортати. Вона кличе рівно те саме, що пункт FAB `post` (`requireAuth` →
   // `openBoardModal`), тобто другого шляху подачі не заводимо — лише другий вхід.
+  //
+  // 🔴 05.08 — У ШАПЦІ ТЕПЕР ФІЛЬТР КАТЕГОРІЙ, А НЕ КОНВЕРТ (рішення Вови, варіант «А»).
+  //
+  // ⚠️ ЦЕ ВІДКОЧУЄ ДВА РІШЕННЯ, і обидва свідомо:
+  //   • 01.08 кнопку-меню категорій замінили видимим рядом чіпів `bd-types`
+  //     («без зайвого тапу і з лічильниками»);
+  //   • 02.08 (PR #737) конверт переїхав СЮДИ з FAB-меню, і в коді стояв рядок
+  //     «пункт "Повідомлення" сюди НЕ повертається».
+  // Що змінилось: тоді місце в шапці ні під що не було потрібне. Тепер під нього
+  // претендує фільтр, і рахунок такий — ряд чіпів коштував 71px висоти
+  // (заміряно: `.bd-search-row` кінець 153 → `.bd-controls` кінець 224), тобто
+  // 13% робочої зони списку. Категорії з нього нікуди не діваються: вони
+  // переїхали в меню цієї кнопки РАЗОМ з лічильниками, які й були аргументом 01.08.
+  //
+  // 📐 ЧОМУ СЛОГАН СТИСКАЄТЬСЯ, А НЕ ПЕРЕНОСИТЬСЯ (заміряно на 390px):
+  // hero має 362px, текст слогана — 265px, тобто праворуч вільно рівно 97px.
+  // Кнопка з найдовшою назвою («Знайдено 2») просить ~118px. Якби текст
+  // переносився, hero виріс би на рядок і виграш висоти зник — а головне,
+  // розкладка «дихала» б від ВИБРАНОЇ КАТЕГОРІЇ. Це та сама хвороба, яку
+  // лікували 30.07, коли лічильник усередині плашки FAB розширював пункт меню.
+  // ➡️ Тому `.bd-hero-text` має `min-width: 0`, а слоган — один рядок із
+  // трикрапкою: висота hero стала НЕЗМІННОЮ, а місце віддає найменш цінне.
+  const catBtnLabel = activeCategory === 'all' ? 'Усі' : catShort(activeCategory);
+  const catBtnCount = activeCategory === 'all'
+    ? getFilteredPosts({ ignoreCategory: true }).length
+    : getFilteredPosts().length;
   const heroHtml = showCategories ? `
     <div class="bd-hero">
       <div class="bd-hero-text">
@@ -1332,47 +1401,59 @@ function renderHeader() {
         <p class="bd-hero-sub">Знайди, продай, обміняй або віддай безкоштовно</p>
       </div>
       <div class="bd-hero-actions">
-        ${canSeeMessages() ? `
-        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="Повідомлення">
-          ${MSG_ICON_SVG}
-          <span class="board-trigger-badge" id="board-trigger-badge"></span>
-        </button>` : ''}
+        <div class="bd-hero-cat-filter">
+          <button class="bd-hero-cat${activeCategory === 'all' ? '' : ' bd-hero-cat--on'}" id="bd-cat-btn" type="button"
+                  aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за категорією">
+            <span class="bd-hero-cat-label">${escapeHtml(catBtnLabel)}</span>
+            <span class="bd-hero-cat-n" id="bd-count">${catBtnCount}</span>
+            <svg class="bd-hero-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          ${catMenuHtml()}
+        </div>
       </div>
     </div>
   ` : '';
 
-  // 🔴 01.08 — ТИПИ УГОДИ ОКРЕМИМ РЯДОМ, і показуються ЛИШЕ НЕПОРОЖНІ.
+  // 🔴 05.08 — КАТЕГОРІЇ ЖИВУТЬ У МЕНЮ КНОПКИ В ШАПЦІ (було: ряд чіпів `bd-types`).
   //
-  // На концепті стояло 5 кнопок із лічильниками 128/32/54/12/30. У нас усього
-  // 17 оголошень, і по категоріях це: продам 8 · куплю 5 · інше 3 · послуга 1,
-  // а «шукаю»/«віддам»/«знайдено»/«загубилось» бувають нулями. Порожня кнопка
-  // з нулем робить екран мертвим — рівно та пастка, через яку 31.07 прибрали
-  // чіпи з табла новин (фільтр над трьома картками показував 3 з 212).
-  // ➡️ Рахуємо по РЕАЛЬНОМУ набору і малюємо тільки те, що не порожнє.
+  // Правила відбору лишились ті самі, що були у чіпів 01.08 — змінився лише
+  // спосіб показу, і це важливо, бо саме правила тут неочевидні:
+  //   • показуємо ЛИШЕ непорожні категорії. У нас 19 оголошень, і
+  //     «шукаю»/«віддам»/«знайдено» бувають нулями; мертвий пункт зі «0» робить
+  //     список сміттям — та сама пастка, через яку 31.07 прибрали чіпи з табла
+  //     новин (фільтр над трьома картками показував 3 з 212);
+  //   • лічильники рахуються по постах, які проходять УСІ інші фільтри (пошук,
+  //     локація) — інакше пункт обіцяв би «Продам 8», а показував 2.
   //
-  // ⚠️ Лічильники рахуються по постах, які проходять УСІ інші фільтри (пошук,
-  // локація) — інакше чіп обіцяв би «Продам 8», а після натискання показував 2.
-  const typesHtml = showCategories ? (() => {
+  // ℹ️ Функція оголошена ПІСЛЯ місця виклику свідомо: `function` піднімається
+  // (hoisting), а тримати 25 рядків меню посеред розмітки hero — гірше для читання.
+  //
+  // ⚠️ Меню бере готові класи `.bd-cat-menu` / `.bd-cat-mi`, які лишились у CSS
+  // від кнопки-лійки до 01.08 (спільна база з меню локації). Це не «оживлення
+  // мертвого коду» навмання: вони й досі стилізують чинне меню локації, тобто
+  // весь час були живі — просто одного з двох користувачів у них не було.
+  function catMenuHtml() {
     const base = getFilteredPosts({ ignoreCategory: true });
     const n = {};
     base.forEach(p => { n[p.category] = (n[p.category] || 0) + 1; });
-    const chip = (id, label, on, num) => `
-      <button class="bd-type${on ? ' bd-type--on' : ''}" type="button" data-bd-cat="${escapeHtml(id)}">
-        ${escapeHtml(label)}<span class="bd-type-n"${id === 'all' ? ' id="bd-count"' : ''}>${num}</span>
+    const mi = (id, label, on, num) => `
+      <button class="bd-cat-mi${on ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
+        <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
+        <span class="bd-cat-mi-n">${num}</span>
       </button>`;
     const live = CATS.filter(c => n[c.id] > 0)
       .sort((a, b) => n[b.id] - n[a.id])
-      .map(c => chip(c.id, c.short || c.label, activeCategory === c.id, n[c.id]))
+      .map(c => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id]))
       .join('');
-    // Якщо активна категорія стала порожньою (звузили пошук) — її чіп усе одно
-    // показуємо, інакше людина не побачить, ЯКИЙ фільтр зараз тримає екран порожнім.
-    const activeGone = activeCategory !== 'all' && !n[activeCategory];
-    const orphan = activeGone
-      ? chip(activeCategory, catShort(activeCategory), true, 0) : '';
-    return `<div class="bd-types" id="bd-types">
-      ${chip('all', 'Усі', activeCategory === 'all', base.length)}${orphan}${live}
+    // Якщо активна категорія стала порожньою (звузили пошук) — її пункт усе одно
+    // показуємо, інакше людина не побачить, ЯКИЙ фільтр тримає екран порожнім,
+    // і не матиме куди тапнути, щоб його зняти.
+    const orphan = (activeCategory !== 'all' && !n[activeCategory])
+      ? mi(activeCategory, catShort(activeCategory), true, 0) : '';
+    return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+      ${mi('all', 'Усі', activeCategory === 'all', base.length)}${orphan}${live}
     </div>`;
-  })() : '';
+  }
 
   // Рядок пошуку. ⚠️ Для ДОШКИ він вставляється ВСЕРЕДИНУ багряного блоку (нижче),
   // для Обговорень — окремим рядом, як було. Це не косметика: винесений назовні
@@ -1420,7 +1501,6 @@ function renderHeader() {
       ${discHead}
       ${titlebarHtml}
       ${showCategories ? '' : searchRowHtml}
-      ${typesHtml}
     </div>
   `;
 }
@@ -1432,7 +1512,12 @@ function updateAdCount() {
   if (!el || activeType !== 'board') return;
   // ⚠️ 01.08: лічильник переїхав у чіп «Усі», тож тут ЛИШЕ число — слово
   // «оголошень» поруч із ним у пігулці не поміститься і не потрібне.
-  el.textContent = String(getFilteredPosts({ ignoreCategory: true }).length);
+  // ⚠️ 05.08: число тепер живе на КНОПЦІ фільтра і мусить відповідати тому, що
+  // на ній написано. При «Усі» це весь набір, при вибраній категорії — лише вона;
+  // інакше кнопка казала б «Продам 19», показуючи 8 карток.
+  el.textContent = String(activeCategory === 'all'
+    ? getFilteredPosts({ ignoreCategory: true }).length
+    : getFilteredPosts().length);
 }
 
 function renderBody() {
@@ -1668,6 +1753,8 @@ function renderAll() {
       // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
+      // 05.08 — вхід у листування (повернувся з шапки, див. renderFab).
+      if (act === 'messages') { requireAuth('переглянути повідомлення', openThreadsList); return; }
       if (act === 'saved') { requireAuth('переглянути збережені', () => {
         // Д-27: «Збережені» — окремий екран (pm-screen), як «Мої оголошення».
         // Список = published-оголошення з закладок (обговорення мають свою кімнату).
@@ -1740,22 +1827,11 @@ function renderAll() {
     });
   };
   wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
-
-  // 🔴 02.08 — КОНВЕРТ У ШАПЦІ: прямий вхід у листування, без меню й без зайвого
-  // тапу. Показується за `canSeeMessages()`, бейдж непрочитаних лежить на ньому.
-  document.getElementById('bd-hero-msgs')
-    ?.addEventListener('click', () => requireAuth('переглянути повідомлення', openThreadsList));
-
-  // 🔴 01.08 — ряд типів (чіпи). Той самий стан `activeCategory`, що й старе меню,
-  // тобто фільтр один — змінився лише спосіб ним керувати.
-  // ⚠️ Обробник вішається на КОНТЕЙНЕР, а не на кожен чіп: `renderAll()` перестворює
-  // ряд на кожен вибір, тож слухачі на самих кнопках жили б рівно до першого тапу.
-  document.getElementById('bd-types')?.addEventListener('click', e => {
-    const chip = e.target.closest('[data-bd-cat]');
-    if (!chip) return;
-    activeCategory = chip.dataset.bdCat;
-    renderAll();
-  });
+  // 🔴 05.08 — категорії знову за кнопкою (варіант «А» Вови). Стан той самий
+  // (`activeCategory`), що був у чіпів 01.08 і в кнопки-лійки до них — фільтр один,
+  // змінюється лише спосіб ним керувати. `wireMenuButton` уже вміє все потрібне:
+  // взаємовиключність із меню локації, `aria-expanded`, `renderAll()` після вибору.
+  wireMenuButton('bd-cat-btn',    'bd-cat-menu', mi => { activeCategory = mi.dataset.bdCat; });
 
 
   // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
@@ -2218,7 +2294,7 @@ let _threadsEvtWired = false;
 // видимий ряд чіпів, і меню з таким id більше не існує.
 let _boardMenusWired = false;
 function closeBoardMenus() {
-  [['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
+  [['bd-loc-menu', 'bd-loc-btn'], ['bd-cat-menu', 'bd-cat-btn']].forEach(([menuId, btnId]) => {
     document.getElementById(menuId)?.setAttribute('hidden', '');
     const b = document.getElementById(btnId);
     if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }

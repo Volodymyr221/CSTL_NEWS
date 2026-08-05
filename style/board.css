@@ -788,7 +788,33 @@ textarea.cm-board-input.bm-invalid {
    впливає взагалі.
    ⚠️ Геометрія дзеркалить `.board-trigger-badge` (головна кнопка FAB) — щоб два
    бейджі в одному меню виглядали одним прийомом, а не двома різними. Розмір трохи
-   менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки. */
+   менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки.
+
+   🔴 05.08 — СЕЛЕКТОР ПОВЕРНУТО. З 02.08 по 05.08 цей коментар лежав БЕЗ КОДУ:
+   пункт «Повідомлення» тоді прибрали з меню, правило пішло з чисткою мертвого CSS,
+   а опис лишився — тобто файл описував те, чого нема. Пункт повернувся (рішення
+   Вови, варіант «А»), і разом з ним правило. */
+.board-fab-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--red, #722F37);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+  display: none;
+}
+/* Кружечок пункту меню — точка відліку для бейджа (інакше він ліг би відносно
+   всієї плашки з текстом і поїхав би вбік). */
+.board-fab-ic { position: relative; }
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
@@ -2735,40 +2761,11 @@ textarea.cm-board-input.bm-invalid {
 #board-content .bd-count { color: rgba(255, 236, 240, 0.86); }
 #board-content .bd-loc-btn { color: rgba(255, 236, 240, 0.92); }
 
-/* ── Ряд типів угоди ──────────────────────────────────────────────────────── */
-#board-content .bd-types {
-  display: flex;
-  gap: 7px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 9px 0 2px;
-  margin: 0 -2px;
-}
-#board-content .bd-types::-webkit-scrollbar { display: none; }
-#board-content .bd-type {
-  flex: none;
-  height: 32px;
-  padding: 0 13px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--board-card, #FFFFFF);
-  border: 1px solid var(--board-line, #C4C4C1);
-  font-size: 13px;
-  font-weight: 600;
-  color: #1B1B1B;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-#board-content .bd-type--on {
-  background: var(--brand-grad-sm);
-  border-color: var(--news-accent, #722F37);
-  color: #fff;
-}
-#board-content .bd-type-n { font-size: 12px; font-weight: 700; opacity: 0.5; }
-#board-content .bd-type--on .bd-type-n { opacity: 0.75; }
+/* 🗑 05.08 — РЯД ТИПІВ УГОДИ (`.bd-types` / `.bd-type*`) ВИДАЛЕНО РАЗОМ З РОЗМІТКОЮ.
+   Фільтр категорій переїхав у меню кнопки в шапці (`#bd-cat-btn`, нижче). Правила
+   прибрані, а не лишені «про всяк випадок»: мертвий CSS бреше наступній сесії, і
+   на це вже підводився сторож (`board-cream.mjs` перевіряв екран, якого нема).
+   Порог мертвих класів стереже `tests/dead-css.mjs`. */
 
 /* Пошук усередині багряного блоку — світле поле на темному, а не біла плашка.
    ⚠️ Тільки на Дошці: в Обговореннях рядок пошуку лишається на світлому тлі. */
@@ -2812,38 +2809,64 @@ textarea.cm-board-input.bm-invalid {
   white-space: nowrap;
 }
 
-/* ── КОНВЕРТ У ШАПЦІ ДОШКИ (02.08) ──────────────────────────────────────────
-   Дії й листування помінялись місцями. Причина не смак, а зона досяжності: подати
-   оголошення — найчастіша дія екрана, і тримати її у ВЕРХНЬОМУ ПРАВОМУ куті означало
-   ставити найпотрібніше найдалі від великого пальця. Тепер дії внизу (FAB), а вхід у
-   листування — тут, іконкою на постійному місці. Той самий розподіл, що у Facebook:
-   продаж великою кнопкою, Messenger — іконкою у верхній панелі.
-   ⚠️ Конверта може не бути зовсім: `canSeeMessages()` = «є оголошення АБО є розмова».
-   Поява/зникнення на льоту — `syncMsgFab()`. */
+/* ── ФІЛЬТР КАТЕГОРІЙ У ШАПЦІ ДОШКИ (05.08) ─────────────────────────────────
+   Тут стояв конверт листування (02.08). 05.08 (рішення Вови, варіант «А») місце
+   віддано фільтру категорій, а листування повернулось пунктом FAB-меню — розбір
+   обох відкатів у `board.js`, коментарі до `heroHtml` і `renderFab`.
+
+   📐 ГЕОМЕТРІЯ НЕ «НА ОКО» — заміряно на 390px до змін:
+   hero має 362px, текст слогана — 265px, тобто праворуч вільно рівно 97px.
+   Найдовша назва категорії («Знайдено») з числом і кареткою просить ~118px.
+   ➡️ Тому кнопка НЕ фіксованої ширини, а слоган стискається: `.bd-hero-text`
+   уже має `min-width: 0`, і слоган отримує один рядок із трикрапкою.
+   🔴 ЧОМУ САМЕ ТАК, А НЕ ПЕРЕНОСОМ РЯДКА: при переносі hero виростав би на рядок
+   від ВИБОРУ КАТЕГОРІЇ — тобто розкладка «дихала» б від стану. Це рівно та
+   хвороба, яку лікували 30.07 (число всередині плашки FAB розширювало пункт
+   меню), і вона ж з'їла б виграш висоти, заради якого все й робилось.
+   ⚠️ Слоган — не декор (він каже, ЩО тут роблять), тому стискаємо, а не знімаємо:
+   при «Усі» видно майже весь, обрізається лише хвіст. */
 #board-content .bd-hero-actions { position: relative; flex: none; }
-#board-content .bd-hero-msgs {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+#board-content .bd-hero-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#board-content .bd-hero-cat-filter { position: relative; }
+#board-content .bd-hero-cat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;              /* 44 — та сама висота, що мав конверт (мінімум Apple HIG) */
+  padding: 0 11px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-#board-content .bd-hero-msgs svg { width: 21px; height: 21px; }
-#board-content .bd-hero-msgs:active { background: rgba(255, 255, 255, 0.28); }
-/* Бейдж непрочитаних — накладка на кут, а не текст усередині: інакше кнопка
-   ширшала б із кожним новим повідомленням (урок 30.07 про плашку в FAB-меню). */
-#board-content .bd-hero-msgs .board-trigger-badge {
-  position: absolute;
-  top: -3px;
-  right: -3px;
+#board-content .bd-hero-cat:active,
+#board-content .bd-hero-cat.open { background: rgba(255, 255, 255, 0.28); }
+/* Обрана категорія — світліша заливка: кнопка мусить казати «фільтр УВІМКНЕНО»
+   ще до того, як людина прочитає напис. При «Усі» фільтра фактично немає, тож
+   і виділяти нема чого. */
+#board-content .bd-hero-cat--on {
+  background: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.5);
 }
+#board-content .bd-hero-cat-n { font-weight: 800; opacity: 0.72; }
+#board-content .bd-hero-cat-caret { opacity: 0.7; flex: none; }
+
+/* Меню категорій — праворуч під кнопкою (кнопка біля правого краю, тож `left: 0`
+   вивів би меню за екран). Решту вигляду дає спільна база `.bd-cat-menu`, яку
+   меню локації використовує з 01.08 — окремого вигляду тут свідомо не заводимо. */
+#board-content .bd-cat-menu { right: 0; left: auto; min-width: 190px; }
+#board-content .bd-cat-mi { justify-content: space-between; gap: 12px; }
+#board-content .bd-cat-mi-n { font-weight: 700; opacity: 0.55; font-size: 13px; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
