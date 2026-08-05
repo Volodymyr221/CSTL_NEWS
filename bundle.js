@@ -11227,7 +11227,7 @@
     const bodyHtml = `
     <div class="wxp">
       <button class="wxp-row wxp-row--geo${!current ? " wxp-row--on" : ""}" type="button" data-place="">
-        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>\u0417\u0430 \u043C\u043E\u0457\u043C \u043C\u0456\u0441\u0446\u0435\u043C</span>
+        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>\u0417\u0430 \u043C\u043E\u0457\u043C \u043C\u0456\u0441\u0446\u0435\u043C \u0440\u043E\u0437\u0442\u0430\u0448\u0443\u0432\u0430\u043D\u043D\u044F</span>
         ${!current ? '<span class="wxp-row-ok" aria-hidden="true">\u2713</span>' : ""}
       </button>
       ${groups.map((g) => `

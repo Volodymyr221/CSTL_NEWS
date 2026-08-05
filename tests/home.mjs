@@ -77,6 +77,29 @@ ok('погода в шапці', head.wx === '18°', head.wx);
 ok('прогноз 7 днів', head.days === 7, String(head.days));
 ok('кнопка кабінету на місці', head.ava);
 
+// 1.1 🔴 ВЕРХНІЙ БЛОК НАСТИК ДО ШАПКИ ЗАСТОСУНКУ (замовлення Вови 05.08:
+// «блок відʼєднаний від шапки, вони мають бути настик»).
+// Заміряно тоді: зазор 6px згори і 14px з боків — від спадкового
+// `.cm-content { padding: 6px 14px 0 }`, який редизайн 04.08 не зняв.
+// ⚠️ Міряємо НАСЛІДОК (відстань між прямокутниками на екрані), а не наявність
+// правила: зазор може повернутись із будь-якого з трьох рівнів розмітки.
+const flush = await p.evaluate(() => {
+  const h = document.querySelector('.app-header');
+  const t = document.querySelector('.hm-top');
+  if (!h || !t) return null;
+  const hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect();
+  return {
+    gap: Math.round(tr.top - hr.bottom),
+    left: Math.round(tr.left),
+    full: Math.round(tr.width) >= window.innerWidth,
+    // Тінь має віддавати САМЕ шапка — вона лежить вище блока.
+    hdrShadow: getComputedStyle(h).boxShadow !== 'none',
+  };
+});
+ok('🔴 верхній блок Громади настик до шапки', flush && flush.gap === 0, flush ? `зазор ${flush.gap}px` : '—');
+ok('🔴 верхній блок на всю ширину', flush && flush.left === 0 && flush.full, flush ? `ліворуч ${flush.left}px` : '—');
+ok('шапка має власну тінь (лягає на блок)', flush && flush.hdrShadow);
+
 // 2. Погода → модалка по годинах
 await p.locator('.hm-wx-day').nth(0).click();
 await p.waitForTimeout(700);
