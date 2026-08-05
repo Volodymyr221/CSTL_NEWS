@@ -201,9 +201,9 @@ export async function renderWeatherBlock() {
         </div>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
-          <span class="hm-wx-place-pin" aria-hidden="true">📍</span>
+          <span class="hm-wx-place-pin" aria-hidden="true">${ICONS.pin}</span>
           <span class="hm-wx-place-n">${escapeHtml(cityName || 'Олика')}</span>
-          <span class="hm-wx-place-ch" aria-hidden="true">▾</span>
+          <span class="hm-wx-place-ch" aria-hidden="true">${ICONS.chevronDown}</span>
         </button>
       </div>
       <div class="hm-wx-days">${forecastHtml}</div>
@@ -295,7 +295,7 @@ function openPlaceSheet() {
   const bodyHtml = `
     <div class="wxp">
       <button class="wxp-row wxp-row--geo${!current ? ' wxp-row--on' : ''}" type="button" data-place="">
-        <span class="wxp-row-n">📍 За моїм місцем</span>
+        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>За моїм місцем</span>
         ${!current ? '<span class="wxp-row-ok" aria-hidden="true">✓</span>' : ''}
       </button>
       ${groups.map(g => `

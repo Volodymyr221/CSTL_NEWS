@@ -279,20 +279,37 @@
 /* Аватар — 44px тап-ціль (Apple HIG), видимий кружечок менший.
    Стоїть У ПОТОЦІ шапки, а не прибитий поверх сторінки: стара `.cm-acc-pin`
    висіла над контентом на всьому скролі й накривала картки. */
+/* 🔴 05.08 — КНОПКА КАБІНЕТУ ПОВЕРНУЛА КОЛИШНІЙ РОЗМІР (скарга Вови «іконка
+   персонального кабінету замала, збільши як було раніше»).
+   Було до редизайну 04.08: `.cm-greet-account` = **50px**, і саме це число Вова
+   сам ставив 16.07 (у `community.css` лишився коментар «трохи більша 46→50»).
+   Редизайн зробив коло 38px — тобто мовчки відкотив те рішення.
+
+   🔑 Але коло — лише ПОЛОВИНА причини. Друга: фото профілю малює спільний
+   `.account-btn-av` із фіксованими **28px** (`style/account.css`), а стара
+   кнопка перебивала його на `100%`. Головна цього не робила — тож навіть у
+   50-піксельному колі знімок лишався б 28-піксельним. Саме тому «замала» — це
+   не про одне число. */
 .hm-ava {
   appearance: none; -webkit-appearance: none; cursor: pointer;
   position: relative;   /* якір для ::before — видимого кружечка всередині тап-цілі */
-  flex: 0 0 auto; width: 44px; height: 44px; margin: -3px -6px 0 0;
-  padding: 3px; border: 0; background: none;
+  flex: 0 0 auto; width: 52px; height: 52px; margin: -4px -6px 0 0;
+  padding: 0; border: 0; background: none;
   display: grid; place-items: center; color: #fff;
 }
 .hm-ava::before {
-  content: ''; position: absolute; width: 38px; height: 38px; border-radius: 50%;
+  content: ''; position: absolute; width: 50px; height: 50px; border-radius: 50%;
   background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .28);
 }
 .hm-ava > * { position: relative; }
 .hm-ava:active::before { background: rgba(255, 255, 255, .26); }
-.hm-ava-txt { font: 600 15px/1 system-ui, -apple-system, sans-serif; }
+.hm-ava-txt { font: 600 19px/1 system-ui, -apple-system, sans-serif; }
+/* Іконка-людина (гість) росте разом із колом — інакше вона висіла б крапкою
+   посеред великого кружечка. */
+.hm-ava-ic { width: 26px; height: 26px; }
+/* Фото профілю заповнює коло, лишаючи 2px обідка. Впритул (50px) закрило б
+   обідок собою, і кнопка втратила б межу на світлих ділянках фону. */
+.hm-ava .account-btn-av { width: 46px; height: 46px; }
 /* Іконка-людина показується лише коли немає ініціала (гість). */
 .hm-ava-txt:not(:empty) + .hm-ava-ic { display: none; }
 
@@ -344,8 +361,23 @@
 /* Назва обрізається, а не переносить рядок: «Хромʼяків» довше за «Олика», і
    картка не має від цього рости. */
 .hm-wx-place-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hm-wx-place-pin { font-size: 11px; }
-.hm-wx-place-ch  { opacity: .7; font-size: 10px; }
+
+/* 🔴 05.08 — ІКОНКИ ВЕКТОРНІ, А НЕ СИМВОЛИ. Замовлення Вови: «всі ікони,
+   включаючи стрілочку донизу, мають бути векторними, і стрілочка замаленька».
+   Було: емодзі 📍 і текстовий символ ▾. Обидва не масштабуються під сусідній
+   текст, у різних шрифтах малюються по-різному і не беруть товщину лінії решти
+   іконок застосунку — тому й читались чужими та дрібними.
+   Стало: `ICONS.pin` і `ICONS.chevronDown` з `core/icons.js` (Tabler, та сама
+   товщина 1.75, що в усій хромі).
+   📐 Розміри задані ЯВНО, а не через `1em`: базовий `1em` дорівнював би 12px
+   кегля чіпа — рівно та дрібність, на яку скаржився Вова. */
+.hm-wx-place-pin,
+.hm-wx-place-ch { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.hm-wx-place-pin svg { width: 16px; height: 16px; }
+/* Стрілка трохи більша за шпильку: вона єдиний знак того, що кнопку можна
+   натиснути, і має читатись першою. */
+.hm-wx-place-ch  { opacity: .8; margin-left: 1px; }
+.hm-wx-place-ch svg { width: 17px; height: 17px; }
 
 /* ── Шторка вибору населеного пункту ─────────────────────────────────────────
    Лежить у звичайному аркуші застосунку (`app-modal--sheet`), тому тут лише
@@ -370,6 +402,10 @@
    лише галочка губилась би у списку з двадцяти рядків. */
 .wxp-row--on { background: var(--board-card); font-weight: 700; }
 .wxp-row-ok  { color: var(--red); font-weight: 800; }
+/* Шпилька в рядку «За моїм місцем» — той самий вектор, що в кнопці. */
+.wxp-row-n { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.wxp-row-ic { display: inline-flex; flex: 0 0 auto; color: var(--red); }
+.wxp-row-ic svg { width: 18px; height: 18px; }
 .wxp-row--geo { margin-top: 4px; }
 /* Застереження про однакову погоду по селах. Тихе, але присутнє: людина має
    розуміти, чому в Дерні стільки ж градусів, що в Олиці, — інакше вирішить,
