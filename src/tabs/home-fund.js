@@ -70,10 +70,11 @@ import { ICONS } from '../core/icons.js';
 // лишаємо). Беремо з набору проєкту, нових не малюємо.
 const KIND = {
   // ⚠️ НЕ `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, а не військо —
-  // на картці збору він читався б як попередження про шахрайство. Зірка —
-  // найближче до військової символіки з того, що є в наборі; малювати нову
-  // іконку заради одного рядка не варто.
-  military:     { ic: ICONS.star,      label: 'Військовим' },
+  // на картці збору він читався б як попередження про шахрайство.
+  // 05.08 (вечір): зірку замінено на ЩИТ, а підпис «Військовим» — на «Для
+  // захисників» за макетом Вови. Щит — універсальний знак захисту, зірка ж у
+  // наборі Tabler означає «обране» і на зборі читалась як оцінка.
+  military:     { ic: ICONS.shield,    label: 'Для захисників' },
   humanitarian: { ic: ICONS.users,     label: 'Гуманітарний' },
   community:    { ic: ICONS.community, label: 'Для громади' },
 };
@@ -141,46 +142,108 @@ async function loadFundraisers() {
   }
 }
 
+// Ряд фактів під панеллю. 🔴 МАЛЮЄМО ЛИШЕ ТЕ, ЩО В ДАНИХ СПРАВДІ Є.
+//
+// На макеті Вови тут стояло «124 донати · Оновлено 5 хв тому · Збір перевірено
+// командою». Перші два намальовані бути не можуть:
+//   • Monobank НЕ ВІДДАЄ кількості донатерів — жодним способом, ні за токеном,
+//     ні за посиланням. Число «124» довелось би вигадати;
+//   • «оновлено 5 хв тому» під рукою редагованим файлом — пряма брехня; той
+//     самий принцип, через який у капсулах відмовились від «23 переглядають».
+// Тому ряд збирається з полів, які заповнює людина і які не старіють мовчки.
+// Немає жодного факту → ряду немає зовсім (порожня рамка гірша за її брак).
+function factsHtml(it) {
+  const facts = [];
+
+  // Довіра йде ПЕРШОЮ — той самий порядок, що «Збирає» перед «Ціль»: у зборі
+  // коштів найважливіше не сума, а чи можна вірити тому, хто просить.
+  // 🔴 `verified` ставить Вова руками, коли справді перевірив збір. Позначка,
+  // яку клеять усім підряд, знецінює слово, заради якого існує.
+  if (it.verified) facts.push({ ic: ICONS.shieldCheck, k: 'Збір', v: 'перевірено' });
+
+  // Скільки лишилось. На відміну від суми, дата НЕ старіє мовчки: вона
+  // рахується від сьогодні, тож завжди правдива без жодного оновлення.
+  // ⚠️ Ключ «До кінця», а не «Залишилось»: у комірці 78px під текст, і слово
+  // «Залишилось» обрізалось трикрапкою («Залишил…») — заміряно на знімку
+  // стрічки. Значення «сьогодні» замість «останній день» — з тієї ж причини.
+  if (!it.closed && it.left != null) {
+    facts.push({ ic: ICONS.clock, k: 'До кінця',
+      v: it.left === 0 ? 'сьогодні' : `${it.left} ${plural(it.left, 'день', 'дні', 'днів')}` });
+  }
+
+  if (it.place) facts.push({ ic: ICONS.pin, k: 'Збір із', v: it.place });
+
+  // 🔴 СТЕЛЯ — ДВА ФАКТИ, А НЕ ТРИ (заміряно 05.08, макет мав три).
+  // У стрічці кількох зборів картка вужча — 249px, — і на комірку лишається
+  // 80px, з яких під текст 38px. Слово «Залишилось» займає 68px, тож три факти
+  // НАЛАЗИЛИ ОДИН НА ОДНОГО. При двох комірках під текст лишається 78px і все
+  // читається. Порядок у `facts` і є пріоритетом: довіра, потім строк, потім
+  // місце — тобто відкидається найменш важливе.
+  if (!facts.length) return '';
+  return `
+        <div class="hm-fund-facts">
+          ${facts.slice(0, 2).map(f => `
+          <span class="hm-fund-fact">
+            <span class="hm-fund-fic" aria-hidden="true">${f.ic}</span>
+            <span class="hm-fund-ftx"><b>${escapeHtml(f.k)}</b>${escapeHtml(f.v)}</span>
+          </span>`).join('')}
+        </div>`;
+}
+
 function fundCardHtml(it) {
   const kind = KIND[it.kind] || KIND.community;
   const goal = money(it.goal);
 
-  // Рядок терміновості. Показуємо, ЛИШЕ коли лишилось мало: «ще 43 дні» — не
-  // інформація, а шум. Поріг 7 днів — тиждень, який людина відчуває як «скоро».
-  const urgent = !it.closed && it.left != null && it.left <= 7
-    ? (it.left === 0 ? 'Останній день' : `Залишилось ${it.left} ${plural(it.left, 'день', 'дні', 'днів')}`)
-    : '';
-
+  // 🔑 ФОТО — ПІДКЛАДКА ВСІЄЇ КАРТКИ, а не смужка згори (варіант «2» з макета
+  // Вови 05.08). Текст лежить ПОВЕРХ знімка, на градієнті затемнення.
+  //
+  // ⚠️ Через це картка мусить лишатись читабельною БЕЗ фото: якщо `photo`
+  // порожній або знімок не завантажився, під текстом усе одно темна поверхня
+  // (див. `.hm-fund` у home.css — базовий фон стоїть на самій картці, а не на
+  // зображенні). Тому `onerror="this.remove()"` тут безпечний: зникає лише шар
+  // фото, а не тло під літерами. У варіанті «1» такої вимоги не було — там
+  // текст лежав на власній білій поверхні.
   return `
     <article class="hm-card hm-fund${it.closed ? ' hm-fund--closed' : ''}">
       ${it.photo ? `
       <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy"
            onerror="this.remove()">` : ''}
+      <span class="hm-fund-scrim" aria-hidden="true"></span>
       <div class="hm-fund-body">
         <div class="hm-fund-kind">
           <span class="hm-fund-ic" aria-hidden="true">${kind.ic}</span>
           <span>${escapeHtml(kind.label)}</span>
         </div>
-        <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
-        ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ''}
-        <div class="hm-fund-org">
-          <span class="hm-fund-org-k">Збирає</span>
-          <span class="hm-fund-org-v">${escapeHtml(it.org)}</span>
+        <div class="hm-fund-main">
+          <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
+          ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ''}
+
+          <div class="hm-fund-panel">
+            <div class="hm-fund-cell">
+              <span class="hm-fund-k">Збирає</span>
+              <span class="hm-fund-v">${escapeHtml(it.org)}</span>
+            </div>
+            ${goal ? `
+            <div class="hm-fund-cell hm-fund-cell--goal">
+              <span class="hm-fund-k">Ціль</span>
+              <span class="hm-fund-v hm-fund-v--big">${goal}</span>
+            </div>` : ''}
+          </div>
+          ${factsHtml(it)}
+          ${it.closed ? `
+          <p class="hm-fund-done">Збір завершено</p>
+          <p class="hm-fund-hint">Дякуємо всім, хто долучився</p>` : `
+          <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
+             aria-label="Відкрити банку Monobank — ${escapeHtml(it.title)}">
+            <span class="hm-fund-go-ic" aria-hidden="true">${ICONS.link}</span>
+            <span class="hm-fund-go-tx">Банка Monobank</span>
+            <span class="hm-fund-go-ch" aria-hidden="true">${ICONS.chevronRight}</span>
+          </a>
+          <p class="hm-fund-hint">
+            <span class="hm-fund-hic" aria-hidden="true">${ICONS.lock}</span>
+            Перехід на офіційну банку
+          </p>`}
         </div>
-        ${goal ? `
-        <div class="hm-fund-goal">
-          <span class="hm-fund-goal-k">Ціль</span>
-          <span class="hm-fund-goal-v">${goal}</span>
-        </div>` : ''}
-        ${it.closed ? `
-        <p class="hm-fund-done">Збір завершено</p>
-        <p class="hm-fund-hint">Дякуємо всім, хто долучився</p>` : `
-        ${urgent ? `<p class="hm-fund-left">${escapeHtml(urgent)}</p>` : ''}
-        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
-           aria-label="Задонатити — ${escapeHtml(it.title)}">
-          Задонатити
-        </a>
-        <p class="hm-fund-hint">Відкриється банка Monobank</p>`}
       </div>
     </article>`;
 }
@@ -208,10 +271,44 @@ export async function renderHomeFund() {
   const list = items.slice(0, 6);
   body.innerHTML = list.length === 1
     ? fundCardHtml(list[0])
-    : `<div class="hm-ftrack">${list.map(fundCardHtml).join('')}</div>`;
+    : `<div class="hm-ftrack">${list.map(fundCardHtml).join('')}</div>` +
+      `<div class="hm-fdots" role="tablist" aria-label="Збори">${
+        list.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</div>`;
   body.classList.add('hm-appear');
 
   // Підпис секції каже, скільки зборів, лише коли їх більше одного.
   const kicker = sec.querySelector('.hm-kicker');
   if (kicker) kicker.textContent = list.length > 1 ? 'Актуальні збори' : 'Актуальний збір';
+
+  if (list.length > 1) wireFundDots(body);
+}
+
+// Крапки під стрічкою — «скільки зборів і котрий зараз». На макеті вони є, і це
+// не прикраса: у стрічці з прилипанням видно лише край наступної картки, тож
+// без крапок незрозуміло, чи там ще один збір, чи їх пʼять.
+//
+// 🔑 Рахуємо позицію за `scrollLeft`, а не через `IntersectionObserver`: трек
+// прилипає (`scroll-snap`), тобто позиція завжди кратна ширині картки, і просте
+// ділення дає точну відповідь без спостерігача, який довелось би відчіплювати
+// при кожній перемальовці головної (`initCommunity()` перебудовує `#cm-content`
+// цілком — саме на цьому вже злітали слухачі в інших блоках).
+function wireFundDots(body) {
+  const track = body.querySelector('.hm-ftrack');
+  const dots = [...body.querySelectorAll('.hm-fdots i')];
+  if (!track || dots.length < 2) return;
+
+  let raf = 0;
+  const sync = () => {
+    raf = 0;
+    const card = track.querySelector('.hm-fund');
+    if (!card) return;
+    // Крок = ширина картки + проміжок. Беремо з ЖИВИХ розмірів, а не з числа в
+    // CSS: картка задана у відсотках, і на різних телефонах це різні пікселі.
+    const step = card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap || 0);
+    const i = Math.min(dots.length - 1, Math.max(0, Math.round(track.scrollLeft / (step || 1))));
+    dots.forEach((d, n) => d.classList.toggle('on', n === i));
+  };
+  // Через `requestAnimationFrame`: подія прокрутки сипле десятками разів за
+  // секунду, а перемальовувати крапки частіше за кадр немає сенсу.
+  track.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(sync); }, { passive: true });
 }
