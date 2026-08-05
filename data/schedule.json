@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "05.08.2026",
-  "updatedTime": "21:23",
+  "updatedTime": "23:09",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -4842,7 +4842,7 @@
         }
       ],
       "fetchedAt": "05.08.2026",
-      "fetchedTime": "21:23"
+      "fetchedTime": "23:09"
     },
     "2026-08-06": {
       "routes": [
@@ -6448,7 +6448,7 @@
         }
       ],
       "fetchedAt": "05.08.2026",
-      "fetchedTime": "21:23"
+      "fetchedTime": "23:09"
     },
     "2026-08-07": {
       "routes": [
