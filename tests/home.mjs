@@ -29,9 +29,27 @@ const errs = [];
 p.on('pageerror', e => errs.push('pageerror: ' + e.message));
 p.on('console', m => { if (m.type()==='error' && !/favicon|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text().slice(0,120)); });
 await p.route('**://*.supabase.co/**', r => r.abort());
-await p.route('**://nominatim.openstreetmap.org/**', r => r.fulfill({contentType:'application/json',body:JSON.stringify({address:{village:'Олика'}})}));
+// Nominatim віддає ДВІ різні форми, і плутати їх не можна:
+//   /reverse → обʼєкт із `address` (координати → назва, погода в шапці);
+//   /search  → МАСИВ знахідок (назва → координати, вибір населеного пункту 05.08).
+// Один спільний мок на обидва шляхи брехав би в один бік і тихо ламав другий.
+await p.route('**://nominatim.openstreetmap.org/**', r => {
+  const isSearch = r.request().url().includes('/search');
+  r.fulfill({
+    contentType: 'application/json',
+    body: isSearch
+      ? JSON.stringify([{ lat: '50.9', lon: '25.6', display_name: 'Дерно, Волинська область' }])
+      : JSON.stringify({ address: { village: 'Олика' } }),
+  });
+});
 const day=n=>Array.from({length:n},(_,i)=>new Date(Date.now()+i*864e5).toISOString().slice(0,10));
-const hrs=day(1).flatMap(d=>Array.from({length:24},(_,h)=>`${d}T${String(h).padStart(2,'0')}:00`));
+// 🔴 СІМ ДНІВ ГОДИН, А НЕ ОДИН (05.08). Мок віддавав `hourly` лише на СЬОГОДНІ,
+// хоча справжній Open-Meteo при `forecast_days=7` віддає години на всі сім.
+// Наслідок був не безневинний: `openWeatherDayModal` для будь-якого дня, крім
+// сьогоднішнього, чесно виходив на `if (!idxs.length) return` — і стенд показав
+// би це як «застосунок зламався», хоча брехав саме мок. Спіймано новим сторожем
+// тапу по дню 05.08: перша ж перевірка «завтра» впала на рівному місці.
+const hrs=day(7).flatMap(d=>Array.from({length:24},(_,h)=>`${d}T${String(h).padStart(2,'0')}:00`));
 await p.route('**://api.open-meteo.com/**', r => r.fulfill({contentType:'application/json',body:JSON.stringify({
   utc_offset_seconds:10800, current:{temperature_2m:18.4,weather_code:3,apparent_temperature:17.2},
   hourly:{time:hrs,temperature_2m:hrs.map((_,i)=>14+(i%12)),precipitation_probability:hrs.map((_,i)=>(i*7)%100),weather_code:hrs.map(()=>3)},
@@ -143,6 +161,64 @@ const ev = await p.evaluate(()=>({
 }));
 ok('🔴 секції подій на головній немає', !ev.sec && !ev.cont);
 ok('🔴 кнопки «Афіша», що вела у Стрічку, немає', !ev.afisha);
+
+// 5.14 🔴 ВИБІР НАСЕЛЕНОГО ПУНКТУ В ПОГОДІ (05.08).
+// Замовлення Вови: локацію винести окремо, при натиску — список сіл громади
+// плюс Луцьк. Міряємо наслідок на живій сторінці: чи є чіп, чи відкривається
+// шторка, чи справді змінюється показане місце після вибору.
+await p.evaluate(() => { const m = document.querySelector('.app-main'); m.scrollTop = 0; });
+await p.waitForTimeout(300);
+const chip0 = await p.evaluate(() => {
+  const c = document.querySelector('[data-wx-place]');
+  if (!c) return null;
+  const r = c.getBoundingClientRect();
+  return { name: c.querySelector('.hm-wx-place-n')?.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height) };
+});
+ok('🔴 населений пункт винесено окремим елементом', !!chip0, chip0 ? `«${chip0.name}» ${chip0.w}×${chip0.h}` : 'чіпа нема');
+
+await p.click('[data-wx-place]');
+await p.waitForTimeout(600);
+const sheet = await p.evaluate(() => {
+  const s = document.querySelector('.app-modal--wxplace');
+  if (!s) return null;
+  const rows = [...s.querySelectorAll('.wxp-row')].map(b => b.dataset.place);
+  return {
+    rows: rows.length,
+    geo: rows.includes(''),                       // «за моїм місцем»
+    olyka: rows.includes('Олика'),
+    lutsk: rows.includes('Луцьк'),                // пряме прохання Вови
+    groups: [...s.querySelectorAll('.wxp-grp')].map(g => g.textContent.trim()),
+    note: !!s.querySelector('.wxp-note'),
+  };
+});
+ok('🔴 тап по пункту відкриває шторку вибору', !!sheet);
+ok('у шторці є всі 17 НП громади + Луцьк + геолокація',
+   sheet && sheet.rows === 19 && sheet.geo && sheet.olyka && sheet.lutsk, sheet ? `${sheet.rows} рядків` : '—');
+ok('Луцьк окремою групою «Міста поруч»',
+   sheet && sheet.groups.length === 2 && /міста поруч/i.test(sheet.groups[1]), sheet ? sheet.groups.join(' / ') : '—');
+ok('🔴 у шторці сказано, що по селах прогноз однаковий', sheet && sheet.note);
+
+// Вибираємо село → чіп мусить показати САМЕ його.
+await p.click('.wxp-row[data-place="Дерно"]');
+await p.waitForTimeout(3500);
+const afterPick = await p.evaluate(() => ({
+  name: document.querySelector('.hm-wx-place-n')?.textContent.trim(),
+  saved: localStorage.getItem('wx_place_v1'),
+}));
+ok('🔴 після вибору показано обране село', afterPick.name === 'Дерно', `чіп: «${afterPick.name}»`);
+ok('вибір запамʼятався', afterPick.saved === 'Дерно', String(afterPick.saved));
+
+// 🔴 КОНТРОЛЬ: модалка по годинах ЖИВА. Порада, яку приніс Вова, пропонувала
+// замінити тап по дню на перемикання верху картки — це прибрало б скрабер із
+// графіками. Вова сказав не чіпати; сторож не дає зробити це випадково.
+await p.locator('.hm-wx-day').nth(1).click();
+await p.waitForTimeout(600);
+ok('🔴 КОНТРОЛЬ: тап по дню ДОСІ відкриває модалку по годинах',
+   await p.evaluate(() => !!document.querySelector('.app-modal--weather .wx-chart-svg-wrap')));
+await p.evaluate(() => document.querySelector('.app-modal--weather .app-modal-close')?.click());
+await p.waitForTimeout(500);
+// Повертаємо стан, щоб наступні перевірки бачили сторінку як завжди.
+await p.evaluate(() => { localStorage.removeItem('wx_place_v1'); });
 
 // 5.15 🔴 ПЛИТКА НОВИНИ МАЄ ВЛАСНУ ПОВЕРХНЮ (04.08).
 // Скарга Вови: «чому вони квадратні?». Заміряно тоді: радіус 0, обідок 0,

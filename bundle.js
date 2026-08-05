@@ -10974,6 +10974,84 @@
     }
   }
 
+  // src/core/settlements-geo.js
+  var NEARBY_CITIES = ["\u041B\u0443\u0446\u044C\u043A"];
+  var SEED = { "\u041E\u043B\u0438\u043A\u0430": { ...OLYKA_COORDS } };
+  var CACHE_KEY = "wx_geo_v1";
+  var GEO_FILE = "./data/settlements-geo.json";
+  var _filePromise = null;
+  function readCache() {
+    try {
+      return JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function writeCache(name, c) {
+    try {
+      const all = readCache();
+      all[name] = c;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(all));
+    } catch {
+    }
+  }
+  function loadFile() {
+    if (_filePromise)
+      return _filePromise;
+    _filePromise = fetch(GEO_FILE).then((r) => r.ok ? r.json() : {}).then((d) => d && typeof d === "object" ? d.coords || d : {}).catch(() => ({}));
+    return _filePromise;
+  }
+  async function geocode(name) {
+    const q = encodeURIComponent(`${name}, \u0412\u043E\u043B\u0438\u043D\u0441\u044C\u043A\u0430 \u043E\u0431\u043B\u0430\u0441\u0442\u044C, \u0423\u043A\u0440\u0430\u0457\u043D\u0430`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+      { headers: { "Accept-Language": "uk" } }
+    );
+    const arr = await res.json();
+    const hit = Array.isArray(arr) ? arr[0] : null;
+    if (!hit)
+      return null;
+    const lat = parseFloat(hit.lat), lon = parseFloat(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon))
+      return null;
+    return { lat, lon };
+  }
+  async function coordsOf(name) {
+    if (SEED[name])
+      return SEED[name];
+    const cached = readCache()[name];
+    if (cached && Number.isFinite(cached.lat))
+      return cached;
+    const file = await loadFile();
+    if (file[name] && Number.isFinite(file[name].lat)) {
+      writeCache(name, file[name]);
+      return file[name];
+    }
+    try {
+      const c = await Promise.race([
+        geocode(name),
+        // Той самий запобіжник, що для назви міста в погоді: чужий сервіс не має
+        // права підвісити інтерфейс назавжди.
+        new Promise((r) => setTimeout(() => r(null), 6e3))
+      ]);
+      if (c) {
+        writeCache(name, c);
+        return c;
+      }
+    } catch {
+    }
+    return null;
+  }
+  function locationGroups() {
+    return [
+      { title: "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430", items: SETTLEMENTS },
+      { title: "\u041C\u0456\u0441\u0442\u0430 \u043F\u043E\u0440\u0443\u0447", items: NEARBY_CITIES }
+    ];
+  }
+  function isKnownPlace(name) {
+    return SETTLEMENTS.includes(name) || NEARBY_CITIES.includes(name);
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -11003,12 +11081,38 @@
     if (headerEl && cityName)
       headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
   }
+  var WX_PLACE_KEY = "wx_place_v1";
+  function loadWxPlace() {
+    try {
+      const v = localStorage.getItem(WX_PLACE_KEY);
+      return v && isKnownPlace(v) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+  function saveWxPlace(name) {
+    try {
+      if (name)
+        localStorage.setItem(WX_PLACE_KEY, name);
+      else
+        localStorage.removeItem(WX_PLACE_KEY);
+    } catch {
+    }
+  }
   async function renderWeatherBlock() {
     const el = document.getElementById("cm-weather-content");
     if (!el)
       return;
     try {
-      const { lat, lon, city: knownCity } = await getCoords();
+      const place = loadWxPlace();
+      let picked = null;
+      if (place)
+        picked = await coordsOf(place);
+      const placeFailed = !!place && !picked;
+      const geo = picked ? null : await getCoords();
+      const lat = picked ? picked.lat : geo.lat;
+      const lon = picked ? picked.lon : geo.lon;
+      const knownCity = picked ? place : geo.city;
       const cityP = knownCity ? Promise.resolve(knownCity) : Promise.race([
         getCityName(lat, lon).catch(() => null),
         new Promise((r) => setTimeout(() => r(null), 3e3))
@@ -11039,24 +11143,115 @@
         </button>
       `;
       }).join("");
+      const hint = weatherHint(data);
       el.classList.remove("hm-wx--loading");
       el.innerHTML = `
       <div class="hm-wx-main">
         <div class="hm-wx-t">${temp}\xB0</div>
         <div class="hm-wx-txt">
           <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
-          <div class="hm-wx-sub">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")} \xB7 \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${feels}\xB0</div>
+          <div class="hm-wx-sub">${escapeHtml(subLine(temp, feels, hint))}</div>
         </div>
+        <button class="hm-wx-place" type="button" data-wx-place
+                aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442">
+          <span class="hm-wx-place-pin" aria-hidden="true">\u{1F4CD}</span>
+          <span class="hm-wx-place-n">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")}</span>
+          <span class="hm-wx-place-ch" aria-hidden="true">\u25BE</span>
+        </button>
       </div>
       <div class="hm-wx-days">${forecastHtml}</div>
     `;
       el.querySelectorAll("[data-wx-day]").forEach((btn) => {
         btn.addEventListener("click", () => openWeatherDayModal(+btn.dataset.wxDay));
       });
+      el.querySelector("[data-wx-place]")?.addEventListener("click", openPlaceSheet);
+      if (placeFailed)
+        showToast(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \xAB${place}\xBB \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u0437\u0430 \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0456\u0454\u044E`, 0, "error");
     } catch {
       el.classList.remove("hm-wx--loading");
       el.innerHTML = '<div class="hm-wx-err">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function subLine(temp, feels, hint) {
+    const gap = Math.abs(feels - temp);
+    if (gap >= 3)
+      return `\u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${feels}\xB0`;
+    if (hint)
+      return hint;
+    return `\u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${feels}\xB0`;
+  }
+  function weatherHint(data) {
+    const h = data.hourly, d = data.daily;
+    try {
+      const offsetSec = data.utc_offset_seconds ?? 7200;
+      const now = new Date(Date.now() + offsetSec * 1e3);
+      const today = now.toISOString().slice(0, 10);
+      const nowH = now.getUTCHours();
+      if (h?.time && h.precipitation_probability) {
+        for (let i = 0; i < h.time.length; i++) {
+          const t = h.time[i];
+          if (!t.startsWith(today))
+            continue;
+          const hour = +t.slice(11, 13);
+          if (hour <= nowH)
+            continue;
+          if ((h.precipitation_probability[i] ?? 0) >= 60)
+            return `\u043E\u043F\u0430\u0434\u0438 \u043E ${pad(hour)}:00`;
+        }
+      }
+      if (d?.temperature_2m_max?.length > 1) {
+        const diff = Math.round(d.temperature_2m_max[1]) - Math.round(d.temperature_2m_max[0]);
+        if (diff >= 2)
+          return `\u0437\u0430\u0432\u0442\u0440\u0430 \u0442\u0435\u043F\u043B\u0456\u0448\u0435 \u043D\u0430 ${diff}\xB0`;
+        if (diff <= -2)
+          return `\u0437\u0430\u0432\u0442\u0440\u0430 \u043F\u0440\u043E\u0445\u043E\u043B\u043E\u0434\u043D\u0456\u0448\u0435 \u043D\u0430 ${Math.abs(diff)}\xB0`;
+      }
+    } catch {
+    }
+    return "";
+  }
+  function openPlaceSheet() {
+    const current = loadWxPlace();
+    const groups = locationGroups();
+    const rowHtml = (name, active) => `
+    <button class="wxp-row${active ? " wxp-row--on" : ""}" type="button" data-place="${escapeHtml(name)}">
+      <span class="wxp-row-n">${escapeHtml(name)}</span>
+      ${active ? '<span class="wxp-row-ok" aria-hidden="true">\u2713</span>' : ""}
+    </button>`;
+    const bodyHtml = `
+    <div class="wxp">
+      <button class="wxp-row wxp-row--geo${!current ? " wxp-row--on" : ""}" type="button" data-place="">
+        <span class="wxp-row-n">\u{1F4CD} \u0417\u0430 \u043C\u043E\u0457\u043C \u043C\u0456\u0441\u0446\u0435\u043C</span>
+        ${!current ? '<span class="wxp-row-ok" aria-hidden="true">\u2713</span>' : ""}
+      </button>
+      ${groups.map((g) => `
+        <div class="wxp-grp">${escapeHtml(g.title)}</div>
+        ${g.items.map((n) => rowHtml(n, n === current)).join("")}
+      `).join("")}
+      <p class="wxp-note">
+        \u0421\u0435\u043B\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043B\u0435\u0436\u0430\u0442\u044C \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u043E\u0434\u043D\u0435 \u0434\u043E \u043E\u0434\u043D\u043E\u0433\u043E, \u0442\u043E\u0436 \u043F\u0440\u043E\u0433\u043D\u043E\u0437 \u0434\u043B\u044F \u043D\u0438\u0445
+        \u0437\u0434\u0435\u0431\u0456\u043B\u044C\u0448\u043E\u0433\u043E \u043E\u0434\u043D\u0430\u043A\u043E\u0432\u0438\u0439. \u041F\u043E\u043C\u0456\u0442\u043D\u0456\u0448\u0435 \u0432\u0456\u0434\u0440\u0456\u0437\u043D\u044F\u0454\u0442\u044C\u0441\u044F \u041B\u0443\u0446\u044C\u043A.
+      </p>
+    </div>`;
+    const { close, el } = openModal({
+      title: "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442",
+      bodyHtml,
+      variant: "sheet",
+      className: "app-modal--wxplace"
+    });
+    el.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-place]");
+      if (!btn)
+        return;
+      saveWxPlace(btn.dataset.place || null);
+      close();
+      const wx = document.getElementById("cm-weather-content");
+      if (wx) {
+        wx.classList.add("hm-wx--loading");
+        wx.innerHTML = '<div class="hm-wx-sk"></div>';
+      }
+      renderWeatherBlock();
+    });
   }
   var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
   function wxGeom(points) {
