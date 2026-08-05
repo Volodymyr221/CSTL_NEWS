@@ -10678,15 +10678,19 @@
   }
 
   // src/tabs/home-fund.js
-  var KIND_ICON = {
-    military: "\u{1FA96}",
-    humanitarian: "\u{1F91D}",
-    community: "\u{1F3D8}\uFE0F"
+  var KIND = {
+    // ⚠️ НЕ `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, а не військо —
+    // на картці збору він читався б як попередження про шахрайство. Зірка —
+    // найближче до військової символіки з того, що є в наборі; малювати нову
+    // іконку заради одного рядка не варто.
+    military: { ic: ICONS.star, label: "\u0412\u0456\u0439\u0441\u044C\u043A\u043E\u0432\u0438\u043C" },
+    humanitarian: { ic: ICONS.users, label: "\u0413\u0443\u043C\u0430\u043D\u0456\u0442\u0430\u0440\u043D\u0438\u0439" },
+    community: { ic: ICONS.community, label: "\u0414\u043B\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438" }
   };
   function money(n) {
     if (!Number.isFinite(n))
       return null;
-    return `${Math.round(n).toLocaleString("uk-UA")}\xA0\u20B4`;
+    return `${Math.round(n).toLocaleString("uk-UA")} \u20B4`;
   }
   async function loadFundraisers() {
     try {
@@ -10698,6 +10702,7 @@
       const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       return items.filter(
         (it) => it && it.active !== false && it.title && it.org && it.url && // 🔴 без відповідального і посилання — не показуємо
+        /^https:\/\//i.test(String(it.url)) && // 🔴 тільки https: посилання про гроші не йде по http
         (!it.until || it.until >= todayISO)
         // прострочений збір зникає сам
       );
@@ -10706,29 +10711,34 @@
     }
   }
   function fundCardHtml(it) {
-    const icon = KIND_ICON[it.kind] || KIND_ICON.community;
+    const kind = KIND[it.kind] || KIND.community;
     const goal = money(it.goal);
-    const raised = money(it.raised);
-    const hasBar = Number.isFinite(it.goal) && Number.isFinite(it.raised) && it.goal > 0;
-    const pct = hasBar ? Math.max(0, Math.min(100, Math.round(it.raised / it.goal * 100))) : 0;
     return `
-    <a class="hm-card hm-fund" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
-      <div class="hm-fund-top">
-        <span class="hm-fund-ic" aria-hidden="true">${icon}</span>
-        <span class="hm-fund-txt">
-          <span class="hm-title hm-fund-ttl">${escapeHtml(it.title)}</span>
-          <span class="hm-quiet hm-fund-org">${escapeHtml(it.org)}</span>
-        </span>
+    <article class="hm-card hm-fund">
+      ${it.photo ? `
+      <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy">` : ""}
+      <div class="hm-fund-body">
+        <div class="hm-fund-kind">
+          <span class="hm-fund-ic" aria-hidden="true">${kind.ic}</span>
+          <span>${escapeHtml(kind.label)}</span>
+        </div>
+        <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
+        ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ""}
+        <div class="hm-fund-org">
+          <span class="hm-fund-org-k">\u0417\u0431\u0438\u0440\u0430\u0454</span>
+          <span class="hm-fund-org-v">${escapeHtml(it.org)}</span>
+        </div>
+        ${goal ? `
+        <div class="hm-fund-goal">
+          <span class="hm-fund-goal-k">\u0426\u0456\u043B\u044C</span>
+          <span class="hm-fund-goal-v">${goal}</span>
+        </div>` : ""}
+        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+          \u0417\u0430\u0434\u043E\u043D\u0430\u0442\u0438\u0442\u0438
+        </a>
+        <p class="hm-fund-hint">\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0431\u0430\u043D\u043A\u0430 Monobank</p>
       </div>
-      ${hasBar ? `
-      <div class="hm-fund-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
-        <i style="width:${pct}%"></i>
-      </div>
-      <div class="hm-fund-nums">
-        <span><b>${raised}</b> \u0437\u0456\u0431\u0440\u0430\u043D\u043E</span>
-        <span>\u0446\u0456\u043B\u044C ${goal}</span>
-      </div>` : ""}
-    </a>`;
+    </article>`;
   }
   async function renderHomeFund() {
     const sec = document.getElementById("hm-fund");
@@ -10741,18 +10751,13 @@
       body.innerHTML = "";
       return;
     }
-    const [first] = items;
     sec.hidden = false;
-    body.innerHTML = fundCardHtml(first);
+    const list = items.slice(0, 6);
+    body.innerHTML = list.length === 1 ? fundCardHtml(list[0]) : `<div class="hm-ftrack">${list.map(fundCardHtml).join("")}</div>`;
     body.classList.add("hm-appear");
-    const head = sec.querySelector(".hm-sec-head");
-    const old = head && head.querySelector(".hm-more");
-    if (head && items.length > 1 && !old) {
-      head.insertAdjacentHTML(
-        "beforeend",
-        `<a class="hm-more" href="${escapeHtml(items[0].url)}" target="_blank" rel="noopener noreferrer">\u0423\u0441\u0456 \u2192</a>`
-      );
-    }
+    const kicker = sec.querySelector(".hm-kicker");
+    if (kicker)
+      kicker.textContent = list.length > 1 ? "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u0437\u0431\u043E\u0440\u0438" : "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0431\u0456\u0440";
   }
 
   // src/tabs/home-feed.js

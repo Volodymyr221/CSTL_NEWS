@@ -558,25 +558,97 @@
    Помітність дає МІСЦЕ (одразу під смугою «Зараз»), а не колір: кричущий банер
    у стрічці громади читається як реклама — рівно те, чого просив уникнути Вова.
    Поверхня звичайна біла, бордові лише смужка прогресу і сума. */
-.hm-fund { display: block; padding: var(--hm-s4); text-decoration: none; color: inherit; }
-.hm-fund-top { display: flex; gap: var(--hm-s3); align-items: flex-start; }
-.hm-fund-ic {
-  flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--hm-r-tile);
-  background: var(--brand-tint); display: grid; place-items: center; font-size: 17px;
+/* 🔴 05.08 — ВАРІАНТ «Б»: НА КАРТЦІ НЕМАЄ СУМИ І ВІДСОТКА.
+   Банки належать різним людям, живих даних Monobank узяти нізвідки (розбір — у
+   шапці `home-fund.js`), тож будь-яке число оновлювалось би руками і старіло б
+   мовчки. На картці лишилось тільки те, що НЕ старіє. Смугу прогресу і
+   `.hm-fund-nums` видалено разом із правилами — мертвий CSS не тримаємо.
+   ⚠️ Клікабельна лише КНОПКА, не вся картка: випадковий тап, що веде на платіжну
+   сторінку, — поганий досвід саме там, де йдеться про гроші. */
+.hm-fund { display: block; padding: 0; overflow: hidden; }
+.hm-fund-ph {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+  object-fit: cover; background: #E7E4DF;
 }
-.hm-fund-txt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.hm-fund-ttl { display: block; }
-.hm-fund-org { display: block; }
-.hm-fund-bar {
-  height: 6px; border-radius: 3px; background: #EDEAE6;
-  margin-top: var(--hm-s3); overflow: hidden;
+.hm-fund-body { padding: var(--hm-s4); }
+
+/* Категорія — тихий капс із векторною іконкою. Саме тихий: гучна кольорова
+   пігулка вгорі картки і є те «схоже на рекламу», чого просили уникнути. */
+.hm-fund-kind {
+  display: flex; align-items: center; gap: 6px;
+  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--red);
 }
-.hm-fund-bar i { display: block; height: 100%; background: var(--brand-grad-sm); border-radius: 3px; }
-.hm-fund-nums {
-  display: flex; justify-content: space-between; margin-top: var(--hm-s2);
-  font: 600 12px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+.hm-fund-ic { display: inline-flex; color: var(--red); }
+.hm-fund-ic svg { width: 15px; height: 15px; }
+
+.hm-fund-ttl {
+  margin: var(--hm-s2) 0 0;
+  font: 800 18px/1.22 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.02em; color: var(--ink);
 }
-.hm-fund-nums b { color: var(--ink); }
+.hm-fund-note {
+  margin: 6px 0 0;
+  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* «Збирає» і «Ціль» — два рядки одного вигляду: ключ тихий, значення виразне.
+   🔑 Хто збирає стоїть ПЕРЕД ціллю навмисно: у зборі коштів найважливіше не
+   сума, а чи можна довіряти тому, хто просить. */
+.hm-fund-org,
+.hm-fund-goal {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--hm-s3);
+  margin-top: var(--hm-s3); padding-top: var(--hm-s3);
+  border-top: 1px solid var(--board-line);
+}
+.hm-fund-org-k,
+.hm-fund-goal-k {
+  flex: 0 0 auto;
+  font: 400 12.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+.hm-fund-org-v {
+  min-width: 0; text-align: right;
+  font: 700 13.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--ink);
+}
+.hm-fund-goal-v {
+  font: 800 16px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink);
+  letter-spacing: -.01em;
+}
+
+/* Кнопка — єдина клікабельна річ у картці, тому вона на всю ширину і з площею
+   дотику 48px (вище норми Apple HIG 44px). Тут економити на розмірі нема сенсу:
+   це головна і єдина дія блока. */
+.hm-fund-go {
+  display: flex; align-items: center; justify-content: center;
+  margin-top: var(--hm-s4); min-height: 48px; padding: 0 var(--hm-s4);
+  border-radius: var(--hm-r-card);
+  background: var(--brand-grad-sm); color: #fff; text-decoration: none;
+  font: 800 15px/1 system-ui, -apple-system, sans-serif; letter-spacing: .01em;
+}
+.hm-fund-go:active { background: var(--brand-grad-press); }
+/* Куди веде кнопка — сказано словами, а не вгадується. Це частина довіри:
+   людина має знати, що зараз відкриється чужий сайт із платежем. */
+.hm-fund-hint {
+  margin: var(--hm-s2) 0 0; text-align: center;
+  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+
+/* Кілька зборів — горизонтальна стрічка з прилипанням, та сама механіка, що в
+   новин. Картка 88% ширини: край наступної видно, і це єдиний натяк, що можна
+   гортати.
+   ⚠️ `overflow-y: hidden` обовʼязково — інакше горизонтальний скролер перехоплює
+   вертикальний жест і сторінка перестає гортатись пальцем по картках. */
+.hm-ftrack {
+  display: flex; gap: var(--hm-s3);
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  padding-bottom: 4px;   /* запас під тінь картки */
+}
+.hm-ftrack::-webkit-scrollbar { display: none; }
+.hm-ftrack > .hm-fund { flex: 0 0 88%; scroll-snap-align: start; }
 
 /* ══ БЛОК «ЖИТТЯ ГРОМАДИ» — ДАЙДЖЕСТ СТРІЧКИ ══════════════════════════════════
    Два яруси: ряд кружечків каналів + останній допис карткою.
