@@ -14,9 +14,10 @@ import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice, de
 import { BOARD_RULES_HTML } from '../core/legal.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
-// конкретних категорій. ⚠️ 01.08: `ALL_ICON` (лійка «Всі») більше не імпортується —
-// він жив лише у кнопці-меню категорій, яку замінив ряд чіпів `bd-types`.
-import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
+// конкретних категорій. ⚠️ 05.08: `ALL_ICON` (повзунки «Всі») ЗНОВУ імпортується —
+// він жив у кнопці-меню категорій, втратив користувача 01.08 разом із нею, і
+// повернувся, коли фільтр став кружечком у шапці (рішення Вови).
+import { catColor, catIcon, catShort, catLabel, ALL_ICON, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
@@ -1382,18 +1383,27 @@ function renderHeader() {
   // 13% робочої зони списку. Категорії з нього нікуди не діваються: вони
   // переїхали в меню цієї кнопки РАЗОМ з лічильниками, які й були аргументом 01.08.
   //
-  // 📐 ЧОМУ СЛОГАН СТИСКАЄТЬСЯ, А НЕ ПЕРЕНОСИТЬСЯ (заміряно на 390px):
-  // hero має 362px, текст слогана — 265px, тобто праворуч вільно рівно 97px.
-  // Кнопка з найдовшою назвою («Знайдено 2») просить ~118px. Якби текст
-  // переносився, hero виріс би на рядок і виграш висоти зник — а головне,
-  // розкладка «дихала» б від ВИБРАНОЇ КАТЕГОРІЇ. Це та сама хвороба, яку
-  // лікували 30.07, коли лічильник усередині плашки FAB розширював пункт меню.
-  // ➡️ Тому `.bd-hero-text` має `min-width: 0`, а слоган — один рядок із
-  // трикрапкою: висота hero стала НЕЗМІННОЮ, а місце віддає найменш цінне.
-  const catBtnLabel = activeCategory === 'all' ? 'Усі' : catShort(activeCategory);
-  const catBtnCount = activeCategory === 'all'
-    ? getFilteredPosts({ ignoreCategory: true }).length
-    : getFilteredPosts().length;
+  // 🔵 КРУЖЕЧОК З ВЕКТОРНОЮ ІКОНКОЮ, А НЕ ПЛАШКА З НАЗВОЮ (правка Вови того ж дня).
+  // Перша версія малювала пігулку «Усі 19 ▾». Вова: «іконки фільтрів категорій мають
+  // розміщуватися в такому кружечку, як і було раніше… як було повідомлення, в такому
+  // самому кружечку, стилі, відтінку». Тобто форма береться від конверта, який тут
+  // стояв до 05.08 (`.bd-hero-msgs`, 44px), а вміст — векторна іконка категорії.
+  //
+  // 🔑 Іконки НЕ нові: вони лежать у `core/board-categories.js` з першого дня
+  // таксономії — кошик (куплю) · цінник (продам) · ключ (послуги) · лупа (шукаю) ·
+  // подарунок (віддам) · галочка (знайдено) · «?» (загубилось) · повзунки («Всі»,
+  // `ALL_ICON`). Саме `ALL_ICON` втратив користувача 01.08, коли кнопку-лійку
+  // замінили чіпами; тепер він повертається на своє місце.
+  //
+  // 📐 ЩО ЦЕ ДАЄ ПОНАД ВИГЛЯД: кружечок — 44px замість 81-118px пігулки, тобто
+  // ширина кнопки більше НЕ ЗАЛЕЖИТЬ від назви категорії. Слоган (265px при
+  // вільних 362−44−12 = 306px) перестав обрізатися взагалі — те, на що я
+  // попереджав як на ціну першої версії, зникло саме собою.
+  //
+  // ⚠️ ЧИСЛА НА КНОПЦІ НЕМА свідомо: у кружечок 44px воно влізло б лише бейджем,
+  // а бейдж на цьому екрані вже означає ІНШЕ — непрочитані повідомлення на FAB.
+  // Два однакові значки з різним змістом на одному екрані — гірше, ніж число,
+  // яке видно на один тап. Лічильники лишились у меню, біля кожної категорії.
   const heroHtml = showCategories ? `
     <div class="bd-hero">
       <div class="bd-hero-text">
@@ -1403,57 +1413,15 @@ function renderHeader() {
       <div class="bd-hero-actions">
         <div class="bd-hero-cat-filter">
           <button class="bd-hero-cat${activeCategory === 'all' ? '' : ' bd-hero-cat--on'}" id="bd-cat-btn" type="button"
-                  aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за категорією">
-            <span class="bd-hero-cat-label">${escapeHtml(catBtnLabel)}</span>
-            <span class="bd-hero-cat-n" id="bd-count">${catBtnCount}</span>
-            <svg class="bd-hero-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="Фільтр за категорією: ${escapeHtml(activeCategory === 'all' ? 'усі' : catLabel(activeCategory))}">
+            ${activeCategory === 'all' ? ALL_ICON : catIcon(activeCategory)}
           </button>
           ${catMenuHtml()}
         </div>
       </div>
     </div>
   ` : '';
-
-  // 🔴 05.08 — КАТЕГОРІЇ ЖИВУТЬ У МЕНЮ КНОПКИ В ШАПЦІ (було: ряд чіпів `bd-types`).
-  //
-  // Правила відбору лишились ті самі, що були у чіпів 01.08 — змінився лише
-  // спосіб показу, і це важливо, бо саме правила тут неочевидні:
-  //   • показуємо ЛИШЕ непорожні категорії. У нас 19 оголошень, і
-  //     «шукаю»/«віддам»/«знайдено» бувають нулями; мертвий пункт зі «0» робить
-  //     список сміттям — та сама пастка, через яку 31.07 прибрали чіпи з табла
-  //     новин (фільтр над трьома картками показував 3 з 212);
-  //   • лічильники рахуються по постах, які проходять УСІ інші фільтри (пошук,
-  //     локація) — інакше пункт обіцяв би «Продам 8», а показував 2.
-  //
-  // ℹ️ Функція оголошена ПІСЛЯ місця виклику свідомо: `function` піднімається
-  // (hoisting), а тримати 25 рядків меню посеред розмітки hero — гірше для читання.
-  //
-  // ⚠️ Меню бере готові класи `.bd-cat-menu` / `.bd-cat-mi`, які лишились у CSS
-  // від кнопки-лійки до 01.08 (спільна база з меню локації). Це не «оживлення
-  // мертвого коду» навмання: вони й досі стилізують чинне меню локації, тобто
-  // весь час були живі — просто одного з двох користувачів у них не було.
-  function catMenuHtml() {
-    const base = getFilteredPosts({ ignoreCategory: true });
-    const n = {};
-    base.forEach(p => { n[p.category] = (n[p.category] || 0) + 1; });
-    const mi = (id, label, on, num) => `
-      <button class="bd-cat-mi${on ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
-        <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
-        <span class="bd-cat-mi-n">${num}</span>
-      </button>`;
-    const live = CATS.filter(c => n[c.id] > 0)
-      .sort((a, b) => n[b.id] - n[a.id])
-      .map(c => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id]))
-      .join('');
-    // Якщо активна категорія стала порожньою (звузили пошук) — її пункт усе одно
-    // показуємо, інакше людина не побачить, ЯКИЙ фільтр тримає екран порожнім,
-    // і не матиме куди тапнути, щоб його зняти.
-    const orphan = (activeCategory !== 'all' && !n[activeCategory])
-      ? mi(activeCategory, catShort(activeCategory), true, 0) : '';
-    return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
-      ${mi('all', 'Усі', activeCategory === 'all', base.length)}${orphan}${live}
-    </div>`;
-  }
 
   // Рядок пошуку. ⚠️ Для ДОШКИ він вставляється ВСЕРЕДИНУ багряного блоку (нижче),
   // для Обговорень — окремим рядом, як було. Це не косметика: винесений назовні
@@ -1505,19 +1473,74 @@ function renderHeader() {
   `;
 }
 
+// 🔴 05.08 — КАТЕГОРІЇ ЖИВУТЬ У МЕНЮ КНОПКИ В ШАПЦІ (було: ряд чіпів `bd-types`).
+//
+// Правила відбору лишились ті самі, що були у чіпів 01.08 — змінився лише
+// спосіб показу, і це важливо, бо саме правила тут неочевидні:
+//   • показуємо ЛИШЕ непорожні категорії. У нас 19 оголошень, і
+//     «шукаю»/«віддам»/«знайдено» бувають нулями; мертвий пункт зі «0» робить
+//     список сміттям — та сама пастка, через яку 31.07 прибрали чіпи з табла
+//     новин (фільтр над трьома картками показував 3 з 212);
+//   • лічильники рахуються по постах, які проходять УСІ інші фільтри (пошук,
+//     локація) — інакше пункт обіцяв би «Продам 8», а показував 2.
+//
+// 🔴 ФУНКЦІЯ НА РІВНІ МОДУЛЯ, А НЕ ВСЕРЕДИНІ `renderControls` — і це не стиль.
+// Меню перемальовує ще й `updateAdCount()` (пошук міняє склад пунктів, не лише
+// числа), а він живе поза `renderControls` і вкладеної функції просто не побачив
+// би. Перша версія лежала всередині — і зламалася б рівно на першому ж пошуку.
+//
+// ⚠️ Меню бере готові класи `.bd-cat-menu` / `.bd-cat-mi`, які лишились у CSS
+// від кнопки-лійки до 01.08 (спільна база з меню локації). Це не «оживлення
+// мертвого коду» навмання: вони й досі стилізують чинне меню локації, тобто
+// весь час були живі — просто одного з двох користувачів у них не було.
+function catMenuHtml() {
+  const base = getFilteredPosts({ ignoreCategory: true });
+  const n = {};
+  base.forEach(p => { n[p.category] = (n[p.category] || 0) + 1; });
+  // Пункт = іконка + назва + число. Іконка та сама, що на кнопці й на картці
+  // оголошення — одна таксономія на весь застосунок (`core/board-categories.js`).
+  const mi = (id, label, on, num, ico) => `
+    <button class="bd-cat-mi${on ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
+      <span class="bd-cat-mi-ico">${ico}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
+      <span class="bd-cat-mi-n">${num}</span>
+    </button>`;
+  const live = CATS.filter(c => n[c.id] > 0)
+    .sort((a, b) => n[b.id] - n[a.id])
+    .map(c => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id], c.icon))
+    .join('');
+  // Якщо активна категорія стала порожньою (звузили пошук) — її пункт усе одно
+  // показуємо, інакше людина не побачить, ЯКИЙ фільтр тримає екран порожнім,
+  // і не матиме куди тапнути, щоб його зняти.
+  const orphan = (activeCategory !== 'all' && !n[activeCategory])
+    ? mi(activeCategory, catShort(activeCategory), true, 0, catIcon(activeCategory)) : '';
+  return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+    ${mi('all', 'Усі', activeCategory === 'all', base.length, ALL_ICON)}${orphan}${live}
+  </div>`;
+}
+
 // Оновити лічильник оголошень у шапці без повного ре-рендеру (Д-11).
 // Викликається після фільтрів (пошук/локація), коли header не перебудовується.
 function updateAdCount() {
-  const el = document.getElementById('bd-count');
-  if (!el || activeType !== 'board') return;
-  // ⚠️ 01.08: лічильник переїхав у чіп «Усі», тож тут ЛИШЕ число — слово
-  // «оголошень» поруч із ним у пігулці не поміститься і не потрібне.
-  // ⚠️ 05.08: число тепер живе на КНОПЦІ фільтра і мусить відповідати тому, що
-  // на ній написано. При «Усі» це весь набір, при вибраній категорії — лише вона;
-  // інакше кнопка казала б «Продам 19», показуючи 8 карток.
-  el.textContent = String(activeCategory === 'all'
-    ? getFilteredPosts({ ignoreCategory: true }).length
-    : getFilteredPosts().length);
+  // Історія: до 01.08 — рядок «N оголошень» у шапці; 01.08 — число в чіпі «Усі»;
+  // 05.08 — лічильники живуть у МЕНЮ фільтра, біля кожної категорії (на кружечку
+  // кнопки числа немає — див. `heroHtml`).
+  //
+  // 🔴 ЧОМУ ПЕРЕМАЛЬОВУЄМО МЕНЮ ЦІЛКОМ, а не правимо самі числа: від пошуку
+  // змінюється не лише кількість, а й СКЛАД пунктів — категорія, що стала
+  // порожньою, зникає зі списку, а активна-порожня навпаки лишається сиротою.
+  // Правка самих чисел лишила б у меню пункти, які нічого не знайдуть.
+  //
+  // ⚠️ Перемальовка безпечна лише тому, що вибір категорії слухає КОНТЕЙНЕР меню
+  // (делегування у `wireMenuButton`), а не кожен пункт окремо: слухачі на пунктах
+  // злетіли б із першим же `innerHTML`.
+  const menu = document.getElementById('bd-cat-menu');
+  if (!menu || activeType !== 'board') return;
+  const wasOpen = !menu.hasAttribute('hidden');
+  const fresh = document.createElement('div');
+  fresh.innerHTML = catMenuHtml();
+  menu.innerHTML = fresh.firstElementChild.innerHTML;
+  if (wasOpen) menu.removeAttribute('hidden');   // перемальовка не має закривати відкрите меню
 }
 
 function renderBody() {
@@ -1822,8 +1845,18 @@ function renderAll() {
         btn.setAttribute('aria-expanded', 'true');
       }
     });
-    menu.querySelectorAll('[data-bd-cat], [data-bd-loc]').forEach(mi => {
-      mi.addEventListener('click', () => { onPick(mi); renderAll(); });
+    // 🔴 05.08 — СЛУХАЧ НА КОНТЕЙНЕРІ, А НЕ НА КОЖНОМУ ПУНКТІ (делегування).
+    // Меню категорій перемальовується на кожен пошук (`updateAdCount` — від запиту
+    // змінюється не лише число, а й СКЛАД пунктів). Слухачі, повішені на самі
+    // пункти, пережили б рівно один такий `innerHTML`, і фільтр мовчки перестав би
+    // реагувати на тап — без жодної помилки в консолі.
+    // ⚠️ Меню локації від цього нічого не втрачає: воно не перемальовується, а
+    // поведінка делегата для нього тотожна.
+    menu.addEventListener('click', e => {
+      const mi = e.target.closest('[data-bd-cat], [data-bd-loc]');
+      if (!mi || !menu.contains(mi)) return;
+      onPick(mi);
+      renderAll();
     });
   };
   wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });

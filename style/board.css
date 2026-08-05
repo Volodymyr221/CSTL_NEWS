@@ -1655,14 +1655,11 @@ textarea.cm-board-input.bm-invalid {
   margin-top: 6px;
   margin-bottom: 2px;
 }
-/* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
-.bd-count {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;   /* «7 ОГОЛОШЕНЬ» */
-  color: var(--ink-soft, #5a5a5a);
-}
+/* 🗑 05.08 — `.bd-count` ВИДАЛЕНО. Це був рядок «7 ОГОЛОШЕНЬ» у шапці; лічильник
+   з того часу двічі змінював місце (01.08 — чіп «Усі», 05.08 — меню фільтра), а
+   правило лишалось. Прибрано не «щоб було чисто»: `dead-css.mjs` терпить 10
+   мертвих класів, і після цієї зміни лишався запас рівно в один — тобто наступна
+   сесія впіймала б чуже падіння. */
 
 /* Фільтр за локацією (Д-12) — тонко, без пігулки: іконка + назва (ВЕЛИКИМИ) + каретка */
 .bd-loc-filter {
@@ -2758,7 +2755,6 @@ textarea.cm-board-input.bm-invalid {
   line-height: 1.25;
   color: rgba(255, 236, 240, 0.78);
 }
-#board-content .bd-count { color: rgba(255, 236, 240, 0.86); }
 #board-content .bd-loc-btn { color: rgba(255, 236, 240, 0.92); }
 
 /* 🗑 05.08 — РЯД ТИПІВ УГОДИ (`.bd-types` / `.bd-type*`) ВИДАЛЕНО РАЗОМ З РОЗМІТКОЮ.
@@ -2814,17 +2810,19 @@ textarea.cm-board-input.bm-invalid {
    віддано фільтру категорій, а листування повернулось пунктом FAB-меню — розбір
    обох відкатів у `board.js`, коментарі до `heroHtml` і `renderFab`.
 
-   📐 ГЕОМЕТРІЯ НЕ «НА ОКО» — заміряно на 390px до змін:
-   hero має 362px, текст слогана — 265px, тобто праворуч вільно рівно 97px.
-   Найдовша назва категорії («Знайдено») з числом і кареткою просить ~118px.
-   ➡️ Тому кнопка НЕ фіксованої ширини, а слоган стискається: `.bd-hero-text`
-   уже має `min-width: 0`, і слоган отримує один рядок із трикрапкою.
-   🔴 ЧОМУ САМЕ ТАК, А НЕ ПЕРЕНОСОМ РЯДКА: при переносі hero виростав би на рядок
-   від ВИБОРУ КАТЕГОРІЇ — тобто розкладка «дихала» б від стану. Це рівно та
-   хвороба, яку лікували 30.07 (число всередині плашки FAB розширювало пункт
-   меню), і вона ж з'їла б виграш висоти, заради якого все й робилось.
-   ⚠️ Слоган — не декор (він каже, ЩО тут роблять), тому стискаємо, а не знімаємо:
-   при «Усі» видно майже весь, обрізається лише хвіст. */
+   🔵 КРУЖЕЧОК, А НЕ ПІГУЛКА З НАЗВОЮ (правка Вови того ж дня): «іконки фільтрів
+   категорій мають розміщуватися в такому кружечку, як і було раніше… як було
+   повідомлення, в такому самому кружечку, стилі, відтінку». Тому геометрія і
+   колір нижче — ДОСЛІВНО ті, що мав конверт `.bd-hero-msgs` до 05.08.
+
+   📐 ЩО ЦЕ ДАЄ ПОНАД ВИГЛЯД (заміряно на 390px): пігулка з назвою займала
+   81-118px і РОСЛА від довжини назви категорії, через що слоган (265px при
+   доступних 362) доводилось обрізати трикрапкою. Кружечок — рівно 44px завжди,
+   слогану лишається 306px, і обрізка зникла сама. Ширина кнопки більше не
+   залежить від стану — тобто хвороба «розкладка дихає від вибору» (лікована
+   30.07 на плашці FAB) тут неможлива в принципі.
+   ⚠️ `text-overflow` на слогані ЛИШАЄТЬСЯ як запобіжник: при збільшеному
+   системному шрифті iOS текст усе одно не має переноситись і ростити hero. */
 #board-content .bd-hero-actions { position: relative; flex: none; }
 #board-content .bd-hero-sub {
   white-space: nowrap;
@@ -2833,40 +2831,51 @@ textarea.cm-board-input.bm-invalid {
 }
 #board-content .bd-hero-cat-filter { position: relative; }
 #board-content .bd-hero-cat {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 44px;              /* 44 — та сама висота, що мав конверт (мінімум Apple HIG) */
-  padding: 0 11px;
-  border-radius: 12px;
+  position: relative;
+  width: 44px;
+  height: 44px;              /* 44 — мінімальна зона тапу за Apple HIG */
+  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* Іконки категорій приходять з `core/board-categories.js` розміром 1em, тож
+   розмір задається шрифтом кнопки — 21px, як було в конверта. */
+#board-content .bd-hero-cat { font-size: 21px; }
+#board-content .bd-hero-cat .cat-ico { display: block; }
 #board-content .bd-hero-cat:active,
 #board-content .bd-hero-cat.open { background: rgba(255, 255, 255, 0.28); }
-/* Обрана категорія — світліша заливка: кнопка мусить казати «фільтр УВІМКНЕНО»
-   ще до того, як людина прочитає напис. При «Усі» фільтра фактично немає, тож
-   і виділяти нема чого. */
+/* Обрана категорія — світліша заливка: сама іконка вже каже, ЯКИЙ фільтр стоїть,
+   а заливка каже, що фільтр узагалі увімкнено. При «Усі» фільтра фактично немає,
+   тож і виділяти нема чого. */
 #board-content .bd-hero-cat--on {
   background: rgba(255, 255, 255, 0.26);
   border-color: rgba(255, 255, 255, 0.5);
 }
-#board-content .bd-hero-cat-n { font-weight: 800; opacity: 0.72; }
-#board-content .bd-hero-cat-caret { opacity: 0.7; flex: none; }
 
 /* Меню категорій — праворуч під кнопкою (кнопка біля правого краю, тож `left: 0`
    вивів би меню за екран). Решту вигляду дає спільна база `.bd-cat-menu`, яку
    меню локації використовує з 01.08 — окремого вигляду тут свідомо не заводимо. */
-#board-content .bd-cat-menu { right: 0; left: auto; min-width: 190px; }
-#board-content .bd-cat-mi { justify-content: space-between; gap: 12px; }
-#board-content .bd-cat-mi-n { font-weight: 700; opacity: 0.55; font-size: 13px; }
+#board-content .bd-cat-menu { right: 0; left: auto; min-width: 208px; }
+/* Пункт: іконка · назва (розтягується) · число праворуч. Іконка робить меню
+   читабельним «по картинці», а не лише по тексту — і це та сама іконка, що на
+   кнопці й на картці оголошення. */
+#board-content .bd-cat-mi { gap: 11px; font-size: 14px; }
+#board-content .bd-cat-mi-ico {
+  flex: none;
+  font-size: 17px;
+  line-height: 0;
+  color: var(--red, #722F37);
+  opacity: 0.85;
+}
+#board-content .bd-cat-mi-label { flex: 1; min-width: 0; }
+#board-content .bd-cat-mi-n { flex: none; font-weight: 700; opacity: 0.55; font-size: 13px; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════

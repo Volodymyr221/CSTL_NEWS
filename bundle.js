@@ -2454,6 +2454,10 @@
     const c = byId(id);
     return c ? c.icon : ALL_ICON;
   }
+  function catLabel(id) {
+    const c = byId(id);
+    return c ? c.label : id;
+  }
   function catShort(id) {
     const c = byId(id);
     return c ? c.short || c.label : id;
@@ -6887,8 +6891,6 @@
   function renderHeader() {
     const discHead = "";
     const showCategories = activeType === "board";
-    const catBtnLabel = activeCategory === "all" ? "\u0423\u0441\u0456" : catShort(activeCategory);
-    const catBtnCount = activeCategory === "all" ? getFilteredPosts({ ignoreCategory: true }).length : getFilteredPosts().length;
     const heroHtml = showCategories ? `
     <div class="bd-hero">
       <div class="bd-hero-text">
@@ -6898,33 +6900,15 @@
       <div class="bd-hero-actions">
         <div class="bd-hero-cat-filter">
           <button class="bd-hero-cat${activeCategory === "all" ? "" : " bd-hero-cat--on"}" id="bd-cat-btn" type="button"
-                  aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E">
-            <span class="bd-hero-cat-label">${escapeHtml(catBtnLabel)}</span>
-            <span class="bd-hero-cat-n" id="bd-count">${catBtnCount}</span>
-            <svg class="bd-hero-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E: ${escapeHtml(activeCategory === "all" ? "\u0443\u0441\u0456" : catLabel(activeCategory))}">
+            ${activeCategory === "all" ? ALL_ICON : catIcon(activeCategory)}
           </button>
           ${catMenuHtml()}
         </div>
       </div>
     </div>
   ` : "";
-    function catMenuHtml() {
-      const base = getFilteredPosts({ ignoreCategory: true });
-      const n = {};
-      base.forEach((p) => {
-        n[p.category] = (n[p.category] || 0) + 1;
-      });
-      const mi = (id, label, on, num) => `
-      <button class="bd-cat-mi${on ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
-        <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
-        <span class="bd-cat-mi-n">${num}</span>
-      </button>`;
-      const live = BOARD_CATEGORIES.filter((c) => n[c.id] > 0).sort((a, b) => n[b.id] - n[a.id]).map((c) => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id])).join("");
-      const orphan = activeCategory !== "all" && !n[activeCategory] ? mi(activeCategory, catShort(activeCategory), true, 0) : "";
-      return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
-      ${mi("all", "\u0423\u0441\u0456", activeCategory === "all", base.length)}${orphan}${live}
-    </div>`;
-    }
     const COMMUNITY_ALL_SHORT = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
     const locFilterHtml = `
         <div class="bd-loc-filter">
@@ -6963,11 +6947,34 @@
     </div>
   `;
   }
+  function catMenuHtml() {
+    const base = getFilteredPosts({ ignoreCategory: true });
+    const n = {};
+    base.forEach((p) => {
+      n[p.category] = (n[p.category] || 0) + 1;
+    });
+    const mi = (id, label, on, num, ico) => `
+    <button class="bd-cat-mi${on ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
+      <span class="bd-cat-mi-ico">${ico}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
+      <span class="bd-cat-mi-n">${num}</span>
+    </button>`;
+    const live = BOARD_CATEGORIES.filter((c) => n[c.id] > 0).sort((a, b) => n[b.id] - n[a.id]).map((c) => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id], c.icon)).join("");
+    const orphan = activeCategory !== "all" && !n[activeCategory] ? mi(activeCategory, catShort(activeCategory), true, 0, catIcon(activeCategory)) : "";
+    return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+    ${mi("all", "\u0423\u0441\u0456", activeCategory === "all", base.length, ALL_ICON)}${orphan}${live}
+  </div>`;
+  }
   function updateAdCount() {
-    const el = document.getElementById("bd-count");
-    if (!el || activeType !== "board")
+    const menu = document.getElementById("bd-cat-menu");
+    if (!menu || activeType !== "board")
       return;
-    el.textContent = String(activeCategory === "all" ? getFilteredPosts({ ignoreCategory: true }).length : getFilteredPosts().length);
+    const wasOpen = !menu.hasAttribute("hidden");
+    const fresh = document.createElement("div");
+    fresh.innerHTML = catMenuHtml();
+    menu.innerHTML = fresh.firstElementChild.innerHTML;
+    if (wasOpen)
+      menu.removeAttribute("hidden");
   }
   function renderBody() {
     const filtered = getFilteredPosts();
@@ -7173,11 +7180,12 @@
           btn.setAttribute("aria-expanded", "true");
         }
       });
-      menu.querySelectorAll("[data-bd-cat], [data-bd-loc]").forEach((mi) => {
-        mi.addEventListener("click", () => {
-          onPick(mi);
-          renderAll();
-        });
+      menu.addEventListener("click", (e) => {
+        const mi = e.target.closest("[data-bd-cat], [data-bd-loc]");
+        if (!mi || !menu.contains(mi))
+          return;
+        onPick(mi);
+        renderAll();
       });
     };
     wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
