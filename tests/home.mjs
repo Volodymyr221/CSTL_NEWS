@@ -152,6 +152,23 @@ const caps = await p.evaluate(()=>{
   };
 });
 ok('старої смуги «Зараз» більше немає', !caps.старі);
+
+// 🔴 ІКОНКИ КАПСУЛ — ВЕКТОР, А НЕ ЕМОДЗІ (правило Вови 05.08).
+// Були 🚌 📋 📰 💬 — останні емодзі на головній: іконки погоди по днях уже
+// векторні (Meteocons). Міряємо і наявність `<svg>`, і ВІДСУТНІСТЬ емодзі —
+// поставити вектор поруч із символом, що лишився, легше, ніж здається.
+const capIc = await p.evaluate(() => {
+  const ics = [...document.querySelectorAll('.hm-cap2-ic')];
+  return {
+    n: ics.length,
+    svg: ics.filter(i => i.querySelector('svg')).length,
+    emoji: ics.filter(i => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(i.textContent)).length,
+    w: ics[0] ? Math.round(ics[0].querySelector('svg')?.getBoundingClientRect().width || 0) : 0,
+  };
+});
+ok('🔴 іконки капсул векторні', capIc.n > 0 && capIc.svg === capIc.n, `${capIc.svg}/${capIc.n}`);
+ok('🔴 емодзі в капсулах не лишилось', capIc.emoji === 0);
+ok('іконка капсули не дрібна (≥16px)', capIc.w >= 16, `${capIc.w}px`);
 ok('капсули намальовані', caps.n > 0, `${caps.n} шт`);
 ok('🔴 порожньої коробки капсул не буває', !caps.порожня);
 // Кожне повідомлення мусить містити ЧИСЛО — це статус, а не гасло.
