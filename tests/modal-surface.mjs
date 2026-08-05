@@ -1,0 +1,141 @@
+// Стенд №38: ПОВЕРХНЯ І ШРИФТ МОДАЛОК.
+//
+// Заведено 05.08.2026 на замовлення Вови: «бежевий колір і шрифт у кожній
+// модалці по-різному. Ми вже відійшли від того кольору, а він ще зберігається».
+//
+// 🔴 ЗАРАДИ ЧОГО ВІН ІСНУЄ. Беж у цьому проєкті вже переживав один прохід
+// стандартизації: 29.07 Дошку перевели на нейтральну родину, і саме тоді завели
+// `tests/board-cream.mjs`. Модалки в той прохід не входили — і кремовий спокійно
+// дожив у них до серпня. Без сторожа він повернеться і сюди: достатньо, щоб
+// хтось написав новий hex під новою назвою.
+//
+// 🔬 КРИТЕРІЙ — ЧИСЛО, А НЕ НАЗВА. «Теплота» = R − B обчисленого кольору.
+// Нейтральний білий/сірий дає ≤ 3, найслабший кремовий проєкту `#FAF8EF` = +11.
+// Перевіряти «чи є слово cream у CSS» було б безглуздо: будь-який новий відтінок
+// обійшов би таку перевірку, лишившись тим самим бежем на екрані.
+//
+// ⚠️ Стенд розбирає CSS ТЕКСТОМ, а не відкриває модалки браузером. Причина
+// названа в `tests/tools/modal-audit.mjs`: більшість модалок будується з даних
+// Supabase, якого в пісочниці немає, тож живий обхід охопив би третину списку і
+// створив би хибне враження повноти.
+
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { ROOT, reporter } from './_lib.mjs';
+
+const { ok, done } = reporter();
+const STYLE = join(ROOT, 'style');
+const files = readdirSync(STYLE).filter(f => f.endsWith('.css'));
+const all = files.map(f => ({ f, css: readFileSync(join(STYLE, f), 'utf8') }));
+
+// ── Розкриття токенів ────────────────────────────────────────────────────────
+const tokens = {};
+for (const { css } of all) {
+  for (const m of css.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)[;}]/g)) {
+    if (!(m[1] in tokens)) tokens[m[1]] = m[2].trim();
+  }
+}
+function resolve(v, depth = 0) {
+  if (depth > 6 || !v) return v;
+  const m = v.match(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/);
+  if (!m) return v.trim();
+  return resolve(v.replace(m[0], tokens[m[1]] ?? m[2] ?? ''), depth + 1);
+}
+function firstHex(v) {
+  const m = String(v).match(/#([0-9a-f]{3}|[0-9a-f]{6})\b/i);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  return { r: parseInt(h.slice(0, 2), 16), b: parseInt(h.slice(4, 6), 16), hex: '#' + h.toUpperCase() };
+}
+const warmth = c => (c ? c.r - c.b : null);
+
+// ── Що саме вважаємо модалкою ────────────────────────────────────────────────
+// Тільки СПІЛЬНИЙ примітив і те, що явно зветься модалкою. Ширший фільтр (як в
+// інструменті аудиту) тягне сюди Обговорення і картку новини — а це не модалки,
+// і сварити за них стенд не має права.
+const MODAL_SEL = /(\.app-modal|\.wxp\b|-modal\b)/;
+
+// 🟡 ДОЗВОЛЕНІ ТЕПЛІ ПОВЕРХНІ — і кожна з причиною, а не «щоб стенд мовчав».
+const ALLOW = [
+  // Бренд: `--red` і градієнти. Це кнопки й акценти, вони теплі за задумом.
+  /^#722F37$/i, /^#5A1622$/i, /^#5E1723$/i, /^#4A121C$/i, /^#2E0C14$/i, /^#46111B$/i, /^#380F18$/i, /^#2A0A12$/i,
+];
+// 🔴 ЧАТ ДОШКИ — ОКРЕМИЙ ВИНЯТОК, І ВІН ТИМЧАСОВИЙ.
+// `#F3EFE3` і `#FCFAF4` там стоять за ПРЯМИМ рішенням Вови 20.07 («трохи
+// насиченіші, але не такі кремові як були раніше, трішки»). Перефарбовувати те,
+// що власник обрав сам, без його слова не можна — тому виняток названий, а не
+// схований у порозі. Скаже прибрати теплоту звідти — рядок іде геть.
+const CHAT_EXCEPT = /\.bd-chat-modal/;
+
+const warm = [];
+for (const { f, css } of all) {
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim().replace(/\s+/g, ' ');
+    if (sel.startsWith('@') || !MODAL_SEL.test(sel)) continue;
+    if (CHAT_EXCEPT.test(sel)) continue;
+    for (const d of m[2].split(';')) {
+      const i = d.indexOf(':');
+      if (i < 0) continue;
+      const prop = d.slice(0, i).trim();
+      if (prop !== 'background' && prop !== 'background-color') continue;
+      const hex = firstHex(resolve(d.slice(i + 1).trim()));
+      if (!hex) continue;
+      const w = warmth(hex);
+      if (w > 3 && !ALLOW.some(re => re.test(hex.hex))) warm.push(`${f}: ${sel.slice(0, 40)} = ${hex.hex} (+${w})`);
+    }
+  }
+}
+ok('🔴 жодна модалка не малює теплу поверхню повз токен', warm.length === 0, warm.join(' | ') || 'чисто');
+
+// ── Спільний примітив: обидві половини одного кольору ────────────────────────
+// Саме тут і був корінь скарги: аркуш брав `--bg-card` (#FAF8EF, +11), а
+// центрована картка вже була `#fff`. Один компонент, два кольори.
+const MODAL_CSS = readFileSync(join(STYLE, 'modal.css'), 'utf8');
+const bgOf = sel => {
+  const m = MODAL_CSS.match(new RegExp(`\\${sel}\\s*\\{([^}]*)\\}`));
+  if (!m) return null;
+  const d = m[1].match(/background(?:-color)?:\s*([^;]+)/);
+  return d ? d[1].trim() : null;
+};
+const sheetBg = bgOf('.app-modal-sheet');
+const cardBg  = bgOf('.app-modal-card');
+ok('аркуш і картка беруть ОДИН токен поверхні',
+   sheetBg && cardBg && sheetBg === cardBg, `аркуш: ${sheetBg} · картка: ${cardBg}`);
+ok('поверхня модалки — через `--modal-bg`', /--modal-bg/.test(String(sheetBg)), String(sheetBg));
+const modalBgHex = firstHex(resolve('var(--modal-bg)'));
+ok('🔴 `--modal-bg` нейтральний (теплота ≤ 3)',
+   modalBgHex && warmth(modalBgHex) <= 3, modalBgHex ? `${modalBgHex.hex} (+${warmth(modalBgHex)})` : '—');
+
+// ── Шрифт заголовка ──────────────────────────────────────────────────────────
+const titleFont = (MODAL_CSS.match(/\.app-modal-title\s*\{[^}]*font-family:\s*([^;]+)/) || [])[1] || '';
+// ⚠️ `(?<!sans-)` обовʼязково: перша версія перевірки шукала просто `serif` і
+// падала на цілком правильному `sans-serif`. Сторож мусить розрізняти сімейство
+// і його протилежність, інакше він сварить за те, чого домагався.
+ok('🔴 заголовок модалки НЕ серифом',
+   !/georgia|(?<!sans-)\bserif\b/i.test(titleFont), titleFont.trim());
+ok('заголовок модалки — системний sans', /-apple-system|system-ui/i.test(titleFont));
+
+// 🛑 Georgia в бренді ЛИШАЄТЬСЯ — це айдентика, а не службовий текст.
+// Перевірка тримає межу з обох боків: сериф пішов саме з модалки, а не звідусіль.
+const BASE = readFileSync(join(STYLE, 'base.css'), 'utf8');
+ok('КОНТРОЛЬ: Georgia лишилась у логотипі (бренд не чіпали)',
+   /\.header-logo\s*\{[^}]*Georgia/s.test(BASE));
+
+// ── КОНТРОЛЬ: сторож справді ловить ──────────────────────────────────────────
+// Без цього перевірка «warm.length === 0» могла б бути зеленою просто тому, що
+// нічого не знайшла — тобто через зламаний розбір, а не через чистий код.
+const trap = (() => {
+  const css = '.app-modal-sheet { background: #FAF8EF; }';
+  const out = [];
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim();
+    if (!MODAL_SEL.test(sel)) continue;
+    const hex = firstHex(resolve((m[2].match(/background:\s*([^;]+)/) || [])[1] || ''));
+    if (hex && warmth(hex) > 3) out.push(hex.hex);
+  }
+  return out;
+})();
+ok('🔴 КОНТРОЛЬ: сторож ЛОВИТЬ підкинутий кремовий', trap.length === 1, trap.join(',') || 'не спіймав');
+
+done();

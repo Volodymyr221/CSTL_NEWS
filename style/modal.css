@@ -28,9 +28,24 @@
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   z-index: 1;
 }
+/* 🔴 05.08 — СИСТЕМНИЙ SANS ЗАМІСТЬ GEORGIA (вибір Вови «Б» із чотирьох макетів,
+   `_mockups/modal-font.html`). Скарга дослівно: «шрифт, який зараз у модалці,
+   мені не подобається».
+
+   🔑 Чому це не «замінили шрифт бо набрид»: сериф у заголовку аркуша був ЄДИНИМ
+   місцем, де застосунок раптом переходив на іншу гарнітуру посеред службового
+   вікна. Заголовок тепер відрізняється від тексту ВАГОЮ і кеглем, а не
+   сімейством — так роблять аркуші iOS і Android.
+   ⚠️ Розбіжність уже почалась до цієї правки: зум-модалка оголошення в
+   `community.css` сама відмовилась від успадкованого шрифту і прописала собі
+   системний sans. Тобто компонент уже розходився — тут ми його зводимо.
+
+   🛑 GEORGIA В ІНШИХ МІСЦЯХ НЕ ЧІПАЄМО. Логотип шапки, сплеш, сайдбар і назва
+   спільноти у «Стрічці» — це айдентика бренду, а не службовий текст. Заміряно:
+   Georgia живе в 14 місцях, і лише частина з них — заголовки. */
 .app-modal-title {
-  font-family: Georgia, serif;
-  font-size: 20px; font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--ink, #2b2b2b);
   margin: 0 0 8px;
 }
@@ -54,7 +69,11 @@
      ширину (сусідні розкладки не стискає). Стоїть на САМОМУ скролері, тому
      властивість успадковується всім вмістом. Той самий підхід — у style/feed.css. */
   word-break: normal; overflow-wrap: break-word;
-  background: var(--bg-card, #fff);
+  /* 🔴 05.08 — НЕЙТРАЛЬНА, як і центрована картка нижче. Був `--bg-card`
+     (`#FAF8EF`, теплота +11), тоді як `.app-modal-card` уже малювався `#fff`:
+     дві половини одного примітиву різними кольорами. Тепер обидві беруть
+     `--modal-bg`, тож розійтись більше не можуть. */
+  background: var(--modal-bg, #fff);
   border-radius: 22px 22px 0 0;
   padding: 4px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%);
@@ -126,7 +145,7 @@
   position: relative;
   width: 100%;
   max-width: 340px;
-  background: #fff;
+  background: var(--modal-bg, #fff);
   border-radius: 22px;
   padding: 26px 22px 18px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
