@@ -14,7 +14,7 @@
 import { chromium } from 'playwright';
 import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { ROOT, launch, projectFile } from './_lib.mjs';
+import { ROOT, launch, projectFile, zoneCss } from './_lib.mjs';
 
 const R = ROOT;
 const REV = process.env.CSS_REV || '';
@@ -23,7 +23,7 @@ const src = (f) => REV
   : projectFile(f);
 
 const modalCss = src('style/modal.css');
-const commCss  = src('style/community.css');
+const commCss  = zoneCss();
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

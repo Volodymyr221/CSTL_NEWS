@@ -29,10 +29,10 @@
 // падіння гірше за відсутність перевірки. Чи натиск «відчувається так само» — може
 // сказати лише Вова на iPhone; підбір зроблено за контрастом (1.274 проти 1.271 було).
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, zoneCss } from './_lib.mjs';
 
 const BASE_CSS = projectFile('style/base.css');
-const COMM_CSS = projectFile('style/community.css');
+const COMM_CSS = zoneCss();
 const MSGS_CSS = projectFile('style/messages.css');
 
 const { ok, done } = reporter();
@@ -112,10 +112,14 @@ const SCENE = `
      і вони його закривають. Стенд уже впав на цьому двічі (див. шапку файлу). -->
 <div class="app-modal app-modal--board-compose">
   <div class="app-modal-sheet" data-t="лист подачі — поверхня">
-    <div class="bm-type-tabs" data-t="дорожка перемикача типу">
-      <button class="bm-type-tab active" data-t="активний таб типу"></button>
-      <button class="bm-type-tab"></button>
-    </div>
+    <!-- 🔴 05.08 — ПЕРЕМИКАЧ ТИПУ ЗІ СЦЕНИ ПРИБРАНО. Класів bm-type-tabs /
+         bm-type-tab у застосунку НЕМАЄ ЖОДНОГО: таб «Розмова» знято ще 02.07,
+         і відтоді сцена стенда описувала екран, якого не існує. Тобто сторож
+         охороняв мертвий CSS і завдяки цьому виглядав повнішим, ніж був.
+         Знайдено аудитом 05.08, коли ті правила видалили як мертві — і впав
+         саме цей рядок, а не застосунок.
+         ⚠️ Урок той самий, що в шапці: сцена мусить відповідати ЗАСТОСУНКУ.
+         Розійшлась у будь-який бік — зелене світло перестає щось означати. -->
     <span class="bm-author-fixed" data-t="поле «Імʼя»" data-el="рамка поля «Імʼя»">Вова</span>
     <div class="bm-chips"><button class="bm-chip" data-t="чіп категорії" data-el="межа чіпа категорії"></button></div>
     <div class="bm-photos">

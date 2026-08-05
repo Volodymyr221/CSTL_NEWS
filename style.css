@@ -17,7 +17,14 @@
 @import url('style/power.css');      /* .pw-* — Світло v2: hero-таймер, горизонтальна стрічка */
 @import url('style/modal.css');      /* .article-modal — sticky-header, swipe, body */
 @import url('style/tabbar.css');     /* .tab-bar, .tab-item, .tab-icon, .tab-label */
-@import url('style/community.css');  /* .cm-* — вкладка Громада, D2 colored blocks, hero, board */
+@import url('style/community.css');  /* .cm-* — вкладка Громада: hero, блоки, віджети */
+/* ⚠️ board.css мусить стояти ОДРАЗУ ПІСЛЯ community.css і НІДЕ ІНДЕ.
+   05.08 стилі Дошки виділено з community.css (там вони займали 68% селекторів).
+   Відносний порядок правил Дошки збережено байт-у-байт, а цей рядок тримає їх
+   рівно там, де вони й були в каскаді. Пересунеш імпорт — поїде каскад, і
+   зламається саме те, що зараз доведено рівністю зліпків «до/після»
+   (0 розбіжностей на 224 елементах, `tests/tools/css-snapshot.mjs`). */
+@import url('style/board.css');      /* .bd-* .cm-board-* .cm-ad-* .bm-* — вкладка «Дошка» */
 @import url('style/feed.css');       /* .fd-* — вкладка «Стрічка»: сторінки-канали громади */
 @import url('style/account.css');    /* .acc-* — Фаза Б: вхід, профіль, Кабінет жителя + іконка 👤 */
 @import url('style/messages.css');   /* .pm-* — Фаза Б: приватний чат, список розмов, Мої оголошення */
