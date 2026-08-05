@@ -78,6 +78,16 @@ const KIND = {
   community:    { ic: ICONS.community, label: 'Для громади' },
 };
 
+// Відмінювання днів. Копію не заводимо дарма: у `utils.js` такої функції немає,
+// а в `home-contacts.js` вона локальна й під інші слова.
+function plural(n, one, few, many) {
+  const t = n % 100, o = n % 10;
+  if (t >= 11 && t <= 14) return many;
+  if (o === 1) return one;
+  if (o >= 2 && o <= 4) return few;
+  return many;
+}
+
 // Формат суми: «500 000 ₴» — нерозривні пробіли, щоб число не переносилось.
 function money(n) {
   if (!Number.isFinite(n)) return null;
@@ -87,6 +97,14 @@ function money(n) {
   return `${Math.round(n).toLocaleString('uk-UA')} ₴`;
 }
 
+// Скільки днів завершений збір ще видно. 🔴 Не нуль і не назавжди.
+// Нуль означав би, що збір зникає МОВЧКИ: людина, яка вчора донатила, ніколи не
+// дізнається, чим усе скінчилось, — а це найгірше, що можна зробити з довірою.
+// Назавжди означало б, що головна перетворюється на архів.
+const CLOSED_DAYS = 7;
+
+const dayDiff = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
+
 async function loadFundraisers() {
   try {
     const res = await fetch('./data/fundraisers.json', { cache: 'no-cache' });
@@ -94,12 +112,30 @@ async function loadFundraisers() {
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.items || []);
     const todayISO = new Date().toISOString().slice(0, 10);
-    return items.filter(it =>
+
+    const ok = items.filter(it =>
       it && it.active !== false &&
       it.title && it.org && it.url &&        // 🔴 без відповідального і посилання — не показуємо
-      /^https:\/\//i.test(String(it.url)) && // 🔴 тільки https: посилання про гроші не йде по http
-      (!it.until || it.until >= todayISO)    // прострочений збір зникає сам
-    );
+      /^https:\/\//i.test(String(it.url))   // 🔴 тільки https: посилання про гроші не йде по http
+    ).map(it => {
+      // `left` — днів до кінця; відʼємне означає, що збір уже завершився.
+      const left = it.until ? dayDiff(it.until, todayISO) : null;
+      return { ...it, left, closed: left != null && left < 0 };
+    // Завершений збір лишається ще CLOSED_DAYS днів — уже без кнопки.
+    }).filter(it => !it.closed || -it.left <= CLOSED_DAYS);
+
+    // 🔑 ПОРЯДОК ПОКАЗУ — це рішення, а не випадковість. До 05.08 збори бралися
+    // так, як лежать у файлі: хто перший рядок, той і на екрані.
+    //   1. живі перед завершеними;
+    //   2. серед живих — той, у кого менше днів лишилось (терміновість);
+    //   3. збір без дати — після тих, у кого дата є: він не горить;
+    //   4. решта — як у файлі (стабільно, без стрибків між відкриттями).
+    return ok.sort((a, b) => {
+      if (a.closed !== b.closed) return a.closed ? 1 : -1;
+      const la = a.left == null ? Infinity : a.left;
+      const lb = b.left == null ? Infinity : b.left;
+      return la - lb;
+    });
   } catch {
     return [];
   }
@@ -109,10 +145,17 @@ function fundCardHtml(it) {
   const kind = KIND[it.kind] || KIND.community;
   const goal = money(it.goal);
 
+  // Рядок терміновості. Показуємо, ЛИШЕ коли лишилось мало: «ще 43 дні» — не
+  // інформація, а шум. Поріг 7 днів — тиждень, який людина відчуває як «скоро».
+  const urgent = !it.closed && it.left != null && it.left <= 7
+    ? (it.left === 0 ? 'Останній день' : `Залишилось ${it.left} ${plural(it.left, 'день', 'дні', 'днів')}`)
+    : '';
+
   return `
-    <article class="hm-card hm-fund">
+    <article class="hm-card hm-fund${it.closed ? ' hm-fund--closed' : ''}">
       ${it.photo ? `
-      <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy">` : ''}
+      <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy"
+           onerror="this.remove()">` : ''}
       <div class="hm-fund-body">
         <div class="hm-fund-kind">
           <span class="hm-fund-ic" aria-hidden="true">${kind.ic}</span>
@@ -129,10 +172,15 @@ function fundCardHtml(it) {
           <span class="hm-fund-goal-k">Ціль</span>
           <span class="hm-fund-goal-v">${goal}</span>
         </div>` : ''}
-        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+        ${it.closed ? `
+        <p class="hm-fund-done">Збір завершено</p>
+        <p class="hm-fund-hint">Дякуємо всім, хто долучився</p>` : `
+        ${urgent ? `<p class="hm-fund-left">${escapeHtml(urgent)}</p>` : ''}
+        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
+           aria-label="Задонатити — ${escapeHtml(it.title)}">
           Задонатити
         </a>
-        <p class="hm-fund-hint">Відкриється банка Monobank</p>
+        <p class="hm-fund-hint">Відкриється банка Monobank</p>`}
       </div>
     </article>`;
 }
