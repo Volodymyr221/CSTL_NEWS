@@ -361,6 +361,7 @@
 /* Назва обрізається, а не переносить рядок: «Хромʼяків» довше за «Олика», і
    картка не має від цього рости. */
 .hm-wx-place-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+<<<<<<< HEAD
 
 /* 🔴 05.08 — ІКОНКИ ВЕКТОРНІ, А НЕ СИМВОЛИ. Замовлення Вови: «всі ікони,
    включаючи стрілочку донизу, мають бути векторними, і стрілочка замаленька».
@@ -378,6 +379,10 @@
    натиснути, і має читатись першою. */
 .hm-wx-place-ch  { opacity: .8; margin-left: 1px; }
 .hm-wx-place-ch svg { width: 17px; height: 17px; }
+=======
+.hm-wx-place-pin { font-size: 11px; }
+.hm-wx-place-ch  { opacity: .7; font-size: 10px; }
+>>>>>>> origin/main
 
 /* ── Шторка вибору населеного пункту ─────────────────────────────────────────
    Лежить у звичайному аркуші застосунку (`app-modal--sheet`), тому тут лише
@@ -402,10 +407,13 @@
    лише галочка губилась би у списку з двадцяти рядків. */
 .wxp-row--on { background: var(--board-card); font-weight: 700; }
 .wxp-row-ok  { color: var(--red); font-weight: 800; }
+<<<<<<< HEAD
 /* Шпилька в рядку «За моїм місцем» — той самий вектор, що в кнопці. */
 .wxp-row-n { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .wxp-row-ic { display: inline-flex; flex: 0 0 auto; color: var(--red); }
 .wxp-row-ic svg { width: 18px; height: 18px; }
+=======
+>>>>>>> origin/main
 .wxp-row--geo { margin-top: 4px; }
 /* Застереження про однакову погоду по селах. Тихе, але присутнє: людина має
    розуміти, чому в Дерні стільки ж градусів, що в Олиці, — інакше вирішить,
