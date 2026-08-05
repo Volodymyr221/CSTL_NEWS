@@ -124,7 +124,7 @@
   padding: 15px 16px;
   border: 0;
   border-radius: 14px;
-  background: var(--news-accent, #722F37);
+  background: var(--brand-grad-sm);
   color: #fff;
   font-size: 15px;
   font-weight: 700;

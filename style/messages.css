@@ -32,7 +32,7 @@
 .pm-head {
   display: flex; align-items: center; gap: 10px;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
-  background: var(--red, #722F37); color: #fff;
+  background: var(--brand-grad); color: #fff;
   flex-shrink: 0;
 }
 .pm-back {
@@ -126,10 +126,10 @@
 .pm-send {
   width: 42px; height: 42px; flex-shrink: 0;
   border: 0; border-radius: 50%;
-  background: var(--red, #722F37); color: #fff;
+  background: var(--brand-grad-sm); color: #fff;
   font-size: 20px; line-height: 1; cursor: pointer;
 }
-.pm-send:active { background: var(--red-dark, #5A2329); }
+.pm-send:active { background: var(--brand-grad-press); }
 
 /* Кнопка «вниз» (Telegram-стиль): зʼявляється коли прокрутив угору. Абсолютно
    позиціонована в .pm-screen (position:fixed), над полем вводу справа. */
@@ -244,7 +244,7 @@
   box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
 }
 .pm-chip--active {
-  background: var(--red, #722F37); color: #fff; border-color: var(--red, #722F37);
+  background: var(--brand-grad-sm); color: #fff; border-color: var(--red, #722F37);
   box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30);
 }
 
@@ -275,7 +275,7 @@
 .pm-thread-row--open .pm-thread-act { opacity: 1; transform: scale(1); }
 .pm-thread-act svg { width: 22px; height: 22px; display: block; }
 .pm-thread-act--archive { background: var(--ink-mute, #9C9080); }
-.pm-thread-act--delete  { background: var(--red, #722F37); }
+.pm-thread-act--delete  { background: var(--brand-grad-sm); }
 .pm-thread-act:active { filter: brightness(0.92); }
 .pm-thread {
   position: relative; z-index: 1; width: 100%;
@@ -346,7 +346,7 @@
   font-size: 14px; font-weight: 600; cursor: pointer;
   box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
 }
-.pm-ad-tab.active { background: var(--red, #722F37); color: #fff; box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30); }
+.pm-ad-tab.active { background: var(--brand-grad-sm); color: #fff; box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30); }
 
 /* Обгортка-рядок: картка зверху (z-index 1) ковзає, свайп-дії — ззаду справа. */
 .pm-ad-row { position: relative; margin: 10px 12px; }
@@ -366,7 +366,7 @@
 .pm-ad-swipe-btn svg { width: 22px; height: 22px; display: block; }
 .pm-ad-swipe-btn--done    { background: #3C6B2A; }
 .pm-ad-swipe-btn--restore { background: var(--ink-mute, #9C9080); }
-.pm-ad-swipe-btn--delete  { background: var(--red, #722F37); }
+.pm-ad-swipe-btn--delete  { background: var(--brand-grad-sm); }
 .pm-ad-swipe-btn:active { filter: brightness(0.92); }
 
 .pm-ad {
@@ -451,7 +451,7 @@
 .pm-ad-bump {
   margin-left: auto;
   border: 0; border-radius: 10px; padding: 8px 14px;
-  background: var(--red, #722F37); color: #fff;
+  background: var(--brand-grad-sm); color: #fff;
   font-size: 13px; font-weight: 700; cursor: pointer;
   box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30);
   display: inline-flex; align-items: center; gap: 6px;
@@ -486,7 +486,7 @@
   /* 🔴 29.07 — ЗАЛИТА БОРДОВА, ідентично .board-trigger--fixed (там же й обґрунтування
      з числами). Ця кнопка живе на екрані «Мої оголошення / чат», і якби вона лишилась
      склом, вкладки знову виглядали б по-різному — тобто рівно те, що Вова просив звести. */
-  background: var(--red, #722F37);
+  background: var(--brand-grad-sm);
   border: 1.5px solid var(--red, #722F37);
   color: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
@@ -549,7 +549,7 @@
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .pm-ctx-tab--active {
-  background: var(--red, #722F37);
+  background: var(--brand-grad-sm);
   border-color: var(--red, #722F37);
   color: #fff;
 }
@@ -809,7 +809,7 @@
 .gr-actions { display: flex; gap: 8px; padding: 10px 16px 4px; }
 .gr-act {
   flex: 1; padding: 11px 0; border: 0; border-radius: 12px;
-  background: var(--red, #722F37); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+  background: var(--brand-grad-sm); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
 .gr-act-ic { display: inline-flex; align-items: center; }
@@ -843,7 +843,7 @@
 .gr-emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .gr-emoji { width: 44px; height: 44px; border: 0; border-radius: 12px; background: rgba(0,0,0,0.05); font-size: 22px; cursor: pointer; }
 .gr-emoji.active { background: var(--red, #722F37); }
-.gr-submit { margin-top: 14px; padding: 13px 0; border: 0; border-radius: 14px; background: var(--red, #722F37); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.gr-submit { margin-top: 14px; padding: 13px 0; border: 0; border-radius: 14px; background: var(--brand-grad-sm); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 .gr-submit:disabled { opacity: 0.6; }
 
 /* Кнопка керування у шапці групового чату */
@@ -880,7 +880,7 @@
   opacity: 0;
   pointer-events: none;
   z-index: 2500;
-  background: var(--red, #722F37);
+  background: var(--brand-grad);
   color: #fff;
   border-radius: 14px;
   padding: 12px 16px;

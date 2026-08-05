@@ -4958,7 +4958,7 @@ textarea.cm-board-input.bm-invalid {
   -webkit-tap-highlight-color: transparent;
 }
 #board-content .bd-type--on {
-  background: var(--news-accent, #722F37);
+  background: var(--brand-grad-sm);
   border-color: var(--news-accent, #722F37);
   color: #fff;
 }
@@ -5542,7 +5542,7 @@ textarea.cm-board-input.bm-invalid {
 }
 .cm-ad-write {
   border: 0;
-  background: var(--news-accent, #722F37);
+  background: var(--brand-grad-sm);
   color: #fff;
 }
 .cm-ad-write--solo { flex: 1 1 100%; }
@@ -5650,7 +5650,7 @@ textarea.cm-board-input.bm-invalid {
   margin-top: 16px;
   padding: 15px;
   border: 0; border-radius: 14px;
-  background: var(--news-accent, #722F37);
+  background: var(--brand-grad-sm);
   color: #fff;
   font-size: 16px; font-weight: 700;
   cursor: pointer;
