@@ -1,17 +1,20 @@
 {
   "updated": "2026-08-05",
   "_коментар": "ТИМЧАСОВО: один ТЕСТОВИЙ запис, щоб Вова побачив блок на живому сайті. Прибрати = зробити items порожнім масивом, тоді секція зникає повністю.",
+  "_поля": "title · org · url (https, обовʼязкові) · goal · photo · note · kind (military|humanitarian|community) · until (РРРР-ММ-ДД) · place · verified · active",
   "items": [
     {
       "id": "test-1",
       "title": "ТЕСТ — перевірка блока зборів",
-      "org": "CSTL NEWS (технічна перевірка)",
+      "org": "CSTL NEWS",
       "url": "https://send.monobank.ua/",
       "goal": 100000,
-      "photo": null,
-      "note": "Це не справжній збір. Запис поставлено, щоб перевірити, як блок виглядає на телефоні. Гроші сюди надсилати не треба.",
+      "photo": "./photos/olyka.day-2.jpg",
+      "note": "Технічна перевірка вигляду блока. Це не справжній збір — гроші сюди надсилати не треба.",
       "kind": "community",
       "until": null,
+      "place": "Олика",
+      "verified": true,
       "active": true
     }
   ]

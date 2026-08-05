@@ -2551,6 +2551,15 @@
     tag: `<svg ${A2}><path d="M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3"/></svg>`,
     // Посилання (Tabler link)
     link: `<svg ${A2}><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>`,
+    // Щит (Tabler shield) — категорія «Для захисників» на картці збору.
+    // ⚠️ Не `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, і на зборі коштів
+    // читався б як попередження про шахрайство (ця помилка вже ловилась 05.08).
+    shield: `<svg ${A2}><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></svg>`,
+    // Щит із галочкою (Tabler shield-check) — «збір перевірено».
+    // 🔴 Малюється ЛИШЕ при `verified: true` у даних. Позначка «перевірено», яку
+    // ставлять усім підряд, гірша за її відсутність: вона знецінює саме те слово,
+    // заради якого існує.
+    shieldCheck: `<svg ${A2}><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/><path d="M15 19l2 2l4 -4"/></svg>`,
     // Скріпка / вкладення (Tabler paperclip)
     paperclip: `<svg ${A2}><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5"/></svg>`,
     // Знак питання / допомога (Tabler help)
@@ -10680,10 +10689,11 @@
   // src/tabs/home-fund.js
   var KIND = {
     // ⚠️ НЕ `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, а не військо —
-    // на картці збору він читався б як попередження про шахрайство. Зірка —
-    // найближче до військової символіки з того, що є в наборі; малювати нову
-    // іконку заради одного рядка не варто.
-    military: { ic: ICONS.star, label: "\u0412\u0456\u0439\u0441\u044C\u043A\u043E\u0432\u0438\u043C" },
+    // на картці збору він читався б як попередження про шахрайство.
+    // 05.08 (вечір): зірку замінено на ЩИТ, а підпис «Військовим» — на «Для
+    // захисників» за макетом Вови. Щит — універсальний знак захисту, зірка ж у
+    // наборі Tabler означає «обране» і на зборі читалась як оцінка.
+    military: { ic: ICONS.shield, label: "\u0414\u043B\u044F \u0437\u0430\u0445\u0438\u0441\u043D\u0438\u043A\u0456\u0432" },
     humanitarian: { ic: ICONS.users, label: "\u0413\u0443\u043C\u0430\u043D\u0456\u0442\u0430\u0440\u043D\u0438\u0439" },
     community: { ic: ICONS.community, label: "\u0414\u043B\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438" }
   };
@@ -10731,40 +10741,74 @@
       return [];
     }
   }
+  function factsHtml(it) {
+    const facts = [];
+    if (it.verified)
+      facts.push({ ic: ICONS.shieldCheck, k: "\u0417\u0431\u0456\u0440", v: "\u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0435\u043D\u043E" });
+    if (!it.closed && it.left != null) {
+      facts.push({
+        ic: ICONS.clock,
+        k: "\u0414\u043E \u043A\u0456\u043D\u0446\u044F",
+        v: it.left === 0 ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${it.left} ${plural3(it.left, "\u0434\u0435\u043D\u044C", "\u0434\u043D\u0456", "\u0434\u043D\u0456\u0432")}`
+      });
+    }
+    if (it.place)
+      facts.push({ ic: ICONS.pin, k: "\u0417\u0431\u0456\u0440 \u0456\u0437", v: it.place });
+    if (!facts.length)
+      return "";
+    return `
+        <div class="hm-fund-facts">
+          ${facts.slice(0, 2).map((f) => `
+          <span class="hm-fund-fact">
+            <span class="hm-fund-fic" aria-hidden="true">${f.ic}</span>
+            <span class="hm-fund-ftx"><b>${escapeHtml(f.k)}</b>${escapeHtml(f.v)}</span>
+          </span>`).join("")}
+        </div>`;
+  }
   function fundCardHtml(it) {
     const kind = KIND[it.kind] || KIND.community;
     const goal = money(it.goal);
-    const urgent = !it.closed && it.left != null && it.left <= 7 ? it.left === 0 ? "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : `\u0417\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${it.left} ${plural3(it.left, "\u0434\u0435\u043D\u044C", "\u0434\u043D\u0456", "\u0434\u043D\u0456\u0432")}` : "";
     return `
     <article class="hm-card hm-fund${it.closed ? " hm-fund--closed" : ""}">
       ${it.photo ? `
       <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy"
            onerror="this.remove()">` : ""}
+      <span class="hm-fund-scrim" aria-hidden="true"></span>
       <div class="hm-fund-body">
         <div class="hm-fund-kind">
           <span class="hm-fund-ic" aria-hidden="true">${kind.ic}</span>
           <span>${escapeHtml(kind.label)}</span>
         </div>
-        <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
-        ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ""}
-        <div class="hm-fund-org">
-          <span class="hm-fund-org-k">\u0417\u0431\u0438\u0440\u0430\u0454</span>
-          <span class="hm-fund-org-v">${escapeHtml(it.org)}</span>
+        <div class="hm-fund-main">
+          <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
+          ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ""}
+
+          <div class="hm-fund-panel">
+            <div class="hm-fund-cell">
+              <span class="hm-fund-k">\u0417\u0431\u0438\u0440\u0430\u0454</span>
+              <span class="hm-fund-v">${escapeHtml(it.org)}</span>
+            </div>
+            ${goal ? `
+            <div class="hm-fund-cell hm-fund-cell--goal">
+              <span class="hm-fund-k">\u0426\u0456\u043B\u044C</span>
+              <span class="hm-fund-v hm-fund-v--big">${goal}</span>
+            </div>` : ""}
+          </div>
+          ${factsHtml(it)}
+          ${it.closed ? `
+          <p class="hm-fund-done">\u0417\u0431\u0456\u0440 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E</p>
+          <p class="hm-fund-hint">\u0414\u044F\u043A\u0443\u0454\u043C\u043E \u0432\u0441\u0456\u043C, \u0445\u0442\u043E \u0434\u043E\u043B\u0443\u0447\u0438\u0432\u0441\u044F</p>` : `
+          <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
+             aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0431\u0430\u043D\u043A\u0443 Monobank \u2014 ${escapeHtml(it.title)}">
+            <span class="hm-fund-go-ic" aria-hidden="true">${ICONS.link}</span>
+            <span class="hm-fund-go-tx">\u0411\u0430\u043D\u043A\u0430 Monobank</span>
+            <span class="hm-fund-go-ch" aria-hidden="true">${ICONS.chevronRight}</span>
+          </a>
+          <p class="hm-fund-hint">
+            <span class="hm-fund-hic" aria-hidden="true">${ICONS.lock}</span>
+            \u041F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u043E\u0444\u0456\u0446\u0456\u0439\u043D\u0443 \u0431\u0430\u043D\u043A\u0443
+          </p>`}
         </div>
-        ${goal ? `
-        <div class="hm-fund-goal">
-          <span class="hm-fund-goal-k">\u0426\u0456\u043B\u044C</span>
-          <span class="hm-fund-goal-v">${goal}</span>
-        </div>` : ""}
-        ${it.closed ? `
-        <p class="hm-fund-done">\u0417\u0431\u0456\u0440 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E</p>
-        <p class="hm-fund-hint">\u0414\u044F\u043A\u0443\u0454\u043C\u043E \u0432\u0441\u0456\u043C, \u0445\u0442\u043E \u0434\u043E\u043B\u0443\u0447\u0438\u0432\u0441\u044F</p>` : `
-        ${urgent ? `<p class="hm-fund-left">${escapeHtml(urgent)}</p>` : ""}
-        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
-           aria-label="\u0417\u0430\u0434\u043E\u043D\u0430\u0442\u0438\u0442\u0438 \u2014 ${escapeHtml(it.title)}">
-          \u0417\u0430\u0434\u043E\u043D\u0430\u0442\u0438\u0442\u0438
-        </a>
-        <p class="hm-fund-hint">\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0431\u0430\u043D\u043A\u0430 Monobank</p>`}
       </div>
     </article>`;
   }
@@ -10781,11 +10825,33 @@
     }
     sec.hidden = false;
     const list = items.slice(0, 6);
-    body.innerHTML = list.length === 1 ? fundCardHtml(list[0]) : `<div class="hm-ftrack">${list.map(fundCardHtml).join("")}</div>`;
+    body.innerHTML = list.length === 1 ? fundCardHtml(list[0]) : `<div class="hm-ftrack">${list.map(fundCardHtml).join("")}</div><div class="hm-fdots" role="tablist" aria-label="\u0417\u0431\u043E\u0440\u0438">${list.map((_, i) => `<i${i ? "" : ' class="on"'}></i>`).join("")}</div>`;
     body.classList.add("hm-appear");
     const kicker = sec.querySelector(".hm-kicker");
     if (kicker)
       kicker.textContent = list.length > 1 ? "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u0437\u0431\u043E\u0440\u0438" : "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0431\u0456\u0440";
+    if (list.length > 1)
+      wireFundDots(body);
+  }
+  function wireFundDots(body) {
+    const track = body.querySelector(".hm-ftrack");
+    const dots = [...body.querySelectorAll(".hm-fdots i")];
+    if (!track || dots.length < 2)
+      return;
+    let raf = 0;
+    const sync = () => {
+      raf = 0;
+      const card = track.querySelector(".hm-fund");
+      if (!card)
+        return;
+      const step = card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap || 0);
+      const i = Math.min(dots.length - 1, Math.max(0, Math.round(track.scrollLeft / (step || 1))));
+      dots.forEach((d, n) => d.classList.toggle("on", n === i));
+    };
+    track.addEventListener("scroll", () => {
+      if (!raf)
+        raf = requestAnimationFrame(sync);
+    }, { passive: true });
   }
 
   // src/tabs/home-feed.js

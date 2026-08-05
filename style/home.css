@@ -555,100 +555,230 @@
 }
 
 /* ══ ЗБІР ═════════════════════════════════════════════════════════════════════
-   Помітність дає МІСЦЕ (одразу під смугою «Зараз»), а не колір: кричущий банер
-   у стрічці громади читається як реклама — рівно те, чого просив уникнути Вова.
-   Поверхня звичайна біла, бордові лише смужка прогресу і сума. */
-/* 🔴 05.08 — ВАРІАНТ «Б»: НА КАРТЦІ НЕМАЄ СУМИ І ВІДСОТКА.
-   Банки належать різним людям, живих даних Monobank узяти нізвідки (розбір — у
-   шапці `home-fund.js`), тож будь-яке число оновлювалось би руками і старіло б
-   мовчки. На картці лишилось тільки те, що НЕ старіє. Смугу прогресу і
-   `.hm-fund-nums` видалено разом із правилами — мертвий CSS не тримаємо.
+   🔴 05.08 (вечір) — ВАРІАНТ «2» З МАКЕТА ВОВИ: ІНФОРМАЦІЯ НАКЛАДЕНА НА ФОТО.
+   Було: фото смужкою 16:9 згори, під ним біла картка з текстом (варіант «1»).
+   Стало: знімок — підкладка ВСІЄЇ картки, вміст лежить поверх нього на градієнті
+   затемнення, панелі зі скла, кнопка на всю ширину.
+
+   🔑 Чому це не суперечить старому правилу «помітність дає МІСЦЕ, а не колір»:
+   гучним тут став ЗНІМОК того, на що збирають, а не декоративна заливка. Людина
+   бачить предмет допомоги, а не банер. Бордовим лишились рівно дві речі —
+   пігулка категорії і КНОПКА, тобто позначка й дія.
+
+   🛑 ЧОГО НА КАРТЦІ НЕМАЄ І ЧОМУ (на макеті це було, свідомо не малюємо):
+   • «Зібрано 82 450 ₴», відсоток і смуга прогресу — рішення Вови «Б» від 05.08:
+     банки належать РІЗНИМ людям, живих даних Monobank узяти нізвідки, тож будь-
+     яке число оновлювалось би руками і старіло б мовчки;
+   • «124 донати» — Monobank кількості донатерів не віддає ЖОДНИМ способом;
+   • «Оновлено 5 хв тому» — під рукою редагованим файлом це пряма брехня;
+   • «1/4» — лічильник фото без галереї фото.
+   Розгорнутий розбір — у шапці `src/tabs/home-fund.js`.
+
    ⚠️ Клікабельна лише КНОПКА, не вся картка: випадковий тап, що веде на платіжну
    сторінку, — поганий досвід саме там, де йдеться про гроші. */
-.hm-fund { display: block; padding: 0; overflow: hidden; }
-.hm-fund-ph {
-  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
-  object-fit: cover; background: #E7E4DF;
-}
-.hm-fund-body { padding: var(--hm-s4); }
 
-/* Категорія — тихий капс із векторною іконкою. Саме тихий: гучна кольорова
-   пігулка вгорі картки і є те «схоже на рекламу», чого просили уникнути. */
+/* 🔴 ТЕМНА БАЗА СТОЇТЬ НА САМІЙ КАРТЦІ, А НЕ НА ФОТО.
+   Це не косметика: текст білий, і якби тло давало лише зображення, то збір без
+   `photo` (або зі знімком, що не завантажився) показав би білі літери на білій
+   картці `.hm-card` — тобто порожню картку. Тепер фото це ВЕРХНІЙ шар, який
+   може зникнути без наслідків для читабельності. */
+/* 🔴 СЕЛЕКТОР `.hm-card.hm-fund`, А НЕ `.hm-fund` — І ЦЕ НЕ ПРИДИРКА.
+   `.hm-card` (де `background: var(--board-card)`, тобто БІЛИЙ) оголошений НИЖЧЕ
+   в цьому файлі. Специфічність в обох однакова — один клас, — тож при простому
+   `.hm-fund` виграє той, що пізніше, і темна база мовчки замінювалась на білу.
+   Симптом був би підступний: з фото картка виглядає нормально (темряву дає
+   знімок і затемнення), а збір БЕЗ фото показав би білий текст на білому тлі,
+   тобто порожню картку. Спіймано сторожем `tests/home.mjs`, а не оком. */
+.hm-card.hm-fund {
+  position: relative; display: block; padding: 0; overflow: hidden;
+  min-height: 400px;
+  background: linear-gradient(160deg, #2A1A20 0%, #1B1315 55%, #140F11 100%);
+  border-color: rgba(255, 255, 255, .10);
+}
+.hm-fund-ph {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%; object-fit: cover;
+}
+/* Затемнення. Згори майже прозоре — знімок мусить лишитись знімком; донизу
+   майже непрозоре — там літери. Три опорні точки, а не дві: з простим
+   лінійним переходом середина картки виходила каламутною, а низ недостатньо
+   темним для білого тексту. */
+/* 🔴 ЗУПИНКИ В ПІКСЕЛЯХ ВІД НИЗУ, А НЕ У ВІДСОТКАХ.
+   Перша версія рахувала відсотками — і на довгому описі картка виростала, разом
+   із нею розтягувався градієнт, а низ ставав світлішим рівно там, де стоїть
+   текст. Заміряно на тестовому записі: крізь панель «Збирає» просвічував дах.
+   Відлік від НИЗУ прив'язує темну зону до вмісту, а не до висоти картки. */
+.hm-fund-scrim {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(to top,
+    rgba(18, 13, 14, .96) 0,
+    rgba(18, 13, 14, .93) 210px,
+    rgba(18, 13, 14, .62) 300px,
+    rgba(18, 13, 14, .16) 100%);
+}
+/* Вміст — окремий шар над фото і затемненням. Категорія притиснута до верху,
+   решта — до низу (`margin-top: auto` на `.hm-fund-main`), тобто знімок завжди
+   лишається видимим угорі незалежно від довжини тексту. */
+.hm-fund-body {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; min-height: 400px;
+  padding: var(--hm-s4);
+}
+.hm-fund-main { margin-top: auto; }
+
+/* Категорія — бордова пігулка, як на макеті. Раніше була тихим капсом на білому;
+   на фото тихий капс просто не читався б — і саме пігулка дає ту «позначку»,
+   яка на знімку виглядає навмисною, а не загубленою. */
 .hm-fund-kind {
-  display: flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px 8px 10px; border-radius: var(--hm-r-pill);
+  background: var(--brand-grad-sm);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .28);
   font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .1em; text-transform: uppercase;
-  color: var(--red);
+  color: #fff;
 }
-.hm-fund-ic { display: inline-flex; color: var(--red); }
+.hm-fund-ic { display: inline-flex; color: #fff; }
 .hm-fund-ic svg { width: 15px; height: 15px; }
 
 .hm-fund-ttl {
-  margin: var(--hm-s2) 0 0;
-  font: 800 18px/1.22 system-ui, -apple-system, sans-serif;
-  letter-spacing: -.02em; color: var(--ink);
+  margin: 0;
+  font: 800 22px/1.18 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.02em; color: #fff;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, .45);
 }
 .hm-fund-note {
-  margin: 6px 0 0;
-  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  margin: 7px 0 0;
+  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .80);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
-/* «Збирає» і «Ціль» — два рядки одного вигляду: ключ тихий, значення виразне.
-   🔑 Хто збирає стоїть ПЕРЕД ціллю навмисно: у зборі коштів найважливіше не
-   сума, а чи можна довіряти тому, хто просить. */
-.hm-fund-org,
-.hm-fund-goal {
-  display: flex; align-items: baseline; justify-content: space-between; gap: var(--hm-s3);
-  margin-top: var(--hm-s3); padding-top: var(--hm-s3);
-  border-top: 1px solid var(--board-line);
+/* Скляна панель «Збирає / Ціль» — на макеті тут стояли «Зібрано / % / Ціль».
+   🔑 Хто збирає лишився ЛІВОРУЧ і першим навмисно: у зборі коштів найважливіше
+   не сума, а чи можна довіряти тому, хто просить. Ціль праворуч — єдине число,
+   яке не старіє, бо його ставлять один раз.
+   ⚠️ `will-change` не ставимо: у Safari разом із `backdrop-filter` дає застиглий
+   blur (та сама пастка, що на шапці Дошки). */
+.hm-fund-panel {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hm-s3);
+  margin-top: var(--hm-s4); padding: 11px 14px;
+  border-radius: var(--hm-r-card);
+  background: rgba(255, 255, 255, .10);
+  border: 1px solid rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
-.hm-fund-org-k,
-.hm-fund-goal-k {
-  flex: 0 0 auto;
-  font: 400 12.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+/* 🔴 `min-width: 0` + `flex: 1 1 auto` на лівій комірці і `0 0 auto` на правій.
+   Без цього довге імʼя збирача («CSTL NEWS (технічна перевірка)») розпихало
+   панель, ціль виїжджала за край і накладалась на текст — заміряно на першому ж
+   тестовому записі. Флекс за замовчуванням не дає елементу стиснутись менше за
+   вміст, тому `min-width: 0` тут обовʼязковий, а не «про всяк випадок». */
+.hm-fund-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.hm-fund-cell--goal { text-align: right; align-items: flex-end; flex: 0 0 auto; }
+.hm-fund-k {
+  font: 400 11.5px/1.2 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .62);
 }
-.hm-fund-org-v {
-  min-width: 0; text-align: right;
-  font: 700 13.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--ink);
+/* Імʼя збирача — максимум 2 рядки. Довше означає, що в даних не назва, а речення;
+   панель від цього перетворювалась на абзац і з'їдала знімок. */
+.hm-fund-v {
+  font: 700 14px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.hm-fund-goal-v {
-  font: 800 16px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink);
-  letter-spacing: -.01em;
+.hm-fund-v--big {
+  font: 800 19px/1.15 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
+  white-space: nowrap;
 }
 
-/* Кнопка — єдина клікабельна річ у картці, тому вона на всю ширину і з площею
-   дотику 48px (вище норми Apple HIG 44px). Тут економити на розмірі нема сенсу:
-   це головна і єдина дія блока. */
+/* Ряд фактів. Комірки рівні за шириною і розділені тонкими лініями — рівно як на
+   макеті. Малюються лише ті факти, що є в даних (див. `factsHtml`), тож ряд може
+   містити один, два або три елементи і не має «дірок». */
+.hm-fund-facts {
+  display: flex; align-items: stretch;
+  margin-top: var(--hm-s2); padding: 9px 4px;
+  border-radius: var(--hm-r-card);
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .11);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.hm-fund-fact {
+  flex: 1 1 0; min-width: 0;
+  display: flex; align-items: center; gap: 7px; padding: 0 9px;
+}
+.hm-fund-fact + .hm-fund-fact { border-left: 1px solid rgba(255, 255, 255, .13); }
+.hm-fund-fic { display: inline-flex; flex: 0 0 auto; color: rgba(255, 255, 255, .72); }
+.hm-fund-fic svg { width: 17px; height: 17px; }
+/* Ключ і значення один під одним: у ряд вони не влізли б на 390px, а перенос
+   всередині комірки дає рівний ритм без обрізки.
+   ⚠️ `overflow: hidden` — не «про всяк випадок»: без нього довге значення (назва
+   села, «останній день») вилазило за межі комірки і НАЛАЗИЛО на сусідню, бо
+   флекс не обрізає вміст сам. */
+.hm-fund-ftx {
+  min-width: 0; overflow: hidden;
+  font: 400 10.5px/1.25 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .66);
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.hm-fund-ftx b {
+  display: block; overflow: hidden; text-overflow: ellipsis;
+  font: 700 11.5px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+}
+
+/* Кнопка — єдина клікабельна річ у картці, тому на всю ширину і 52px заввишки
+   (норма Apple HIG — 44px). Три частини, як на макеті: іконка посилання, назва
+   дії, шеврон. Назва каже, КУДИ веде тап, а не лише «Задонатити»: людина має
+   розуміти, що зараз відкриється чужий сайт, ще до того як натисне. */
+/* 📐 ЗАМІРЯНО, А НЕ ПІДІБРАНО НА ОКО — і міряти довелось ДВІЧІ.
+   Один збір → картка 288px, під напис лишається 221px.
+   🔴 Кілька зборів → картка у стрічці лише 88% ширини, тобто **249px**, а під
+   напис — 249 − 22 (поля) − 33 (дві іконки) − 12 (проміжки) = **182px**.
+   Перша версія міряла тільки одинарну картку, підійшла — і зламалась рівно
+   тоді, коли зборів стало більше одного. Тому кегль підбирається під ВУЖЧИЙ
+   випадок, інакше напис ламається на два рядки посеред бордової плашки.
+
+   Ширина написів при 800-й насиченості, 13.5px:
+     «Посилання на банку Monobank» — 242px → не влазить навіть на широкій
+     «Відкрити банку Monobank»     — 206px → влазить на широкій, НЕ у стрічці
+     «Банка Monobank»              — 131px → влазить скрізь, запас 51px ✅
+
+   Чому лишили бренд, а не дієслово («Задонатити», 92px): на зборі коштів довіру
+   дає ВПІЗНАВАНИЙ отримувач, а не заклик. Дію позначають іконка посилання
+   ліворуч і шеврон праворуч, а `aria-label` каже читачеві екрана повністю:
+   «Відкрити банку Monobank — <назва збору>». */
 .hm-fund-go {
-  display: flex; align-items: center; justify-content: center;
-  margin-top: var(--hm-s4); min-height: 48px; padding: 0 var(--hm-s4);
+  display: flex; align-items: center; gap: 6px;
+  margin-top: var(--hm-s3); min-height: 52px; padding: 0 10px 0 12px;
   border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff; text-decoration: none;
-  font: 800 15px/1 system-ui, -apple-system, sans-serif; letter-spacing: .01em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .30);
+  font: 800 13.5px/1.15 system-ui, -apple-system, sans-serif; letter-spacing: 0;
 }
 .hm-fund-go:active { background: var(--brand-grad-press); }
-/* Куди веде кнопка — сказано словами, а не вгадується. Це частина довіри:
-   людина має знати, що зараз відкриється чужий сайт із платежем. */
+.hm-fund-go-ic, .hm-fund-go-ch { display: inline-flex; flex: 0 0 auto; }
+.hm-fund-go-ic svg { width: 17px; height: 17px; }
+.hm-fund-go-ch svg { width: 16px; height: 16px; opacity: .8; }
+/* Текст займає весь вільний простір і центрується в ньому — тоді назва стоїть
+   по центру КНОПКИ, а іконки притиснуті до країв (саме так на макеті). */
+.hm-fund-go-tx { flex: 1 1 auto; text-align: center; }
+
 /* Завершений збір — тихіший, БЕЗ кнопки. Лишається 7 днів, щоб людина, яка
    донатила, побачила, чим усе скінчилось, і лише потім зникає.
    ⚠️ Приглушуємо ПРОЗОРІСТЮ всієї картки, а не сірим текстом: сірий текст
    читався б як «зламалось», а приглушена картка — як «це вже позаду». */
 .hm-fund--closed { opacity: .72; }
 .hm-fund-done {
-  margin: var(--hm-s4) 0 0; text-align: center;
-  font: 800 14px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink);
-}
-/* Терміновість — єдине місце картки, де дозволено акцентний колір поруч із
-   кнопкою: він працює, лише поки рідкісний (показується від 7 днів і менше). */
-.hm-fund-left {
   margin: var(--hm-s3) 0 0; text-align: center;
-  font: 700 12.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--red);
+  font: 800 14px/1.2 system-ui, -apple-system, sans-serif; color: #fff;
 }
 .hm-fund-hint {
-  margin: var(--hm-s2) 0 0; text-align: center;
-  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  margin: var(--hm-s2) 0 0;
+  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .55);
 }
+.hm-fund-hic { display: inline-flex; }
+.hm-fund-hic svg { width: 13px; height: 13px; }
 
 /* Кілька зборів — горизонтальна стрічка з прилипанням, та сама механіка, що в
    новин. Картка 88% ширини: край наступної видно, і це єдиний натяк, що можна
@@ -664,6 +794,19 @@
 }
 .hm-ftrack::-webkit-scrollbar { display: none; }
 .hm-ftrack > .hm-fund { flex: 0 0 88%; scroll-snap-align: start; }
+
+/* Крапки — скільки зборів і котрий зараз. Форма та сама, що в капсул
+   (`.hm-cap2-dots`): активна ВИТЯГУЄТЬСЯ в рисочку, а не просто світлішає, —
+   форму видно навіть краєм ока. Копію правил не роблю навмисно: кольори тут
+   інші (крапки лежать на світлому тлі сторінки, а не на темній капсулі). */
+.hm-fdots { display: flex; justify-content: center; gap: 5px; margin-top: var(--hm-s3); }
+.hm-fdots i {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255, 255, 255, .34);
+  transition: width 200ms var(--hm-ease), background 200ms var(--hm-ease), border-radius 200ms var(--hm-ease);
+}
+.hm-fdots i.on { width: 14px; border-radius: 3px; background: rgba(255, 255, 255, .9); }
+@media (prefers-reduced-motion: reduce) { .hm-fdots i { transition: none; } }
 
 /* ══ БЛОК «ЖИТТЯ ГРОМАДИ» — ДАЙДЖЕСТ СТРІЧКИ ══════════════════════════════════
    Два яруси: ряд кружечків каналів + останній допис карткою.
