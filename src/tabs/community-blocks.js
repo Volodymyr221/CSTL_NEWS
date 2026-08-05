@@ -910,15 +910,18 @@ export async function renderBoardBlock() {
   if (!el) return;
 
   try {
-    // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло.
-    let posts = [], usedSupabase = false;
+    // 1. Дані — ТІЛЬКИ Supabase. 🔴 05.08: JSON-фолбек прибрано (рішення Вови).
+    //
+    // Тут стояло те саме, що в `board.js`: якщо база не відповіла, віджет тягнув
+    // `data/community-board.json` і показував сім ВИГАДАНИХ оголошень із
+    // ВИГАДАНИМИ ТЕЛЕФОНАМИ — без жодної позначки, що це заглушка. Тобто те
+    // саме порушення стояло у ДВОХ місцях, і прибирати його треба було теж у
+    // двох, інакше Громада й далі показувала б вигадані номери, коли Дошка вже
+    // чесно каже «недоступно». Розгорнутий розбір — у `board.js`, гілка 2.
+    let posts = [], ok = false;
     if (isSupabaseReady()) {
       const p = await fetchPublishedPosts();
-      if (p !== null) { posts = p; usedSupabase = true; }
-    }
-    if (!usedSupabase) {
-      const boardRes = await fetch('./data/community-board.json');
-      posts = ((await boardRes.json()).posts) || [];
+      if (p !== null) { posts = p; ok = true; }
     }
 
     // 2. Лише оголошення (type board), уся громада без фільтра населеного пункту.
@@ -929,9 +932,14 @@ export async function renderBoardBlock() {
     const shown = bwShuffle(ads).slice(0, BOARD_ROWS);
 
     el.classList.remove('cm-loading');
+    // ⚠️ «Порожньо» і «не змогли спитати» — РІЗНІ речі, і казати їх треба
+    // по-різному. До 05.08 обидва випадки давали «На дошці поки порожньо»:
+    // при збої мережі людина читала, що оголошень немає, хоча вони є.
     el.innerHTML = ads.length
       ? shown.map(bwRowHtml).join('')
-      : '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення</div>';
+      : ok
+        ? '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення</div>'
+        : '<div class="hm-empty">Не вдалось завантажити оголошення</div>';
 
     // 3. Тап по рядку → зум САМЕ цього оголошення (та сама модалка, що на Дошці).
     if (!el.dataset.wired) {

@@ -4622,6 +4622,32 @@ textarea.cm-board-input.bm-invalid {
    ⚠️ Клас `cm-board-note` на картці ЛИШИВСЯ навмисно — за ним чіпляється
    розгортання в зум-модалку. Прибереш — тап по оголошенню перестане працювати.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* ── ДОШКА НЕДОСТУПНА (05.08) ─────────────────────────────────────────────────
+   Стан, якого до 05.08 людина не бачила НІКОЛИ: замість нього підставлялись сім
+   вигаданих оголошень із вигаданими телефонами. Тепер збій називається збоєм.
+   🔑 Кнопка «Спробувати ще» тут не прикраса: єдина причина цього екрана —
+   тимчасова недосяжність бази, тобто повтор справді має шанс спрацювати. */
+#board-content .bd-offline {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 56px 28px; text-align: center;
+}
+#board-content .bd-offline-ttl {
+  margin: 0; font: 800 17px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink);
+}
+#board-content .bd-offline-tx {
+  margin: 0; max-width: 30ch;
+  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--gray);
+}
+/* 44px — норма Apple HIG. Кнопка збою натискається рідко, але саме тому вона
+   не має бути дрібною: у неї цілять поспіхом і роздратовано. */
+#board-content .bd-offline-btn {
+  margin-top: 4px; min-height: 44px; padding: 0 22px;
+  border: 0; border-radius: 12px;
+  background: var(--brand-grad-sm); color: #fff;
+  font: 800 14px/1 system-ui, -apple-system, sans-serif;
+}
+#board-content .bd-offline-btn:active { background: var(--brand-grad-press); }
+
 #board-content .bd-ads {
   display: flex;
   flex-direction: column;

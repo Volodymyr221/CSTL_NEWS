@@ -29,6 +29,7 @@
 
 import { chromium } from 'playwright';
 import { launch, serve, reporter } from './_lib.mjs';
+import { mockSupabase } from './_board-fixture.mjs';
 
 const { ok, done } = reporter();
 
@@ -66,9 +67,11 @@ const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile
 const p = await ctx.newPage();
 const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/json',
   headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
-await p.route('**://*.supabase.co/**', r => json(r, []));
+// 🔴 05.08: стенд більше НЕ покладається на демо-фолбек у `data/` — той
+// показував вигадані телефони живим людям і його прибрано. Оголошення тепер
+// підставляє явна фікстура (розбір — у `tests/_board-fixture.mjs`).
+await mockSupabase(p, { posts: POSTS, announcements: [] });
 await p.route('**://api.open-meteo.com/**', r => r.abort());
-await p.route('**/data/community-board.json*', r => json(r, { posts: POSTS }));
 await p.goto(url, { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(2500);
 await p.evaluate(() => window.switchTab && window.switchTab('board'));
