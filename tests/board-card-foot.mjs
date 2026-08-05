@@ -16,9 +16,9 @@
 // ⚠️ Беремо СПРАВЖНІЙ `style/community.css`, а не копію значень: інакше правка в проєкті
 // лишила б стенд зеленим і він збрехав би.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, zoneCss } from './_lib.mjs';
 
-const CSS = projectFile('style/community.css');
+const CSS = zoneCss();
 const { ok, done } = reporter();
 
 // Пари «населений пункт / дата» різної довжини — саме на різниці довжин і вилазив баг.

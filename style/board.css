@@ -1,0 +1,3399 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   style/board.css — СТИЛІ ВКЛАДКИ «ДОШКА».
+   Виділено 05.08.2026 з `style/community.css` (аудит Дошки, рішення Вови).
+
+   🔴 ЧОМУ ЦЕ БУЛА ПРОБЛЕМА, А НЕ ПРИБИРАННЯ.
+   `community.css` мав 5113 рядків, і **68% селекторів у ньому належали Дошці**,
+   а не Громаді. Тобто найбільший файл стилів проєкту називався не тим, чим був.
+   Це вже коштувало помилки одного разу: до 30.07 роль «підменю FAB Дошки»
+   хибно приписувалась `core/messages-ui.js`, і сесія, що йшла за документацією,
+   відкривала не той файл.
+
+   📐 ЯК РОЗДІЛЕНО БЕЗПЕЧНО (порядок правил у CSS вирішує):
+   • відносний порядок правил Дошки збережено байт-у-байт;
+   • `board.css` підключено ОДРАЗУ ПІСЛЯ `community.css`, тож усе, що раніше
+     стояло нижче правил Дошки, нижче й лишилось;
+   • перед зміною заміряно: пар «правило Громади перебиває правило Дошки,
+     стоячи нижче» — **0**;
+   • після зміни знято зліпок ОБЧИСЛЕНИХ стилів 224 елементів на обох вкладках
+     і звірено з «до» (`tests/tools/css-snapshot.mjs`) — розбіжностей 0.
+
+   ⚠️ `@media` та інші at-rules ЛИШИЛИСЬ у `community.css`: усередині них бувають
+   правила обох зон, і механічно різати їх означало б порвати блок.
+   ⚠️ Спільні класи нікуди не поділись: `cm-board-note` носять і картка Дошки, і
+   віджет Громади, і прев'ю подачі. Правки Дошки лишаються scoped під
+   `#board-content` — рівно як було.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cmbw-body .cm-board-cat { margin-bottom: 5px; } / Оголошення «Олицька громада»).
+   Сидить між fixed-шапкою і корк-бордом; корк-борд дає власний верхній відступ. */
+.bd-group-title {
+  position: relative;   /* інакше ховається під .board-bg (fixed, z-index:0) — як картки */
+  z-index: 1;
+  display: flex;             /* назва по центру + тонкі лінії обабіч (Вова) */
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 16px 2px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  /* 🔴 28.07 — ПЕРЕВЕДЕНО НА СВІТЛИЙ ФОН. Було `rgba(245,232,210,0.88)` + темний ореол:
+     кремовий текст під темний корок (Д-21). Корок зняли 28.07 (фон став `--board-bg`),
+     а написи лишились світлими — заміряний контраст був **1.04:1** при нормі 4.5:1,
+     тобто текст практично зливався з фоном. Тепер `--ink-soft` = **5.83:1**.
+     Ореол прибрано: темна тінь під ТЕМНИМ текстом на світлому фоні лише каламутить літери.
+     ⚠️ Це роль «розділювач секцій» — навмисно легша за основний текст. Якщо колись
+     робитимеш темний фон назад, міняй разом усі п'ять написів Дошки (див. .bd-group-empty). */
+  color: var(--ink-soft);
+}
+/* Тонкі лінії ліворуч/праворуч від назви — йдуть від країв назви й затухають до країв. */
+.bd-group-title::before,
+.bd-group-title::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+}
+/* Лінії теж були кремові (світле на світлому = невидимі). Тепер темні й напівпрозорі:
+   розділювач має ПІДКАЗУВАТИ межу секції, а не сперечатися з назвою за увагу. */
+.bd-group-title::before { background: linear-gradient(to left,  rgba(95, 84, 72, 0.30), rgba(95, 84, 72, 0)); }
+.bd-group-title::after  { background: linear-gradient(to right, rgba(95, 84, 72, 0.30), rgba(95, 84, 72, 0)); }
+
+/* Папірець-оголошення */
+.cm-board-note {
+  --tilt: 0deg;
+  position: relative;
+  width: 100%;
+  min-height: 100px;
+  padding: 16px 14px 14px;
+  background: #FBFBF9;   /* Д-9: єдиний нейтральний фон усіх карток (майже білий) */
+  border-radius: 20px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.10),
+    0 5px 14px rgba(0,0,0,0.15),
+    0 12px 30px rgba(0,0,0,0.11);
+  transform: rotate(var(--tilt)) translateZ(0);
+  transition: transform 0.2s, opacity 0.18s ease;
+  /* GPU promotion — запобігає «блиманню» сусідів коли модалка відкривається.
+     Кожен стікер має власний композит-шар, не перерендериться разом з іншими. */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #2B2B2B;
+  display: flex;
+  flex-direction: column;
+}
+.cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
+
+/* Д-9: тонові класи карток прибрано — фон тепер єдиний (базове правило вище).
+   Колір категорії переїхав на тег .cm-board-cat--{color} (нижче). */
+
+/* Офіційний папірець (адміністрація) — на повну ширину, бронзова рамка */
+.cm-board-note--official {
+  width: 100%;
+  background: linear-gradient(135deg, #FFFDE7 0%, #FFF9C4 100%);
+  border: 1.5px solid #B45309;
+  padding: 16px 14px 14px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.08),
+    0 4px 14px rgba(0,0,0,0.12),
+    0 10px 28px rgba(0,0,0,0.08);
+}
+.cm-board-cat--official {
+  color: #B45309;
+  font-size: 11.5px;
+}
+.cm-board-official-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 4px 0 6px;
+  line-height: 1.3;
+}
+
+/* Золотиста шпилька для офіційних */
+.cm-board-pin--gold {
+  background: radial-gradient(circle at 32% 28%, #FFE082 0%, #FFA000 50%, #B45309 100%);
+  box-shadow:
+    0 3px 7px rgba(0,0,0,0.40),
+    0 1px 2px rgba(0,0,0,0.20),
+    inset 2px 2px 2px rgba(255,255,255,0.45),
+    inset -1px -1px 2px rgba(0,0,0,0.15);
+}
+
+/* Червона шпилька зверху по центру — реалістична матова */
+.cm-board-pin {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 32% 28%, #C96070 0%, #8B2A3D 45%, #5A1A27 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 3px 7px rgba(0,0,0,0.45),
+    0 1px 2px rgba(0,0,0,0.25),
+    inset 2px 2px 2px rgba(255,255,255,0.40),
+    inset -1px -1px 2px rgba(0,0,0,0.20);
+  z-index: 2;
+}
+
+.cm-board-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(114, 47, 55, 0.09);
+  color: #7A3040;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 99px;
+  margin-bottom: 8px;
+  align-self: flex-start;
+}
+
+/* Д-9: категорію позначає КОЛІР ТЕГА (переюз p.color), а не фон картки.
+   Кольори СЕМАНТИЧНІ (колір = зміст): купити=зелений, продати=червоний,
+   шукаю=синій, послуга=фіолетовий, знайдено/загубилось=бурштин (спільний).
+   Приглушені пігулки — у тон преміальності дошки. */
+.cm-board-cat--green  { background: rgba(46,125,80,0.14);  color: #2E7D50; }  /* куплю */
+.cm-board-cat--red    { background: rgba(192,57,43,0.13);  color: #C0392B; }  /* продам */
+.cm-board-cat--blue   { background: rgba(40,90,150,0.12);  color: #2E5C8A; }  /* послуга */
+.cm-board-cat--amber  { background: rgba(176,124,20,0.16); color: #8A6410; }
+.cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
+/* Д-23: плейсхолдер тегу в прев'ю поки категорію не обрано (приглушений, курсивом) */
+.cm-board-cat--placeholder { background: rgba(90,90,90,0.08); color: #9a9a9a; font-style: italic; }
+/* Колір іконки БЕЗ фону (чіп форми / меню фільтра) — дзеркалить текст .cm-board-cat--*. */
+.cat-c-green { color: #2E7D50; }
+
+/* Локація оголошення (Д-10) — рядок під заголовком у картці/модалці/прев'ю */
+.cm-board-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft, #6b6b6b);
+  margin-bottom: 6px;
+  align-self: flex-start;
+  text-transform: uppercase;   /* Д-20: назва НП великими буквами (як у фільтрі) */
+  letter-spacing: 0.2px;
+}
+/* Д-20: пін НП — векторний (той самий силует що біля фільтра), акцентний колір */
+.cm-board-loc svg {
+  width: 12px;
+  height: 12px;
+  color: var(--red, #722F37);   /* SVG stroke=currentColor → підхоплює цей колір */
+  flex-shrink: 0;
+}
+
+/* 🆕 28.07 (потік 2): ЦІНА — перше, що людина шукає очима в оголошенні, тому стоїть
+   НАД заголовком і важча за нього (17px/800 проти 15px/700), як у OLX.
+   Малюється лише коли ціна є (`renderPrice` у board.js): для «віддам»/«шукаю»/
+   «загубилось» рядка просто немає — порожній слот у сітці не лишаємо.
+   `font-variant-numeric: tabular-nums` — цифри однакової ширини, щоб ціни у двох
+   колонках корка не «танцювали» одна відносно одної. */
+.cm-board-price {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+  color: #1C1C1E;
+  margin-bottom: 3px;
+  align-self: flex-start;
+}
+.cm-board-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 4px;
+  color: #1C1C1E;
+  word-wrap: break-word;
+}
+.cm-board-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin-bottom: 10px;
+  flex: 1;
+  word-wrap: break-word;
+  color: #2B2B2B;
+}
+
+.cm-board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: rgba(43, 43, 43, 0.50);
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 6px;
+}
+.cm-board-author { font-weight: 600; }
+.cm-board-time { font-size: 10px; }
+/* Мітка «піднято» біля дати: вектор-стрілка вгору + акцентний колір (видно що
+   оголошення підняли — узгоджено з верхньою позицією в сортуванні). */
+/* Підняте оголошення: час у тому ж стилі що звичайна дата (успадковує колір/розмір
+   від .cm-board-time — сірий, uppercase) + стрілка вгору як позначка «підняте». */
+.cm-board-bumped {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.cm-board-bumped svg { flex-shrink: 0; width: 11px; height: 11px; }
+
+.cm-board-contact {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8B3A4A;
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+/* Форма "Подати оголошення" — стилізована під білий аркуш на дошці */
+/* Кнопка-тригер «Подати оголошення» (стара inline-форма видалена) */
+.cm-board-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 28px);
+  margin: 14px;
+  padding: 14px 18px;
+  background: var(--brand-grad-sm);
+  color: #fff;
+  border: 0;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.15s;
+}
+.cm-board-trigger:active { transform: scale(0.98); background: var(--brand-grad-press); }
+.cm-board-trigger-icon { font-size: 18px; line-height: 1; }
+.cm-board-trigger-text { flex: 1; text-align: left; }
+/* Липка шапка = заголовок + підзаголовок «Заповніть поля нижче» разом (фідбек Вови —
+   підзаголовок теж у шапці). Липне під баром рисочки; форма скролиться під нею. */
+.app-modal--board-compose .cm-board-modal-head {
+  position: sticky;
+  top: 22px;               /* липне одразу під баром рисочки (2px перекриття, без гапу) */
+  z-index: 5;
+  margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
+  padding: 0 46px 0 18px;   /* правий 46px — місце під ✕; нижній 0 (границю піднято максимально — фідбек Вови) */
+  background: var(--board-bg);   /* 29.07 — та сама поверхня, що й аркуш (див. коментар у .app-modal-handle вище) */
+  border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
+  transition: border-color 0.2s ease;
+}
+/* Д-17: лінія-роздільник з'являється плавно лише коли контент скролиться під шапку
+   (при повністю відкритій нескроленій модалці лінія зайва — фідбек Вови). Клас ставить JS. */
+.app-modal--board-compose .app-modal-sheet.is-scrolled .cm-board-modal-head {
+  border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+.cm-board-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 0;            /* підзаголовок ближче до заголовка (фідбек Вови) */
+  line-height: 1.15;
+  text-transform: uppercase;   /* «НОВЕ ОГОЛОШЕННЯ» великими (розмір не змінено) */
+  display: flex;
+  align-items: center;
+  gap: 8px;                     /* відступ вектор-олівець → текст */
+}
+.cm-board-title-ic {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--red);   /* олівець бордовий (SVG stroke=currentColor) */
+}
+.cm-board-title-ic svg { width: 22px; height: 22px; }
+.cm-board-modal-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 0;   /* нижній відступ дає padding .cm-board-modal-head (підзаголовок у шапці) */
+  margin-left: 30px;  /* вирівняти під ТЕКСТ заголовка (олівець 22px + gap 8px), не під олівець */
+}
+.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }   /* тінь — щоб поле не зливалось з фоном */
+.app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
+/* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
+   як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
+   рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
+   і зайвою дірою. */
+/* Секція ціни ховається для категорій без ціни. Явне правило потрібне, бо `.bm-section`
+   може мати `display`, а він перебиває стандартну поведінку атрибута `hidden`. */
+.bm-section[hidden] { display: none; }
+.bm-price-field { display: flex; align-items: center; gap: 8px; }
+.bm-price-cur {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-soft, #6b6b6b);
+  flex-shrink: 0;
+}
+.bm-price-note { margin: 6px 0 0; display: block; }
+/* «Договірна» — поруч із полем числа, бо це ТА САМА відповідь на питання «скільки»,
+   лише інакша. Окремою секцією нижче вона читалась би як не пов'язана з ціною. */
+/* Два варіанти замість числа — власним рядком під полем, а не поруч із ним:
+   на вузькому екрані «₴ ☐ Договірна ☐ Безкоштовно» в один рядок не влазить
+   і переноситься навпіл. */
+.bm-price-opts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+.bm-negot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 🔴 44px — мінімальна тап-ціль за Apple HIG. Сам квадратик галочки 18px, і без цього
+     рядка вся клікабельна зона була б 18px заввишки: заміряно стендом. Той самий аргумент,
+     через який 28.07 кнопки модалки лишили 44px і не зменшували. Тягнеться за рахунок
+     padding, а не розміру квадратика — квадратик 18px виглядає правильно. */
+  min-height: 44px;
+  padding: 2px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bm-negot input { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; }
+/* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
+.cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
+.cm-board-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px;        /* мін 16px — інакше iOS Safari зумить екран при фокусі (і не завжди повертає) */
+  font-family: inherit;
+  resize: vertical;
+  background: #FAFAFA;
+}   /* авто-зростання (autoGrowTextarea) — скрол сам лист */
+.cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
+.cm-board-input--small { padding: 8px 11px; font-size: 16px; }
+
+.cm-board-submit {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  background: var(--brand-grad-sm);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  text-transform: uppercase;    /* «ОПУБЛІКУВАТИ» великими */
+  letter-spacing: 1px;          /* трохи більший відступ між буквами */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-submit:active { background: var(--brand-grad-press); }
+
+.cm-board-hint {
+  font-size: 11px;
+  color: var(--gray);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ===== BOARD MODAL FORM v2 (Tier 4 — 16.05.2026) ===== */
+
+.bm-section { margin-bottom: 14px; }
+.bm-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.bm-label-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+/* Позначка обов'язкового поля (Д-16) */
+.bm-label-req {
+  color: var(--red, #722F37);
+  margin-left: 2px;
+}
+
+/* ── Лічильник символів у мітці (аудит Д-В4, 30.07) ──────────────────────────
+   Межа 80 символів існувала (`maxlength`), а показника не було: при досягненні межі
+   поле просто «перестає писати», і людина читає це як поламану клавіатуру, а не як
+   обмеження. Тримається праворуч у самій мітці — не займає окремого рядка форми. */
+.bm-label-count {
+  float: right;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;   /* цифри однакової ширини — число не «стрибає» */
+}
+.bm-label-count--full { color: var(--red); }
+
+/* ── Невалідне поле (аудит Д-В4, 30.07) ─────────────────────────────────────
+   Було: перевірка при submit кликала `.focus()` — тобто фокус переїжджав правильно,
+   але ВИДИМОЇ ознаки не було. Тост висить угорі, у формі сім полів, при відкритій
+   клавіатурі видно два-три — і фокус лишався єдиною підказкою, яку легко проґавити.
+   ⚠️ Рамка `--red` дає до білого поля контраст 7.24 — та сама пара, що вже несе
+   головну дію («Опублікувати»), тож нового кольору в систему не додаємо.
+   ⚠️ `!important` НЕ ставимо: клас іде після базового правила поля, специфічність
+   вища за рахунок подвійного селектора. */
+.cm-board-input.bm-invalid,
+textarea.cm-board-input.bm-invalid {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.14);   /* м'який ореол — видно навіть кутом ока */
+}
+/* Ім'я з акаунта — нередаговане (анонімність прибрано).
+   🔴 29.07 — БІЛЕ (було `--paper` #F4F1E6, кремове). Це останній кремовий острівець
+   у листі подачі: сам лист і його липка шапка переїхали на `--board-bg` раніше, а це
+   поле лишилось на старому токені й на сірому фоні читалось жовтуватою плямою.
+   Тепер поверхня та сама, що в решти полів форми. */
+.bm-author-fixed {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--board-card);
+  /* 🔴 30.07 (аудит Д-А1) — МЕЖА З РОДИНИ ДОШКИ. Було `--border #E5E5E5`, і на поверхні
+     листа `--board-bg #E6E6E3` це давало контраст **1.007** — тобто рамки не було видно
+     зовсім. Саме поле лишалось помітним власною білою заливкою (1.251), тому дефект і
+     не кидався в очі: елемент читався, а його межа — ні.
+     ⚠️ Це хвіст кремового проходу 29.07: заливки я перевів, межі — ні. Модель OLX
+     тримається саме на ЛІНІЇ (контраст ≈1.40), не на різниці заливок. */
+  border: 1px solid var(--board-line);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink, #2A2520);
+}
+/* Іконка людини — векторна (`ICONS.user`), а не емодзі 👤: емодзі малює система,
+   тож на різних телефонах він різного кольору й розміру і не тримає лінію решти
+   іконок листа (олівець у шапці, пін у прев'ю — обидва вектор). */
+.bm-author-fixed .bm-author-ic {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--red);
+}
+.bm-author-fixed .bm-author-ic svg { width: 17px; height: 17px; }
+
+/* Категорії — чіпи */
+.bm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  /* 🔴 30.07 (аудит Д-А1/Д-В) — біле тіло + ЛІНІЯ, як уже зроблено для `.pm-chip`
+     у `messages.css`. Було `--gray-light #F5F5F5` без межі (`transparent`): на поверхні
+     листа це давало **1.147** і чіп тримався лише на тіні — тобто рівно те, від чого
+     пішли на картці Дошки. Тепер той самий прийом, що всюди в зоні: заливка виступає,
+     межа визначає край. */
+  background: var(--board-card);
+  border: 1.5px solid var(--board-line);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* Тінь знято (30.07): вона була костилем «щоб чіп не зливався з кремовим фоном»,
+     а тепер край дає межа. Тримати обидва — це «подвійний розділювач», від якого
+     пішли 29.07 на картці Дошки (два розділювача в одному місці = каша). */
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.bm-chip:active { transform: scale(0.96); }
+.bm-chip.active {
+  background: var(--brand-grad-sm);
+  border-color: var(--red);
+  color: white;
+}
+.bm-chip-emoji { font-size: 14px; line-height: 1; display: inline-flex; }
+/* Активний чіп — червоний фон: іконка теж біла (перебиває семантичний .cat-c-*). */
+.bm-chip.active .bm-chip-emoji { color: #fff; }
+.bm-chip-label { text-transform: capitalize; }
+
+/* Фото-слоти — горизонтальний скрол (до 5, видно ~3, решта гортанням) */
+.bm-photos {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 3px 2px 6px;   /* місце щоб тінь слотів не обрізалась при overflow */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.bm-photo-slot {
+  position: relative;
+  flex: 0 0 calc((100% - 16px) / 3);   /* 3 видимі (2 gap×8px), решта — скрол */
+  scroll-snap-align: start;
+  aspect-ratio: 1;
+  /* 🔴 30.07 (аудит Д-А1) — слот фото був НАЙГІРШИМ місцем: тіло `#F5F5F5` давало 1.147
+     до поверхні листа, а пунктирна межа `--border #E5E5E5` — **1.007**, тобто «додати
+     фото» позначала лише тінь. Пунктир ЛИШАЄТЬСЯ (він каже «тут порожньо, натисни»),
+     але тепер у кольорі родини — межа справді видима. */
+  background: var(--board-card);
+  background-size: cover;
+  background-position: center;
+  border: 1.5px dashed var(--board-line);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  /* Тінь знято (30.07). Її комент прямо казав «щоб слот фото не зливався з фоном» —
+     тобто вона робила роботу межі. За моделлю OLX це неправильний розділювач: розмитий
+     градієнт око читає як пляму, а не як край. Тепер край дає пунктир `--board-line`. */
+  transition: border-color 0.12s, background-color 0.12s;
+}
+/* 29.07: було `--paper` #F4F1E6 — слот фото у листі подачі, а лист уже стоїть на
+   поверхні Дошки, тож кремовий натиск був останнім теплим спалахом у цьому вікні. */
+.bm-photo-slot:active { background-color: var(--board-press); }
+.bm-photo-slot.filled {
+  /* Слот із фото: межа теж із родини (була `--border` = 1.007 до поверхні листа).
+     Тут вона потрібна навіть більше, ніж у порожнього: світле фото без обідка
+     розтікається по світлій поверхні листа. */
+  border: 1.5px solid var(--board-line);
+  background-color: transparent;
+}
+.bm-photo-plus {
+  font-size: 26px;
+  font-weight: 300;
+  color: var(--ink-mute);
+  line-height: 1;
+  user-select: none;
+}
+.bm-photo-slot.filled .bm-photo-plus {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Стан upload — фото локально показане, але ще заливається у Supabase Storage.
+   Темна напівпрозора плівка + spinner. Завантажилось → клас знімається. */
+.bm-photo-slot.uploading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: inherit;
+  z-index: 1;
+}
+.bm-photo-slot.uploading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: bm-spin 0.8s linear infinite;
+  z-index: 2;
+}
+
+/* Live-preview секція */
+.bm-preview-section {
+  margin: 18px -18px 14px;
+  padding: 14px 18px 18px;
+  /* 🔴 29.07 — ПОВЕРХНЯ ДОШКИ, а не темний корок. СКАСОВУЄ рішення 28.07.
+     Тоді корок лишили навмисно: «темне тло дає світлому папірцю максимальний контраст».
+     Аргумент помер разом із самим корком — Дошка вже нейтрально-сіра, тож прев'ю
+     на коричневому показувало картку на тлі, якого на дошці НЕМАЄ. Обіцянка «як
+     виглядатиме на дошці» має бути правдою до кольору включно, інакше це не прев'ю.
+     ⚠️ Фон тут НЕ окремий hex, а той самий токен — інакше він знову відстане при
+     наступній зміні Дошки (рівно це й сталось із цим блоком). */
+  background: var(--board-bg);
+  border-top: 1px solid rgba(16, 18, 22, 0.10);
+  border-bottom: 1px solid rgba(16, 18, 22, 0.10);
+}
+.bm-preview-label {
+  font-size: 11px;
+  font-weight: 800;
+  /* 🔴 29.07 — той самий колір, що підказка порожнього стану Дошки (`.bd-group-empty-hint`,
+     `--ink-soft` = 5.83:1). Було `#FFF4D6` + тінь — світлий текст під темний корок; на
+     світлому фоні він засліп би (1.05:1). Пряме прохання Вови: «підбери такий колір,
+     як ми підбирали для „Немає оголошень“ — щоб зливався з фоном». */
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.bm-preview-canvas {
+  display: flex;
+  justify-content: center;
+}
+/* Сам стікер у preview — обмежена ширина для центрування */
+.bm-preview-canvas .cm-board-note {
+  width: min(80%, 240px);
+  pointer-events: none;
+}
+
+/* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
+
+/* Фон вкладки Дошка — нейтральний сірий, той самий що Стрічка й Автобуси.
+   🔴 ПЕРЕРОБЛЕНО 28.07 (Вова: «варто залишити тут цей такий темний колір?…
+   цю фотографію взагалі потрібно краще прибрати ні?»). Було: фото `cork2.png`
+   під затемненням `rgba(24,14,8,0.62)` + радіальний відблиск + inset-тіні 90px.
+   П'ять причин, чому знято (у порядку сили):
+   1. 🔴 `cork2.png` = 2.9 МБ і лежало в `STATIC_ASSETS` (`sw.js`) — кожен телефон
+      перекачував його при КОЖНОМУ деплої коду (CACHE_NAME міняється щоразу),
+      навіть не відкриваючи Дошку. Найважчий файл проєкту.
+   2. Затемнення 62% з'їдало саму текстуру — від корка лишалась темно-коричнева
+      пляма. Тобто платили 2.9 МБ за фото, якого майже не видно.
+   3. Три конкуруючі шари: темний фон + світлі картки + КОЛЬОРОВІ фото товарів.
+      У маркетплейсі головне — фото товару, а темна рамка тягла увагу на себе.
+   4. Сірий текст лічильника/локації на темно-коричневому — низький контраст
+      (видно на скріншоті IMG_3701).
+   5. `position:fixed` + `cover`-фото + два градієнти + inset-тіні 90px — класична
+      причина «блимання» шарів при скролі на iOS.
+   ⚠️ ХАРАКТЕР ДОШКИ НЕ ЗНИК — він переїхав у ДЕТАЛЬ: червона шпилька
+   (`.cm-board-pin`) на кожній картці і сама метафора папірця. Правило IG/FB:
+   фон нейтральний завжди, ідентичність — в елементах, не в тлі.
+   Шар лишається в розмітці (не прибираю `<div class="board-bg">`): він дає фон
+   при overscroll-bounce (iOS «гумовий» відскок), інакше з-під нього визирне body. */
+.board-bg {
+  position: fixed;
+  inset: 0;
+  /* `--board-bg`, а не `--app-bg`: Дошка — єдиний екран, де контент лежить окремими
+     картками у дві колонки, тож тло має бути на щабель глибшим, щоб «папірці»
+     виступали. Обґрунтування і числа — у `base.css`, блок «ДРУГИЙ РІВЕНЬ ПОВЕРХНІ». */
+  background: var(--board-bg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.board-content {
+  position: relative;
+  z-index: 1;
+  /* 🔴 30.07 (аудит Д-В2) — ВІДСТУП ПІД ПЛАВАЮЧУ КНОПКУ, порахований, а не на око.
+     `.app-main` уже додає таб-бар + safe-area, тож тут потрібна рівно смуга самої
+     кнопки: зазор (14) + висота (56) + повітря (12) = 82px. Було 24px — тобто кнопка
+     накривала останні 46px списку. Числа беруться з тих самих токенів, що й кнопка
+     (`--fab-size` / `--fab-gap`), щоб вони не могли розійтись: саме через незв'язані
+     числа дефект і зʼявився.
+     ⚠️ Клас носять ОБА кореня (`#board-content` і `#disc-content`, index.html:87/138),
+     і в обох є FAB — тож правка свідомо одна на дві вкладки.
+     Сторож — `tests/board-fab-clearance.mjs`. */
+  padding-bottom: calc(var(--fab-gap) + var(--fab-size) + 12px);
+}
+
+/* Повна коркова дошка — прозора, бо корок винесений у .board-bg.
+   Залишаємо лише padding для розташування папірців. */
+.board-corkboard--full {
+  background: none;
+  border-top: none;
+  border-bottom: none;
+  border-radius: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+/* FAB кнопка «Подати оголошення» — кругла, справа знизу */
+.board-trigger--fixed {
+  position: fixed;
+  right: 18px;
+  /* Розмір і зазор — із токенів (`base.css`, блок `--fab-size`): той самий джерело
+     правди, з якого `.board-content` рахує свій нижній відступ. 30.07 */
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--fab-gap));
+  left: auto;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: 50%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  z-index: 80;
+  /* 🔴 29.07 — ЗАЛИТА БОРДОВА, а не скло. Було `rgba(255,255,255,0.45)` + розмиття.
+     ЧОМУ ЗМІНЕНО: скарга Вови «кнопки зливаються з фоном». Заміряно — біле скло на
+     фоні Дошки давало **1.140:1**, тобто заливка не відділялась зовсім і кнопку
+     тримала сама лише бордова обручка.
+     🔑 І це НЕ лікується щільнішим склом: стеля для БІЛОГО на `#E3DFD3` — **1.332**
+     навіть при 100% непрозорості (та сама стеля, що в картки). Тобто єдиний спосіб
+     дати кнопці помітність — змінити ЗНАЧЕННЯ заливки, а не її прозорість.
+     Залита бордова дає **7.24:1**, біла іконка на ній — 9.65:1.
+     Заразом це мова самого застосунку: головна дія модалки («Написати») уже залита
+     бордовим, тож головна дія екрана має виглядати так само.
+     ⚠️ `backdrop-filter` прибрано свідомо — під непрозорою заливкою він нічого не
+     робить, а в Safari зайвий фільтр коштує кадрів. */
+  background: var(--brand-grad-sm);
+  border: 1.5px solid var(--red);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
+}
+.board-trigger--fixed .cm-board-trigger-text { display: none; }
+/* Дві накладені іконки (бульбашка + ✕) — плавний cross-fade при відкритті */
+.board-trigger--fixed .cm-board-trigger-icon,
+.board-trigger--fixed .cm-board-trigger-close {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 🔴 БІЛІ, бо кнопка стала бордовою. Було `var(--red)` — на залитій бордовій кнопці
+     це бордове по бордовому, тобто іконка зникає. Спіймано на знімку варіанта B:
+     у відкритому стані кнопка виглядала ПОРОЖНЬОЮ, бо ✕ був того самого кольору. */
+  color: #fff;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+.board-trigger--fixed .cm-board-trigger-icon svg,
+.board-trigger--fixed .cm-board-trigger-close svg { width: 28px; height: 28px; }
+.board-trigger--fixed .cm-board-trigger-close { opacity: 0; pointer-events: none; }
+/* Бейдж непрочитаних чатів у кутку FAB (число ставить refreshUnreadBadge) */
+.board-trigger-badge {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; background: var(--red, #722F37); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+  border: 2px solid #fff; box-sizing: content-box;
+  display: none;
+}
+/* Лічильник непрочитаних у пункті «Повідомлення» FAB-меню (число ставить refreshUnreadBadge) */
+/* 🔴 30.07 — НАКЛАДКА НА КУТОК КРУЖЕЧКА, а не число в плашці.
+   Вова: «коли приходить повідомлення, біля повідомлення вкладки зʼявляється N
+   кількість чатів і розширює кнопку саму, треба зробити як накладку на кут кнопки».
+   Було: бейдж лежав УСЕРЕДИНІ `.board-fab-label` з `margin-left: 6px`, а в плашки
+   `white-space: nowrap` — тобто кожне нове повідомлення робило пункт меню ШИРШИМ,
+   і меню «дихало» від стану. Тепер число висить над кружечком і на розкладку не
+   впливає взагалі.
+   ⚠️ Геометрія дзеркалить `.board-trigger-badge` (головна кнопка FAB) — щоб два
+   бейджі в одному меню виглядали одним прийомом, а не двома різними. Розмір трохи
+   менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки. */
+
+/* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
+/* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
+.board-fab-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 150;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.board-fab.open .board-fab-backdrop { opacity: 1; pointer-events: auto; }
+
+/* Стовпчик пунктів над кнопкою (right:23px центрує 46px іконки під 56px FAB) */
+.board-fab-menu {
+  position: fixed;
+  right: 23px;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px + 56px + 14px);
+  z-index: 151;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+.board-fab.open .board-fab-menu { pointer-events: auto; }
+
+.board-fab-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  /* Б6.1: transform прибрано — разом з backdrop-filter на .board-fab-label/.board-fab-ic
+     давало WebKit-привид (подвійний рендер шару). Лишається лише fade, каскад через delay. */
+  transition: opacity 0.18s ease;
+}
+.board-fab.open .board-fab-item { opacity: 1; }
+/* Каскад появи знизу вгору */
+.board-fab.open .board-fab-item:nth-child(4) { transition-delay: 0.02s; }
+.board-fab.open .board-fab-item:nth-child(3) { transition-delay: 0.05s; }
+.board-fab.open .board-fab-item:nth-child(2) { transition-delay: 0.08s; }
+.board-fab.open .board-fab-item:nth-child(1) { transition-delay: 0.11s; }
+
+/* Пункти підменю — той самий glassmorphism що FAB + ВЕЛИКІ букви */
+.board-fab-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 🔴 29.07 — ПОВЕРХНЯ ДОШКИ, а не окремий білий. Дорога була така:
+     скло 45% (пункт vs затемнення лише 1.770, вигляд ПЛАВАВ від вкладки до вкладки,
+     бо крізь скло просвічував її фон) → біле 92% → `var(--board-bg)`.
+     Вова: «стандартизуй цей фон у FAB-меню» — тобто меню має бути з тієї самої
+     поверхні, що й сама Дошка, а не «біле саме по собі».
+     Заміряно: пункт vs затемнення 2.37, текст на ньому 12.13, іконка 7.71 —
+     запас величезний, тож трохи нижчий контраст панелі до затемнення (2.76 → 2.37)
+     нічого не коштує, зате меню перестало бути окремою сутністю.
+     🔑 Головний виграш — ОДНАКОВІСТЬ: колір узято з токена, тож він більше не
+     залежить від того, на якій вкладці відкрито меню (раніше крізь скло
+     просвічував фон вкладки і Дошка з Обговореннями виглядали по-різному).
+     ⚠️ `backdrop-filter` прибрано: під непрозорою заливкою він не робить нічого,
+     а в Safari коштує кадрів. */
+  background: var(--board-bg);
+  border: 1.5px solid rgba(114, 47, 55, 0.55);
+  color: var(--ink, #2B2B2B);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16), inset 0 1px 2px rgba(255,255,255,0.65);
+  white-space: nowrap;
+}
+.board-fab-ic {
+  position: relative;   /* 30.07: система координат для накладки-бейджа (див. `.board-fab-msgs-badge`) */
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--board-bg);   /* див. коментар у .board-fab-label */
+  border: 1.5px solid rgba(114, 47, 55, 0.55);
+  color: var(--red);
+  border-radius: 50%;
+  font-size: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16), inset 0 1px 2px rgba(255,255,255,0.65);
+}
+/* Векторні іконки пунктів FAB — однаковий розмір незалежно від атрибутів SVG */
+.board-fab-ic svg { width: 22px; height: 22px; }
+
+/* Відкрито: скло трохи щільніше; бульбашка зникає, проявляється ✕ (cross-fade) */
+/* Б6.1: пом'якшено 0.62→0.52 — базовий стан теж скло 0.45, різкий стрибок опасності відчувався як «перефарбування» */
+/* Відкрите меню: кнопка ЛИШАЄТЬСЯ бордовою (було світле скло 0.52 — тепер це зробило б
+   ✕ невидимим і кнопка на пів-секунди «блимала» б з кольору в біле). Трохи темніший
+   відтінок — щоб натиснутий стан читався як «активна», а не як інша кнопка. */
+.board-fab.open .board-trigger--fixed { z-index: 152; background: var(--brand-grad-press); border-color: var(--red-dark); }
+.board-fab.open .board-trigger--fixed .cm-board-trigger-icon { opacity: 0; }
+.board-fab.open .board-trigger--fixed .cm-board-trigger-close { opacity: 1; }
+.board-fab.open .board-trigger-badge { display: none; }
+
+/* ── Зум розгортання картки оголошення ── */
+/* Backdrop — плавне затемнення фону при відкритому стікері */
+.board-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.board-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Оригінальний стікер на дошці плавно зникає коли модалка відкрита */
+.cm-board-note--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+/* ── Фото на стікері ── */
+.cm-board-photo-wrap {
+  /* Виходимо за padding стікера щоб фото було від краю до краю */
+  margin: -16px -14px 12px;
+  background: linear-gradient(135deg, #d8d8d8, #b8b8b8); /* плейсхолдер при завантаженні */
+  overflow: hidden;
+  position: relative;
+  /* Закруглені верхні кути — збігаються з border-radius картки */
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+/* Темний gradient знизу фото — для читабельності тексту над зображенням */
+.cm-board-photo-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.22) 100%);
+  pointer-events: none;
+}
+.cm-board-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+/* Стрічка «Збережені» — картки оголошень компактніші: нижче фото + менші відступи */
+.bd-stream .cm-board-note--has-photo .cm-board-photo { aspect-ratio: 16 / 10; }
+.bd-stream .cm-board-note { padding: 13px 13px 12px; }
+.bd-stream .cm-board-note--has-photo .cm-board-photo-wrap { margin: -13px -13px 10px; }
+.bd-stream .cm-board-text {
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Картки-обговорення у стрічці «Збережені» — ті самі відступи, що й оголошення */
+.bd-stream .bd-card--chat { padding: 13px 13px 12px; }
+/* На стікері з фото меншу к-сть рядків тексту (місця менше) */
+.cm-board-note--has-photo .cm-board-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Повний текст у модалці (без клампу), чорний */
+.cm-board-modal-note .cm-board-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  color: #1C1C1E;
+}
+
+/* ── Зум-модалка оголошення (будується з даних поста, renderAdModal) ──
+   Висота ДИНАМІЧНА за вмістом; центрована у проміжку між шапкою і таб-баром.
+   Увесь вміст (ФОТО + текст) — один скрол (overflow-y на самій модалці), тож фото
+   скролиться РАЗОМ з текстом, без різкого стику. Фото — повного розміру (без обрізки). */
+.cm-board-modal-note {
+  position: fixed;
+  left: 50%;
+  /* центр проміжку між низом шапки і верхом таб-бару.
+     -18px знизу резервуємо під виступ центральної кнопки-замка (стирчить ~27px над таб-баром) */
+  top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 18px) / 2);
+  /* 28.07 (Вова: «модалку можна трішки розширити»): було min(88vw, 360px).
+     ⚠️ Тісно робила саме СТЕЛЯ 360px, а не 88vw: на великому iPhone (430px) 88vw = 378px,
+     тобто стеля вигравала і лишала по 35px порожнечі з боків. Тому піднято обидва числа —
+     самого 92vw не вистачило б, стеля так само з'їла б виграш.
+
+     🔴 РОЗМИТИЙ ТЕКСТ — ПОБІЧНИЙ ЕФЕКТ ЦІЄЇ САМОЇ ЗМІНИ, ЗНАЙДЕНО 29.07.
+     Вова: «текст опису якийсь нечіткий, розмитий». Причина НЕ у шрифті, а в геометрії.
+     Модалка центрується `left: 50%` + `translate(-50%, -50%)`, тобто зсувається на
+     ПОЛОВИНУ власної ширини. Заміряно на екрані 430px: ширина виходила 395.59px →
+     зсув −197.797px. Дробовий зсув композитного шару (а він композитний: у
+     `.cm-board-note` є `translateZ(0)` + `backface-visibility: hidden`) означає, що
+     ВЕСЬ вміст, включно з текстом, малюється між пікселями — звідси мило.
+     ⚠️ До зміни ширини на цьому ж екрані вигравала стеля 360px — ціле число, зсув −180,
+     текст чіткий. Тобто дефект приїхав рівно з розширенням модалки.
+     ЛІКУЄМО: округлюємо ширину донизу до ПАРНОГО цілого — тоді половина від неї теж ціла.
+     Перший рядок лишається запасним: якщо браузер не знає `round()`, він просто
+     проігнорує другий рядок і поведінка буде як була (краще мило, ніж зламана модалка). */
+  width: min(92vw, 400px);
+  width: round(down, min(92vw, 400px), 2px);
+  max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 58px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* згортна шапка: скролиться тіло; фото+під-шапка закріплені зверху */
+  -webkit-overflow-scrolling: touch;
+  z-index: 220;
+  margin: 0;
+  padding: 0;
+  border-radius: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #1C1C1E;
+  box-shadow:
+    0 16px 40px rgba(0,0,0,0.45),
+    0 6px 16px rgba(0,0,0,0.25);
+  transform: translate(-50%, -50%) scale(0.9);
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+.cm-board-modal-note.visible {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+/* Модалка оголошення, відкрита з чату — білий фон + чиста тінь (виділяється на фоні).
+   Внутрішні блоки (бар/під-шапка/футер) мають background:inherit → теж білі. */
+/* 🔴 02.08 — МОДАЛКА ОГОЛОШЕННЯ СТАЛА ПОВНОЕКРАННИМ АРКУШЕМ ЗНИЗУ.
+   Було: центрована картка, заміряно **300px висоти з 844** — вона й «не читалась як
+   окрема сторінка», на що скаржився Вова. Плюс футер із кнопками «Подзвонити/Написати»
+   був `position: relative`, тобто при описі до 1296 символів (наш максимум) головна
+   дія їхала за межі екрана.
+   Стало: аркуш від нижнього краю на 92% висоти, радіус лише ВЕРХНІХ кутів.
+   ⚠️ Геометрія змінилась із центрованої (`translate(-50%,-50%)`) на притиснуту знизу,
+   тому разом із нею ОБОВʼЯЗКОВО міняється математика свайпу в `board.js`
+   (`centeredRemaining` → `sheetRemaining`, `translate(-50%,…)` → `translateY`).
+   Лишити старий свайп означало б зсув на пів ширини при кожному дотику. */
+.cm-board-modal-note.cm-ad-screen {
+  /* 🔴 НЕПРОЗОРИЙ — і це не косметика, а КОРІНЬ бага IMG_3814 («модалка без фото
+     поламана»). Контейнер був прозорий: він нічого не малював і розраховував, що вміст
+     сам закриє екран. Поки аркуш мав `min-height: 100dvh`, це трималось. Полірування
+     02.08 зняло ту висоту (пряме замовлення Вови «висота по вмісту») — і крізь екран
+     проступила Дошка: заміряно **45 точок зі 153 = 29% екрана**, видно `app-header`
+     згори і `app-main` знизу, з кнопкою «+» і банером куки.
+     Тепер діра неможлива за визначенням, а не «поки вміст достатньо високий». Заразом
+     це лікує ще не побачений випадок: короткий опис ПРИ фото давав би те саме.
+     ⚠️ Не міняти на `transparent` заради «чистоти» — це поверне баг. */
+  background: #fff;
+  /* Далі — контейнер на ВЕСЬ екран: він лише ВЕЗЕ шари.
+     Саме тому свайп рухає його — фото й аркуш їдуть як одне ціле, і «розʼїхатись»
+     їм нема як. Заразом «скільки лишилось до зникнення» дорівнює висоті екрана,
+     тобто геометрію жесту більше нема де переплутати (з чого й виріс баг 02.08
+     «скаче в різні боки» — там аркуш рухали математикою центрованої картки). */
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Висота панелі дій — одне число на два місця: сама панель і відступ знизу в аркуші,
+     щоб останній рядок опису ніколи не ховався за кнопками. Сторож звіряє, що вони
+     збігаються. 50px кнопка (тап-ціль Apple HIG 44 із запасом) + 12 + 12 + home-bar. */
+  --ad-bar-h: calc(74px + env(safe-area-inset-bottom, 0px));
+  /* Висота смужки з ручкою. Теж одне число на два місця: сама смужка і верхня межа
+     компактної шапки, яка стоїть одразу під нею. */
+  --ad-grip-h: 38px;
+  /* 🔴 ВИЩЕ ТАБ-БАРА (він z-index: 1000/1001). Модалка займає весь екран, і таб-бар
+     поверх неї накривав би саме панель «Подзвонити / Написати» — тобто головні дії.
+     На макеті таб-бару під модалкою теж немає: це «окремий екран». Затемнення
+     піднято разом із нею, інакше воно лягло б ПІД таб-бар і той світив би крізь. */
+  z-index: 1100;
+}
+.board-backdrop.cm-ad-backdrop--over { z-index: 1099; }
+.cm-board-modal-note.cm-ad-screen.visible { transform: translateY(0); }
+/* ── Простий надійний скрол: фото(4:3) + під-шапка + текст — УСЕ в одному скролі (без JS) ──
+   Жодних оверлеїв/стискання → рідний скрол iOS, без смикань/просвічування/застрягання. */
+.cm-board-modal-scrollarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: inherit;   /* колір картки → щоб sticky під-шапка мала непрозорий фон */
+}
+/* Під-шапка: категорія+заголовок — одразу під фото, скролиться разом. */
+/* Під-шапка липне (sticky) до верху скрол-зони: фото йде вгору і ховається,
+   а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними.
+   top:-1px + padding компенсація — прибирає субпіксельну щілину на стику з грабером (там просвічував текст).
+   box-shadow вниз — тінь прилипає разом з під-шапкою, видно її поки гортаєш опис. */
+/* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
+/* 🆕 29.07 — ІМ'Я АВТОРА стало на місце населеного пункту у шапці модалки
+   (Вова: «поміщай місцями»). Ті самі правила, що були в НП: праворуч від пігулки
+   категорії, той самий рядок, той самий кегль — тобто перестановка НЕ ламає ритм шапки. */
+/* У модалці ціна більша — там місця вдосталь і це головна цифра екрана */
+/* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
+.cm-board-modal-gallery {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cm-board-modal-gallery::-webkit-scrollbar { display: none; }
+.cm-board-modal-slide { flex: 0 0 100%; height: 100%; scroll-snap-align: center; }
+.cm-board-modal-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+/* Крапки-індикатор — поверх фото знизу */
+.cm-board-modal-dots {
+  position: absolute;
+  bottom: 8px; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  z-index: 3;
+  pointer-events: none;
+}
+.cm-board-modal-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+  transition: background 0.15s, transform 0.15s;
+}
+.cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
+/* Тінь на опис відкидають сусідні блоки самі: під-шапка (sticky, зверху) і футер (знизу).
+   Сам блок опису без тіні — середина чиста. */
+.cm-board-modal-content { padding: 16px 20px; }
+/* Опис у модалці зберігає абзаци й відступи як їх надрукувала людина
+   (порожній рядок між блоками → видимий проміжок). Тільки модалка —
+   картки на Дошці лишаються обрізаними. */
+.cm-board-modal-content .cm-board-text { white-space: pre-wrap; }
+/* Компактний футер — менше місця (специфічність 0,3,0 щоб перекрити загальні .cm-board-modal-note правила) */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-footer {
+  padding-top: 7px;
+  margin-top: 0;
+  font-size: 12px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact {
+  margin-top: 6px;
+  font-size: 14px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-call,
+.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn {
+  width: 42px;
+  height: 42px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-call svg,
+.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn svg { width: 24px; height: 24px; }
+/* Дата публікації в модалці — трохи більша за базові 9px (Вова 11.07). */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-time { font-size: 11px; }
+/* 🆕 28.07 — футер став КОМПАКТНІШИЙ (Вова: «занадто високий»).
+   Зсув 5+6=11px був потрібен, поки над кнопками 🔖/↗ малювалась лінія-роздільник —
+   вона відділяла їх від рядка «ім'я / телефон». Лінію прибрано (нижче у файлі),
+   тож зсув лишився б просто дірою. */
+.cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
+  margin-top: 0;
+  padding-top: 0;
+}
+/* Ім'я автора у модалці — більше за картку (Вова: «ім'я замале»). На картці ним керує
+   JS `fitBoardAuthors` (8.5–12.5px під ширину, бо там поряд тіснились кнопки); у модалці
+   кнопок поряд уже немає, місця вдосталь — тому фіксовані 13px. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-author--card { font-size: 13px; }
+
+/* Мердж двох блоків футера модалки в один рядок (Вова 11.07): call+msg+ім'я зліва
+   (пояснює кому дзвониш/пишеш), save+share справа (де раніше було ім'я). Прибрано
+   верхню лінію над call/msg/ім'ям — блоки стали одним рядком, розділювач не потрібен. */
+.cm-board-modal-note .cm-board-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  /* 28.07: 14/16 → 10/12 (Вова: «занадто високий»). Панель нижча на 8px, і на стільки ж
+     її верхній край (лінія з тінню) їде ВНИЗ — саме те, чого просив Вова («блок трошки
+     опустити»): текст опису більше не обрізається на півслові. */
+  padding: 10px 20px 12px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot {
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 0;
+  padding-top: 0;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot::before { display: none; }
+/* 🆕 29.07 — футер модалки тепер показує НП+дату і мусить вирівнюватись ТАК САМО, як
+   на картці (Вова: «використати таку саму логіку як на карточці коли модалка закрита»).
+   Було `text-align: center` — воно лишилось від часів, коли тут стояло ім'я по центру
+   між кнопками. З лівим вирівнюванням центрування зламало б увесь прийом із колонками
+   (пін/стрілка ліворуч, текст під першою буквою). */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: left; }
+/* НП у футері модалки — трохи більший, ніж на картці: там тісно у дві колонки, тут ні. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-loc--foot { font-size: 13px; }
+/* 🆕 28.07 (потік 2): контакт переїхав із КАРТКИ у модалку однією широкою кнопкою.
+   Футер модалки став ДВОРЯДКОВИМ: верхній рядок — автор/дата + зберегти/шер (рівно як
+   був, не переписаний), нижній — контакт на всю ширину.
+   Прийом: flex-wrap на футері + flex-basis:100% на смузі контакту. Так робочий верхній
+   рядок лишається недоторканим — на відміну від переходу на grid, який переклав би
+   обидва блоки. */
+.cm-board-modal-note .cm-board-modal-foot { flex-wrap: wrap; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 7px;   /* 28.07: 10 → 7, частина компактування футера */
+}
+/* Дзвінок — квадратна кнопка 44px (мінімальна тап-ціль за Apple HIG; на картці вона
+   була 34px — це й була одна з причин прибрати її звідти).
+   ⚠️ Селектор навмисно на 4 рівні: вище у файлі стоїть
+   `.cm-board-modal-note .cm-board-modal-foot .cm-board-call { width: 42px }` (0,3,0) —
+   без четвертого рівня воно б виграло і кнопка лишилась би 42px. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar .cm-board-call {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar .cm-board-call svg {
+  width: 22px;
+  height: 22px;
+}
+/* Головна дія модалки — написати автору. Залита (не контурна): це основна дія екрана,
+   дзвінок поруч лишається другорядним контурним. */
+.cm-board-write-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  background: var(--brand-grad-sm);
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(114, 47, 55, 0.28);
+  transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-write-btn svg { width: 19px; height: 19px; flex-shrink: 0; }
+.cm-board-write-btn:active {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  box-shadow: 0 1px 4px rgba(114, 47, 55, 0.28);
+}
+.cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
+  margin-top: 0;
+  padding-top: 0;
+  flex: 0 0 auto;
+}
+.cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact::before { display: none; }
+.cm-board-modal-meta .cm-board-time {
+  font-size: 11px;
+  color: rgba(43,43,43,0.5);
+}
+.cm-board-msg-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  cursor: pointer;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-msg-btn:active {
+  background: var(--board-press);   /* 29.07: було `--paper-deep` — тепле на білій картці */
+  transform: scale(0.92);
+}
+/* Шпилька зайва — модалка не на дошці */
+.cm-board-modal-note .cm-board-pin { display: none; }
+
+/* Більші розміри тексту/елементів у модалці — текст чіткий бо рендериться
+   у природному великому розмірі (без transform: scale) */
+/* ⚠️ 13 → 11.5px (замовлення Вови: «чіп хай буде, але не такий великий»). Чіп — це
+   МІТКА категорії, а не другий заголовок; при 13px він важив майже як назва і разом із
+   нею створював два заголовки поспіль. Зменшено разом із внутрішніми відступами,
+   інакше пігулка лишилась би того самого розміру з дрібним текстом усередині. */
+.cm-board-modal-note .cm-board-cat {
+  font-size: 11.5px;
+  padding: 3px 9px 3px 7px;
+  margin-bottom: 8px;
+}
+.cm-board-modal-note .cm-board-cat svg { width: 12px; height: 12px; }
+.cm-board-modal-note .cm-board-official-title {
+  font-size: 19px;
+  margin: 6px 0 10px;
+  line-height: 1.3;
+}
+.cm-board-modal-note .cm-board-text {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.cm-board-modal-note .cm-board-footer {
+  font-size: 13px;
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.cm-board-modal-note .cm-board-time { font-size: 12px; }
+.cm-board-modal-note .cm-board-contact {
+  font-size: 15px;
+  margin-top: 10px;
+}
+.cm-board-modal-note .cm-board-call {
+  width: 42px;
+  height: 42px;
+}
+.cm-board-modal-note .cm-board-call svg { width: 20px; height: 20px; }
+/* Менші кнопки на картці щоб номер завжди влазив */
+.cm-board-contact--phone .cm-board-msg-btn,
+.cm-board-contact--phone .cm-board-call {
+  width: 36px;
+  height: 36px;
+}
+.cm-board-contact--phone .cm-board-msg-btn svg,
+.cm-board-contact--phone .cm-board-call svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Новий футер картки/модалки (рішення Вови): кнопки зліва · ім'я+час справа.
+   БЕЗ номера телефону. Роздільна лінія зверху як у контакту.
+   align-items:center — ім'я+відступ+час по центру висоти кнопок, обидва рядки в межах іконок. */
+.cm-board-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.cm-board-foot::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 50%, transparent 100%);
+  filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.12));
+}
+.cm-board-foot-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+/* Кнопки футера — трохи більші; ім'я поряд підганяється по ширині динамічно (JS fitBoardAuthors) */
+.cm-board-foot-actions .cm-board-call,
+.cm-board-foot-actions .cm-board-msg-btn { width: 34px; height: 34px; }
+.cm-board-foot-actions .cm-board-call svg,
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 19px; height: 19px; }   /* іконки трохи більші, кнопки лишаються 34px (Вова 14.07) */
+.cm-board-foot-who {
+  min-width: 0;
+  text-align: right;
+  line-height: 1.15;   /* компактно — щоб ім'я+відступ+час влазили у висоту кнопок (34px) */
+}
+/* 🔴 28.07 (/byyou) — ФУТЕР КАРТКИ ВИРІВНЯНО ПО ЛІВОМУ КРАЮ.
+   Скарга Вови: «дата зараз то напочатку, то посередині… все в карточці має бути рівномірним».
+   КОРІНЬ був саме тут: `.cm-board-foot-who` мав `text-align: right`, а сам блок у flex-рядку
+   стискається по ширині НАЙДОВШОГО свого рядка. Через це довгий рядок («ОЛИЦЬКА ГРОМАДА»)
+   починався від лівого краю блока, а короткий («13 липня») притискався до правого — тобто
+   «плавала» не дата, а вирівнювання. Лікуємо ПРИЧИНУ, а не наслідок відступами.
+   `width: 100%` — щоб блок займав усю ширину картки і ліва межа не залежала від довжини тексту. */
+.cm-board-foot--card { justify-content: flex-start; }
+.cm-board-foot--card .cm-board-foot-who { text-align: left; width: 100%; }
+/* Населений пункт у футері картки — на місці колишнього імені і трохи більший
+   (Вова: «перемістити на місце імені і трішки збільшити»).
+   ⚠️ Рівно ОДИН рядок: довга назва обрізається трикрапкою, а не переноситься —
+   інакше картки в двох колонках корка стали б різної висоти. */
+.cm-board-loc--foot {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 12px;   /* Вова: «зменшити трошки, але не так, як було раніше» (було 11 → 12.5 → 12) */
+  margin-bottom: 5px;
+}
+/* 🔴 ДАТА ВИРІВНЮЄТЬСЯ ПІД ПЕРШОЮ БУКВОЮ НП, А НЕ ПІД ПІНОМ.
+   Вова: «дата має якраз не під піном починати писатись, а під першою буквою населеного
+   пункту. А якщо є стрілочка вгору… то стрілочка має бути під піном».
+   Тобто це ДВА СТОВПЦІ: ліва колонка — іконка (пін / стрілка «піднято»), права — текст.
+   Геометрія береться з самого піна, не з ока: `.cm-board-loc svg` = 12px + `gap: 3px`
+   у `.cm-board-loc` = рівно 15px до першої літери.
+   ⚠️ Прийом: дата зсунута на ці 15px, а коли є стрілка — `.cm-board-bumped` витягується
+   назад на −15px і сама займає ті 15px (12px іконка + 3px проміжок). Тому текст дати
+   починається з однієї координати В ОБОХ випадках, а стрілка стає рівно під піном.
+   Так працює без CSS-grid і без `display:contents` (у Safari з ним бували сюрпризи). */
+.cm-board-foot--card .cm-board-time {
+  display: flex;
+  align-items: center;
+  padding-left: 15px;
+}
+.cm-board-foot--card .cm-board-bumped {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: -15px;
+}
+/* ⚠️ Селектор навмисно на ЧОТИРИ рівні: нижче у файлі стоїть
+   `.cm-board-foot-who .cm-board-bumped svg { width: 9px }` (0,3,1). При однаковій вазі
+   виграє те, що НИЖЧЕ, тож моє 12px програвало — і стрілка ставала 9px. Стенд це
+   спіймав числом: розʼїзд дати виходив рівно 3px = 12−9.
+   Стрілка мусить бути 12px, бо саме на її ширині тримається вирівнювання: вона займає
+   ту саму колонку, що й пін (12px), інакше текст дати з'їжджає. */
+.cm-board-foot--card .cm-board-foot-who .cm-board-bumped svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+.cm-board-loc-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-board-foot-who .cm-board-author--card {
+  display: block;
+  font-size: 11px;   /* дефолт (fallback) — JS підганяє 8.5–12.5px під ширину */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;   /* невеликий відступ до часу; блок лишається в межах висоти кнопок */
+}
+/* Тільки закрита картка (не zoom-модалка): більший зазор ім'я→час, час трішки нижче (Вова 11.07). */
+.bd-card--board .cm-board-foot-who .cm-board-author--card { margin-bottom: 6px; }
+/* Час публікації на картці — жирним (Вова 11.07). */
+.bd-card--board .cm-board-foot-who .cm-board-time { font-weight: 700; font-size: 10px; }
+/* Час — завжди в один рядок (стрілка+«13 год тому» не переносяться) */
+.cm-board-foot-who .cm-board-time {
+  display: block;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.cm-board-foot-who .cm-board-bumped { white-space: nowrap; }
+/* Стрілка «піднято» у футері — під розмір тексту часу (9px), щоб не роздувала рядок
+   і низ часу був рівно на низу кнопок (не вилазив на 2px). */
+.cm-board-foot-who .cm-board-bumped svg { width: 9px; height: 9px; }
+.cm-board-author--card {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(43,43,43,0.5);
+  min-width: 0;
+  white-space: nowrap;        /* ім'я завжди в один рядок — не ламається «— / Володимир» */
+  overflow: hidden;
+  text-overflow: ellipsis;    /* дуже довге ім'я — трикрапка, а не негарний перенос */
+}
+.cm-board-author-row .cm-board-time {
+  color: rgba(43,43,43,0.5);
+  flex-shrink: 0;
+}
+/* Ім'я автора і дата в оголошенні — завжди ВЕЛИКИМИ буквами (і на картці, і в модалці) */
+.cm-board-author,
+.cm-board-author--card,
+.cm-board-contact-name,
+.cm-board-time { text-transform: uppercase; }
+.cm-board-call {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  text-decoration: none;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-call:active {
+  background: var(--board-press);   /* 29.07: було `--paper-deep` */
+  transform: scale(0.92);
+  box-shadow: inset 0 2px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.10);
+}
+
+
+/* ============================================================================
+   ДОШКА ГРОМАДИ 2.0 — таби + пошук + 3 типи карток + реакції + збережені
+   (17.05.2026, план з docs/COMMUNITY_BOARD_VISION.md)
+   ============================================================================ */
+
+/* Контролі зверху: пошук + таби + категорії — fixed (sticky ламається
+   на iOS Safari через height:100% на body, як і у filters-bar) */
+.bd-controls {
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 90;
+  /* «Лівітірує»: не суцільна плита кольору сторінки, а матове скло (frosted glass —
+     напівпрозорий фон з розмиттям). Картки при скролі видно крізь бар (iOS-стиль),
+     а не ховаються під мертвою смугою. Fallback без blur — трохи щільніший фон. */
+  background: rgba(244, 241, 230, 0.62);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  /* 🔴 05.08 — ВЕРХНІЙ ВІДСТУП ЗНЯТО (замовлення Вови: бордовий блок Дошки має
+     стояти настик до шапки застосунку, як і на Громаді). Заміряно: ці 6px і
+     були тим зазором, через який блок «відʼєднувався». Бічні 14px лишаються —
+     на них тримаються чіпи категорій нижче; сам бордовий блок їх і так гасить
+     власним відʼємним полем (`.bd-titlebar { margin: 0 -14px 8px }`).
+     ⚠️ Тінь шапки додавати не треба: `.app-header` має власну і лежить вище
+     (z-index 100 проти 90) — щойно зазор зник, вона лягає на цей блок сама. */
+  padding: 0 14px 4px;   /* низ 8→4: менша відстань від пошуку до низу блоку (Вова) */
+  /* Заокруглені нижні кути (трохи гостріші, Вова) + тінь знизу — «плаваючий» блок над
+     картками; верх під шапкою застосунку — прямий. */
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
+   картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
+/* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
+   Обговорення (chat): шапка ≈22 + пошук 40 + відступи ≈16 ≈ 78 → підтягуємо картку
+   ближче до пошуку (Рома: «занадто далеко»), лишаючи легкий зазор.
+   З категоріями (тип board): заголовок Д-11 + пошук + чіпи ≈ 160.
+   ⚠️ Це лише ЗАПАСНЕ значення (до запуску JS / коли вкладка схована).
+   Точну висоту виставляє syncBoardBodyOffset() у board.js — міряє реальний
+   .bd-controls у рантаймі, тож при будь-якій зміні шапки картки не залазять під неї
+   (раніше це число «пливло» щоразу — Д-11 його зламав). */
+.bd-body { padding-top: 100px; }
+.bd-controls:has(.bd-search-row) ~ .bd-body { padding-top: 140px; }
+/* Обговорення (Вова 20.07, фікс «баху» при відкритті): їхня шапка (тільки заголовок
+   + пошук, без titlebar/чіпів Дошки) ≈82px, а успадкований від Дошки запас 140px був
+   ЗАВЕЛИКИЙ → syncBoardBodyOffset() у наступному кадрі стягував тіло на ~94px, картки
+   стрибали вгору («бах»). Даємо одразу правильний запас = реальній висоті → нема стрибка
+   (id перекриває :has-правило Дошки). */
+/* Варіант C (Вова 21.07): заголовок «ОБГОВОРЕННЯ» прибрано → шапка нижча
+   (лише пошук ≈54px + зазор 12 = 66). Раніше 94 (з заголовком) → без нього був би
+   стрибок вниз доки JS не зміряє. syncBoardBodyOffset уточнює в рантаймі. */
+#disc-content .bd-body { padding-top: 66px; }
+/* Обговорення (Вова 20.07): пошук БІЛИЙ (був #FAF8EF = колір карток) — на глибшому
+   фоні відділяється; scoped під #disc-content, Дошки не чіпає. */
+#disc-content .bd-search { background: #FFFFFF; }
+/* Обговорення (Вова 22.07): шапка й пошук заокруглені ЯК НА ДОШЦІ — прибрано
+   варіант C (гострі кути 6px + розділювач замість тіні). .bd-controls повертається
+   до базового вигляду (заокруглені нижні кути 12px + тінь), пошук — 14px як на Дошці. */
+#disc-content .bd-search { border-radius: 14px; }
+/* Розширити картки: бічний відступ стрічки 14→10px (картки ширші на 8px сумарно). */
+#disc-content .bd-stream { padding-left: 10px; padding-right: 10px; }
+
+/* Обговорення тепер справжня .page у .app-main (не overlay) — .disc-screen прибрано.
+   #disc-content поводиться як .board-content на Дошці; шапку/таб-бар/скрол дає .app-main. */
+
+/* Пошук */
+.bd-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--card-cream);
+  border: 1.5px solid rgba(0,0,0,0.22);
+  border-radius: 14px;
+  padding: 0 12px;
+  height: 40px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+}
+.bd-search-icon {
+  font-size: 16px;   /* 1em-масштаб SVG-лупи (ICONS.search) */
+  margin-right: 8px;
+  opacity: 0.6;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink, #2b2b2b);
+}
+.bd-search-icon svg { width: 1em; height: 1em; display: block; }
+.bd-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px; /* iOS Safari zoom-fix — нижче 16px iOS автоматично zoom-ить input при focus */
+  font-family: inherit;
+  color: var(--black);
+}
+.bd-search-input::placeholder { color: var(--gray); }
+.bd-search-clear {
+  background: var(--paper-deep);
+  border: none;
+  color: var(--gray);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Шапка Дошки (Д-11) — рядок «лічильник | локація».
+   🔴 28.07: правила `.bd-title` / `.bd-title::after` ВИДАЛЕНО разом із самим
+   заголовком «ДОШКА ОГОЛОШЕНЬ» (18px, uppercase, letter-spacing 2.2px, scaleY 1.08,
+   лінія-градієнт під ним). Причини — у `renderHeader()` (`src/tabs/board.js`).
+   Класу `.bd-title` більше немає в жодній розмітці; лишати мертві правила не можна —
+   наступна сесія прийняла б їх за живі й почала «лагодити» невидимий заголовок. */
+.bd-titlebar {
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+/* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
+.bd-count {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* «7 ОГОЛОШЕНЬ» */
+  color: var(--ink-soft, #5a5a5a);
+}
+
+/* Фільтр за локацією (Д-12) — тонко, без пігулки: іконка + назва (ВЕЛИКИМИ) + каретка */
+.bd-loc-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 55%;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+/* Пін локації — векторна іконка (SVG у розмітці), акцентний колір додатку */
+.bd-loc-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  margin-right: 4px;
+  color: var(--red, #722F37);
+}
+/* Кнопка-фільтр локації — пін + назва НП + каретка (кастомна, не нативний select). */
+.bd-loc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* назви НП великими буквами */
+  color: var(--ink-soft, #5a5a5a);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-loc-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-loc-caret { flex: none; color: var(--red, #722F37); }
+
+/* ── 28.07: ШАПКА ДОШКИ НА НЕЙТРАЛЬНОМУ ФОНІ ──────────────────────────────────
+   Базові правила вище лишаються КРЕМОВИМИ, бо ті самі класи носять Обговорення
+   (`#disc-content`), а їхній теплий беж `#E7E1D2` я свідомо не чіпаю. Тому все
+   нижче — scoped під `#board-content` (тільки вкладка Дошка).
+   Причина: кремове скло `rgba(244,241,230,0.62)` було підібране під ТЕМНИЙ корок.
+   На світло-сірому фоні тепле кремове тло читається як брудна пляма — скло має
+   бути тієї самої родини, що й фон під ним. */
+/* ── ШАПКА ДОШКИ = ОКРЕМА ПЛАШКА (варіант D, Вова 28.07) ──────────────────────
+   Скарга: «сам верхній блок цього пошуку зливається з фоном… може накласти накладку
+   як у Громаді у віджеті Дошка зверху, щоб трошки вирізнялось, але щоб було
+   гармонічно поєднано».
+
+   🔴 ЧОМУ НЕ СКОПІЮВАНО НАКЛАДКУ ВІДЖЕТА БУКВАЛЬНО.
+   `.cmbw-head` (віджет Громади) = `rgba(0,0,0,0.22)` + світла лінія знизу. Це
+   ЗАТЕМНЕННЯ, і воно працює лише тому, що фон віджета темний, а текст на ньому
+   світлий (`#F2E7D0`). Тут текст ТЕМНИЙ на світлому — те саме затемнення дало б
+   темно-сіру плиту з гірше читабельним написом, і шапка виглядала б ВДАВЛЕНОЮ,
+   а не піднятою. Фізика та сама, знак протилежний: на темному тлі «вище» = темніше
+   з підсвіченим краєм, на світлому «вище» = світліше з тінню під краєм.
+
+   🔑 ЧОМУ САМЕ ЦЕЙ ВАРІАНТ (з чотирьох показаних Вові скріншотами):
+   шапка відділяється не КОЛЬОРОМ, а ФОРМОЮ — відступає від країв екрана і стає
+   такою самою білою заокругленою плашкою, як картки під нею. Тобто перестає
+   прикидатись фоном і починає говорити тією ж мовою, що решта екрана. Це і є
+   «гармонічно поєднано»: нового прийому в інтерфейс не додано, використано наявний.
+   Інструмент порівняння лишився в репозиторії — `tests/tools/board-head-variants.mjs`
+   (A світліше скло · B градієнт+лінія · C біла плита · D цей). Вова: «Давай D
+   попробуєм, якщо що повернемо» → перехід на будь-який інший = один блок нижче.
+
+   📌 ІСТОРІЯ ВИБОРУ (щоб наступна сесія не переграла це наново):
+   • **D — плашка з полями** (`left/right: 8px` + рамка + `radius: 16px`) була
+     задеплоєна першою (PR #693, run 3475). Вова: «Давай D попробуєм, якщо що
+     повернемо». Її ціна, названа до вибору: шапка вужча за екран, тож у двох смужках
+     по 8px з боків видно картки, що проїжджають угору.
+   • **B — градієнт + лінія (ЗАРАЗ)**: Вова захотів порівняти живцем. Шапка знову на
+     всю ширину, а «підняття» дає вертикальний градієнт усередині — світліше згори,
+     темніше донизу, ніби на плашку падає світло — плюс тонка лінія знизу.
+     Саме B і є найточніший дзеркальний відповідник накладки віджета: там на темному
+     тлі затемнення + світла лінія, тут на світлому — підсвітлення + темна лінія.
+   Обидва лишаються в `tests/tools/board-head-variants.mjs` — перемикання це заміна
+   цього одного блоку. */
+#board-content .bd-controls {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.62));
+  border-bottom: 1px solid rgba(16, 18, 22, 0.12);
+  /* Тінь під нижнім краєм посилена (Вова 28.07: «добав ще тіні трохи нижній частині
+     того блока»). ДВА шари, а не один щільніший: близький (2px/5px) малює саму межу
+     й не дає лінії злитися з картками, далекий (10px/24px) дає розсіяне падіння —
+     разом читається як фізична висота. Один широкий шар при тій самій щільності
+     виглядав би сірою плямою під шапкою, а не тінню.
+     Було: `0 5px 16px rgba(…,0.12)`. */
+  box-shadow:
+    0 2px 5px rgba(16, 18, 22, 0.08),
+    0 10px 24px rgba(16, 18, 22, 0.18);
+}
+
+/* ── ПОВЕРХНЯ КАРТКИ ДОШКИ — ЧИСТИЙ БІЛИЙ (28.07) ────────────────────────────
+   Базове правило `.cm-board-note` лишається `#FBFBF9` (теплуватий) — його носять
+   і картки Обговорень, а там фон теплий беж `#E7E1D2`, і холодний білий на ньому
+   виглядав би чужим. Тому тільки для Дошки.
+   🔑 ЧОМУ ЦЕ ВАЖЛИВІШЕ ЗА САМЕ ЗАТЕМНЕННЯ ФОНУ: `#FBFBF9` — жовтуватий білий,
+   залишок від часів кремового корка. На ХОЛОДНОМУ сірому фоні тепла поверхня
+   читається «брудно» навіть тоді, коли яскравість формально відрізняється. Тобто
+   Вова бачив ДВІ проблеми, а описав як одну («зливається»): малу різницю
+   яскравості (1.122:1) і розбіжність температури. Чистий білий закриває другу
+   і заразом зрівнює Дошку зі «Стрічкою» (`--fd-surface: #FFFFFF`).
+   ⚠️ Три селектори, а не один: зум-модалка оголошення і прев'ю в модалці подачі
+   живуть ПОЗА `#board-content` (створюються в `body`), тож scoped-правило їх не
+   дістає — а картка й її збільшена копія мусять бути однакового кольору, інакше
+   різницю видно в момент відкриття. */
+#board-content .cm-board-note:not(.cm-board-note--official),
+.cm-board-modal-note,
+.bm-preview-canvas .cm-board-note {
+  background: #FFFFFF;
+}
+/* 🔴 ОБІДОК КАРТКИ (Вова: «добавимо на карточки обідок такий тоненький і не чорний,
+   але такий темніший, щоб він виділявся»).
+   ЧОМУ КРАЙ, А НЕ ТЕМНІШИЙ ФОН: різниця заливок картка/фон — лише 1.264:1, на такій
+   малій різниці око ловить саме МЕЖУ, а не площину. Затемнення фону 28.07 дало +0.10
+   контрасту і водночас «тиск на очі» (пряма скарга) — тобто важіль був не той.
+   Один 1px край дає більше, ніж будь-яке затемнення, і дозволяє фону лишитись світлим.
+   Колір — не чорний, а темно-нейтральний під прозорістю: на білій картці читається як
+   м'яка сіра лінія, не як обведення.
+   ⚠️ Тінь заразом ЗІБРАНА (менший радіус, менша щільність): широка розмита тінь поруч
+   із чітким краєм читається як бруд — вони конкурують за ту саму роль «межі».
+   ⚠️ Прев'ю подачі (`.bm-preview-canvas`) теж отримує край — Д-6, прев'ю дзеркалить
+   реальну картку. Зум-модалка НЕ отримує: це аркуш на затемненні, там межу дає підкладка. */
+/* 🔴 29.07, ЗАХІД ДРУГИЙ — МОДЕЛЬ OLX. Вова дав скріншот OLX як зразок: «дивись, який
+   там фон… та на карточках є такі обідки, тоненький сірий — нам також це треба, бо
+   в нас його не видно».
+   🔬 ЗАМІРЯНО ПО ПІКСЕЛЯХ ТОГО СКРІНШОТА (не на око):
+     фон OLX  #EEF1F1 · картка #FFFFFF → різниця заливок лише **1.136:1**, майже нуль
+     обідок   #C8CED0, 3 фізичні пікселі при 3× = рівно 1pt → контраст лінії **1.401**
+     тіні НЕМАЄ — зріз дає чистий стрибок фон → лінія → біле, без градієнта.
+
+   🔑 ЧОМУ НАШ ОБІДОК «НЕ ВИДНО», ХОЧ ЧИСЛО В НЬОГО БУЛО НАВІТЬ БІЛЬШЕ (1.446 > 1.401):
+     1) ТІНЬ. `0 4px 10px rgba(...,0.10)` малювала навколо картки градієнт, який
+        розмивав перехід — око бачило м'яку смугу, а не лінію.
+     2) ПОДВІЙНИЙ КРАЙ. Ми розділяли ОДНОЧАСНО заливкою (1.458) і лінією. Два
+        розділювачі в одному місці читаються як каша, а не як межа.
+   Тобто «давить на очі» — це не яскравість і не сірість, а НЕВИЗНАЧЕНА МЕЖА: око
+   весь час доводить край, якого немає. Саме тому і світліший, і темніший фон однаково
+   не рятували — крутили не той важіль. Модель OLX: заливку майже зрівняти, лишити
+   ОДИН чіткий розділювач — лінію, тінь прибрати зовсім.
+
+   ⚠️ ОБІДОК ТЕПЕР СУЦІЛЬНИЙ HEX, А НЕ rgba. Прозорий обідок домішується до того, що
+   під ним: на білій картці й на фоні він давав різні кольори, тобто лінія «пливла».
+   Суцільний тримає рівно те, що заміряно.
+   ⚠️ ПАРА «фон + обідок» лишається: під кожен фон обідок підбирається так, щоб
+   контраст лінії був ≈**1.40** (число OLX). Чинний фон `#E6E6E3` → **#C4C4C1** (1.398).
+   Історія й таблиця — у `base.css`, блок `--board-bg`.
+   ⚠️ Те саме носять картки екранів FAB (`.pm-thread`, `.pm-ad` у `messages.css`) —
+   вони лежать на тій самій поверхні. Міняєш тут — міняй і там. */
+#board-content .cm-board-note:not(.cm-board-note--official),
+.bm-preview-canvas .cm-board-note {
+  border: 1px solid #C4C4C1;
+  box-shadow: none;
+}
+/* Поле пошуку і кнопка-фільтр — БІЛІ (були кремові `--card-cream` #FAF8EF).
+   На сірому фоні біле поле — стандарт (той самий хід уже зроблено в Обговореннях
+   20.07: «пошук БІЛИЙ — на глибшому фоні відділяється»). Рамку роблю світлішою:
+   на кремовому тлі 0.22 читалась як тонка лінія, на білому — як чорна обводка. */
+#board-content .bd-search,
+#board-content .bd-cat-filter {
+  background: #FFFFFF;
+  border-color: rgba(16, 18, 22, 0.12);
+  box-shadow: 0 1px 3px rgba(16, 18, 22, 0.06);
+}
+/* Кружечок «×» усередині поля пошуку. Базове правило дає йому `--paper-deep`
+   (#EAE4D2) — на кремовому полі це читалось, а на БІЛОМУ (правило вище) кремовий
+   кружечок став жовтуватою плямою. Scoped під `#board-content`, бо той самий клас
+   носять Обговорення, а там свідомо теплий беж. */
+#board-content .bd-search-clear { background: var(--board-press); }
+
+/* ── ЗГОРТАННЯ ШАПКИ ДОШКИ ПРИ СКРОЛІ (переписано 28.07) ──────────────────────
+   Вова: «треба зробити, щоб ховалася оце поле воду з категоріями та і так далі…
+   щоб не займало багато місця». Тобто ховається ВСЯ шапка (лічильник + локація +
+   пошук + фільтр), а не лише назва, як було до 28.07.
+
+   🔴 ЧОМУ `transform`, А НЕ ВИСОТА — головне в цьому блоці.
+   Було: `.bd-title { max-height: 48px → 0 }`, тобто шапка ЗМЕНШУВАЛА свою висоту.
+   Це працювало лише тому, що ховався один невеликий заголовок. Ховати так усю шапку
+   не можна: `syncBoardBodyOffset()` (`board.js`) виставляє `.bd-body { padding-top }`
+   рівно по живій висоті шапки. Зменшилась висота → мусить перерахуватись відступ
+   тіла → весь список поїхав би ВГОРУ під пальцем, посеред жесту прокрутки.
+   Це рівно та хвороба, від якої лікували «Стрічку» і Дошку 27-28.07
+   (`core/list-patch.js`), і рівно те, від чого застерігає HOT_RULES №10
+   («не рухати те, що зараз під пальцем»).
+
+   Стало: шапка ЇДЕ вгору (`translateY(-100%)`), її висота НЕ змінюється, і
+   `padding-top` тіла не чіпається взагалі. Контент не рухається ні на піксель —
+   просто відкривається більше видимої області. `transform` не викликає reflow
+   (перерахунок розкладки), лише композицію шарів → плавно на iOS.
+
+   Куди вона їде: верх шапки стоїть на `header-h + safe-area` (≈103px), зсув на власну
+   висоту (≈92px) кладе її в зону 11..103px. Цю зону повністю накривають
+   `.app-header` (z-100, непрозорий білий) і `.app-header::before` (z-101, статус-бар).
+   Сама шапка — z-90, тобто заїжджає ПІД них і зникає з очей без жодної маски.
+
+   ⚠️ Порожньої смуги під шапкою застосунку не буде: біля верху списку шапка завжди
+   розгорнута (`TOP_ZONE` у `setupHeaderCollapse`), а коли вона згортається — людина
+   вже прокрутила вниз, тобто під нею реальний контент, а не відступ.
+   ⚠️ `will-change: transform` тут НЕ ставлю свідомо: у Safari поєднання
+   `will-change` + `backdrop-filter` дає застиглий blur (шапка «замерзає» кадром).
+   Композитний шар transform на `position:fixed` створює й без підказки. */
+#board-content .bd-controls {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s ease;
+}
+#board-content .bd-controls--collapsed {
+  /* -100% ЗА ВИСОТОЮ + 6px ЗАПАСУ.
+     Чистого -100% було досить, поки шапка не мала ні рамки, ні заокруглень: нижній
+     край сідав рівно на межу шапки застосунку. Запас додано при переході на плашку
+     (варіант D) — там з'явились рамка 1px і кути 16px, і рівно на межі в кутах могла
+     блиснути світла дуга.
+     ⚠️ ЗАПАС ПОТРІБЕН І ЗАРАЗ, коли шапка знову на всю ширину (варіант B): у неї
+     лишились `border-bottom: 1px` і базові нижні кути 12px, тобто той самий ризик.
+     Тобто це не залишок від D — прибирати не треба. */
+  transform: translateY(calc(-100% - 6px));
+  /* Тінь малюється НИЖЧЕ нижнього краю — у згорнутому стані вона визирала б з-під
+     шапки застосунку тонкою сірою смугою. Знімаємо разом зі зсувом. */
+  box-shadow: none;
+  /* Схована шапка не має ловити тапи: інакше пальцем по шапці застосунку можна
+     випадково влучити в невидиме поле пошуку під нею. */
+  pointer-events: none;
+}
+
+/* Рядок пошуку: кнопка-фільтр категорій (зліва) + поле пошуку (розтягується). */
+.bd-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bd-search-row > .bd-search { flex: 1; min-width: 0; }
+.bd-cat-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 19px;   /* задає розмір іконки (1em) */
+  background: var(--card-cream);
+  border: 1.5px solid rgba(0,0,0,0.22);
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  color: var(--black);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-cat-filter.open { border-color: rgba(0,0,0,0.4); }
+
+/* Випадне меню категорій — під кнопкою, поверх карток. */
+/* Спільна база випадних меню Дошки (категорії + локація). */
+.bd-cat-menu,
+.bd-loc-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 210px;
+  /* 🔴 29.07 — БІЛЕ (було `--card-cream` #FAF8EF). Обидва меню малює лише board.js,
+     тобто вони належать самій Дошці, і висять над білими картками на сірому фоні.
+     Кремове меню поверх білої картки давало жовтуватий острівець. */
+  background: var(--board-card);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  overflow: hidden;
+  padding: 4px;
+}
+.bd-cat-menu[hidden],
+.bd-loc-menu[hidden] { display: none; }
+.bd-cat-mi,
+.bd-loc-mi {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--black);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-cat-mi:active,
+.bd-loc-mi:active { background: rgba(0,0,0,0.05); }
+.bd-cat-mi.active,
+.bd-loc-mi.active { background: rgba(114,47,55,0.10); font-weight: 700; }
+/* Меню локації: праворуч під кнопкою (щоб не вилазило за правий край) + прокрутка
+   (довгий список НП). ПІСЛЯ спільної бази — щоб перекрити left:0/overflow:hidden. */
+.bd-loc-menu {
+  right: 0;
+  left: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Тіло — порожній стан і стрічка */
+.bd-body { min-height: 50vh; }
+.bd-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* Немає оголошень у конкретному НП (перед секцією «Олицька громада») — компактніше за .bd-empty.
+   2 рядки: перший темніший (факт), другий приглушеніший (підказка).
+   position:relative;z-index:1 — інакше ховається під .board-bg (fixed, z-index:0),
+   та сама пастка що й .bd-group-title (див. коментар там). */
+.bd-group-empty {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 18px 24px 10px;
+  /* 🔴 28.07 — ПЕРЕВЕДЕНО НА СВІТЛИЙ ФОН (заміряно: було **1.02:1**, тобто напис
+     фактично не існував для ока). Це ПЕРШИЙ рядок — сам факт «оголошень немає»,
+     тому найтемніший: `--ink` = **12.00:1**. */
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.bd-group-empty-hint {
+  display: block;
+  margin-top: 4px;
+  /* ДРУГИЙ рядок — підказка «перегляньте всі оголошення громади». Світліший за перший,
+     щоб ієрархія лишалась (Вова: «один світліший, другий темніший»), але вже в ТЕМНОМУ
+     діапазоні: `--ink-soft` = **5.83:1** проти колишніх 1.08:1. */
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 🔴 28.07 — Порожній стан на Дошці. Правило заведене, коли Дошка мала ТЕМНИЙ корок і
+   потребувала світлого тексту; корок зняли 28.07, і світлий текст осліп (1.02:1).
+   Лишаю правило (а не видаляю до базового `var(--gray)` = 4.54:1, тобто рівно на межі
+   норми) і роблю темним: `--ink-soft` = **5.83:1** — те саме, що підказка порожньої
+   секції, тож обидва порожні стани Дошки звучать однаково. */
+.board-bg ~ .bd-body .bd-empty {
+  color: var(--ink-soft);
+}
+
+.bd-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  padding-bottom: 8px; /* .board-content уже дає нижній відступ; таб-бар клірить .app-main */
+}
+
+/* ── Рядок дій (тригер реакції зліва + save/share справа) ──────────────── */
+.bd-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.10);
+}
+.bd-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #555;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s, color 0.15s, border-color 0.15s, background 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.bd-icon-btn:active { transform: scale(0.88); }
+.bd-icon-btn svg { display: block; }
+.bd-share-btn:active { color: var(--red); }
+.bd-bookmark--active {
+  color: var(--red);
+  border-color: var(--red);
+  background: white;
+}
+
+/* На board-стікері трохи більший контраст бо фон може бути темний */
+.bd-card--board .bd-actions {
+  position: relative;
+  margin-top: 3px;
+  padding-top: 8px;
+  border-top: none;   /* прибираємо штрихпунктир (.bd-actions--board-compact), лишається ::before суцільна */
+}
+/* Суцільна роздільна лінія над реакціями, затухає по краях (як під описом, без тіні) */
+.bd-card--board .bd-actions::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0,0,0,0.12) 50%,
+    transparent 100%);
+}
+
+
+/* ── BOARD-стікер: на звичайній картці actions ПРИХОВАНИЙ (реакції прибрано
+   11.07; save/share показуємо лише у zoom-modal .cm-board-modal-note).
+   ⚠️ 03.08 — виняток для НОВОЇ картки-рядка Дошки: там закладка повернулась у правий
+   верхній кут (макет від ChatGPT, схвалений Вовою). Загальне правило лишається — його
+   носять картки Обговорень і прев'ю подачі, де кнопки справді зайві. */
+.bd-actions--board-compact { display: none; }
+#board-content .bd-ad .bd-actions--board-compact { display: block; }
+.cm-board-modal-note .bd-actions--board-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  border-top: none;
+}
+/* 🗑 28.07 — лінію-роздільник над 🔖/↗ ПРИБРАНО за прямою вказівкою Вови («Прибери»).
+   Історія: вона малювалась через `::before` і відділяла кнопки від рядка «ім'я / телефон»,
+   поки футер був ОДНИМ рядком (мердж 11.07). Після переїзду контакту у власну смугу
+   (потік 2, 28.07) футер став дворядковим — і лінія опинилась усередині одного рядка,
+   не розділяючи вже нічого. Разом з нею знято зсув 5+6px, який тримав під неї місце. */
+.cm-board-modal-note .bd-actions-extra {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── INLINE-КОМЕНТАРІ ДЛЯ CHAT-КАРТОК ───────────────────────────────────── */
+/* ── Прев'ю картки обговорення (тап → модалка-чат) ──────────────────────── */
+.bd-card--chat { cursor: pointer; }
+.bd-chat-topic {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+/* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
+.bd-chat-topline {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bd-chat-msgcount, .bd-chat-participants {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bd-chat-last {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;   /* два останніх повідомлення — окремими рядками */
+  align-items: stretch;
+  gap: 5px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #555;
+}
+.bd-chat-last-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bd-chat-last-msg {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bd-chat-last-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--gray);
+  white-space: nowrap;
+}
+.bd-chat-last-author { font-weight: 600; color: var(--red); }
+.bd-chat-last--empty { color: var(--gray); font-style: italic; }
+.bd-chat-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;          /* штрих-пунктирна лінія зміщена нижче (більший відступ над підвалом) */
+  padding-top: 10px;
+  border-top: 1px dashed rgba(0,0,0,0.10);
+  font-size: 12px;
+  color: var(--gray);
+}
+.bd-chat-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;   /* лічильник трохи більший разом із сердечком (Вова 14.07) */
+  font-weight: 600;
+  color: var(--gray);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-chat-like:active { background: rgba(0,0,0,0.05); }
+.bd-chat-like--active { color: var(--red); }
+.bd-chat-like svg { flex-shrink: 0; }
+/* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
+.bd-chat-by {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.25;
+  font-size: 11px;
+  color: #1C1C1E;
+}
+.bd-chat-by-author { text-transform: uppercase; }
+.bd-chat-by-label { font-weight: 700; color: var(--red); }
+.bd-chat-by-date { font-size: 10.5px; color: var(--gray); }
+/* Кнопка «зберегти» в підвалі картки — трохи компактніша */
+.bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
+
+/* Гість у чаті обговорення — замість поля вводу кнопка входу (читати можна, писати — ні) */
+.bd-chat-login-cta {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px calc(10px + env(safe-area-inset-bottom));
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  background: var(--brand-grad-sm);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
+.bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
+
+.bd-chat-modal {
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 6px);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  left: 50%;
+  width: min(94vw, 460px);
+  z-index: 1100;                        /* вище таб-бару — меню не перекриває */
+  display: flex;
+  flex-direction: column;
+  background: #F3EFE3;                  /* Вова 20.07: контейнер = колір верх/низ блоків → зона рисочки і заокруглені кути суцільні з шапкою (тіло має власний колір нижче) */
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.40), 0 6px 18px rgba(0,0,0,0.22);
+  transform: translateX(-50%) scale(0.96);
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease,
+              top 0.28s ease, height 0.28s ease, bottom 0.28s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-chat-modal.visible {
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+}
+/* Клавіатура відкрита: верх піднімається до самого верху (низ — inline-стилем у JS) */
+.bd-chat-modal--kb {
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+}
+/* Прибрати нижній safe-area відступ поля при відкритій клавіатурі (інакше кремова
+   смуга між полем і клавіатурою). Та сама логіка, що в приватному чаті (.pm-kb-open). */
+.bd-chat-modal--kb .bd-chat-modal-form { padding-bottom: 10px; }
+
+.bd-chat-modal-handle {
+  width: 38px; height: 4px; border-radius: 2px;
+  background: rgba(0,0,0,0.12);
+  margin: 8px auto 2px; flex-shrink: 0;
+}
+.bd-chat-modal-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px 10px;
+  flex-shrink: 0;
+  background: #F3EFE3;                  /* Вова 20.07: верхній блок = колір нижнього (форми #F3EFE3); тіло чату лишається в колір картки #FCFAF4 */
+  /* Тінь ТІЛЬКИ донизу (відділяє шапку від повідомлень — Вова: «знизу добре»).
+     Було 0 4px 12px — blur 12 бив ~8px і ВГОРУ, даючи темну смугу над заголовком
+     (виглядало накладеним). Тепер відʼємний spread -4 прибирає верхнє розпливання:
+     верх модалки суцільний до заокруглених кутів (Вова 14.07). */
+  box-shadow: 0 6px 8px -4px rgba(0,0,0,0.12);
+  z-index: 1;
+}
+.bd-chat-modal-back,
+.bd-chat-modal-close {
+  width: 34px; height: 34px; border: none; background: transparent;
+  font-size: 20px; color: var(--black); border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-chat-modal-back:active,
+.bd-chat-modal-close:active { background: rgba(0,0,0,0.07); }
+.bd-chat-modal-titles { flex: 1; min-width: 0; }
+.bd-chat-modal-title {
+  font-size: 16px; font-weight: 700; color: var(--black);
+  text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bd-chat-modal-meta {
+  font-size: 12px; color: var(--gray); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bd-chat-modal-meta svg { vertical-align: -2px; margin-right: 2px; }
+.bd-chat-modal-body {
+  flex: 1; overflow-y: auto; padding: 14px 12px;
+  display: flex; flex-direction: column;
+  -webkit-overflow-scrolling: touch;
+  background: #FCFAF4;                  /* Вова 20.07: тіло (де повідомлення) — колір картки; верх/низ модалки #F3EFE3 */
+}
+.bd-chat-stream {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: auto;                     /* мало повідомлень → притиснуті донизу */
+}
+.bd-chat-empty {
+  margin: auto; text-align: center; color: var(--gray);
+  font-size: 13px; line-height: 1.5; padding: 24px 12px;
+}
+.bd-chat-empty-icon { display: block; margin-bottom: 8px; opacity: 0.5; }
+.bd-chat-empty-icon svg { width: 32px; height: 32px; }
+.bd-msg-group .bd-avatar { flex-shrink: 0; }
+
+/* ── Роздільник «Нові повідомлення» ── */
+.bd-chat-divider {
+  display: flex; align-items: center; gap: 10px;
+  align-self: stretch; margin: 4px 0;
+  color: var(--red); font-size: 12px; font-weight: 700;
+}
+.bd-chat-divider::before, .bd-chat-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(114,47,55,0.25);
+}
+.bd-chat-divider span { white-space: nowrap; }
+
+/* ── Floating-пігулка «N нових повідомлень» ── */
+.bd-chat-newpill {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 74px; z-index: 5;
+  background: var(--brand-grad-sm); color: #fff; border: none;
+  padding: 7px 16px; border-radius: 18px;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  box-shadow: 0 3px 12px rgba(114,47,55,0.40);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  animation: bd-newpill-in 0.2s ease;
+}
+.bd-chat-newpill[hidden] { display: none; }
+
+/* ── Поле вводу ── */
+.bd-chat-modal-form {
+  display: flex; gap: 8px; align-items: center;
+  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: #F3EFE3;
+  box-shadow: 0 -5px 14px -2px rgba(0,0,0,0.20);  /* Вова 20.07: помітна тінь вгору (на світлому тілі слабку не видно — посилено) */
+  flex-shrink: 0;
+}
+.bd-chat-modal-input {
+  flex: 1; background: #fff; border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 20px; padding: 10px 16px;
+  font-size: 16px;   /* iOS Safari zoom-fix — нижче 16px iOS auto-zoom-ить input */
+  font-family: inherit; color: var(--black);
+  outline: none; min-width: 0;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  transition: border-color 0.15s;
+}
+.bd-chat-modal-input:focus { border-color: var(--red); }
+.bd-chat-modal-input::placeholder { color: var(--gray); }
+.bd-chat-modal-send {
+  width: 38px; height: 38px; border: none; border-radius: 50%;
+  background: var(--brand-grad-sm); color: #fff; font-size: 18px; font-weight: 700;
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(114,47,55,0.35);
+  -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
+}
+.bd-chat-modal-send:active { transform: scale(0.9); }
+
+/* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
+.bd-card--chat {
+  /* Вова 20.07: картки на глибшому беж-фоні (#E7E1D2) — контраст «аркуш на столі».
+     Не чисто білі, а трохи теплі (#FCFAF4) — Вова: «трохи насиченіші, але не такі
+     кремові як були раніше (#FAF8EF), трішки». */
+  background: #FCFAF4;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(60,45,20,0.10), 0 8px 22px rgba(60,45,20,0.12);
+}
+.bd-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.bd-chat-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--black);
+  margin-bottom: 6px;
+}
+/* Заголовок теми у картці обговорення — великі літери, чорний, жирний.
+   Лише в межах .bd-card--chat, щоб не зачепити лайв-прев'ю у модалці «Новий пост». */
+.bd-card--chat .bd-chat-text {
+  text-transform: uppercase;
+  color: #1C1C1E;
+  font-weight: 700;
+}
+
+/* Затемнений верхній край — поверх карток (z:8), нижче контролів (z:90).
+   ⚠️ 28.07: лишився ТІЛЬКИ для Обговорень (їхній теплий беж `#E7E1D2` не чіпали).
+   З Дошки знято разом із темним корком — на світло-сірому фоні це читалось би як
+   брудна смуга через екран.
+   🗑 `.board-vignette--bottom` ВИДАЛЕНО: його вживала винятково Дошка, тобто після
+   зняття корка правило стало мертвим. Мертвий CSS не лишаю — наступна сесія прийняла б
+   його за живий (той самий випадок, що з правилами `.bd-title` вище). */
+.board-vignette {
+  position: fixed;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.board-vignette--top {
+  top: 0;
+  height: 140px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, transparent 100%);
+}
+/* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔴 01.08.2026 — ДОШКА В ОДИН СТОВПЧИК. Прощання з корком (рішення Вови).
+
+   ЗАМОВЛЕННЯ. Вова прислав концепт (намальований ChatGPT) і сказав: «Мені
+   подобається цей вигляд. Це схоже на дошку оголошень. Те, як зараз у нас
+   реалізовано… взагалі неясно, що це таке». На питання «прощаємось із корком
+   і шпильками?» — «Попрощаємось».
+
+   ЧОМУ ДВІ КОЛОНКИ НЕ ПРАЦЮВАЛИ — арифметика, не смак. У масонрі з двох колонок
+   картці лишалось ~175px ширини. Фото, ціна, локація і час у таку ширину разом
+   не влазять, тож картка показувала лише текст і читалась як стікер. Один
+   стовпчик дає 358px: фото 76×76 ліворуч, решта праворуч.
+
+   ЩО ВЗЯТО З КОНЦЕПТУ, А ЩО СВІДОМО НІ (перевірено по ЖИВИХ даних, 17 оголошень):
+   • взято: один стовпчик · фото зліва · тип угоди міткою · локація · ціна;
+   • НЕ взято ряд «Нові/Популярні/Поруч» — це другий ряд перемикачів поспіль,
+     8 елементів до першої картки (те саме прибирали в новинах 31.07);
+   • НЕ взято ціну як окрему колонку — її має 1 оголошення з 17 (6%), тож вона
+     елемент, якого може не бути, а не сітка;
+   • НЕ взято «цукерки» на типах — плашок було б стільки ж, скільки карток.
+
+   ⚠️ SCOPED ПІД `#board-content` — інакше зламаються ТРИ сусіди, які носять той
+   самий клас `cm-board-note`: віджет Дошки в Громаді, прев'ю в модалці подачі й
+   зум-модалка оголошення (останні дві створюються в `body`, поза цим коренем).
+   ⚠️ Клас `cm-board-note` на картці ЛИШИВСЯ навмисно — за ним чіпляється
+   розгортання в зум-модалку. Прибереш — тап по оголошенню перестане працювати.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── ДОШКА НЕДОСТУПНА (05.08) ─────────────────────────────────────────────────
+   Стан, якого до 05.08 людина не бачила НІКОЛИ: замість нього підставлялись сім
+   вигаданих оголошень із вигаданими телефонами. Тепер збій називається збоєм.
+   🔑 Кнопка «Спробувати ще» тут не прикраса: єдина причина цього екрана —
+   тимчасова недосяжність бази, тобто повтор справді має шанс спрацювати. */
+#board-content .bd-offline {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 56px 28px; text-align: center;
+}
+#board-content .bd-offline-ttl {
+  margin: 0; font: 800 17px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink);
+}
+#board-content .bd-offline-tx {
+  margin: 0; max-width: 30ch;
+  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--gray);
+}
+/* 44px — норма Apple HIG. Кнопка збою натискається рідко, але саме тому вона
+   не має бути дрібною: у неї цілять поспіхом і роздратовано. */
+#board-content .bd-offline-btn {
+  margin-top: 4px; min-height: 44px; padding: 0 22px;
+  border: 0; border-radius: 12px;
+  background: var(--brand-grad-sm); color: #fff;
+  font: 800 14px/1 system-ui, -apple-system, sans-serif;
+}
+#board-content .bd-offline-btn:active { background: var(--brand-grad-press); }
+
+#board-content .bd-ads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 12px з боків: картка на всю ширину торкалась краю екрана і читалась як
+     суцільна смуга, а не як окремі оголошення. */
+  padding: 0 12px;
+}
+/* Скидання спадку від «стікера»: поворот, три шари тіні, вертикальна розкладка
+   і padding 16px були потрібні корку, а рядку заважають. */
+#board-content .bd-ad {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  /* `gap` більше не потрібен: фото поза потоком, просвіт дає `margin-left` тіла. */
+  position: relative;
+  width: 100%;
+  /* 🔴 03.08, ДРУГИЙ ЗАХІД — ВИСОТА ЗНОВУ ЗА ВМІСТОМ. Кілька годин тут стояло
+     `min-height: 137px` (однакова висота всіх карток), і Вова показав наслідок на
+     живому екрані, обвівши порожнечу: заміряно **24-63px слаку** між описом і рядком
+     локації, а в картці без опису — 63px чистого нічого.
+     Чому попереднє рішення було хибним: я боявся рваного списку і зробив однакову
+     висоту — але вирівняв її по НАЙВИЩОМУ випадку. Тобто заплатив порожнечею в кожній
+     короткій картці за акуратність у довгій. Порожнеча помітніша за різницю висот:
+     різні висоти око читає як різний обсяг тексту (і це правда), а діру — як недоробку.
+     ⚠️ Розкид тепер ОБМЕЖЕНИЙ, а не довільний: опис обрізаний двома рядками, назва —
+     теж, тож картка буває лише кількох висот. Це не та «рвань», що була в новинах, де
+     висота стрибала від наявності фото.
+     ⚠️ Підлога 98px — вона НЕ вирівнює картки за
+     найвищою (саме це й дало порожнечу), а лише не дає фото схлопнутись у марку на
+     оголошенні без опису: заміряно, що без підлоги така картка падає до 74px, а фото
+     до 54px, і список читається як зламаний.
+     🛑 НЕ ПІДІЙМАТИ цю підлогу до висоти найвищої картки — це вже пробували і
+     відкотили за скаргою «забагато пустого місця». */
+  min-height: 98px;
+  padding: 9px;
+  border-radius: 14px;
+  border: 1px solid var(--board-line, #C4C4C1);
+  box-shadow: none;
+  transform: none;
+}
+#board-content .bd-ad:hover { transform: none; }
+#board-content .bd-ad:active { background: var(--board-press, #E4E4E1); }
+
+#board-content /* 🔴 03.08 — ФОТО ТЯГНЕТЬСЯ НА ВСЮ ВИСОТУ КАРТКИ. Скарга Вови: «населений пункт
+   розташувати знизу, напроти нижнього краю фотографії».
+   Заміряно, чому не збігалось: фото мало ФІКСОВАНУ висоту 76px і було приліплене до
+   ВЕРХУ, а права колонка просто сипала текст згори вниз — їх не звʼязувало ніщо. Через
+   це низ рядка локації опинявся на **21-26px ВИЩЕ** за край фото, і праворуч від його
+   низу лишалась мертва смуга.
+   🔑 Лікування СТРУКТУРНЕ, а не підбором числа: фото розтягується (`align-self:
+   stretch`), а нижній рядок притискається донизу (`margin-top: auto` у `.bd-ad-foot`).
+   Тоді низ фото і низ локації збігаються ЗАВЖДИ — і при короткому заголовку, і при
+   довгому, і з описом, і без. Підбирати висоту не доведеться ніколи.
+   ⚠️ `height` тут БІЛЬШЕ НЕ ЗАДАЄМО — саме він і робив розрив. Не повертати.
+   76 → 88px по ширині: при вищій картці вузьке фото читалось маркою на конверті. */
+.bd-ad-img {
+  /* 🔴 ФОТО ВИЙНЯТЕ З ПОТОКУ. Це третій захід, і причина кожного разу нова — тому варто
+     памʼятати всі три:
+       1) `height: 76px` + `align-self: flex-start` → низ фото на 21-26px нижче за
+          локацію (перша скарга Вови);
+       2) `align-self: stretch` без висоти → фото ПОЧАЛО ДИКТУВАТИ висоту картки: у
+          `<img>` є власна пропорція, і кадр 1200×1600 при ширині 88 просить 117px.
+          Заміряно: картки з фото 137px, без фото 108px — тобто висота залежала від
+          того, ЯКИЙ кадр зняла людина. Саме з цим колись боролись монограмою;
+       3) `position: absolute` — фото розтягується від верхнього до нижнього відступу
+          картки й НЕ БЕРЕ УЧАСТІ в її вимірюванні. Висоту визначає лише текст, а низ
+          фото збігається з низом локації за побудовою.
+     ⚠️ `top`/`bottom` = внутрішній відступ картки (9px). Зміниш `padding` у `.bd-ad` —
+     зміни й тут, інакше фото вилізе за край. */
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  /* ⚠️ САМЕ `height`, а не `bottom`. У картинки є ВЛАСНА пропорція, і при заданих
+     `top` + `bottom` + `width` розкладка стає переобмеженою: браузер відкидає `bottom`
+     і бере висоту з пропорції кадру. Заміряно наслідок: фото 117px у картці 113px —
+     вилазило на 24-29px. `height: calc(100% - 18px)` знімає пропорцію з рівняння. */
+  height: calc(100% - 18px);
+  width: 88px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #ECECEA;
+}
+/* Монограма для оголошення без фото. Тримає ту саму висоту рядка, що й фото —
+   інакше список знову став би рваним (у новинах це коштувало розбіжності 8px). */
+#board-content .bd-ad-img--mono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.26);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+#board-content .bd-ad-body {
+  flex: 1;
+  min-width: 0;
+  /* Місце під фото, вийняте з потоку: 88 ширина + 10 просвіт. */
+  margin-left: 98px;
+  display: flex;
+  flex-direction: column;
+}
+#board-content .bd-ad-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+}
+/* Тип угоди — кольоровий ТЕКСТ, а не пігулка з підкладкою: мітка стоїть на кожній
+   картці без винятку, і плашки зробили б список строкатим. Колір бере наявні
+   класи `cat-c-*`, тобто семантика категорій лишається спільною з рештою Дошки. */
+#board-content .bd-ad-type {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+#board-content .bd-ad-time {
+  font-size: 11px;
+  color: var(--gray, #8A8A8A);
+}
+/* 🔴 03.08 — ЗАГОЛОВОК = ГОЛОВНИЙ АКЦЕНТ КАРТКИ (замовлення Вови: «щоб миттєво
+   зчитувався навіть при швидкому скролінгу»).
+   Було 14.5px/700 звичайним регістром — і поруч з описом 12.5px вони важили майже
+   однаково, тож око не мало за що зачепитись.
+   КАПС робить `text-transform`, а не дані: у базі оригінальне написання лишається
+   потрібним пошуку і сторінці оголошення. Заміряно — 7 із 10 назв люди вже пишуть
+   капсом, 3 ні; тобто різнобій у списку створювали люди, і виправити його можна лише
+   на показі.
+   ⚠️ `letter-spacing` при капсі ОБОВʼЯЗКОВИЙ: великі літери мають однакову висоту й без
+   міжлітерного просвіту злипаються в суцільну смугу (те саме правило вже діє на мітці
+   типу `.bd-ad-type`, там 0.7px при кеглі 10px).
+   📐 Заміряно на 390px: блок назви 248px завширшки, у два рядки капсом при 16px/800
+   влазить ~34-40 символів. Довше — обрізає клемп із багатокрапкою, і 80 символів
+   (стеля поля вводу) картку не розвалять за побудовою. */
+#board-content .bd-ad-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1.22;
+  text-transform: uppercase;
+  color: #141414;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Два рядки опису під заголовком. Тихий сірий — це УТОЧНЕННЯ до назви, а не другий
+   заголовок; якби він важив стільки ж, картка знову читалась би «накиданою».
+   ⚠️ Опис, який дублює назву, сюди взагалі не потрапляє — його відсіює `cardDescText`
+   у board.js. Це не косметика: у наших даних пара «Куплю мотоцикл» / «Куплю мотоцикл.»
+   трапляється часто, і такий рядок з'їдав би висоту картки ні за що. */
+/* 🔴 03.08 — опис ПРИТИШЕНО (12.5 → 12px, сірий світліший). Це не косметика: заголовок
+   виріс до 16px, і якби опис лишився 12.5px, різниця між ними була б 3.5px — око читає
+   таку пару як «два заголовки» й починає метатись. Тепер розрив 16/12 = чітка ієрархія:
+   спершу назва, потім уточнення. */
+.bd-ad-desc {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #767676;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#board-content /* `margin-top: auto` — саме він притискає рядок «локація · ціна» до низу картки,
+   тобто до краю фото. Разом із `align-self: stretch` на фото це і є вся механіка
+   вирівнювання: жодних фіксованих висот. */
+.bd-ad-foot {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+#board-content .bd-ad-loc {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #7A7A7A;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#board-content .bd-ad-loc svg { width: 11px; height: 11px; flex: none; }
+/* Ціна праворуч у тому ж рядку, що й локація. Коли ціни немає (16 оголошень із 17)
+   — рядок не порожніє, місце просто забирає локація. */
+#board-content .bd-ad .cm-board-price {
+  flex: none;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--news-accent, #722F37);
+}
+#board-content .bd-ad .cm-board-price--word { font-size: 12px; font-weight: 700; }
+
+/* Дії (зберегти) — ВСЕРЕДИНІ рядка категорії, притиснуті праворуч.
+   🔴 03.08 — було `position: absolute` у кутку картки, і кнопка 40px накривала початок
+   ЗАГОЛОВКА: смуга 6..46px по вертикалі, а заголовок починається на 28px. Перекриття
+   лікується не відступом (його довелось би тримати вручну на кожному рядку), а тим, що
+   кнопка стає звичайним елементом рядка — тоді розкладка розводить їх сама.
+   🔴 03.08 — на картці лишається ЛИШЕ закладка. «Поділитися» звідси прибрано: на 390px
+   два кружечки поруч із чіпом категорії і датою робили з верхнього рядка сміттєзвалище,
+   а ділитися оголошенням із СПИСКУ людина майже не ходить — це дія зі сторінки, де вона
+   вже прочитала. Зберегти ж — навпаки, дія саме зі списку: «повернусь пізніше». */
+#board-content .bd-ad .bd-actions-extra .bd-share-btn { display: none; }
+#board-content .bd-ad .bd-actions {
+  /* `auto` притискає праворуч. Відʼємні поля згори й знизу — щоб кнопка 32px НЕ
+     розпихала рядок категорії (заміряно: без них картка виростала на 20px, бо рядок
+     ставав заввишки з кнопку). Тап-ціль лишається 40×32, а в потоці кнопка займає 22. */
+  /* Знизу 0, згори −8: кнопка 32px віддає рядку рівно його 24px і НЕ ЗВИСАЄ в область
+     заголовка. З симетричними −5/−5 вона залазила туди на 4px — стенд це зловив
+     перетином коробок, хоча оком видно не було. Оком не видно ЩЕ, а от довгий
+     заголовок доїхав би під неї. */
+  margin: -8px -8px 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+/* Тап-ціль 40px при видимій іконці 20 — те саме, що в компактній шапці модалки:
+   маленька іконка не мусить означати маленьку кнопку (Apple HIG 44 із запасом на
+   краю картки, де промах веде у сусідній рядок). */
+#board-content .bd-ad .bd-bookmark {
+  /* 40×32: тап-ціль лишається широкою, але кнопка не розпихає рядок по вертикалі. */
+  width: 40px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: none;
+  color: #B0B0B0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-ad .bd-bookmark svg { width: 20px; height: 20px; }
+#board-content .bd-ad .bd-bookmark--active { color: var(--news-accent, #722F37); }
+/* Рядок категорії тепер несе й закладку — тому вирівнюємо по центру і не даємо
+   кнопці розтягнути його по висоті. */
+#board-content .bd-ad .bd-ad-meta { align-items: center; min-height: 24px; }
+
+/* ── ШАПКА ДОШКИ: назва + слоган + «+» і ряд типів (01.08) ──────────────────
+   Багряний «прилад» — той самий, що в таблі новин: бренд у застосунку один, і
+   два різні способи малювати фірмовий блок читались би як два різні застосунки.
+   ⚠️ Scoped під `#board-content`: класи `.bd-*` носять і Обговорення, а їхній
+   теплий беж свідомо не чіпаємо (рішення Вови 20.07).
+   📐 Заміряно: hero 84px + пошук 46px + типи 43px. Шапка виросла з 79 до ~173px,
+   і це свідома плата за те, що екран нарешті каже, ЩО він таке. Компенсується
+   наявним згортанням шапки при прокрутці (`transform`, ніколи не висота —
+   HOT_RULES №10: висота смикнула б `padding-top` тіла під пальцем). */
+#board-content .bd-titlebar {
+  margin: 0 -14px 8px;
+  padding: 10px 14px 9px;
+  background:
+    radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),
+    radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);
+  border-radius: 0 0 18px 18px;
+}
+#board-content .bd-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+#board-content .bd-hero-text { flex: 1; min-width: 0; }
+#board-content .bd-hero-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+  color: #fff;
+  text-transform: uppercase;
+}
+/* Слоган — це половина відповіді на «що це таке»: назва лише називає, дієслова
+   кажуть, що тут РОБЛЯТЬ. Саме тому підзаголовок тут не декор. */
+#board-content .bd-hero-sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: rgba(255, 236, 240, 0.78);
+}
+#board-content .bd-count { color: rgba(255, 236, 240, 0.86); }
+#board-content .bd-loc-btn { color: rgba(255, 236, 240, 0.92); }
+
+/* ── Ряд типів угоди ──────────────────────────────────────────────────────── */
+#board-content .bd-types {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 9px 0 2px;
+  margin: 0 -2px;
+}
+#board-content .bd-types::-webkit-scrollbar { display: none; }
+#board-content .bd-type {
+  flex: none;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--board-card, #FFFFFF);
+  border: 1px solid var(--board-line, #C4C4C1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1B1B1B;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-type--on {
+  background: var(--brand-grad-sm);
+  border-color: var(--news-accent, #722F37);
+  color: #fff;
+}
+#board-content .bd-type-n { font-size: 12px; font-weight: 700; opacity: 0.5; }
+#board-content .bd-type--on .bd-type-n { opacity: 0.75; }
+
+/* Пошук усередині багряного блоку — світле поле на темному, а не біла плашка.
+   ⚠️ Тільки на Дошці: в Обговореннях рядок пошуку лишається на світлому тлі. */
+#board-content .bd-titlebar .bd-search-row { margin-top: 9px; }
+#board-content .bd-titlebar .bd-search {
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+#board-content .bd-titlebar .bd-search-input { color: #fff; }
+#board-content .bd-titlebar .bd-search-input::placeholder { color: rgba(255, 236, 240, 0.6); }
+#board-content .bd-titlebar .bd-search-icon { color: rgba(255, 236, 240, 0.7); }
+#board-content .bd-titlebar .bd-search-clear { color: rgba(255, 236, 240, 0.8); }
+
+/* Пошук і фільтр локації в одному рядку. ⚠️ Пропорція не «на око»: без стелі
+   кнопка локації з довгою назвою («Олицька громада») забирала ~45% рядка, і
+   плейсхолдер пошуку обрізався на «Пошук по дошці…». Пошук — головне поле, тож
+   він росте (`flex: 1`), а локація стискається до змісту зі стелею 132px. */
+#board-content .bd-titlebar .bd-search-row {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#board-content .bd-titlebar .bd-search { flex: 1 1 auto; min-width: 0; }
+/* ⚠️ `flex: 0 0 auto` — НЕ стискатись. З `0 1 auto` пошук забирав ширину і кнопка
+   різалась у «Гром…», хоч назва вже була скорочена. Пошук росте сам (`flex: 1`). */
+#board-content .bd-titlebar .bd-loc-filter { flex: 0 0 auto; min-width: 0; max-width: 150px; }
+#board-content .bd-titlebar .bd-loc-btn {
+  max-width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+}
+#board-content .bd-titlebar .bd-loc-label {
+  text-transform: none;   /* капс робив і без того довгу назву ще ширшою */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── КОНВЕРТ У ШАПЦІ ДОШКИ (02.08) ──────────────────────────────────────────
+   Дії й листування помінялись місцями. Причина не смак, а зона досяжності: подати
+   оголошення — найчастіша дія екрана, і тримати її у ВЕРХНЬОМУ ПРАВОМУ куті означало
+   ставити найпотрібніше найдалі від великого пальця. Тепер дії внизу (FAB), а вхід у
+   листування — тут, іконкою на постійному місці. Той самий розподіл, що у Facebook:
+   продаж великою кнопкою, Messenger — іконкою у верхній панелі.
+   ⚠️ Конверта може не бути зовсім: `canSeeMessages()` = «є оголошення АБО є розмова».
+   Поява/зникнення на льоту — `syncMsgFab()`. */
+#board-content .bd-hero-actions { position: relative; flex: none; }
+#board-content .bd-hero-msgs {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#board-content .bd-hero-msgs svg { width: 21px; height: 21px; }
+#board-content .bd-hero-msgs:active { background: rgba(255, 255, 255, 0.28); }
+/* Бейдж непрочитаних — накладка на кут, а не текст усередині: інакше кнопка
+   ширшала б із кожним новим повідомленням (урок 30.07 про плашку в FAB-меню). */
+#board-content .bd-hero-msgs .board-trigger-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔴 МОДАЛКА ОГОЛОШЕННЯ (02.08). Конструкція описана нижче, у блоці про скролер.
+   Токени беремо з проєкту; «магічних» кольорів не вводимо.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 🔴 02.08 (третій захід) — ОДИН НАТИВНИЙ СКРОЛЕР. ФОТО — ПЕРШИЙ БЛОК ЙОГО ВМІСТУ.
+   Скарга Вови: «все дуже глючить, не плавно, все працює з багами».
+
+   ЩО БУЛО. Аркуш їздив між двома положеннями, а прокрутку рухав НАШ код: `touch-action:
+   none` + `scrollTop` із обробника дотику + власна інерція. Це головний потік і ~60
+   подій на секунду. Рідна прокрутка iPhone іде композитором на 120 Гц, з власною гумкою
+   й інерцією — тобто ми власноруч забрали те, заради чого все й робилось.
+
+   ЯК СТАЛО. Прокрутка ОДНА і рідна. Фото просто перший блок у ній: прокручуєш — воно
+   їде вгору й зникає само собою. Аркуш наїжджає на нього відʼємним відступом.
+   Кнопки, компактна шапка й панель дій — три нерухомі шари ПОВЕРХ скролера.
+
+   🔑 Це патерн OLX / Airbnb / Instagram / App Store. Два положення (Apple Maps) потрібні
+   лише коли ПІД аркушем жива карта, з якою працюють; у нас там фото, з яким не роблять
+   нічого — і ми платили за це повну ціну складності (шість змінних стану на один жест
+   і чотири виходи, які треба узгодити). */
+.cm-ad-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Гумовий відскок не «пробиває» на сторінку під модалкою; заразом у нулі прокрутки
+     рух пальця стає однозначним — там уже працює жест закриття. */
+  overscroll-behavior-y: contain;
+  /* ⚠️ `pan-y` — це НЕ перехоплення прокрутки, а навпаки: ми ЯВНО віддаємо браузеру
+     вертикаль (вона лишається рідною, з інерцією й гумкою) і забираємо собі лише
+     горизонталь — під жест «назад». Перехоплення вертикалі (`none`) і давало ривки;
+     сюди його не повертати без заміру кадрів на живому пристрої. */
+  touch-action: pan-y;
+}
+
+/* 🔴 ФОТО СТОЇТЬ НА МІСЦІ, А ОПИС НАЇЖДЖАЄ НА НЬОГО ДО САМОГО ВЕРХУ (замовлення Вови:
+   «зроби таку саму логіку, як блок опису в стрічці, коли натискаєш на спільноту»).
+   `sticky` — це та сама рідна прокрутка, просто фото прилипає до верху й не їде разом
+   із текстом. Жодного JS: браузер робить це сам, тобто плавність, яку Вова щойно
+   прийняв («скролиться тупо ідеально»), лишається недоторканою.
+   ⚠️ Частка екрана, а не пропорція картинки: 82% наших фото зняті телефоном
+   вертикально й за пропорцією зайняли б увесь екран до самого опису. */
+.cm-ad-photo {
+  position: sticky;
+  top: 0;
+  z-index: 0;                 /* аркуш (z-index: 1) проходить ПОВЕРХ нього */
+  height: 42dvh;
+  background: #ECECEA;
+  overflow: hidden;
+}
+/* Галерея гортається по горизонталі — віддаємо їй саме цю вісь, інакше `pan-y`
+   скролера (нижче) заборонив би браузеру її панорамувати. */
+.cm-ad-photo .cm-board-modal-gallery { touch-action: pan-x; }
+.cm-ad-photo .cm-board-modal-gallery { height: 100%; }
+.cm-ad-photo .cm-board-modal-slide img { width: 100%; height: 100%; object-fit: cover; }
+.cm-ad-hero-count {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: 44px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  z-index: 2;
+}
+.cm-ad-photo .cm-board-modal-dots { position: absolute; bottom: 26px; left: 0; right: 0; z-index: 2; }
+
+/* Аркуш наїжджає на фото відʼємним відступом — той самий вигляд, що й був, але вже
+   БЕЗ окремої геометрії й без власного жесту. Знизу — місце під панель дій, щоб
+   останній рядок опису ніколи не ховався за кнопками. */
+.cm-ad-sheet {
+  position: relative;
+  z-index: 1;                 /* над фото, яке прилипло до верху */
+  margin-top: -28px;
+  /* 🔴 ВИСОТА — ПО ВМІСТУ, а не «з екран» (замовлення Вови, найважливіший пункт
+     полірування): «максимальна висота модалки повинна закінчуватися на останньому
+     інформаційному елементі, не повинно бути кількох сотень пікселів порожнього
+     простору після „Поскаржитися“».
+     Було `min-height: 100dvh` — це рівно та висота, за якої верх аркуша ДІСТАЄ верх
+     екрана. Але вона ж і породжувала порожнечу, коли опис короткий: браузеру нема що
+     показати, а прокрутка ще лишається.
+     Тепер прокрутка закінчується там, де закінчився текст. Наслідок, який треба знати:
+     у короткого оголошення аркуш угору вже не доїде — і це правильно, бо доїжджати
+     нема чим. Порожній білий простір гірший за смужку фото, що лишилась видимою. */
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
+  padding-bottom: var(--ad-bar-h);
+}
+/* 🔴 ОГОЛОШЕННЯ БЕЗ ФОТО (3 з 17) — ТА САМА КОНСТРУКЦІЯ, лише без першого блоку.
+   Слово Вови: «побудуй логічно модалку з фото чи без, немає різниці».
+   Умова — `:first-child`, тобто САМ ФАКТ «перед аркушем нічого немає». Це навмисно не
+   клас-модифікатор: клас треба не забути поставити в розмітці, і саме такий клас
+   (`--full`) уже розійшовся з рештою коду. Факт забути неможливо.
+   Без фото аркуш перестає «наїжджати»: наїжджати нема на що — тому нульовий відступ,
+   прямі кути й без тіні. Смужку-ручку прибрано зовсім: це сторінка, а не аркуш. */
+.cm-ad-scroll > .cm-ad-sheet:first-child {
+  margin-top: 0;
+  border-radius: 0;
+  box-shadow: none;
+  /* 🔴 КОРОТКЕ ОГОЛОШЕННЯ БІЛЬШЕ НЕ ЛИШАЄ ПІВЕКРАНА БІЛОГО (скарга Вови: «нижня частина
+     виглядає дуже пустою»). Заміряно було: 302px порожнечі під «Поскаржитися».
+     Механізм: аркуш заввишки рівно з видиму область, а службовий хвіст (блок безпеки й
+     скарга) притискається до низу через `margin-top: auto`. Тобто порожнеча не
+     зникає — вона переїжджає ТУДИ, ДЕ ЇЙ МІСЦЕ: між словами людини і службовим
+     дрібним шрифтом, а не після всього вмісту.
+     ⚠️ `min-height: 100%`, а НЕ `100dvh` і НЕ на всіх аркушах: правило діє тільки коли
+     фото немає (`:first-child`). З фото аркуш — другий блок скролера, і така висота
+     дала б прокрутку в порожнечу, з якою ми вже боролись 02.08. */
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.cm-ad-scroll > .cm-ad-sheet:first-child .cm-ad-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.cm-ad-scroll > .cm-ad-sheet:first-child .cm-ad-safety { margin-top: auto; }
+/* Кнопки лежать поверх аркуша, а не над ним — тому вміст починається нижче за них.
+   66px = 10 (відступ ряду згори) + 44 (кнопка) + 12 (просвіт). Одне число, виведене
+   з висоти кнопки, а не підібране на око: зміниться кнопка — перерахувати тут. */
+.cm-ad-scroll > .cm-ad-sheet:first-child .cm-ad-body {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 66px);
+}
+
+/* ── Ряд круглих кнопок (назад · поділитися · зберегти) ───────────────────── */
+.cm-ad-top {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: 12px; right: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 4;                 /* над компактною шапкою: кнопки видно завжди */
+}
+.cm-ad-top-right { display: flex; gap: 8px; }
+/* Коли компактна шапка проявилась, кнопки стоять уже на БІЛОМУ, а не на фото —
+   темне скло там читалось би як важка пляма. Міняємо лише заливку, не розмір і не місце:
+   кнопка не має «стрибати» під пальцем. */
+/* У компактній шапці кнопки стають ВІЗУАЛЬНО меншими, але тап-ціль лишається 44px
+   (мінімум Apple HIG). Прийом: `background-clip: content-box` — заливка малюється лише
+   по вмісту, тобто видимий кружечок 34px, а натискається всі 44.
+   ⚠️ Просто зменшити `width/height` тут не можна: це повернуло б промахи пальцем, через
+   які кнопки вже піднімали з 36 до 44 аудитом 02.08. */
+.cm-ad-screen--mini .cm-ad-top .cm-ad-round {
+  background: var(--board-press, #E4E4E1);
+  background-clip: content-box;
+  padding: 5px;
+  color: #1C1C1E;
+}
+.cm-ad-screen--mini .cm-ad-top .cm-ad-round svg { width: 18px; height: 18px; }
+
+/* Компактна шапка — нерухома панель ПОВЕРХ скролера. Проявляється, коли назва поїхала
+   за верх (клас на модалці ставить JS за `scrollTop`).
+   ⚠️ Дві помилки, обидві спіймані знімком, а не логікою:
+   1) спершу показувалась за станом аркуша — і назва писалась ДВІЧІ поспіль, бо велика
+      шапка ще була на екрані;
+   2) стояла в потоці й при появі ШТОВХАЛА текст на 35px. Тепер вона взагалі поза
+      скролером, тож зрушити його не може за побудовою.
+   ⚠️ Лівий відступ 96px — місце під кнопку «назад», щоб назва під неї не залазила. */
+.cm-ad-mini {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  /* 🔴 ВИСОТА СМУГИ ВИВЕДЕНА З КНОПОК, а не підібрана під текст (скарга Вови IMG_3816:
+     «іконки вилазять за рамки тієї шапки»). Кнопка 44px стоїть на 10px від верху, тобто
+     її низ — на 54px; смуга при цьому була заввишки ~43px і кнопки звисали з неї.
+     64 = 10 (відступ згори) + 44 (кнопка) + 10 (просвіт знизу). Зміниться кнопка —
+     перерахувати тут, це одне число з однієї причини.
+     Відступи з боків теж не «на око»: зліва 12 + 44 + 10 = 66, справа 12 + 44 + 8 + 44
+     + 10 = 118 — тобто рівно там, де закінчуються кнопки. Назві лишається 390−66−118 =
+     206px замість 116px, які були (звідси й «ПРОДАМ БУДИН…»). */
+  min-height: calc(env(safe-area-inset-top, 0px) + 64px);
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 118px 10px 66px;
+  /* 🔴 НЕПРОЗОРА. Було `rgba(255,255,255,0.96)` — і на скріні IMG_3811 видно, що крізь
+     неї просвічує текст, який проїжджає під нею. 4% прозорості вистачило, щоб рядок
+     читався двома шарами. Напівпрозорість тут нічого не давала, а коштувала читабельність. */
+  background: #fff;
+  border-bottom: 1px solid var(--board-line, #C4C4C1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.cm-ad-screen--mini .cm-ad-mini { opacity: 1; }
+.cm-ad-mini .cm-board-cat { flex: none; margin: 0; }
+.cm-ad-mini-title {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 15px; font-weight: 700; color: #111;
+}
+/* Кругла кнопка поверх фото: напівпрозоре темне скло — читається і на світлому,
+   і на темному кадрі, тобто не залежить від того, що саме сфотографували. */
+.cm-ad-round {
+  /* 44px — мінімальна тап-ціль Apple HIG. Було 36: заміряно власним аудитом 02.08,
+     промахи пальцем по кутовій кнопці «назад» були гарантовані. */
+  width: 44px; height: 44px;
+  border: 0; border-radius: 50%;
+  /* 🔴 БЕЗ `backdrop-filter`. Він тут коштував дорого: розмиття рахується щокадру
+     по площі ПІД кнопкою, а під нею — фото, яке ще й їде при свайпі аркуша. На
+     iPhone це давало помітні ривки («модалка лагає страшно»). Щільніша заливка
+     дає ту саму читабельність на будь-якому кадрі й коштує нуль.
+     ⚠️ У проєкті вже є урок про `backdrop-filter` у Safari (застиглий blur разом
+     із `will-change`) — не повертати його сюди без заміру. */
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-ad-round svg { width: 20px; height: 20px; }
+.cm-ad-round--on { color: var(--news-accent, #722F37); background: rgba(255, 255, 255, 0.92); }
+.cm-ad-round:active { opacity: 0.8; }
+/* На білому аркуші (коли фото немає) те саме темне скло було б плямою — там кнопка
+   стає світло-сірою з темним знаком. Форма й розмір ті самі.
+   ⚠️ Селектор `.cm-ad-top:not(--over)`, а НЕ `.cm-ad-sheet .cm-ad-round`, як тут стояло
+   до 02.08: ряд кнопок лежить ПОРУЧ зі скролером, а не всередині аркуша, тому старе
+   правило не збігалось ніколи і кнопки лишались темними на білому. Мертве правило, яке
+   виглядало як робоче, — тому й не помічалось. */
+.cm-ad-top:not(.cm-ad-top--over) .cm-ad-round {
+  background: var(--board-press, #E4E4E1);
+  color: #1C1C1E;
+}
+.cm-ad-top:not(.cm-ad-top--over) .cm-ad-round--on { color: var(--news-accent, #722F37); }
+
+/* Лічильник «1 / N» і крапки стоять НАД краєм аркуша: аркуш починається на 34dvh,
+   а шар фото тягнеться до 42dvh — тобто нижні 8dvh кадру аркуш накриває. Прив'язка
+   до низу шару сховала б їх під аркушем, тому рахуємо від ЙОГО краю. */
+.cm-ad-hero-count {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(8dvh + 26px);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  z-index: 2;
+}
+.cm-ad-photo .cm-board-modal-dots {
+  position: absolute;
+  bottom: calc(8dvh + 8px);
+  left: 0; right: 0;
+  z-index: 2;
+}
+
+/* ── Тіло ─────────────────────────────────────────────────────────────────── */
+/* Чіп категорії більше не «приліплений» до верхнього краю: 18px згори дають йому
+   те саме повітря, що й 18px з боків, тобто він читається як частина композиції,
+   а не як наліпка на межі аркуша. */
+.cm-ad-body { padding: 18px 18px; }
+.cm-ad-title {
+  /* 🔽 Було 10px + 8px власного відступу чіпа = 18px розриву — заголовок читався
+     окремим блоком. Тепер 2px + 8px = 10px: чіп і назва стали однією групою.
+     ⚠️ Двома числами тут керує ДВА правила (`.cm-board-cat` має свій `margin-bottom`),
+     тож міряти треба відстань між ними, а не одне з них. */
+  margin: 2px 0 0;
+  /* 24 → 21px (полірування 02.08), потім 21 → 23px тим самим вечором. Не хитання, а
+     дві різні задачі: спершу назва була завелика САМА ПО СОБІ, тепер вона мусить бути
+     БІЛЬШОЮ ЗА ЦІНУ. Ціна «Договірна» стояла 28px і переростала назву на 33% — тобто
+     головним на екрані було слово, яке нічого не повідомляє.
+     🔑 Правило, за яким тут тримати число: заголовок — найбільший елемент екрана
+     завжди. Піднімеш ціну вище 23px — поверни й це. */
+  font-size: 23px;
+  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1.18;
+  color: #111;
+}
+.cm-ad-price-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+/* 🔴 РИТМ НЕСЕ ГРУПУВАННЯ — це і є відповідь на «зливається в одну площину» (IMG_3819).
+   Було: сім різних типів вмісту з відступами 10 · 12 · 10 · 16 · 18 · 14 · 18. Майже
+   однакові інтервали означають «усе однаково важливе», тобто нічого не важливе — око не
+   має за що зачепитись і читає сторінку як суцільну стіну.
+   Стало: ТІСНО всередині думки (8px) і ШИРОКО між думками (28px). Співвідношення 3.5:1
+   малює межі БЕЗ ЖОДНОЇ НОВОЇ ЛІНІЇ — саме так роблять Apple, Airbnb і Notion, і саме
+   тому сторінка не набирає візуального шуму.
+   Групи: [чіп + назва] → [факти: місце · час · ціна] → [опис] → [автор] → [безпека].
+   ⚠️ Міняєш одне число — перевір СПІВВІДНОШЕННЯ, а не саме число. Щойно внутрішні
+   відступи наблизяться до міжгрупових, стіна повернеться. */
+/* Ціна-ЧИСЛО (і «Безкоштовно») — гучна, бо повідомляє головне після назви.
+   28 → 22px: не тому що ціна стала менш важливою, а тому що вона більше не має права
+   переростати заголовок. Різниця з назвою (23) лишилась мала — це другий голос, а не
+   шепіт. */
+.cm-ad-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--news-accent, #722F37);
+  letter-spacing: -0.5px;
+}
+/* «Ціна договірна» — це ВІДСУТНІСТЬ ціни, а не ціна. Тому звичайний тихий рядок:
+   без багряного, без ваги 800, розміром як допоміжний текст. Так виглядає ~94% наших
+   оголошень, і саме через попереднє оформлення екран здавався «накиданим». */
+/* «Договірна» живе в рядку фактів (`.cm-ad-meta`) і носить його голос — тому лише
+   знімає з себе все, що робило її заголовком. Розмір успадковується від рядка. */
+.cm-ad-price--quiet {
+  font-size: inherit;
+  font-weight: 600;
+  color: inherit;
+  letter-spacing: 0;
+}
+/* «Можливий торг» — тиха пігулка поруч із сумою, а не другий акцент: інакше два
+   темні плями в рядку сперечались би за увагу. */
+.cm-ad-haggle {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--board-press, #E4E4E1);
+  color: #555;
+  font-size: 13px; font-weight: 600;
+}
+.cm-ad-meta {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 8px;              /* ТІСНО: факти — продовження назви, та сама думка */
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #6C6C6C;
+}
+/* Населений пункт капсом — рядок «де і коли» стає читабельнішим, бо назва місця
+   перестає губитись серед тексту тієї самої висоти. */
+/* ⚠️ КАПС ІЗ ЛОКАЦІЇ ЗНЯТО (був доданий поліруванням на прохання Вови, тепер скасовано
+   свідомо). Причина не смак: капсів було ТРИ поспіль — чіп, назва, локація. Коли кричить
+   усе, не веде ніщо. Тепер великими літерами написана РІВНО ОДНА річ на екрані — назва
+   оголошення, і саме тому вона читається першою. Це та сама економія, що дає ритм:
+   виділення працює лише поки воно рідкісне. */
+.cm-ad-meta-loc { display: inline-flex; align-items: center; gap: 4px; }
+.cm-ad-meta-loc svg { width: 13px; height: 13px; }
+.cm-ad-meta-dot { opacity: 0.5; }
+/* Опис — головний текст екрана, тож інтервал більший за звичайний 1.4. */
+/* 🔴 ОПИС І АВТОР — РІЗНІ СЕКЦІЇ (замовлення Вови: «зараз після опису одразу
+   починається картка користувача, все сприймається як один великий блок»).
+   Розділяємо і повітрям, і лінією. Сам лише відступ не працював: в описі між абзацами
+   майже стільки ж, тож 20px читались як черговий абзац, а не як межа секції.
+   ⚠️ Лінія стоїть на КІНЦІ ОПИСУ, а не на картці автора: у картки свій сірий фон і
+   заокруглення, і межа всередині неї читалась би як помилка верстки. */
+.cm-ad-text {
+  /* ШИРОКО: тут шапка закінчилась і починаються слова людини. 28 проти 8 всередині
+     групи — межа видно без лінії. */
+  margin: 28px 0 0;
+  /* ⚠️ ЛІНІЮ ЗНЯТО 02.08. Вона зʼявилась поліруванням, щоб відділити опис від СІРОЇ
+     ПЛАШКИ автора; плашки давно немає, а лінія лишилась і разом із другою (під автором)
+     затискала його в смугу — Вова: «виділяється двома рисочками, це в нікуди».
+     Межу тут малює просвіт 28px, як і скрізь на цій сторінці. */
+  /* Опис звучить як ПРОЗА, а не як ще один рядок даних: більший кегль і вільніший
+     інтерліньяж. 16/1.62 читалось як метадані, бо майже збігалось із рядком фактів. */
+  font-size: 17px;
+  line-height: 1.65;
+  color: #1A1A1A;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Автор ────────────────────────────────────────────────────────────────── */
+/* 🔴 02.08 — АВТОР СТАВ СЕКЦІЄЮ, А НЕ СМУГОЮ МІЖ ДВОМА ЛІНІЯМИ.
+   Шлях сюди був через дві невдалі спроби, і обидві варто памʼятати:
+     1) сіра плашка — Вова: «не подобається, що акаунт користувача в сірому фоні».
+        Заливка ставила автора на один ваго́вий рівень із блоком безпеки, хоч це різні
+        речі: автор — перехід у профіль, безпека — попередження;
+     2) рядок між двома волосяними лініями — Вова: «виділяється двома рисочками, це в
+        нікуди». Дві лінії навколо одного рядка малюють СМУГУ, вирізану нізвідки: вони
+        кажуть «тут межа», але не кажуть ЧОГО. І це прямо суперечило рішенню, ухваленому
+        годиною раніше: на цій сторінці групи розділяє ПРОСВІТ, а не чорнило.
+   Стало: маленький підпис «Автор оголошення» + рядок + просвіт. Підпис коштує один
+   рядок дрібного сірого тексту і робить те, чого не робили ані плашка, ані лінії, —
+   КАЖЕ, ЩО ЦЕ ТАКЕ. Той самий прийом, що в Airbnb («Знайомтеся з господарем») і в
+   Notion: назвати секцію дешевше, ніж обвести її.
+   ⚠️ Не повертати сюди ні фон, ні border — обидва вже пробували. */
+.cm-ad-seller { margin-top: 28px; }
+.cm-ad-seller-cap {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #8A8A8A;
+}
+.cm-ad-author {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+.cm-ad-avatar {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  color: #6C6C6C;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+}
+.cm-ad-author-name { font-size: 17px; font-weight: 700; color: #111; }
+
+/* ── Скарга ───────────────────────────────────────────────────────────────── */
+/* 🔴 02.08 — БУЛО три однакові широкі кнопки (поділитися · зберегти · скаржитися).
+   Однаковий розмір — це повідомлення «вони рівноцінні», а вони не рівноцінні:
+   перші дві людина робить часто, скаржиться — раз на сотні переглядів. Перші дві
+   стали круглими кнопками поверх фото, скарга лишилась там, де її й шукають:
+   останнім рядком, тихим текстом, без рамки. */
+.cm-ad-report {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: #8A8A8A;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-ad-report svg { width: 15px; height: 15px; }
+.cm-ad-report:active { color: #B3261E; }
+
+/* ── Блок безпеки ─────────────────────────────────────────────────────────── */
+/* 🔴 03.08 — БІЛЬШЕ ЗМІСТУ ПРИ МЕНШІЙ ВИСОТІ (замовлення Вови: «зробити більш
+   інформативним, не збільшуючи його висоту»). Текст виріс із 62 до ~150 символів,
+   тому місце довелось відіграти на всьому іншому:
+     padding 14 → 10px · gap 12 → 9px · іконка 24 → 19px · кегль 13 → 12px ·
+     міжрядок 1.45 → 1.4 · підзаголовок з окремого блока — у рядок.
+   📐 ЗАМІРЯНО на 390px (інструмент `tests/tools/board-title-measure.mjs`, з контролем
+   на старих значеннях): було 88px / 3 рядки / 86 символів → стало 89px / 4 рядки /
+   174 символи. Тобто змісту вдвічі більше за ту саму висоту (+1px).
+   ⚠️ «2-3 рядки» з початкового замовлення недосяжні за арифметикою: у ширину 300px
+   при читабельному кеглі влазить ~48 символів у рядок, тобто 174 символи — це щонайменше
+   4 рядки. Тримали ВИСОТУ (справжнє обмеження), а не кількість рядків.
+   «Легкий бордовий акцент» — обідок `rgba(114,47,55,0.16)` замість самої лише
+   підкладки: підкладка 6% на білому майже не видно, і блок читався як звичайний
+   абзац. Обідок окреслює його як окремий службовий елемент, не додаючи ваги. */
+.cm-ad-safety {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin-top: 28px;             /* ШИРОКО: службовий хвіст — окрема думка */
+  padding: 10px 11px;
+  border-radius: 14px;
+  border: 1px solid rgba(114, 47, 55, 0.16);
+  background: rgba(114, 47, 55, 0.05);
+}
+/* `margin-top: 1px` — оптичне вирівнювання: залитий щит важчий за перший рядок тексту
+   і без цього зсуву «висить» трохи вище за нього. */
+.cm-ad-safety-ic { flex: none; width: 19px; height: 19px; margin-top: 1px; color: var(--news-accent, #722F37); }
+.cm-ad-safety-text { font-size: 12px; line-height: 1.4; color: #5A5A5A; }
+/* 🔑 ЗАГОЛОВОК У РЯДОК, А НЕ ОКРЕМИМ БЛОКОМ — і це не смак, а арифметика.
+   `display: block` віддавав під два слова цілий рядок. При старому тексті (86 символів)
+   це було дешево, при новому (174 символи) — ні: заміряно 5 рядків проти 3 і блок
+   виростав із 88 до 115px, тобто рівно те, чого Вова просив не робити. Тепер підзаголовок
+   починає той самий абзац, і рядок економиться. */
+.cm-ad-safety-text b { color: var(--news-accent, #722F37); margin-right: 4px; }
+
+/* ── ШАР 3: ПАНЕЛЬ ДІЙ ────────────────────────────────────────────────────────
+   Поза скролом — це головне, чого бракувало: при описі до 1296 символів кнопки
+   контакту раніше їхали за межі екрана саме тоді, коли людина дочитала й хоче
+   написати. `env(safe-area-inset-bottom)` — щоб не залізти під home-bar iPhone.
+
+   🔴 02.08 — ОКРЕМИЙ ЗАОКРУГЛЕНИЙ БЛОК, а не смуга з лінією зверху (зауваження Вови
+   по макету: «блок подзвонити, написати теж заокруглений»). Відділяє його ТІНЬ, а не
+   колір: обидві поверхні білі, і будь-який сірий тут читався б як «неактивно».
+   Той самий висновок, що для шапки Дошки 28.07 — «D відділялось формою, B світлом»;
+   тут світло, бо форма вже зайнята заокругленням самого аркуша. */
+.cm-ad-bottom {
+  /* 🔴 02.08 — ПОВЕРХ СКРОЛУ, а не в ряд із ним. Причина — вище, у правилі скрол-області. */
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  height: var(--ad-bar-h);
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  /* 🔴 ТІНЬ ДВОШАРОВА (замовлення Вови: «верхньому краю блоку треба добавити тінь»).
+     Було `0 -5px 18px rgba(0,0,0,0.09)` — заміряно по пікселях: `248,248,248` на білому,
+     тобто різниця **7 з 255**. Такий один широкий шар не читається як край; він
+     читається як брудна пляма — рівно те, на що Вова й показав.
+     Тонка лінія дає ЧІТКИЙ край, широка — обʼєм. Це той самий висновок, що для шапки
+     Дошки 28.07: один широкий шар при такій щільності = сіра пляма, а не тінь. */
+  box-shadow:
+    0 -1px 0 rgba(0, 0, 0, 0.07),
+    0 -10px 22px rgba(0, 0, 0, 0.12);
+}
+.cm-ad-call,
+.cm-ad-write {
+  flex: 1 1 0;
+  height: 50px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 14px;
+  font-size: 16px; font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Дзвінок — другорядна дія (контурна), листування — головна (залита).
+   ⚠️ Обидві 50px: мінімальна тап-ціль Apple HIG 44px, з запасом. */
+.cm-ad-call {
+  border: 1.5px solid var(--news-accent, #722F37);
+  background: #fff;
+  color: var(--news-accent, #722F37);
+}
+.cm-ad-write {
+  border: 0;
+  background: var(--brand-grad-sm);
+  color: #fff;
+}
+.cm-ad-write--solo { flex: 1 1 100%; }
+.cm-ad-call svg, .cm-ad-write svg { width: 19px; height: 19px; }
+.cm-ad-call:active, .cm-ad-write:active { opacity: 0.85; }
+
+/* ── Картка автора: фото · імʼя · «на платформі з …» · стрілка в профіль ──── */
+/* Уся картка клікабельна (`data-av-uid` на контейнері) — тап відкриває профіль
+   через делегований слухач `core/profile-card.js`. Стрілка «›» тут не декор, а
+   єдина ознака, що рядок кудись веде. */
+.cm-ad-author { cursor: pointer; }
+.cm-ad-author:active { opacity: 0.85; }
+.cm-ad-avatar {
+  flex: none;
+  /* 48px, а не 44: тепер це не рядок у списку, а обличчя секції — і воно мусить
+     важити більше за іконку. */
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  /* ⚠️ Було `#fff` — і це працювало ЛИШЕ поки під карткою лежала сіра плашка. Плашку
+     знято (слово Вови), тож білий кружечок на білому зник би разом із літерою всередині.
+     Тепер навпаки: світло-сірий кружечок на білому. */
+  background: var(--board-press, #E4E4E1);
+  color: #6C6C6C;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800;
+  overflow: hidden;   /* фото має лягти під круг, а не вилізти квадратом */
+}
+.cm-ad-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cm-ad-author-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cm-ad-author-name { font-size: 17px; font-weight: 700; color: #111; }` ЗНЯТО 02.08 разом із причиною. Воно ховало
+   порожній рядок, поки не приїде профіль, — і саме через це картка виглядала по-різному
+   в різних оголошеннях (скарга Вови: «не в кожного пише інформація»). Тепер підпис є
+   завжди з розмітки («Учасник спільноти»), а запит його лише уточнює до дати, тож
+   ховати нема чого і висота не стрибає. */
+.cm-ad-author-since { font-size: 12.5px; color: #6C6C6C; }
+.cm-ad-verified {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: #1D74E8;
+  color: #fff;
+  font-size: 10px; font-weight: 800;
+  vertical-align: middle;
+}
+/* Стрілка векторна (див. `CHEVRON_ICON_SVG`): текстовий «›» тонший за решту знаків
+   екрана і сидить не по центру рядка, бо це гліф шрифту, а не іконка. */
+.cm-ad-author-go { flex: none; display: flex; color: #B0B0B0; }
+.cm-ad-author-go svg { width: 18px; height: 18px; }

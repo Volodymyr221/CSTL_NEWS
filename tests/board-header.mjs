@@ -24,10 +24,10 @@
 // «правильність» цих чисел може підтвердити лише Вова на iPhone. Стенд перевіряє
 // МЕХАНІКУ згортання, а не його поріг — і не вдає, що покриває більше.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, zoneCss } from './_lib.mjs';
 
 const BASE_CSS = projectFile('style/base.css');
-const COMM_CSS = projectFile('style/community.css');
+const COMM_CSS = zoneCss();
 
 // Сторож присутності: якщо згортання колись повернуть на висоту, цей рядок зникне,
 // і стенд скаже це прямо, а не буде мовчки міряти не те.

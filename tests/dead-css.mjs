@@ -33,7 +33,11 @@ const PAT = /\.((?:bd|cm-board|board|bm|cm-ad)[\w-]*)/g;
 // хвороба, від якої стенд і охороняє: перевіряти форму запису замість наслідку.
 const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
-const css = stripComments(readFileSync(join(ROOT, 'style/community.css'), 'utf8'));
+// ⚠️ ОБИДВА файли зони: 05.08 стилі Дошки виїхали в `style/board.css`, і сторож,
+// прив'язаний до одного імені, перестав би бачити 68% того, що охороняє.
+const css = stripComments(
+  ['style/community.css', 'style/board.css']
+    .map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n'));
 
 // Уся розмітка і код, де клас може вживатись.
 function collect(dir, acc = []) {

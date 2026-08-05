@@ -16,10 +16,10 @@
 // число за відчуттям, підтвердити його може лише Вова на iPhone. Стенд стежить лише за
 // тим, щоб відступ НЕ БУВ МЕНШИЙ за смугу кнопки.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, zoneCss } from './_lib.mjs';
 
 const BASE_CSS = projectFile('style/base.css');
-const COMM_CSS = projectFile('style/community.css');
+const COMM_CSS = zoneCss();
 
 const { ok, done } = reporter();
 
