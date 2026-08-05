@@ -314,6 +314,72 @@
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-wx-sub  { font: 400 12px/1.3 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .72); margin-top: 2px; }
 
+/* 🔴 05.08 — СЕЛЕКТОР НАСЕЛЕНОГО ПУНКТУ.
+   Вова: «локацію треба вивести окремо» — вона ховалась усередині рядка
+   «Ясно / Луцьк · відчувається 31°» і там губилась серед іншого тексту.
+
+   📐 Чому в ЦЬОМУ рядку, а не окремим: `margin-left: auto` ставить чіп у вільний
+   правий край рядка з температурою, який усе одно порожній. Тобто локація стає
+   самостійним елементом керування, НЕ додаючи картці жодного пікселя висоти —
+   а висоту цієї сторінки ми зменшували цілий день.
+   ⚠️ Не в шапку замість аватара (як пропонувала порада): аватар — це вхід у
+   кабінет, робоча кнопка. Міняти її місце заради погоди — псувати одне, щоб
+   полагодити інше.
+   ⚠️ `align-self: flex-start` — чіп тримається верху рядка, інакше на великому
+   кеглі температури він плаває по центру і виглядає випадковим. */
+.hm-wx-place {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  margin-left: auto; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 4px;
+  max-width: 46%;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, .30);
+  border-radius: var(--hm-r-pill);
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  font: 700 12px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .01em;
+}
+.hm-wx-place:active { background: rgba(255, 255, 255, .26); }
+/* Назва обрізається, а не переносить рядок: «Хромʼяків» довше за «Олика», і
+   картка не має від цього рости. */
+.hm-wx-place-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-wx-place-pin { font-size: 11px; }
+.hm-wx-place-ch  { opacity: .7; font-size: 10px; }
+
+/* ── Шторка вибору населеного пункту ─────────────────────────────────────────
+   Лежить у звичайному аркуші застосунку (`app-modal--sheet`), тому тут лише
+   рядки списку — сам аркуш, свайп і затемнення дає примітив `core/modal.js`. */
+.wxp-grp {
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--hm-quiet);
+  padding: 18px 2px 8px;
+}
+.wxp-row {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 13px 12px;
+  border: 0; border-radius: var(--hm-r-tile);
+  background: none; text-align: left;
+  font: 500 15.5px/1.2 system-ui, -apple-system, sans-serif;
+  color: var(--black);
+}
+.wxp-row:active { background: var(--board-press); }
+/* Обраний — і кольором, і галочкою. Лише колір читався б як «наведення»,
+   лише галочка губилась би у списку з двадцяти рядків. */
+.wxp-row--on { background: var(--board-card); font-weight: 700; }
+.wxp-row-ok  { color: var(--red); font-weight: 800; }
+.wxp-row--geo { margin-top: 4px; }
+/* Застереження про однакову погоду по селах. Тихе, але присутнє: людина має
+   розуміти, чому в Дерні стільки ж градусів, що в Олиці, — інакше вирішить,
+   що застосунок помилився. */
+.wxp-note {
+  margin: 18px 2px 4px;
+  font: 400 12.5px/1.45 system-ui, -apple-system, sans-serif;
+  color: var(--hm-quiet);
+}
+
 /* Ряд 7 днів. Не карусель і не скролер — сім рівних колонок на ширину екрана:
    днів рівно сім, вони влазять, і ховати їх за жестом немає причини. */
 .hm-wx-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: var(--hm-s3); }

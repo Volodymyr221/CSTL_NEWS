@@ -6,7 +6,8 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, showToast } from '../core/utils.js';
+import { coordsOf, locationGroups, isKnownPlace } from '../core/settlements-geo.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -87,12 +88,50 @@ function setWeatherTitle(cityName) {
   if (headerEl && cityName) headerEl.textContent = `Погода в ${cityName}`;
 }
 
+// ── ВИБІР НАСЕЛЕНОГО ПУНКТУ (05.08) ──────────────────────────────────────────
+// Замовлення Вови: «потрібно окремо десь вивести населений пункт… щоб при
+// натиску можна було вибрати список сіл, міст Олицької громади… І плюс Луцьк».
+//
+// Причина, названа Вовою: локація ховалась у рядку «Ясно / Луцьк · відчувається
+// 31°» і там губилась. Тепер це самостійний елемент керування.
+//
+// 🔑 `null` = «за геолокацією» (те, як було завжди). Тобто вибір НЕ обовʼязковий:
+// хто нічого не чіпав, отримує рівно ту саму поведінку, що й до цієї зміни.
+const WX_PLACE_KEY = 'wx_place_v1';
+
+function loadWxPlace() {
+  try {
+    const v = localStorage.getItem(WX_PLACE_KEY);
+    // Перевіряємо, що назва досі «наша»: список НП може змінитись, і тоді
+    // старий запис у сховищі вказував би в нікуди.
+    return v && isKnownPlace(v) ? v : null;
+  } catch { return null; }
+}
+
+function saveWxPlace(name) {
+  try {
+    if (name) localStorage.setItem(WX_PLACE_KEY, name);
+    else localStorage.removeItem(WX_PLACE_KEY);
+  } catch { /* приватний режим — вибір просто не переживе перезапуск */ }
+}
+
 export async function renderWeatherBlock() {
   const el = document.getElementById('cm-weather-content');
   if (!el) return;
 
   try {
-    const { lat, lon, city: knownCity } = await getCoords();
+    // Обраний пункт має пріоритет над геолокацією. Якщо координат для нього
+    // з'ясувати не вдалося — НЕ підставляємо чуже місце мовчки, а вертаємось до
+    // геолокації і кажемо про це у підписі.
+    const place = loadWxPlace();
+    let picked = null;
+    if (place) picked = await coordsOf(place);
+    const placeFailed = !!place && !picked;
+
+    const geo = picked ? null : await getCoords();
+    const lat = picked ? picked.lat : geo.lat;
+    const lon = picked ? picked.lon : geo.lon;
+    const knownCity = picked ? place : geo.city;
     // 🔴 04.08 — НАЗВА МІСТА БІЛЬШЕ НЕ ТРИМАЄ ПОГОДУ.
     // Було `Promise.all([погода, getCityName()])`, тобто температура не
     // показувалась, поки не відповість Nominatim (OpenStreetMap) — а він
@@ -145,28 +184,147 @@ export async function renderWeatherBlock() {
       `;
     }).join('');
 
+    // 🔴 05.08 — ІНДИКАТОР ЗМІНИ. Рахується з даних, які вже прийшли в цій самій
+    // відповіді (`daily.temperature_2m_max`, `hourly.precipitation_probability`),
+    // тобто НЕ вигаданий і не потребує жодного нового запиту.
+    // Порядок важливий: дощ витісняє градуси. «Завтра тепліше» — приємно знати,
+    // «сьогодні дощ» — треба знати.
+    const hint = weatherHint(data);
+
     el.classList.remove('hm-wx--loading');
     el.innerHTML = `
       <div class="hm-wx-main">
         <div class="hm-wx-t">${temp}°</div>
         <div class="hm-wx-txt">
           <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
-          <div class="hm-wx-sub">${escapeHtml(cityName || 'Олика')} · відчувається ${feels}°</div>
+          <div class="hm-wx-sub">${escapeHtml(subLine(temp, feels, hint))}</div>
         </div>
+        <button class="hm-wx-place" type="button" data-wx-place
+                aria-label="Вибрати населений пункт">
+          <span class="hm-wx-place-pin" aria-hidden="true">📍</span>
+          <span class="hm-wx-place-n">${escapeHtml(cityName || 'Олика')}</span>
+          <span class="hm-wx-place-ch" aria-hidden="true">▾</span>
+        </button>
       </div>
       <div class="hm-wx-days">${forecastHtml}</div>
     `;
 
-    // Клік на день → модалка «по годинах» (температура + опади). Не змінювалось.
+    // Клік на день → модалка «по годинах» (температура + опади).
+    // ⚠️ НЕ ЗМІНЮВАЛОСЬ і навмисно: у пораді, яку приніс Вова, було «тап по дню
+    // хай перемикає верх картки». Це прибрало б наявну модалку зі скрабером,
+    // якої ніхто не просив прибирати. Вова підтвердив — лишаємо як є.
     el.querySelectorAll('[data-wx-day]').forEach(btn => {
       btn.addEventListener('click', () => openWeatherDayModal(+btn.dataset.wxDay));
     });
+    el.querySelector('[data-wx-place]')?.addEventListener('click', openPlaceSheet);
+
+    // Обраний пункт не вдалося визначити — сказати прямо. Мовчазний показ
+    // погоди іншого місця під назвою села був би гіршим за помилку.
+    if (placeFailed) showToast(`Не вдалося визначити «${place}» — показано за геолокацією`, 0, 'error');
   } catch {
     // Помилка погоди не ламає шапку: рядок замість блоку, решта сторінки жива
     // (кожен блок головної падає самостійно).
     el.classList.remove('hm-wx--loading');
     el.innerHTML = '<div class="hm-wx-err">Погода тимчасово недоступна</div>';
   }
+}
+
+// 🔴 ОДИН РЯДОК ПІД ТЕМПЕРАТУРОЮ, А НЕ ДВА ЗЧЕПЛЕНІ.
+// Перша версія клеїла «відчувається 17° · опади о 17:00» — і на знімку рядок
+// перенісся надвоє, бо чіп локації праворуч звузив колонку тексту. Наслідок
+// гірший за косметику: висота картки почала залежати від погоди, а «сторінка не
+// має сіпатись» — правило цієї головної з першого дня.
+// Тому показуємо РІВНО ОДНЕ повідомлення, і виграє те, що важливіше:
+//   • різниця «відчувається» від 3° — це те, як одягатись ПРЯМО ЗАРАЗ;
+//   • інакше підказка про дощ чи завтрашню зміну — вона про рішення на день;
+//   • інакше звичайне «відчувається».
+function subLine(temp, feels, hint) {
+  const gap = Math.abs(feels - temp);
+  if (gap >= 3) return `відчувається ${feels}°`;
+  if (hint)     return hint;
+  return `відчувається ${feels}°`;
+}
+
+// Коротка підказка під температурою. Тільки з даних поточної відповіді.
+// 🔴 Порядок перевірок = порядок важливості для людини, а не зручності коду:
+// дощ сьогодні важливіший за «завтра на два градуси тепліше».
+function weatherHint(data) {
+  const h = data.hourly, d = data.daily;
+  try {
+    // 1. Найближчі опади сьогодні: перша година попереду з ймовірністю ≥ 60%.
+    //    60, а не 50: на половині шансів казати «буде дощ» — це вгадування.
+    const offsetSec = data.utc_offset_seconds ?? 7200;
+    const now = new Date(Date.now() + offsetSec * 1000);
+    const today = now.toISOString().slice(0, 10);
+    const nowH = now.getUTCHours();
+    if (h?.time && h.precipitation_probability) {
+      for (let i = 0; i < h.time.length; i++) {
+        const t = h.time[i];
+        if (!t.startsWith(today)) continue;
+        const hour = +t.slice(11, 13);
+        if (hour <= nowH) continue;
+        if ((h.precipitation_probability[i] ?? 0) >= 60) return `опади о ${pad(hour)}:00`;
+      }
+    }
+    // 2. Інакше — наскільки завтра відрізняється. Різницю менше 2° не показуємо:
+    //    один градус у прогнозі на добу — це шум моделі, а не новина.
+    if (d?.temperature_2m_max?.length > 1) {
+      const diff = Math.round(d.temperature_2m_max[1]) - Math.round(d.temperature_2m_max[0]);
+      if (diff >= 2)  return `завтра тепліше на ${diff}°`;
+      if (diff <= -2) return `завтра прохолодніше на ${Math.abs(diff)}°`;
+    }
+  } catch { /* підказка необовʼязкова — її відсутність нічого не ламає */ }
+  return '';
+}
+
+// ── Шторка вибору населеного пункту (05.08) ──────────────────────────────────
+// Використовує ТОЙ САМИЙ примітив `openModal({ variant: 'sheet' })`, що й решта
+// аркушів застосунку — разом зі свайпом-закриттям і затемненням. Власного
+// механізму шторки тут не заводимо: модалка погоди по годинах уже довела, що
+// примітив працює, а друга реалізація означала б другу поведінку.
+function openPlaceSheet() {
+  const current = loadWxPlace();
+  const groups = locationGroups();
+
+  const rowHtml = (name, active) => `
+    <button class="wxp-row${active ? ' wxp-row--on' : ''}" type="button" data-place="${escapeHtml(name)}">
+      <span class="wxp-row-n">${escapeHtml(name)}</span>
+      ${active ? '<span class="wxp-row-ok" aria-hidden="true">✓</span>' : ''}
+    </button>`;
+
+  const bodyHtml = `
+    <div class="wxp">
+      <button class="wxp-row wxp-row--geo${!current ? ' wxp-row--on' : ''}" type="button" data-place="">
+        <span class="wxp-row-n">📍 За моїм місцем</span>
+        ${!current ? '<span class="wxp-row-ok" aria-hidden="true">✓</span>' : ''}
+      </button>
+      ${groups.map(g => `
+        <div class="wxp-grp">${escapeHtml(g.title)}</div>
+        ${g.items.map(n => rowHtml(n, n === current)).join('')}
+      `).join('')}
+      <p class="wxp-note">
+        Села громади лежать близько одне до одного, тож прогноз для них
+        здебільшого однаковий. Помітніше відрізняється Луцьк.
+      </p>
+    </div>`;
+
+  const { close, el } = openModal({
+    title: 'Населений пункт',
+    bodyHtml,
+    variant: 'sheet',
+    className: 'app-modal--wxplace',
+  });
+
+  el.addEventListener('click', e => {
+    const btn = e.target.closest('[data-place]');
+    if (!btn) return;
+    saveWxPlace(btn.dataset.place || null);
+    close();
+    // Перемальовуємо блок повністю: змінилась не лише назва, а всі числа.
+    const wx = document.getElementById('cm-weather-content');
+    if (wx) { wx.classList.add('hm-wx--loading'); wx.innerHTML = '<div class="hm-wx-sk"></div>'; }
+    renderWeatherBlock();
+  });
 }
 
 // ── Модалка «Погода по годинах» ──────────────────────────────────────────────
