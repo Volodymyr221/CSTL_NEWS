@@ -630,6 +630,21 @@
 .hm-fund-go:active { background: var(--brand-grad-press); }
 /* Куди веде кнопка — сказано словами, а не вгадується. Це частина довіри:
    людина має знати, що зараз відкриється чужий сайт із платежем. */
+/* Завершений збір — тихіший, БЕЗ кнопки. Лишається 7 днів, щоб людина, яка
+   донатила, побачила, чим усе скінчилось, і лише потім зникає.
+   ⚠️ Приглушуємо ПРОЗОРІСТЮ всієї картки, а не сірим текстом: сірий текст
+   читався б як «зламалось», а приглушена картка — як «це вже позаду». */
+.hm-fund--closed { opacity: .72; }
+.hm-fund-done {
+  margin: var(--hm-s4) 0 0; text-align: center;
+  font: 800 14px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink);
+}
+/* Терміновість — єдине місце картки, де дозволено акцентний колір поруч із
+   кнопкою: він працює, лише поки рідкісний (показується від 7 днів і менше). */
+.hm-fund-left {
+  margin: var(--hm-s3) 0 0; text-align: center;
+  font: 700 12.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--red);
+}
 .hm-fund-hint {
   margin: var(--hm-s2) 0 0; text-align: center;
   font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);

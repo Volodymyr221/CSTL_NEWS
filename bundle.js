@@ -10687,11 +10687,23 @@
     humanitarian: { ic: ICONS.users, label: "\u0413\u0443\u043C\u0430\u043D\u0456\u0442\u0430\u0440\u043D\u0438\u0439" },
     community: { ic: ICONS.community, label: "\u0414\u043B\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438" }
   };
+  function plural3(n, one, few, many) {
+    const t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 14)
+      return many;
+    if (o === 1)
+      return one;
+    if (o >= 2 && o <= 4)
+      return few;
+    return many;
+  }
   function money(n) {
     if (!Number.isFinite(n))
       return null;
     return `${Math.round(n).toLocaleString("uk-UA")} \u20B4`;
   }
+  var CLOSED_DAYS = 7;
+  var dayDiff = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
   async function loadFundraisers() {
     try {
       const res = await fetch("./data/fundraisers.json", { cache: "no-cache" });
@@ -10700,12 +10712,21 @@
       const data = await res.json();
       const items = Array.isArray(data) ? data : data.items || [];
       const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      return items.filter(
+      const ok = items.filter(
         (it) => it && it.active !== false && it.title && it.org && it.url && // 🔴 без відповідального і посилання — не показуємо
-        /^https:\/\//i.test(String(it.url)) && // 🔴 тільки https: посилання про гроші не йде по http
-        (!it.until || it.until >= todayISO)
-        // прострочений збір зникає сам
-      );
+        /^https:\/\//i.test(String(it.url))
+        // 🔴 тільки https: посилання про гроші не йде по http
+      ).map((it) => {
+        const left = it.until ? dayDiff(it.until, todayISO) : null;
+        return { ...it, left, closed: left != null && left < 0 };
+      }).filter((it) => !it.closed || -it.left <= CLOSED_DAYS);
+      return ok.sort((a, b) => {
+        if (a.closed !== b.closed)
+          return a.closed ? 1 : -1;
+        const la = a.left == null ? Infinity : a.left;
+        const lb = b.left == null ? Infinity : b.left;
+        return la - lb;
+      });
     } catch {
       return [];
     }
@@ -10713,10 +10734,12 @@
   function fundCardHtml(it) {
     const kind = KIND[it.kind] || KIND.community;
     const goal = money(it.goal);
+    const urgent = !it.closed && it.left != null && it.left <= 7 ? it.left === 0 ? "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0434\u0435\u043D\u044C" : `\u0417\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${it.left} ${plural3(it.left, "\u0434\u0435\u043D\u044C", "\u0434\u043D\u0456", "\u0434\u043D\u0456\u0432")}` : "";
     return `
-    <article class="hm-card hm-fund">
+    <article class="hm-card hm-fund${it.closed ? " hm-fund--closed" : ""}">
       ${it.photo ? `
-      <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy">` : ""}
+      <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy"
+           onerror="this.remove()">` : ""}
       <div class="hm-fund-body">
         <div class="hm-fund-kind">
           <span class="hm-fund-ic" aria-hidden="true">${kind.ic}</span>
@@ -10733,10 +10756,15 @@
           <span class="hm-fund-goal-k">\u0426\u0456\u043B\u044C</span>
           <span class="hm-fund-goal-v">${goal}</span>
         </div>` : ""}
-        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+        ${it.closed ? `
+        <p class="hm-fund-done">\u0417\u0431\u0456\u0440 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E</p>
+        <p class="hm-fund-hint">\u0414\u044F\u043A\u0443\u0454\u043C\u043E \u0432\u0441\u0456\u043C, \u0445\u0442\u043E \u0434\u043E\u043B\u0443\u0447\u0438\u0432\u0441\u044F</p>` : `
+        ${urgent ? `<p class="hm-fund-left">${escapeHtml(urgent)}</p>` : ""}
+        <a class="hm-fund-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
+           aria-label="\u0417\u0430\u0434\u043E\u043D\u0430\u0442\u0438\u0442\u0438 \u2014 ${escapeHtml(it.title)}">
           \u0417\u0430\u0434\u043E\u043D\u0430\u0442\u0438\u0442\u0438
         </a>
-        <p class="hm-fund-hint">\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0431\u0430\u043D\u043A\u0430 Monobank</p>
+        <p class="hm-fund-hint">\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0431\u0430\u043D\u043A\u0430 Monobank</p>`}
       </div>
     </article>`;
   }
@@ -10859,7 +10887,7 @@
   ];
   var OTHER = { icon: "\u{1F4C7}", title: "\u0406\u043D\u0448\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438" };
   var telOf = (p) => String(p || "").replace(/[^\d+]/g, "");
-  function plural3(n, one, few, many) {
+  function plural4(n, one, few, many) {
     const t = n % 100, o = n % 10;
     if (t >= 11 && t <= 14)
       return many;
@@ -10949,7 +10977,7 @@
         </div>` : "") + (groups.length ? `
         <div class="hm-csec">
           <div class="hm-csec-h"><span aria-hidden="true">\u{1F3D8}</span> \u0421\u043B\u0443\u0436\u0431\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438
-            <span class="hm-csec-n">${local.length} ${plural3(local.length, "\u043A\u043E\u043D\u0442\u0430\u043A\u0442", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432")}</span>
+            <span class="hm-csec-n">${local.length} ${plural4(local.length, "\u043A\u043E\u043D\u0442\u0430\u043A\u0442", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", "\u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432")}</span>
           </div>
           ${groups.map((g) => groupHtml(g, openAll)).join("")}
         </div>` : "");
