@@ -32,6 +32,7 @@
 // («19 оголош…»), тобто компонент не робив того, заради чого існує.
 
 import { escapeHtml } from '../core/utils.js';
+import { ICONS } from '../core/icons.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { getRouteState, getRouteTimings } from '../core/bus-schedule.js';
 import { parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
@@ -99,7 +100,7 @@ async function busMessages() {
     }
     if (enroute) msgs.push(`${enroute} ${plural(enroute, 'зараз у дорозі', 'зараз у дорозі', 'зараз у дорозі')}`);
 
-    return { key: 'bus', icon: '🚌', label: 'Автобуси', msgs, tap: () => {
+    return { key: 'bus', icon: ICONS.bus, label: 'Автобуси', msgs, tap: () => {
       if (typeof window.switchTab === 'function') window.switchTab('buses');
       if (soon) openSavedRouteOnBuses(soon.r.id, todayISO, null, null);
     } };
@@ -124,7 +125,7 @@ async function boardAndDiscussionMessages() {
     const today = countToday(ads);
     const msgs = [`${ads.length} ${plural(ads.length, 'оголошення', 'оголошення', 'оголошень')}`];
     if (today) msgs.push(`${today} ${plural(today, 'нове', 'нових', 'нових')} сьогодні`);
-    out.push({ key: 'board', icon: '📋', label: 'Дошка', msgs,
+    out.push({ key: 'board', icon: ICONS.clipboard, label: 'Дошка', msgs,
       tap: () => window.switchTab && window.switchTab('board') });
   }
 
@@ -133,7 +134,7 @@ async function boardAndDiscussionMessages() {
     const today = countToday(disc);
     const msgs = [`${disc.length} ${plural(disc.length, 'тема', 'теми', 'тем')}`];
     if (today) msgs.push(`${today} ${plural(today, 'нова', 'нові', 'нових')} сьогодні`);
-    out.push({ key: 'disc', icon: '💬', label: 'Обговорення', msgs,
+    out.push({ key: 'disc', icon: ICONS.message, label: 'Обговорення', msgs,
       tap: () => window.switchTab && window.switchTab('discussions') });
   }
   return out;
@@ -152,7 +153,7 @@ async function newsMessages() {
     if (local) msgs.push(`Громада · ${local} ${plural(local, 'нова', 'нові', 'нових')}`);
     // ⚠️ НЕ switchTab('community'): людина вже стоїть на Громаді, і тап не робив
     // би нічого. Ведемо в той самий повноекранний хаб, що й «Усі новини →».
-    return { key: 'news', icon: '📰', label: 'Новини', msgs,
+    return { key: 'news', icon: ICONS.newspaper, label: 'Новини', msgs,
       tap: () => openNewsHub(NEWS_GEO_GROUPS[0]) };
   } catch {
     return null;
