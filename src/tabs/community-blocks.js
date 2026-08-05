@@ -295,7 +295,7 @@ function openPlaceSheet() {
   const bodyHtml = `
     <div class="wxp">
       <button class="wxp-row wxp-row--geo${!current ? ' wxp-row--on' : ''}" type="button" data-place="">
-        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>За моїм місцем</span>
+        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>За моїм місцем розташування</span>
         ${!current ? '<span class="wxp-row-ok" aria-hidden="true">✓</span>' : ''}
       </button>
       ${groups.map(g => `
