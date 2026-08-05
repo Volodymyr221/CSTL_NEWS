@@ -38,7 +38,7 @@
   padding: 9px 14px;
   border: none;
   border-radius: 12px;
-  background: var(--red, #722F37);
+  background: var(--brand-grad-sm);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
