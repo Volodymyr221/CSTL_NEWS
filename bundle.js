@@ -2492,6 +2492,12 @@
     close: `<svg ${A2}><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>`,
     // Шеврон вправо / розгорнути
     chevronRight: `<svg ${A2}><path d="M9 6l6 6l-6 6"/></svg>`,
+    // 🆕 05.08 — стрілка вниз для елементів вибору («відкриється список»).
+    // Замовлення Вови: «всі ікони, включаючи стрілочку донизу, мають бути
+    // векторними». До цього в кнопці населеного пункту стояв текстовий символ ▾:
+    // він не масштабується під розмір поруч, у різних шрифтах виглядає по-різному
+    // і не бере товщину лінії решти іконок — тобто виглядав чужим і дрібним.
+    chevronDown: `<svg ${A2}><path d="M6 9l6 6l6 -6"/></svg>`,
     // Стрілка вправо / далі
     arrowRight: `<svg ${A2}><path d="M5 12l14 0"/><path d="M13 18l6 -6"/><path d="M13 6l6 6"/></svg>`,
     // Око / перегляд
@@ -11154,9 +11160,9 @@
         </div>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442">
-          <span class="hm-wx-place-pin" aria-hidden="true">\u{1F4CD}</span>
+          <span class="hm-wx-place-pin" aria-hidden="true">${ICONS.pin}</span>
           <span class="hm-wx-place-n">${escapeHtml(cityName || "\u041E\u043B\u0438\u043A\u0430")}</span>
-          <span class="hm-wx-place-ch" aria-hidden="true">\u25BE</span>
+          <span class="hm-wx-place-ch" aria-hidden="true">${ICONS.chevronDown}</span>
         </button>
       </div>
       <div class="hm-wx-days">${forecastHtml}</div>
@@ -11221,7 +11227,7 @@
     const bodyHtml = `
     <div class="wxp">
       <button class="wxp-row wxp-row--geo${!current ? " wxp-row--on" : ""}" type="button" data-place="">
-        <span class="wxp-row-n">\u{1F4CD} \u0417\u0430 \u043C\u043E\u0457\u043C \u043C\u0456\u0441\u0446\u0435\u043C</span>
+        <span class="wxp-row-n"><span class="wxp-row-ic" aria-hidden="true">${ICONS.pin}</span>\u0417\u0430 \u043C\u043E\u0457\u043C \u043C\u0456\u0441\u0446\u0435\u043C</span>
         ${!current ? '<span class="wxp-row-ok" aria-hidden="true">\u2713</span>' : ""}
       </button>
       ${groups.map((g) => `

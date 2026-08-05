@@ -176,6 +176,40 @@ const chip0 = await p.evaluate(() => {
 });
 ok('🔴 населений пункт винесено окремим елементом', !!chip0, chip0 ? `«${chip0.name}» ${chip0.w}×${chip0.h}` : 'чіпа нема');
 
+// 🔴 ІКОНКИ ВЕКТОРНІ, А НЕ ЕМОДЗІ/СИМВОЛИ — правило Вови від 05.08: «всі ікони,
+// включаючи стрілочку донизу, мають бути векторними». Міряємо ДВІ речі, бо
+// кожна ловить свій вид зриву: наявність `<svg>` (поставили вектор) і
+// відсутність емодзі в тексті (не лишили символ поруч із вектором).
+// ⚠️ Розмір теж перевіряємо: `1em` дав би 12px кегля чіпа — рівно та дрібність,
+// на яку Вова і поскаржився. Тобто «вектор є» ще не означає «видно».
+const icons = await p.evaluate(() => {
+  const c = document.querySelector('[data-wx-place]');
+  if (!c) return null;
+  const pin = c.querySelector('.hm-wx-place-pin svg');
+  const ch  = c.querySelector('.hm-wx-place-ch svg');
+  const box = el => (el ? Math.round(el.getBoundingClientRect().width) : 0);
+  return {
+    pin: !!pin, ch: !!ch, pinW: box(pin), chW: box(ch),
+    // Емодзі й типографські стрілки в тексті кнопки — те, що замінювали.
+    emoji: /[\u{1F300}-\u{1FAFF}\u{2190}-\u{21FF}▲▼▴▾]/u.test(c.textContent),
+  };
+});
+ok('🔴 шпилька в кнопці — вектор', icons && icons.pin);
+ok('🔴 стрілка вниз — вектор', icons && icons.ch);
+ok('🔴 емодзі й символів-стрілок у кнопці не лишилось', icons && !icons.emoji);
+ok('стрілка не дрібна (≥14px)', icons && icons.chW >= 14, icons ? `${icons.chW}px` : '—');
+ok('шпилька не дрібна (≥14px)', icons && icons.pinW >= 14, icons ? `${icons.pinW}px` : '—');
+
+// 🔴 КНОПКА КАБІНЕТУ — КОЛИШНІЙ РОЗМІР. Вова 16.07 сам ставив 50px, редизайн
+// 04.08 мовчки зробив 38px. Сторож тримає число, щоб це не повторилось.
+const ava = await p.evaluate(() => {
+  const b = document.querySelector('.hm-ava[data-account-btn]');
+  if (!b) return null;
+  const ring = getComputedStyle(b, '::before');
+  return { tap: Math.round(b.getBoundingClientRect().width), ring: parseFloat(ring.width) || 0 };
+});
+ok('🔴 кнопка кабінету повернула розмір 50px', ava && ava.ring >= 50, ava ? `коло ${ava.ring}px, тап ${ava.tap}px` : '—');
+
 await p.click('[data-wx-place]');
 await p.waitForTimeout(600);
 const sheet = await p.evaluate(() => {
