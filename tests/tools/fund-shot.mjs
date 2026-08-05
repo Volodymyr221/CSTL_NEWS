@@ -9,7 +9,9 @@ const ep = chromiumPath();
 const b = await chromium.launch({ ...(ep ? { executablePath: ep } : {}) });
 const p = await (await b.newContext({ viewport:{width:390,height:844}, deviceScaleFactor:2, isMobile:true, hasTouch:true, serviceWorkers:'block' })).newPage();
 await p.route('**://*.supabase.co/**', r => r.abort());
-const N = +(process.argv[2] || 1);
+// N = 0 — НЕ підміняти дані, читати справжній `data/fundraisers.json` з
+// репозиторію. Тобто побачити рівно те, що поїде на сайт, а не макет.
+const N = +(process.argv[2] ?? 1);
 const ITEMS = [
   { id:'t1', title:'Тестовий збір — не для прода', org:'ТЕСТ (перевірка вигляду)',
     url:'https://send.monobank.ua/jar/EXAMPLE', goal:500000, kind:'military',
@@ -19,7 +21,7 @@ const ITEMS = [
   { id:'t3', title:'Третій тестовий збір', org:'ТЕСТ', url:'https://send.monobank.ua/jar/EXAMPLE3',
     goal:80000, kind:'community', active:true },
 ];
-await p.route('**/data/fundraisers.json', r => r.fulfill({ contentType:'application/json',
+if (N > 0) await p.route('**/data/fundraisers.json', r => r.fulfill({ contentType:'application/json',
   body: JSON.stringify({ updated:'2026-08-05', items: ITEMS.slice(0, N) }) }));
 await p.goto(url, { waitUntil:'domcontentloaded' });
 await p.waitForTimeout(2500);
