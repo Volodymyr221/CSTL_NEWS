@@ -595,30 +595,6 @@
 
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
-
-/* ── Віджет Дошки (переробка 13.07, Вова): «шматочок живої Дошки» ─────────────
-   Темний корок = той самий що вкладка Дошка (Д-21). Стрічка ПАР карток:
-   бокові відступи 30px + gap 12px → пара рівно у видимій зоні, сусідні пари
-   визирають по ~18px з обох боків. Снап на кожній непарній картці = зупинка
-   рівно на парах (і пальцем, і автопрокруткою). */
-/* 🔴 28.07: фото `cork2.png` (2.9 МБ) замінено на ЧИСТИЙ CSS-градієнт. Рішення Вови —
-   віджет лишається ТЕМНИМ (вкладка Дошка стала світло-сірою, тобто Д-21 «той самий фон
-   що вкладка» більше не діє; серед різнокольорових блоків Громади темний блок читається
-   нормально). Але фото більше не потрібне нікому → його знято з precache `sw.js`.
-   Чому вигляд майже не змінився: під затемненням `rgba(24,14,8,0.62)` від фото було
-   видно лише 38%, тобто темно-коричневу пляму. Змішування давало ≈#553C23 — саме цей
-   тон і взято за базу. Пори корка — тим самим прийомом, що вже стоїть у
-   `.cm-board-corkboard` нижче (два дрібні radial + `background-size: 14px`), щоб не
-   плодити другий спосіб малювати ту саму текстуру. Вага: 0 байт. */
-.cm-block--board {
-  background:
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255,220,170,0.10), transparent 60%),
-    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.20) 1px, transparent 2px),
-    radial-gradient(circle at 78% 78%, rgba(255,235,200,0.05) 1px, transparent 2px),
-    linear-gradient(160deg, #5E4429 0%, #4E3720 55%, #45301B 100%);
-  background-size: 100% 100%, 14px 14px, 14px 14px, 100% 100%;
-  box-shadow: var(--card-shadow), inset 0 12px 26px rgba(0,0,0,0.32), inset 0 -12px 26px rgba(0,0,0,0.28);
-}
 /* Контейнер = контекст для затемнених країв-рамки (позиціонуються absolute). */
 #cm-board-content { position: relative; }
 
@@ -1199,13 +1175,6 @@
   letter-spacing: 0.3px;
   color: rgba(255, 255, 255, 0.9);
 }
-/* Точки-індикатори hero прибрано 08.07 (рішення Роми): лише авто-слайдшоу,
-   без ручного гортання і індикаторів. */
-
-/* ===== COMMUNITY BOARD (Дошка громади — коркова дошка з папірцями) ===== */
-
-/* Тіло блоку дошки — без стандартного padding, бо корковий фон сам зі своїм */
-.cm-board-body { padding: 0; }
 
 /* Коркова дошка — фон з градієнту + текстура крапок (імітує корок) */
 /* Підзаголовок групи при фільтрі НП (Оголошення {НП} / Оголошення «Олицька громада»).
@@ -1242,45 +1211,6 @@
    розділювач має ПІДКАЗУВАТИ межу секції, а не сперечатися з назвою за увагу. */
 .bd-group-title::before { background: linear-gradient(to left,  rgba(95, 84, 72, 0.30), rgba(95, 84, 72, 0)); }
 .bd-group-title::after  { background: linear-gradient(to right, rgba(95, 84, 72, 0.30), rgba(95, 84, 72, 0)); }
-.cm-board-corkboard {
-  position: relative;
-  background:
-    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.18) 100%),
-    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.05) 1px, transparent 2px),
-    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
-  background-size: 100% 100%, 14px 14px, 14px 14px, 100% 100%;
-  border-top: 4px solid #7A5C30;
-  border-bottom: 4px solid #7A5C30;
-  box-shadow: inset 0 4px 16px rgba(0,0,0,0.18), inset 0 -4px 16px rgba(0,0,0,0.12);
-  padding: 18px 14px 22px;
-  max-height: 460px;
-  overflow-y: auto;
-  /* column-count: 2 — газетний потік: картки заповнюють зверху вниз
-     без пустих місць (на відміну від flex-wrap де коротка картка лишала gap) */
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 8px;
-  align-items: flex-start;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Явна колонка дошки — flex-дитина corkboard */
-.cm-board-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Рядок офіційних оголошень — повна ширина перед двоколонним блоком */
-.cm-board-official-row {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 
 /* Папірець-оголошення */
 .cm-board-note {
@@ -1384,12 +1314,8 @@
    Приглушені пігулки — у тон преміальності дошки. */
 .cm-board-cat--green  { background: rgba(46,125,80,0.14);  color: #2E7D50; }  /* куплю */
 .cm-board-cat--red    { background: rgba(192,57,43,0.13);  color: #C0392B; }  /* продам */
-.cm-board-cat--blue   { background: rgba(40,90,150,0.12);  color: #2E5C8A; }  /* шукаю */
-.cm-board-cat--purple { background: rgba(109,76,159,0.14); color: #6D4C9F; }  /* послуга */
-.cm-board-cat--amber  { background: rgba(176,124,20,0.16); color: #8A6410; }  /* знайдено/загубилось */
-/* Старі ключі (сумісність зі старими постами до перекласифікації) */
-.cm-board-cat--yellow { background: rgba(176,124,20,0.16); color: #8A6410; }
-.cm-board-cat--pink   { background: rgba(170,60,90,0.12);  color: #A03A5A; }
+.cm-board-cat--blue   { background: rgba(40,90,150,0.12);  color: #2E5C8A; }  /* послуга */
+.cm-board-cat--amber  { background: rgba(176,124,20,0.16); color: #8A6410; }
 .cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
 /* Д-23: плейсхолдер тегу в прев'ю поки категорію не обрано (приглушений, курсивом) */
 .cm-board-cat--placeholder { background: rgba(90,90,90,0.08); color: #9a9a9a; font-style: italic; }
@@ -1675,13 +1601,6 @@
 .app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
 /* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
 .cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
-
-.cm-board-form-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--black);
-  margin-bottom: 10px;
-}
 .cm-board-input {
   width: 100%;
   padding: 9px 11px;
@@ -1695,7 +1614,6 @@
 #bm-text { min-height: 88px; resize: none; }   /* авто-зростання (autoGrowTextarea) — скрол сам лист */
 .cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
 .cm-board-input--small { padding: 8px 11px; font-size: 16px; }
-.cm-board-row { margin-top: 8px; }
 
 .cm-board-submit {
   width: 100%;
@@ -2015,10 +1933,6 @@ textarea.cm-board-input.bm-invalid {
   pointer-events: none;
   z-index: 0;
 }
-.board-bg--plain {
-  background: var(--paper);
-  box-shadow: none;
-}
 
 .board-content {
   position: relative;
@@ -2034,14 +1948,6 @@ textarea.cm-board-input.bm-invalid {
      Сторож — `tests/board-fab-clearance.mjs`. */
   padding-bottom: calc(var(--fab-gap) + var(--fab-size) + 12px);
 }
-.board-empty {
-  padding: 60px 24px 20px;
-  text-align: center;
-  color: var(--gray);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.board-empty p { margin-bottom: 6px; }
 
 /* Повна коркова дошка — прозора, бо корок винесений у .board-bg.
    Залишаємо лише padding для розташування папірців. */
@@ -2225,13 +2131,6 @@ textarea.cm-board-input.bm-invalid {
 }
 /* Векторні іконки пунктів FAB — однаковий розмір незалежно від атрибутів SVG */
 .board-fab-ic svg { width: 22px; height: 22px; }
-/* Бейдж непрочитаних чатів біля «ПОВІДОМЛЕННЯ» */
-.board-fab-badge {
-  min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: 9px; background: var(--red, #722F37); color: #fff;
-  font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
-  display: none;
-}
 
 /* Відкрито: скло трохи щільніше; бульбашка зникає, проявляється ✕ (cross-fade) */
 /* Б6.1: пом'якшено 0.62→0.52 — базовий стан теж скло 0.45, різкий стрибок опасності відчувався як «перефарбування» */
@@ -2431,27 +2330,6 @@ textarea.cm-board-input.bm-invalid {
 }
 .board-backdrop.cm-ad-backdrop--over { z-index: 1099; }
 .cm-board-modal-note.cm-ad-screen.visible { transform: translateY(0); }
-/* Шапка модалки над фото: смужка-ручка для свайпу (по центру) + кнопка ✕ (справа).
-   Липка (sticky) — лишається зверху при скролі, тож ✕ завжди доступний.
-   Фон успадковує колір картки (background: inherit), радіус — під верхні кути модалки. */
-.cm-board-modal-bar {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 38px;
-  background: inherit;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-}
-.cm-board-modal-grip {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(0,0,0,0.18);
-}
 /* ── Простий надійний скрол: фото(4:3) + під-шапка + текст — УСЕ в одному скролі (без JS) ──
    Жодних оверлеїв/стискання → рідний скрол iOS, без смикань/просвічування/застрягання. */
 .cm-board-modal-scrollarea {
@@ -2461,14 +2339,6 @@ textarea.cm-board-input.bm-invalid {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   background: inherit;   /* колір картки → щоб sticky під-шапка мала непрозорий фон */
-}
-/* Фото — фіксований розмір 4:3, повна ширина, у потоці (скролиться разом з текстом). */
-.cm-board-modal-photo {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  max-height: 200px;
-  overflow: hidden;
 }
 /* Під-шапка: категорія+заголовок — одразу під фото, скролиться разом. */
 /* Під-шапка липне (sticky) до верху скрол-зони: фото йде вгору і ховається,
@@ -2522,16 +2392,6 @@ textarea.cm-board-input.bm-invalid {
    (порожній рядок між блоками → видимий проміжок). Тільки модалка —
    картки на Дошці лишаються обрізаними. */
 .cm-board-modal-content .cm-board-text { white-space: pre-wrap; }
-/* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
-   flex:0 0 auto (не скролиться); z-index:3 + opaque фон → завжди поверх фото-оверлея і тексту. */
-.cm-board-modal-foot {
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 3;
-  background: inherit;
-  padding: 0 20px 10px;
-  box-shadow: 0 -5px 7px -4px rgba(0,0,0,0.16);
-}
 /* Компактний футер — менше місця (специфічність 0,3,0 щоб перекрити загальні .cm-board-modal-note правила) */
 .cm-board-modal-note .cm-board-modal-foot .cm-board-footer {
   padding-top: 7px;
@@ -2655,50 +2515,6 @@ textarea.cm-board-input.bm-invalid {
   flex: 0 0 auto;
 }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact::before { display: none; }
-
-/* ── Мета-блок футера модалки: «номер — ім'я» + кнопки ── */
-.cm-board-modal-foot {
-  border-top: none;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
-  padding: 0 20px 6px;
-}
-.cm-board-modal-meta {
-  padding-top: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.cm-board-modal-meta-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.cm-board-contact-line {
-  font-size: 14px;
-  flex-shrink: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cm-board-contact-line .cm-board-contact-phone {
-  font-weight: 700;
-  color: #8B3A4A;
-}
-.cm-board-contact-line .cm-board-contact-name {
-  font-weight: 600;
-  color: rgba(43,43,43,0.6);
-}
-.cm-board-modal-meta-btns {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
 .cm-board-modal-meta .cm-board-time {
   font-size: 11px;
   color: rgba(43,43,43,0.5);
@@ -2825,38 +2641,6 @@ textarea.cm-board-input.bm-invalid {
   height: 42px;
 }
 .cm-board-modal-note .cm-board-call svg { width: 20px; height: 20px; }
-
-/* ── Контакт-телефон з кнопкою виклика праворуч ── */
-.cm-board-contact--phone {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: space-between;
-  /* роздільна лінія — суцільна, затухає по краях (::before нижче); час у рядку з ім'ям */
-  margin-top: 6px;
-  padding-top: 6px;
-}
-/* Суцільна роздільна лінія під описом, затухає по краях (колір як у штрихпунктира) */
-.cm-board-contact--phone::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right,
-    transparent 0%,
-    rgba(0,0,0,0.12) 50%,
-    transparent 100%);
-  /* трішки тіні над лінією (drop-shadow затухає разом з лінією, без різких країв) */
-  filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.12));
-}
-.cm-board-contact-btns {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
 /* Менші кнопки на картці щоб номер завжди влазив */
 .cm-board-contact--phone .cm-board-msg-btn,
 .cm-board-contact--phone .cm-board-call {
@@ -2867,15 +2651,6 @@ textarea.cm-board-input.bm-invalid {
 .cm-board-contact--phone .cm-board-call svg {
   width: 17px;
   height: 17px;
-}
-/* Ім'я під номером телефону на картці */
-/* Рядок під контактом: ім'я (зліва) + час публікації (справа) на одному рівні */
-.cm-board-author-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 8px;
 }
 
 /* Новий футер картки/модалки (рішення Вови): кнопки зліва · ім'я+час справа.
@@ -3013,12 +2788,6 @@ textarea.cm-board-input.bm-invalid {
 .cm-board-author--card,
 .cm-board-contact-name,
 .cm-board-time { text-transform: uppercase; }
-.cm-board-contact-num {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;   /* номер завжди в один рядок — не ламається посеред цифр */
-  font-size: 12px;       /* трохи менше — щоб довший номер влазив біля більших кнопок */
-}
 .cm-board-call {
   flex-shrink: 0;
   display: inline-flex;
@@ -3080,28 +2849,6 @@ textarea.cm-board-input.bm-invalid {
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .bd-controls { background: rgba(244, 241, 230, 0.94); }
-}
-/* Шапка режиму «Обговорення» (відкривається з вкладки Чати) */
-.bd-disc-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.bd-disc-back {
-  flex-shrink: 0;
-  width: 34px; height: 34px;
-  border: 0; border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--ink);
-  font-size: 20px; line-height: 1;
-  cursor: pointer;
-}
-.bd-disc-back:active { background: rgba(0, 0, 0, 0.1); }
-.bd-disc-title {
-  font-size: 18px; font-weight: 800;
-  color: var(--ink);
-  text-transform: uppercase;   /* «ОБГОВОРЕННЯ» — усі великі (Вова 14.07) */
-  letter-spacing: 0.8px;
 }
 /* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
    картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
@@ -3191,15 +2938,6 @@ textarea.cm-board-input.bm-invalid {
 .bd-titlebar {
   margin-top: 6px;
   margin-bottom: 2px;
-}
-.bd-subrow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  /* 28.07: було 12px — відступ ВІД ЗАГОЛОВКА, якого більше немає. Рядок
-     «N оголошень · Локація» тепер сам є назвою екрана і сідає першим у шапці. */
-  margin-top: 0;
 }
 /* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
 .bd-count {
@@ -3445,80 +3183,6 @@ textarea.cm-board-input.bm-invalid {
   pointer-events: none;
 }
 
-/* Таби типів постів */
-.bd-tabs {
-  display: flex;
-  justify-content: space-evenly;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 6px;
-}
-.bd-tab { flex: 1; justify-content: center; }
-/* Кнопки трішки зсунуті до роздільної лінії «|» (вміст лишається по центру кнопки).
-   Зовнішні поля 14px + вужчий роздільник (нижче) зберігають ту саму ширину кнопок. */
-.bd-tabs .bd-tab:first-child { margin-left: 14px; }
-.bd-tabs .bd-tab:last-child  { margin-right: 14px; }
-.bd-tabs::-webkit-scrollbar { display: none; }
-/* Горизонтальна роздільна лінія під кнопками ДОШКА/ОБГОВОРЕННЯ — затухає по краях */
-.bd-tabs-rule {
-  height: 1px;
-  margin: -8px 0 0;
-  background: linear-gradient(to right,
-    transparent 0%,
-    rgba(0,0,0,0.40) 50%,
-    transparent 100%);
-}
-.bd-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 9px 12px;
-  border-radius: 14px;
-  border: 1.5px solid rgba(0,0,0,0.28);
-  background: var(--card-cream);
-  color: var(--black);
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-.bd-tab--active {
-  background: var(--card-cream);
-  color: var(--black);
-  border-color: rgba(114, 47, 55, 0.80);
-  font-weight: 700;
-  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
-}
-.bd-tab-emoji { font-size: 15px; }
-.bd-tab--round {
-  flex: none;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  padding: 2px 0 0 0;
-  gap: 0;
-}
-/* Роздільник «|» між табами ДОШКА та ОБГОВОРЕННЯ.
-   Ширина 14px (вузька) + зовнішні поля 14px на кнопках → кнопки зберігають
-   попередню ширину, але присунуті до роздільної лінії. */
-.bd-tab-sep {
-  flex: 0 0 14px;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(0,0,0,0.30);
-  font-size: 18px;
-  font-weight: 300;
-  line-height: 1;
-  user-select: none;
-}
-
 /* Рядок пошуку: кнопка-фільтр категорій (зліва) + поле пошуку (розтягується). */
 .bd-search-row {
   display: flex;
@@ -3526,9 +3190,6 @@ textarea.cm-board-input.bm-invalid {
   gap: 8px;
 }
 .bd-search-row > .bd-search { flex: 1; min-width: 0; }
-
-/* Кнопка-фільтр категорій — показує іконку активної категорії + каретку. */
-.bd-cat-filter-wrap { position: relative; flex-shrink: 0; }
 .bd-cat-filter {
   display: inline-flex;
   align-items: center;
@@ -3545,8 +3206,6 @@ textarea.cm-board-input.bm-invalid {
   -webkit-tap-highlight-color: transparent;
 }
 .bd-cat-filter.open { border-color: rgba(0,0,0,0.4); }
-.bd-cat-filter-ico { display: inline-flex; }
-.bd-cat-caret { color: var(--ink-soft, #5a5a5a); flex: none; }
 
 /* Випадне меню категорій — під кнопкою, поверх карток. */
 /* Спільна база випадних меню Дошки (категорії + локація). */
@@ -3590,8 +3249,6 @@ textarea.cm-board-input.bm-invalid {
 .bd-loc-mi:active { background: rgba(0,0,0,0.05); }
 .bd-cat-mi.active,
 .bd-loc-mi.active { background: rgba(114,47,55,0.10); font-weight: 700; }
-.bd-cat-mi-ico { display: inline-flex; font-size: 18px; flex: none; }
-.bd-cat-mi-label { min-width: 0; }
 /* Меню локації: праворуч під кнопкою (щоб не вилазило за правий край) + прокрутка
    (довгий список НП). ПІСЛЯ спільної бази — щоб перекрити left:0/overflow:hidden. */
 .bd-loc-menu {
@@ -3666,12 +3323,6 @@ textarea.cm-board-input.bm-invalid {
   padding-top: 8px;
   border-top: 1px dashed rgba(0,0,0,0.10);
 }
-
-/* Save + Share — однаковий круглий стиль з SVG-іконкою всередині */
-.bd-actions-right {
-  display: flex;
-  gap: 6px;
-}
 .bd-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -3720,13 +3371,6 @@ textarea.cm-board-input.bm-invalid {
     transparent 100%);
 }
 
-/* Ліва частина: тригер реакції + кнопка коментарів поряд */
-.bd-actions-left {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
 
 /* ── BOARD-стікер: на звичайній картці actions ПРИХОВАНИЙ (реакції прибрано
    11.07; save/share показуємо лише у zoom-modal .cm-board-modal-note).
@@ -3761,7 +3405,6 @@ textarea.cm-board-input.bm-invalid {
   gap: 8px;
   align-items: flex-start;
 }
-.bd-chat-topic-icon { font-size: 16px; line-height: 1.5; flex-shrink: 0; }
 /* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
 .bd-chat-topline {
   margin-top: 6px;
@@ -3841,7 +3484,6 @@ textarea.cm-board-input.bm-invalid {
 .bd-chat-like:active { background: rgba(0,0,0,0.05); }
 .bd-chat-like--active { color: var(--red); }
 .bd-chat-like svg { flex-shrink: 0; }
-.bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
 /* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
 .bd-chat-by {
   display: flex;
@@ -3978,10 +3620,6 @@ textarea.cm-board-input.bm-invalid {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .bd-chat-modal-meta svg { vertical-align: -2px; margin-right: 2px; }
-.bd-chat-modal-sub {
-  font-size: 12px; color: var(--gray);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 .bd-chat-modal-body {
   flex: 1; overflow-y: auto; padding: 14px 12px;
   display: flex; flex-direction: column;
@@ -3998,36 +3636,7 @@ textarea.cm-board-input.bm-invalid {
 }
 .bd-chat-empty-icon { display: block; margin-bottom: 8px; opacity: 0.5; }
 .bd-chat-empty-icon svg { width: 32px; height: 32px; }
-
-/* ── Групи бульбашок (месенджер-стиль) ── */
-.bd-msg-group { display: flex; gap: 8px; align-items: flex-end; max-width: 84%; }
-.bd-msg-group--other { align-self: flex-start; }
-.bd-msg-group--mine  { align-self: flex-end; }
-.bd-msg-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.bd-msg-group--mine .bd-msg-col { align-items: flex-end; }
 .bd-msg-group .bd-avatar { flex-shrink: 0; }
-.bd-msg-name { font-size: 12px; font-weight: 700; color: var(--red); margin: 0 0 1px 6px; }
-.bd-msg-bubble {
-  background: #fff; border-radius: 16px;
-  padding: 7px 12px 5px;
-  /* Вова 20.07: помітна тінь (2 шари) — бульбашки не зливаються з фоном чату (посилено). */
-  box-shadow: 0 1px 4px rgba(0,0,0,0.16), 0 5px 14px rgba(0,0,0,0.16);
-  max-width: 100%;
-}
-/* Чужі (білі) бульбашки — тонка рамка, щоб не зникали на світлому тлі чату #FCFAF4
-   (Вова 20.07 зробив фон модалки в колір картки). Мої (червоні) — без рамки. */
-.bd-msg-group--other .bd-msg-bubble { border: 1px solid rgba(0,0,0,0.06); }
-.bd-msg-group--mine .bd-msg-bubble { background: var(--brand-grad-sm); }
-/* «хвостик» — гострішій кут у крайньої бульбашки групи */
-.bd-msg-group--other .bd-msg-bubble:last-child { border-bottom-left-radius: 5px; }
-.bd-msg-group--mine  .bd-msg-bubble:last-child { border-bottom-right-radius: 5px; }
-.bd-msg-text {
-  font-size: 14px; line-height: 1.4; color: var(--black);
-  word-wrap: break-word; overflow-wrap: anywhere;
-}
-.bd-msg-group--mine .bd-msg-text { color: #fff; }
-.bd-msg-time { display: block; text-align: right; font-size: 10px; color: var(--gray); margin-top: 2px; }
-.bd-msg-group--mine .bd-msg-time { color: rgba(255,255,255,0.7); }
 
 /* ── Роздільник «Нові повідомлення» ── */
 .bd-chat-divider {
@@ -4096,12 +3705,6 @@ textarea.cm-board-input.bm-invalid {
   padding: 14px 16px;
   box-shadow: 0 1px 3px rgba(60,45,20,0.10), 0 8px 22px rgba(60,45,20,0.12);
 }
-.bd-chat-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
 .bd-avatar {
   width: 36px;
   height: 36px;
@@ -4111,28 +3714,6 @@ textarea.cm-board-input.bm-invalid {
   justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
-}
-.bd-avatar--anon {
-  background: var(--gray-light);
-  color: var(--gray);
-  font-size: 18px;
-}
-/* Потік 12 Б: фото профілю у кружечку обговорення (крос-юзер) */
-.bd-avatar--img { overflow: hidden; }
-.bd-avatar--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.bd-chat-meta {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-.bd-chat-author {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--black);
-}
-.bd-chat-time {
-  font-size: 11px;
-  color: var(--gray);
 }
 .bd-chat-text {
   font-size: 15px;
@@ -4146,79 +3727,6 @@ textarea.cm-board-input.bm-invalid {
   text-transform: uppercase;
   color: #1C1C1E;
   font-weight: 700;
-}
-.bd-chat-photo {
-  width: 100%;
-  border-radius: 10px;
-  margin: 8px 0;
-  max-height: 280px;
-  object-fit: cover;
-}
-.bd-chat-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-.bd-chat-tag {
-  font-size: 12px;
-  color: #1a73e8;
-  background: rgba(26, 115, 232, 0.08);
-  padding: 2px 8px;
-  border-radius: 8px;
-}
-
-/* ── GREETING — святкова картка з emoji-обкладинкою ─────────────────────── */
-.bd-card--greeting {
-  background: white;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-}
-.bd-greet-cover {
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.bd-greet-emoji {
-  font-size: 64px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-}
-.bd-greet-body {
-  padding: 14px 16px;
-}
-.bd-greet-to {
-  font-size: 12px;
-  color: var(--gray);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-.bd-greet-text {
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--black);
-  margin-bottom: 8px;
-}
-.bd-greet-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--gray);
-}
-.bd-greet-author { font-style: italic; }
-
-/* Повна дошка: внутрішній скрол прибрано — скролиться сторінка, не контейнер.
-   max-height і overflow прибрані щоб не було видимого "рядка" знизу контейнера. */
-.cm-board-corkboard.board-corkboard--full {
-  margin-top: 0;
-  padding-top: 18px;
-  max-height: none;
-  overflow: visible;
-  box-shadow: none;
 }
 
 /* Затемнений верхній край — поверх карток (z:8), нижче контролів (z:90).
@@ -4239,70 +3747,6 @@ textarea.cm-board-input.bm-invalid {
   top: 0;
   height: 140px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, transparent 100%);
-}
-
-/* ── Submit-форма: перемикач типу (3 таби) ─────────────────────────────── */
-.bm-type-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 18px;
-  /* 30.07: дорожка ЗАГЛИБЛЕНА (`--board-sunken`), була `--gray-light` = світліша за
-     поверхню листа. Пояснення інверсії — у `base.css`, блок `--board-sunken`. */
-  background: var(--board-sunken);
-  border-radius: 14px;
-  padding: 4px;
-}
-.bm-type-tab {
-  flex: 1;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  border: none;
-  background: transparent;
-  color: var(--gray);
-  font-family: inherit;
-  font-size: 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s;
-}
-.bm-type-tab.active {
-  background: white;
-  color: var(--black);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
-}
-.bm-type-emoji { font-size: 18px; }
-.bm-type-label { font-size: 11px; }
-
-/* ── Submit-форма: пресети обкладинки для greeting ─────────────────────── */
-.bm-greet-presets {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.bm-greet-preset {
-  aspect-ratio: 1;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s, border-color 0.15s;
-}
-.bm-greet-preset:active { transform: scale(0.92); }
-.bm-greet-preset.active {
-  border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15);
-}
-.bm-greet-preset-emoji {
-  font-size: 28px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
 }
 
 /* ── Блок НОВИНИ = «електронне табло новин Олики» (концепт Роми 06.07) ────────
@@ -4933,26 +4377,6 @@ textarea.cm-board-input.bm-invalid {
   line-height: 1.25;
   color: rgba(255, 236, 240, 0.78);
 }
-#board-content .bd-hero-add {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-#board-content .bd-hero-add svg { width: 22px; height: 22px; }
-#board-content .bd-hero-add:active { background: rgba(255, 255, 255, 0.26); }
-
-/* Рядок «N оголошень · локація» лишається, але вже ВСЕРЕДИНІ багряного блоку —
-   тобто світлий текст. До 01.08 він був назвою екрана; тепер це підпис під нею. */
-#board-content .bd-subrow { margin-top: 9px; }
 #board-content .bd-count { color: rgba(255, 236, 240, 0.86); }
 #board-content .bd-loc-btn { color: rgba(255, 236, 240, 0.92); }
 
