@@ -1492,11 +1492,18 @@ export function paintTabDots() {
 export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
   const fabBadge = document.getElementById('board-trigger-badge');
+  // 🔴 05.08 — БЕЙДЖІВ ДВА, і це не дубль. Один на самій кнопці FAB (видно завжди,
+  // коли меню закрите), другий на кружечку пункту «Повідомлення» (видно, коли меню
+  // РОЗКРИТЕ — тоді кнопка показує ✕ і числа на ній уже не видно).
+  // ⚠️ Число рахується ОДНЕ (`_unreadChats`) і роздається обом — два лічильники
+  // того самого вже розходились у B-27, повторювати не будемо.
+  const msgBadge = document.getElementById('board-fab-msg-badge');
 
   const chats = isLoggedIn() ? _unreadChats : 0;
   if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
+    if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
     paintTabDots();   // 30.07: і в гілці «нема непрочитаних» — інакше крапка Дошки застигла б
     return;
   }
@@ -1511,6 +1518,7 @@ export function paintUnreadBadge() {
     badge.textContent = label;
   }
   if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
+  if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'block'; }
   paintTabDots();   // 30.07: крапки в таб-барі йдуть тим самим кроком, що й бейджі
 }
 

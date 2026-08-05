@@ -5906,12 +5906,17 @@
   function paintUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
+    const msgBadge = document.getElementById("board-fab-msg-badge");
     const chats = isLoggedIn() ? _unreadChats : 0;
     if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
         fabBadge.textContent = "";
         fabBadge.style.display = "none";
+      }
+      if (msgBadge) {
+        msgBadge.textContent = "";
+        msgBadge.style.display = "none";
       }
       paintTabDots();
       return;
@@ -5929,6 +5934,10 @@
     if (fabBadge) {
       fabBadge.textContent = label;
       fabBadge.style.display = "block";
+    }
+    if (msgBadge) {
+      msgBadge.textContent = label;
+      msgBadge.style.display = "block";
     }
     paintTabDots();
   }
@@ -6758,17 +6767,17 @@
   function syncMsgFab() {
     if (discOpen)
       return;
-    const box = document.querySelector("#board-content .bd-hero-actions");
-    if (!box)
+    const menu = document.getElementById("board-fab-menu");
+    if (!menu)
       return;
-    const have = document.getElementById("bd-hero-msgs");
+    const have = menu.querySelector('[data-fab="messages"]');
     const need = canSeeMessages();
     if (need && !have) {
-      box.insertAdjacentHTML(
-        "beforeend",
-        `<button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}<span class="board-trigger-badge" id="board-trigger-badge"></span></button>`
-      );
-      document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
+      menu.insertAdjacentHTML("beforeend", msgFabItemHtml());
+      menu.querySelector('[data-fab="messages"]')?.addEventListener("click", () => {
+        closeFab();
+        requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList);
+      });
       paintUnreadBadge();
     } else if (!need && have) {
       have.remove();
@@ -6815,13 +6824,22 @@
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
+        ${canSeeMessages() ? msgFabItemHtml() : ""}
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
+  }
+  function msgFabItemHtml() {
+    return `
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}<span class="board-fab-badge" id="board-fab-msg-badge"></span></span>
+        </button>`;
   }
   function canSeeMessages() {
     if (!isLoggedIn())
@@ -6869,6 +6887,8 @@
   function renderHeader() {
     const discHead = "";
     const showCategories = activeType === "board";
+    const catBtnLabel = activeCategory === "all" ? "\u0423\u0441\u0456" : catShort(activeCategory);
+    const catBtnCount = activeCategory === "all" ? getFilteredPosts({ ignoreCategory: true }).length : getFilteredPosts().length;
     const heroHtml = showCategories ? `
     <div class="bd-hero">
       <div class="bd-hero-text">
@@ -6876,31 +6896,35 @@
         <p class="bd-hero-sub">\u0417\u043D\u0430\u0439\u0434\u0438, \u043F\u0440\u043E\u0434\u0430\u0439, \u043E\u0431\u043C\u0456\u043D\u044F\u0439 \u0430\u0431\u043E \u0432\u0456\u0434\u0434\u0430\u0439 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</p>
       </div>
       <div class="bd-hero-actions">
-        ${canSeeMessages() ? `
-        <button class="bd-hero-msgs" id="bd-hero-msgs" type="button" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
-          ${MSG_ICON_SVG}
-          <span class="board-trigger-badge" id="board-trigger-badge"></span>
-        </button>` : ""}
+        <div class="bd-hero-cat-filter">
+          <button class="bd-hero-cat${activeCategory === "all" ? "" : " bd-hero-cat--on"}" id="bd-cat-btn" type="button"
+                  aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E">
+            <span class="bd-hero-cat-label">${escapeHtml(catBtnLabel)}</span>
+            <span class="bd-hero-cat-n" id="bd-count">${catBtnCount}</span>
+            <svg class="bd-hero-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          ${catMenuHtml()}
+        </div>
       </div>
     </div>
   ` : "";
-    const typesHtml = showCategories ? (() => {
+    function catMenuHtml() {
       const base = getFilteredPosts({ ignoreCategory: true });
       const n = {};
       base.forEach((p) => {
         n[p.category] = (n[p.category] || 0) + 1;
       });
-      const chip = (id, label, on, num) => `
-      <button class="bd-type${on ? " bd-type--on" : ""}" type="button" data-bd-cat="${escapeHtml(id)}">
-        ${escapeHtml(label)}<span class="bd-type-n"${id === "all" ? ' id="bd-count"' : ""}>${num}</span>
+      const mi = (id, label, on, num) => `
+      <button class="bd-cat-mi${on ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${escapeHtml(id)}">
+        <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
+        <span class="bd-cat-mi-n">${num}</span>
       </button>`;
-      const live = BOARD_CATEGORIES.filter((c) => n[c.id] > 0).sort((a, b) => n[b.id] - n[a.id]).map((c) => chip(c.id, c.short || c.label, activeCategory === c.id, n[c.id])).join("");
-      const activeGone = activeCategory !== "all" && !n[activeCategory];
-      const orphan = activeGone ? chip(activeCategory, catShort(activeCategory), true, 0) : "";
-      return `<div class="bd-types" id="bd-types">
-      ${chip("all", "\u0423\u0441\u0456", activeCategory === "all", base.length)}${orphan}${live}
+      const live = BOARD_CATEGORIES.filter((c) => n[c.id] > 0).sort((a, b) => n[b.id] - n[a.id]).map((c) => mi(c.id, c.short || c.label, activeCategory === c.id, n[c.id])).join("");
+      const orphan = activeCategory !== "all" && !n[activeCategory] ? mi(activeCategory, catShort(activeCategory), true, 0) : "";
+      return `<div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+      ${mi("all", "\u0423\u0441\u0456", activeCategory === "all", base.length)}${orphan}${live}
     </div>`;
-    })() : "";
+    }
     const COMMUNITY_ALL_SHORT = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
     const locFilterHtml = `
         <div class="bd-loc-filter">
@@ -6936,7 +6960,6 @@
       ${discHead}
       ${titlebarHtml}
       ${showCategories ? "" : searchRowHtml}
-      ${typesHtml}
     </div>
   `;
   }
@@ -6944,7 +6967,7 @@
     const el = document.getElementById("bd-count");
     if (!el || activeType !== "board")
       return;
-    el.textContent = String(getFilteredPosts({ ignoreCategory: true }).length);
+    el.textContent = String(activeCategory === "all" ? getFilteredPosts({ ignoreCategory: true }).length : getFilteredPosts().length);
   }
   function renderBody() {
     const filtered = getFilteredPosts();
@@ -7046,7 +7069,7 @@
     const fab = document.getElementById("board-fab");
     const fabBtn = document.getElementById("board-trigger");
     const fabBack = document.getElementById("board-fab-backdrop");
-    const closeFab = () => {
+    const closeFab2 = () => {
       if (!fab)
         return;
       fab.classList.remove("open");
@@ -7059,7 +7082,7 @@
       fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
     };
     fabBtn?.addEventListener("click", toggleFab);
-    fabBack?.addEventListener("click", closeFab);
+    fabBack?.addEventListener("click", closeFab2);
     if (!_threadsEvtWired) {
       _threadsEvtWired = true;
       window.addEventListener("cstl-threads-changed", () => syncMsgFab());
@@ -7068,7 +7091,7 @@
     el.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
-        closeFab();
+        closeFab2();
         if (act === "disc-create") {
           requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
           return;
@@ -7083,6 +7106,10 @@
         }
         if (act === "post") {
           requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
+          return;
+        }
+        if (act === "messages") {
+          requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList);
           return;
         }
         if (act === "saved") {
@@ -7156,13 +7183,8 @@
     wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
       activeLocation = mi.dataset.bdLoc;
     });
-    document.getElementById("bd-hero-msgs")?.addEventListener("click", () => requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList));
-    document.getElementById("bd-types")?.addEventListener("click", (e) => {
-      const chip = e.target.closest("[data-bd-cat]");
-      if (!chip)
-        return;
-      activeCategory = chip.dataset.bdCat;
-      renderAll();
+    wireMenuButton("bd-cat-btn", "bd-cat-menu", (mi) => {
+      activeCategory = mi.dataset.bdCat;
     });
     if (!_boardMenusWired) {
       _boardMenusWired = true;
@@ -7523,7 +7545,7 @@
   var _threadsEvtWired = false;
   var _boardMenusWired = false;
   function closeBoardMenus() {
-    [["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
+    [["bd-loc-menu", "bd-loc-btn"], ["bd-cat-menu", "bd-cat-btn"]].forEach(([menuId, btnId]) => {
       document.getElementById(menuId)?.setAttribute("hidden", "");
       const b = document.getElementById(btnId);
       if (b) {
