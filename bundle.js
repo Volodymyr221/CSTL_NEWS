@@ -938,7 +938,7 @@
   async function fetchAuthorAds(uid, limit = 12) {
     if (!supa || !uid)
       return [];
-    const { data, error } = await supa.from("posts").select("id, type, title, text, photo, photos, price, currency, price_negotiable, category, location, author, author_name, owner_uid, status, created_at, bumped_at").eq("owner_uid", uid).eq("status", "published").eq("type", "board").order("bumped_at", { ascending: false, nullsLast: true }).limit(limit);
+    const { data, error } = await supa.from("posts").select("*").eq("owner_uid", uid).eq("status", "published").eq("type", "board").order("bumped_at", { ascending: false, nullsLast: true }).limit(limit);
     if (error) {
       console.warn("[supabase] fetchAuthorAds:", error.message);
       return [];
