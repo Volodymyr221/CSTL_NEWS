@@ -1134,7 +1134,7 @@ function syncMsgFab() {
   const have = menu.querySelector('[data-fab="messages"]');
   const need = canSeeMessages();
   if (need && !have) {
-    menu.insertAdjacentHTML('beforeend', msgFabItemHtml());
+    menu.insertAdjacentHTML('afterbegin', msgFabItemHtml());   // 06.08 — пункт першим, як у renderFab
     menu.querySelector('[data-fab="messages"]')?.addEventListener('click', () => {
       closeFab();
       requireAuth('переглянути повідомлення', openThreadsList);
@@ -1194,12 +1194,12 @@ function renderFab() {
   // меню, і як текст на розгорнутій кнопці. Змінилось лише те, що листування знову
   // досяжне звідси.
   //
-  // 🔴 ЧОМУ «ПОВІДОМЛЕННЯ» ОСТАННІ В РОЗМІТЦІ, А НЕ ПЕРШІ.
-  // Меню стоїть НАД кнопкою (`.board-fab-menu { bottom: … + 56px + 14px }`) і
-  // викладається звичайним `column`, тобто ОСТАННІЙ пункт малюється найнижчим —
-  // найближче до пальця й до самої кнопки. Каскад появи в CSS іде тим самим
-  // порядком (`:nth-child(4)` має найменшу затримку — заготовка саме під
-  // четвертий пункт, який тут стояв до 02.08).
+  // 🔄 06.08 — «ПОВІДОМЛЕННЯ» ПЕРШИМИ (замовлення Вови: «повідомлення постав на
+  // верх»). Меню стоїть НАД кнопкою і викладається звичайним `column`, тож
+  // перший пункт у розмітці малюється НАЙВИЩИМ.
+  // ⚠️ Це відкат моєї ж рекомендації від 05.08: тоді я поставив їх останніми з
+  // аргументом «найнижче = найближче до пальця». Вова подивився на живому екрані
+  // і вирішив інакше — його екран, його рішення.
   //
   // ⚠️ Пункт існує лише за `canSeeMessages()` — тим самим правилом, за яким
   // показувався конверт: людині без оголошень і без жодної розмови нема чого
@@ -1209,6 +1209,7 @@ function renderFab() {
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        ${canSeeMessages() ? msgFabItemHtml() : ''}
         <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
@@ -1221,7 +1222,6 @@ function renderFab() {
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
-        ${canSeeMessages() ? msgFabItemHtml() : ''}
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
