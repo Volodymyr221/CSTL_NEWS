@@ -505,6 +505,34 @@ export async function fetchPublicProfile(uid) {
 // Усі функції приймають uid аргументом (не імпортуємо auth.js — циклічна
 // залежність). RLS у БД все одно перевіряє auth.uid() на сервері.
 
+// 🆕 06.08 — ОГОЛОШЕННЯ ЧУЖОГО АВТОРА (для картки профілю).
+//
+// ⚠️ Це НЕ `fetchMyPosts` з іншим uid, і копією його робити не можна: той віддає
+// УСІ статуси (включно з `pending` і `rejected`), бо показує людині її власну
+// кухню. Тут аудиторія протилежна — сторонній глядач, — і побачити чуже
+// оголошення «на модерації» він не має права. Тому `status = 'published'`
+// прибито в самому запиті, а не у виклику: фільтр, який легко забути передати,
+// рано чи пізно забувають.
+//
+// 🔑 Вужчий `select`, ніж `*`: картці профілю потрібен рядок списку, а не весь
+// пост. Тягнути `text` цілком (в описах бувають тисячі символів) заради двох
+// рядків прев'ю — це трафік на порожньому місці.
+//
+// ⚠️ Оголошення відкривається через подію `cstl-open-ad`, яка чекає ПОВНИЙ пост,
+// тому `text` усе-таки в списку полів — але картка бере з нього лише початок.
+export async function fetchAuthorAds(uid, limit = 12) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('posts')
+    .select('id, type, title, text, photo, photos, price, currency, price_negotiable, category, location, author, author_name, owner_uid, status, created_at, bumped_at')
+    .eq('owner_uid', uid)
+    .eq('status', 'published')
+    .eq('type', 'board')
+    .order('bumped_at', { ascending: false, nullsLast: true })
+    .limit(limit);
+  if (error) { console.warn('[supabase] fetchAuthorAds:', error.message); return []; }
+  return data || [];
+}
+
 // Мої оголошення (для «Мої оголошення» у Кабінеті) — усі статуси, нові зверху.
 export async function fetchMyPosts(uid) {
   if (!supa || !uid) return [];
