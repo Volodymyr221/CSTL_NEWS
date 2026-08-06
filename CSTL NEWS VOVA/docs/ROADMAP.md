@@ -8,7 +8,7 @@
 ## Поточний стан
 
 **Дата:** 17 травня 2026
-**URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
+**URL сайту:** https://castlelife.org/
 **Гілки:** робоча `claude/start-session-XXX` (поточна сесія) → `main` (production через `/finish`)
 **Статус:** Фаза 8 (Громада) + усі 6 Tier-ів редизайну завершені → наступна Фаза 9 (Дошка громади 2.0 + Supabase)
 

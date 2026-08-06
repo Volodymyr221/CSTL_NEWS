@@ -339,7 +339,7 @@ Google-вхід (OAuth), синхронізація двох пристроїв,
   - Деталі — `_ai-tools/SESSION_STATE_VOVA.md` (верхній запис ⭐ ХЕНДОВЕР)
 - **Наступне 🔜** — throttle груп-push; багатший груповий чат (фото/reply/swipe/edit — RPC готові); Захід 2 (репутація+автопублікація); карусель подій у Новинах
 
-**URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
+**URL сайту:** https://castlelife.org/
 **Гілка Фази Б:** `vova/auth-phase-b` (змерджена в `main`)
 **Робоча гілка (нова сесія):** `claude/start-session-XXX` або `vova/<тема>` — мердж через `/finish`
 **Репозиторій:** https://github.com/Volodymyr221/CSTL_NEWS
@@ -362,7 +362,7 @@ Ubuntu runner:
   4. actions/upload-pages-artifact@v3
   5. actions/deploy-pages@v4
     ↓
-volodymyr221.github.io/CSTL_NEWS/ оновлюється через 1-3 хв
+castlelife.org/ оновлюється через 1-3 хв
 ```
 
 ## 🔄 Як працює RSS-парсер

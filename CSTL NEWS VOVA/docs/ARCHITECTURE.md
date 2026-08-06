@@ -111,7 +111,7 @@ actions/upload-pages-artifact@v3 (завантажує ВСЕ як artifact — 
     ↓
 actions/deploy-pages@v4 (деплоїть artifact прямо на GitHub Pages)
     ↓
-volodymyr221.github.io/CSTL_NEWS/ (2-3 хв)
+castlelife.org/ (2-3 хв)
 ```
 
 **Переваги А+:**
