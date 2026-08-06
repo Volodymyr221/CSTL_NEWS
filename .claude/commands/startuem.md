@@ -45,9 +45,10 @@ CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md
 2. `CSTL NEWS VOVA/START_HERE.md`
 3. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md` — поточний стан: що зроблено, що в процесі, що далі
 4. `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md` — майстер-список задач по вкладках
-5. `CSTL NEWS VOVA/CSTL_BUGS.md`
-6. `CSTL NEWS VOVA/CLAUDE.md`
-7. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
+5. `CSTL NEWS VOVA/_ai-tools/BACKLOG_VOVA_2026-08.md` — 🎯 найближча черга робіт (порядок задав Вова 05.08)
+6. `CSTL NEWS VOVA/CSTL_BUGS.md`
+7. `CSTL NEWS VOVA/CLAUDE.md`
+8. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
 
 Додатково — git-історія:
 ```
