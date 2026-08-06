@@ -868,13 +868,73 @@ const REPORT_STATUS_LABEL = { new: 'Нова', reviewed: 'Переглянуто
 // постами у «Стрічці»).
 let reportsFilter = 'new';
 
+// 🔴 06.08 — СКАРГИ ГРУПУЮТЬСЯ ЗА ОГОЛОШЕННЯМ, а не лежать окремими рядками.
+// Розбір (`_ai-tools/AUDIT_SKARGY_2026-08.md`) знайшов три дірки, які закриває
+// саме цей екран:
+//   Д2 — оголошення НЕ ВИДНО: у картці був лише `#42`, тобто рішення приймали про
+//        річ, якої немає на екрані, а шукати її треба було в іншому розділі;
+//   Д3 — висновок НІ ДО ЧОГО НЕ ВІВ: кнопки міняли статус самої скарги, а зняти
+//        оголошення можна було тільки вручну в «Опублікованих»;
+//   Д5 — п'ять скарг на одне оголошення читались як п'ять окремих випадків, хоча
+//        «поскаржилось 5 РІЗНИХ людей» — найсильніший сигнал з усіх.
+//
+// ⚠️ Порогу автоприховування свідомо НЕМАЄ (рішення 06.08). У селі 19 оголошень і
+// всі одне одного знають — троє знайомих зацькували б конкурента за 5 хвилин.
+// Замість автоматики групи з кількома скаргами йдуть ВГОРУ списку: прискорюємо
+// людину, а не замінюємо її.
+function groupReports(list) {
+  const by = new Map();
+  for (const r of list) {
+    const k = String(r.post_id);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(r);
+  }
+  return [...by.values()].sort((a, b) =>
+    // Більше скарг — вище; при рівності свіжіші вперед.
+    (b.length - a.length) || (new Date(b[0].created_at) - new Date(a[0].created_at)));
+}
+
+// Оголошення зі знімка може вже не існувати — і це нормальний випадок, а не збій:
+// автор або адмін міг його прибрати саме після скарги. Тому шукаємо в обох
+// завантажених масивах і чесно кажемо, коли не знайшли.
+function findPost(postId) {
+  const id = Number(postId);
+  return publishedPosts.find(p => p.id === id) || pendingPosts.find(p => p.id === id) || null;
+}
+
+function reportPreviewHtml(post, snapTitle) {
+  if (!post) {
+    return `<div class="empty" style="margin:0 0 10px;padding:10px 12px;text-align:left">
+      Оголошення вже не опубліковане. Знімок на момент скарги:
+      <strong>${escapeHtml(snapTitle || '(без назви)')}</strong>
+    </div>`;
+  }
+  const photo = (Array.isArray(post.photos) && post.photos.find(x => x)) || post.photo || '';
+  const text = (post.text || '').trim();
+  const price = post.price != null ? `${post.price} ${escapeHtml(post.currency || '')}`
+              : (post.price_negotiable ? 'Договірна' : '');
+  return `
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;padding:10px;background:#f7f7f8;border-radius:10px">
+      ${photo
+        ? `<img src="${escapeHtml(photo)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none">`
+        : `<div style="width:64px;height:64px;border-radius:8px;background:#e6e6e8;flex:none"></div>`}
+      <div style="min-width:0;flex:1">
+        <div style="font-weight:700;font-size:14px">${escapeHtml(post.title || snapTitle || '(без назви)')}</div>
+        <div style="font-size:12px;color:#777;margin:2px 0">
+          ${escapeHtml(post.category || '')}${price ? ' · ' + price : ''}${post.location ? ' · ' + escapeHtml(post.location) : ''}
+        </div>
+        ${text ? `<div style="font-size:12.5px;color:#444;line-height:1.5">${escapeHtml(text.slice(0, 220))}${text.length > 220 ? '…' : ''}</div>` : ''}
+      </div>
+    </div>`;
+}
+
 function renderAdReports(el) {
   const counts = {
     new:       adReports.filter(r => r.status === 'new').length,
     reviewed:  adReports.filter(r => r.status === 'reviewed').length,
     dismissed: adReports.filter(r => r.status === 'dismissed').length,
   };
-  const list = adReports.filter(r => r.status === reportsFilter);
+  const groups = groupReports(adReports.filter(r => r.status === reportsFilter));
 
   const chips = [['new', 'Нові'], ['reviewed', 'Переглянуті'], ['dismissed', 'Відхилені']]
     .map(([k, label]) => `<button class="btn${reportsFilter === k ? '' : ' btn--ghost'}" data-rep-filter="${k}">${label} ${counts[k]}</button>`)
@@ -884,26 +944,48 @@ function renderAdReports(el) {
     <div class="section-title">Скарги на оголошення</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${chips}</div>
     ${!adReports.length ? '<div class="empty">Скарг ще немає. Кнопка «Поскаржитися» на сторінці оголошення пише сюди.</div>'
-      : !list.length ? '<div class="empty">У цій категорії порожньо.</div>'
-      : list.map(r => `
+      : !groups.length ? '<div class="empty">У цій категорії порожньо.</div>'
+      : groups.map(g => {
+        const head = g[0];
+        const post = findPost(head.post_id);
+        // Причини згорнуто в «Шахрайство ×2 · Спам ×1» — так адмін бачить характер
+        // проблеми одним рядком, не читаючи весь перелік.
+        const byReason = {};
+        g.forEach(r => { byReason[r.reason] = (byReason[r.reason] || 0) + 1; });
+        const reasonsLine = Object.entries(byReason)
+          .map(([k, n]) => `${escapeHtml(REPORT_REASON_LABEL[k] || k)}${n > 1 ? ` ×${n}` : ''}`)
+          .join(' · ');
+        const скарг = g.length === 1 ? '1 скарга' : `${g.length} ${g.length < 5 ? 'скарги' : 'скарг'}`;
+        return `
         <article class="card">
           <div class="card-meta">
-            <span class="badge">${escapeHtml(REPORT_REASON_LABEL[r.reason] || r.reason)}</span>
-            <span class="badge badge--type">${escapeHtml(REPORT_STATUS_LABEL[r.status] || r.status)}</span>
-            <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(r.created_at))}</span>
+            <span class="badge">${скарг}</span>
+            <span class="badge badge--type">${escapeHtml(REPORT_STATUS_LABEL[head.status] || head.status)}</span>
+            <span style="font-size:12px;color:#999;margin-left:auto">#${head.post_id}</span>
           </div>
-          ${r.details ? `<p class="card-text" style="font-style:italic">«${escapeHtml(r.details)}»</p>` : ''}
-          <div style="font-size:13px;line-height:1.7;color:#444;margin-top:6px">
-            <div><strong>Оголошення:</strong> ${escapeHtml(r.post_title || '(без назви)')} <span style="color:#999">#${r.post_id}</span></div>
-            <div><strong>Автор оголошення:</strong> ${escapeHtml(r.post_owner_name || '(імʼя невідоме)')}</div>
-            <div><strong>Поскаржився:</strong> ${escapeHtml(r.reporter_name || '(імʼя невідоме)')}</div>
+          ${reportPreviewHtml(post, head.post_title)}
+          <div style="font-size:13px;line-height:1.7;color:#444">
+            <div><strong>Причини:</strong> ${reasonsLine}</div>
+            <div><strong>Автор оголошення:</strong> ${escapeHtml(head.post_owner_name || '(імʼя невідоме)')}</div>
+          </div>
+          <div style="margin-top:8px;font-size:12.5px;line-height:1.6;color:#555">
+            ${g.map(r => `
+              <div style="padding:6px 0;border-top:1px solid #eee">
+                <strong>${escapeHtml(r.reporter_name || '(імʼя невідоме)')}</strong>
+                — ${escapeHtml(REPORT_REASON_LABEL[r.reason] || r.reason)}
+                <span style="color:#999">· ${escapeHtml(formatDate(r.created_at))}</span>
+                ${r.details ? `<div style="font-style:italic;color:#666">«${escapeHtml(r.details)}»</div>` : ''}
+              </div>`).join('')}
           </div>
           <div class="card-actions">
-            ${r.status !== 'reviewed'  ? `<button class="btn" data-rep-status="reviewed"  data-rep-id="${r.id}">Переглянуто</button>` : ''}
-            ${r.status !== 'dismissed' ? `<button class="btn btn--ghost" data-rep-status="dismissed" data-rep-id="${r.id}">Відхилити</button>` : ''}
-            ${r.status !== 'new'       ? `<button class="btn btn--ghost" data-rep-status="new" data-rep-id="${r.id}">Повернути в нові</button>` : ''}
+            ${post && post.status === 'published'
+              ? `<button class="btn" data-rep-unpublish="${head.post_id}">Зняти з публікації</button>` : ''}
+            ${post ? `<button class="btn btn--ghost" data-rep-delete="${head.post_id}">Видалити оголошення</button>` : ''}
+            ${head.status !== 'reviewed'  ? `<button class="btn btn--ghost" data-rep-status="reviewed"  data-rep-post="${head.post_id}">Переглянуто</button>` : ''}
+            ${head.status !== 'dismissed' ? `<button class="btn btn--ghost" data-rep-status="dismissed" data-rep-post="${head.post_id}">Відхилити</button>` : ''}
+            ${head.status !== 'new'       ? `<button class="btn btn--ghost" data-rep-status="new" data-rep-post="${head.post_id}">Повернути в нові</button>` : ''}
           </div>
-        </article>`).join('')}
+        </article>`; }).join('')}
   `;
 
   el.querySelectorAll('[data-rep-filter]').forEach(b => b.addEventListener('click', () => {
@@ -911,19 +993,39 @@ function renderAdReports(el) {
     renderAdReports(el);
   }));
 
-  // ⚠️ Міняємо ЛИШЕ `status`. Знімок і текст скарги захищені тригером у базі
-  // (`ad_reports_guard_update`) — журнал модерації мусить лишатись доказом, а не
-  // редагованим документом. `reviewed_at` теж ставить база, не ми.
+  // ⚠️ Міняємо ЛИШЕ `status`, і одразу для ВСІХ скарг на це оголошення: рішення
+  // приймається про оголошення, а не про кожну скаргу окремо — інакше лишались би
+  // «недорозглянуті» хвости від тих самих подій.
+  // Знімок і текст скарги захищені тригером у базі (`ad_reports_guard_update`) —
+  // журнал модерації мусить лишатись доказом. `reviewed_at` теж ставить база.
   el.querySelectorAll('[data-rep-status]').forEach(b => b.addEventListener('click', async () => {
-    const id = Number(b.dataset.repId), status = b.dataset.repStatus;
+    const postId = Number(b.dataset.repPost), status = b.dataset.repStatus;
     b.disabled = true;
-    const { error } = await supa.from('ad_reports').update({ status }).eq('id', id);
+    const { error } = await supa.from('ad_reports').update({ status })
+      .eq('post_id', postId).eq('status', reportsFilter);
     if (error) { b.disabled = false; return showToast('Помилка: ' + error.message, 4000); }
-    const row = adReports.find(x => x.id === id);
-    if (row) row.status = status;          // локально — щоб не перечитувати все
-    showToast('Скаргу позначено: ' + (REPORT_STATUS_LABEL[status] || status));
+    adReports.forEach(r => { if (r.post_id === postId && r.status === reportsFilter) r.status = status; });
+    showToast('Скарги позначено: ' + (REPORT_STATUS_LABEL[status] || status));
     renderAdReports(el);
   }));
+
+  // 🔴 ДІЯ НАД ОГОЛОШЕННЯМ ПРЯМО ТУТ (рішення Вови 06.08: «так, з підтвердженням»).
+  // Механізм той самий, що в розділі «Опубліковані» — переносимо кнопку до
+  // рішення, а не змушуємо адміна шукати оголошення руками в іншому розділі.
+  // ⚠️ Підтвердження обовʼязкове: одне випадкове торкання інакше знімало б чуже
+  // оголошення, і людина цього не побачила б до наступного заходу.
+  el.querySelectorAll('[data-rep-unpublish]').forEach(b => b.addEventListener('click', async () => {
+    const id = Number(b.dataset.repUnpublish);
+    if (!confirm('Зняти це оголошення з публікації?')) return;
+    b.disabled = true;
+    const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', id);
+    if (error) { b.disabled = false; return showToast('Помилка: ' + error.message, 4000); }
+    showToast('Оголошення знято з публікації');
+    await loadAll(); renderApp();
+  }));
+  el.querySelectorAll('[data-rep-delete]').forEach(b => {
+    b.addEventListener('click', () => deletePost(Number(b.dataset.repDelete)));
+  });
 }
 
 // ── TAB: Витрати AI (лічильник автопостингу новин) ────────────────────
