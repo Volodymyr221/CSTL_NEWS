@@ -101,6 +101,34 @@ const atZero = await step(0);
 ok('КОНТРОЛЬ — на самому верху зсуву немає (прилад розрізняє стани)',
    atZero.shift === 0 && pts[2].shift > 0, `0→${atZero.shift}, 90→${pts[2].shift}`);
 
+// ── 1.5. 🔴 ПІД ЧАС РУХУ НЕМА РОЗМИТТЯ (причина скарги «дьоргається») ─────────
+//
+// Вова 06.08: «при скролі на початку сторінки дьоргається верхній блок».
+// Заміряно тоді ж: `.bd-controls` = 390×125, і 90% її площі закриває НЕПРОЗОРИЙ
+// `.bd-titlebar` (390×112), а власний фон шапки — `rgba(0,0,0,0)`. Тобто скла
+// видно смужку ~13px, а `backdrop-filter` браузер рахував по всій площі щокадру.
+//
+// ⚠️ Перевіряємо ОБИДВА боки, інакше «немає розмиття» можна було б задовольнити,
+// прибравши скло взагалі — а в спокої воно має лишатись, це вигляд екрана.
+const blurState = await page.evaluate(async () => {
+  const main = document.querySelector('.app-main');
+  const el = document.querySelector('#board-content .bd-controls');
+  const read = () => {
+    const cs = getComputedStyle(el);
+    return (cs.backdropFilter || cs.webkitBackdropFilter || 'none');
+  };
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  main.scrollTop = 0; await frame();
+  const atRest = read();
+  main.scrollTop = 60; await frame();
+  const moving = read();
+  return { atRest, moving };
+});
+ok('під час руху розмиття вимкнене (воно й з\'їдало кадри)',
+   blurState.moving === 'none', blurState.moving);
+ok('…а в спокої скло на місці — вигляд екрана не змінився',
+   blurState.atRest !== 'none' && blurState.atRest.includes('blur'), blurState.atRest);
+
 // ── 2. Пройшли всю висоту шапки → липкий режим, шапка зникла повністю ─────────
 await step(700);
 const deep = await settled();

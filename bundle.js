@@ -7587,17 +7587,24 @@
     const setFlow = (el, px) => {
       el.style.setProperty("--bd-shift", px + "px");
       el.classList.add("bd-controls--flow");
+      el.classList.toggle("bd-controls--moving", px > 0);
       el.classList.remove("bd-controls--collapsed");
     };
     const setSticky = (el, hidden) => {
-      el.classList.remove("bd-controls--flow");
+      el.classList.remove("bd-controls--flow", "bd-controls--moving");
       el.classList.toggle("bd-controls--collapsed", hidden);
+    };
+    let elCache = null;
+    const controlsEl = () => {
+      if (!elCache || !elCache.isConnected)
+        elCache = getBoardRoot()?.querySelector(".bd-controls") || null;
+      return elCache;
     };
     const apply = () => {
       ticking = false;
       if (main.dataset.tab !== "board")
         return;
-      const el = getBoardRoot()?.querySelector(".bd-controls");
+      const el = controlsEl();
       if (!el)
         return;
       const y = main.scrollTop;
@@ -7633,6 +7640,10 @@
       }
     };
     main.addEventListener("scroll", () => {
+      if (mode === "flow") {
+        apply();
+        return;
+      }
       if (!ticking) {
         ticking = true;
         requestAnimationFrame(apply);
