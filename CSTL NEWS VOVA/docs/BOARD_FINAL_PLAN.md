@@ -246,7 +246,13 @@ Function `send-chat-push` (за зразком `supabase/functions/send-bus-push
 **Безпека:** анонімний `getAnonId()` непридатний (підробляється) → RLS лише на `auth.uid()`;
 тред/повідомлення читають **тільки 2 учасники**; email/телефон у чаті не показуємо (лише імʼя).
 **Конфіг (руки Вови):** Google Cloud Console → OAuth client (id+secret); Supabase Dashboard →
-Auth → Providers → Google + Redirect URL `https://volodymyr221.github.io/CSTL_NEWS/`.
+Auth → Providers → Google + Redirect URL.
+
+⚠️ **Оновлено 06.08:** тут стояла лише стара адреса `https://volodymyr221.github.io/CSTL_NEWS/`.
+Сайт переїхав на власний домен, тому в списку дозволених адрес повернення мусять бути
+**обидві**: **`https://castlelife.org/`** (основна) і стара — як дзеркало.
+🔑 Це не косметика: якщо адреси повернення нема в списку, Google **не пускає назад** після
+входу, і людина бачить порожню сторінку замість свого акаунта.
 
 ---
 
