@@ -7565,11 +7565,77 @@
       }
     });
   }
+  var _invalidateHeaderH = null;
+  var _headerShowWired = false;
+  function setupHeaderShowOnScrollUp() {
+    if (_headerShowWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    _headerShowWired = true;
+    const HIDE_AFTER = 110;
+    const SHOW_AFTER = 70;
+    let lastY = main.scrollTop;
+    let accDown = 0, accUp = 0;
+    let ticking = false;
+    let cachedH = 0;
+    const headerH = (el) => cachedH ||= el.offsetHeight + 6;
+    _invalidateHeaderH = () => {
+      cachedH = 0;
+    };
+    let elCache = null;
+    const controlsEl = () => {
+      if (!elCache || !elCache.isConnected)
+        elCache = getBoardRoot()?.querySelector(".bd-controls") || null;
+      return elCache;
+    };
+    const setShown = (el, on) => el.classList.toggle("bd-controls--shown", on);
+    const apply = () => {
+      ticking = false;
+      if (main.dataset.tab !== "board")
+        return;
+      const el = controlsEl();
+      if (!el)
+        return;
+      const y = main.scrollTop;
+      const dy = y - lastY;
+      lastY = y;
+      if (y <= 0) {
+        accDown = accUp = 0;
+        setShown(el, false);
+        return;
+      }
+      if (dy > 0) {
+        accDown += dy;
+        accUp = 0;
+        if (accDown >= HIDE_AFTER)
+          setShown(el, false);
+      } else if (dy < 0) {
+        accUp -= dy;
+        accDown = 0;
+        if (accUp >= SHOW_AFTER && y > headerH(el))
+          setShown(el, true);
+      }
+    };
+    main.addEventListener("scroll", () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    }, { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(() => {
+      _invalidateHeaderH?.();
+      syncBoardBodyOffset();
+      fitBoardAuthors();
+    }), { passive: true });
+  }
   function initBoard() {
     initDiscussionsEngine({ getPosts: () => allPosts });
     attachDiscussionsDelegation();
     attachDiscussionsRealtime();
     attachBoardDelegation();
+    setupHeaderShowOnScrollUp();
     renderBoard();
     window.addEventListener("cstl-open-ad", (e) => {
       const p = e.detail && e.detail.post;

@@ -2351,7 +2351,86 @@ function closeBoardMenus() {
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
 // прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
-// 🗑 06.08 — `setupHeaderCollapse()` ВИДАЛЕНО ЦІЛКОМ (замовлення Вови).
+// ── ПОКАЗ ШАПКИ ПРИ РУСІ ПАЛЬЦЕМ УГОРУ ────────────────────────────────────────
+//
+// Вова 06.08: «щоб ховався він так як зараз + якщо скрол посеред сторінки то так
+// як раніше, а зʼявлявся теж як раніше». Тобто потрібні ОБИДВІ поведінки:
+//   • на початку сторінки — шапка просто частина потоку (це робить CSS, `sticky`);
+//   • з середини списку — ховається за жестом униз і виїжджає за жестом угору.
+//
+// 🔑 JS ТУТ НЕ РУХАЄ ШАПКУ. Він лише вмикає клас, який міняє ТОЧКУ ПРИЛИПАННЯ
+// (`top: 0` замість від'ємного). Сам рух і плавність — на браузері. Саме тому це
+// не повертає дьоргання: покадрового JS-руху, який тричі провалився, тут немає.
+// Скидач кеша висоти. На рівні модуля, бо кликати треба ЗЗОВНІ обробника —
+// після кожної перебудови шапки (`syncBoardBodyOffset`) і після повороту екрана.
+let _invalidateHeaderH = null;
+let _headerShowWired = false;
+function setupHeaderShowOnScrollUp() {
+  if (_headerShowWired) return;
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  _headerShowWired = true;
+
+  // Пороги ті самі, що були до всіх переробок: ховати ПІЗНІШЕ (випадковий рух
+  // пальцем не має забирати пошук), повертати ШВИДКО (рух угору майже завжди
+  // означає «хочу назад»). Патерн Twitter/Instagram.
+  const HIDE_AFTER = 110;
+  const SHOW_AFTER = 70;
+  let lastY = main.scrollTop;
+  let accDown = 0, accUp = 0;
+  let ticking = false;
+
+  // Висота потрібна для ОДНОГО рішення: чи шапка вже схована. Кешуємо — читати
+  // `offsetHeight` у обробнику прокрутки означає примусовий перерахунок розкладки.
+  let cachedH = 0;
+  const headerH = (el) => (cachedH ||= el.offsetHeight + 6);
+  _invalidateHeaderH = () => { cachedH = 0; };
+
+  let elCache = null;
+  const controlsEl = () => {
+    if (!elCache || !elCache.isConnected) elCache = getBoardRoot()?.querySelector('.bd-controls') || null;
+    return elCache;
+  };
+  const setShown = (el, on) => el.classList.toggle('bd-controls--shown', on);
+
+  const apply = () => {
+    ticking = false;
+    if (main.dataset.tab !== 'board') return;
+    const el = controlsEl();
+    if (!el) return;
+    const y = main.scrollTop;
+    const dy = y - lastY;
+    lastY = y;
+
+    // Самий верх — чистий стан. Знімати клас тут безпечно й непомітно: на нулі
+    // обидва стани дають ту саму позицію (шапка стоїть на своєму місці в потоці).
+    if (y <= 0) { accDown = accUp = 0; setShown(el, false); return; }
+
+    if (dy > 0) {
+      accDown += dy; accUp = 0;
+      if (accDown >= HIDE_AFTER) setShown(el, false);
+    } else if (dy < 0) {
+      accUp -= dy; accDown = 0;
+      // ⚠️ Показ вмикаємо ЛИШЕ коли шапка справді схована. Інакше на початку
+      // сторінки (де вона частково видима й їде в потоці) жест угору смикнув би
+      // її з природної позиції на 56 — тобто повернув би той самий стрибок,
+      // тільки з іншого боку.
+      if (accUp >= SHOW_AFTER && y > headerH(el)) setShown(el, true);
+    }
+  };
+
+  main.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+  }, { passive: true });
+
+  window.addEventListener('resize', () => requestAnimationFrame(() => {
+    _invalidateHeaderH?.();
+    syncBoardBodyOffset();
+    fitBoardAuthors();
+  }), { passive: true });
+}
+
+// 🗑 06.08 — `setupHeaderCollapse()` (старий покадровий рух) ВИДАЛЕНО ЦІЛКОМ.
 //
 // Історія цього місця в трьох рядках, щоб наступна сесія не почала знову:
 //   • до 06.08 — шапка `fixed`, JS ховав її стрибком за порогами 110/70;
@@ -2386,6 +2465,7 @@ export function initBoard() {
   attachDiscussionsDelegation();
   attachDiscussionsRealtime();
   attachBoardDelegation();
+  setupHeaderShowOnScrollUp();
   renderBoard();
   // Відкрити модалку оголошення з чату («Переглянути оголошення →» в розмові)
   window.addEventListener('cstl-open-ad', (e) => {

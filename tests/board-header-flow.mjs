@@ -172,7 +172,57 @@ ok('шапку не рухає жоден клас-перемикач (transform
    cls.transform === 'none' || cls.transform === 'matrix(1, 0, 0, 1, 0, 0)',
    `${cls.transform} · класи: ${cls.list}`);
 
-// ── 5. Повернення на самий верх ───────────────────────────────────────────────
+// ── 5. Рух пальцем УГОРУ з середини повертає шапку (поведінка «як раніше») ────
+// Вова 06.08: «якщо скрол посеред сторінки то так як раніше, а зʼявлявся теж як
+// раніше». Показ вмикає клас, який міняє ТОЧКУ ПРИЛИПАННЯ (`top: 0`), а не зсуває
+// шапку поверх неї.
+const upShow = await page.evaluate(async () => {
+  const main = document.querySelector('.app-main');
+  const el = document.querySelector('#board-content .bd-controls');
+  const hdr = document.querySelector('.app-header');
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  main.scrollTop = 900; await frame();
+  // рух угору дрібними кроками — так само, як пальцем
+  for (const y of [860, 820, 780, 740]) { main.scrollTop = y; await frame(); }
+  await new Promise(r => setTimeout(r, 420));          // доїзд анімації top
+  return { top: Math.round(el.getBoundingClientRect().top),
+           headerBottom: Math.round(hdr.getBoundingClientRect().bottom),
+           shown: el.classList.contains('bd-controls--shown') };
+});
+ok('рух угору з середини сторінки виводить шапку під шапку застосунку',
+   upShow.shown && upShow.top === upShow.headerBottom,
+   `top ${upShow.top}, низ .app-header ${upShow.headerBottom}, клас ${upShow.shown ? 'є' : 'нема'}`);
+
+// ── 6. 🔴 ГОЛОВНЕ ПО СКАРЗІ: показана шапка НЕ З'ЇЖДЖАЄ НИЖЧЕ СВОГО МІСЦЯ ──────
+//
+// Так виглядала вада, яку Вова описав: «зʼїжджає донизу, потім рівняється до
+// верху». Перша версія показу зсувала шапку `transform`-ом поверх прилиплої, і
+// коли та відліплювалась біля верху, зсув ДОДАВАВСЯ до природної позиції:
+//     скрол 100 → 87px · скрол 60 → 127px · скрол 0 → 187px
+// тобто вона їхала все нижче, а потім клас знімали — стрибок.
+//
+// 🔑 Критерій прямий: на підході до верху З УВІМКНЕНИМ показом шапка НЕ сміє
+// опинитись нижче своєї межі. Один піксель нижче — і вада повернулась.
+const approach = await page.evaluate(async () => {
+  const main = document.querySelector('.app-main');
+  const el = document.querySelector('#board-content .bd-controls');
+  const hdr = document.querySelector('.app-header');
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const limit = Math.round(hdr.getBoundingClientRect().bottom);
+  const pts = [];
+  for (const y of [300, 200, 150, 100, 60, 30, 0]) {
+    main.scrollTop = y; await frame();
+    pts.push({ y, top: Math.round(el.getBoundingClientRect().top) });
+  }
+  return { pts, limit };
+});
+const below = approach.pts.filter(p => p.top > approach.limit);
+ok('на підході до верху показана шапка не з\'їжджає нижче свого місця',
+   below.length === 0,
+   below.length ? below.map(p => `${p.y}→${p.top}`).join(' · ')
+                : `усі точки ≤ ${approach.limit}px`);
+
+// ── 7. Повернення на самий верх ───────────────────────────────────────────────
 const back = await step(0);
 ok('на самому верху шапка знову повна і на своєму місці',
    back.top === FLOW_TOP, `top ${back.top}, очікувано ${FLOW_TOP}`);
