@@ -399,10 +399,23 @@ CSTL_NEWS/
 ├── images/                       # Зображення під hero блоки (kino-castle, volleyball)
 ├── package.json                  # Одна залежність: esbuild
 │
-├── .github/workflows/
-│   ├── deploy.yml                # GitHub Pages Deploy (А+)
-│   ├── rss-parser.yml            # RSS парсер — cron 30 хв
-│   └── auto-merge.yml            # claude/** → main, BUILD_NUM з --no-merges
+├── CNAME                         # 🌐 домен castlelife.org. Артефакт деплою = сайт,
+│                                 # зникне файл — злетить домен (сталось 06.08)
+│
+├── .github/workflows/            # 9 робітників GitHub Actions (звірено 06.08)
+│   ├── deploy.yml                # GitHub Pages Deploy (А+). Push у main + вручну
+│   ├── rss-parser.yml            # RSS парсер новин — cron кожні 30 хв
+│   ├── vopas-parser.yml          # Розклад автобусів VOPAS
+│   ├── test-vopas.yml            # Перевірка доступу до VOPAS
+│   ├── db-backup.yml             # 🔴 Щоденний ШИФРОВАНИЙ бекап живої бази Supabase,
+│   │                             # 04:00 Києва, зберігається 14 днів. Єдина копія
+│   │                             # людських даних — тариф free своїх бекапів не робить
+│   ├── ai-news-agent.yml         # AI-агент пише чернетки новин Громади в кабінет
+│   ├── editor-holidays.yml       # AI-редактор: чернетки свят
+│   ├── cms-sync.yml              # Статті з кабінету → у стрічку
+│   └── gitleaks.yml              # Пошук секретів (ключів/паролів) у комітах
+│                                 # ⚠️ auto-merge.yml ВИДАЛЕНО 05.07 — пуш у claude/**
+│                                 # більше НІЧОГО не деплоїть. Тільки PR через /finish
 │
 ├── cloudflare/worker.js          # Proxy для olytska-gromada.gov.ua
 ├── .mcp.json                     # Конфіг MCP Supabase (write-enabled; читається на старті сесії)
@@ -414,32 +427,79 @@ CSTL_NEWS/
 │   ├── test_worker.py            # Тест Cloudflare Worker
 │   └── supabase_*.sql            # Фаза Б: міграції (profiles, chat, RLS, saved_posts) — застосовані
 │
-├── data/
-│   ├── articles.json             # Статті (авто RSS + ручні)
+├── data/                         # 13 файлів (звірено 06.08)
+│   ├── articles.json             # Статті (авто RSS + ручні). 1.5 МБ — найважчий
 │   ├── events.json               # Події (RSS auto:true виключено зі стрічки Подій)
 │   ├── holidays.json             # 25 свят 2026 з cover_emoji + cover_gradient
-│   ├── schedule.json             # Розклад автобусів (10 рейсів VOPAS)
+│   ├── olyka-stories.json        # Історії Олики
+│   ├── schedule.json             # Розклад автобусів (608 КБ)
+│   ├── route-stops.json          # Зупинки маршрутів (+ route-stops.v1.json — стара версія)
+│   ├── vopas-fetched.json        # Сирі дані з VOPAS, які тягне парсер (188 КБ)
 │   ├── power.json                # Графік відключень (DEMO, 11 міст ОТГ)
 │   ├── community.json            # Офіційні оголошення + контакти
-│   └── fundraisers.json          # Актуальні збори (читає src/tabs/home-fund.js)
+│   ├── fundraisers.json          # Актуальні збори (читає src/tabs/home-fund.js).
+│   │                             # ⚠️ Зараз містить ТЕСТОВИЙ запис, поставлений 05.08
+│   ├── hromada_memory.json       # Памʼять AI-агента про громаду
+│   └── ai_spend.json             # Облік витрат на AI (видно в адмінці)
 │                                 # 🗑 community-board.json ВИДАЛЕНО 05.08 (PR #790) —
 │                                 # був демо-фолбеком Дошки з вигаданими телефонами
+│                                 # 🗑 curated.json НІКОЛИ НЕ ІСНУВАВ, хоч на нього
+│                                 # посилаються CLAUDE.md і docs/CONTENT_STRATEGY.md
 │
 ├── src/
 │   ├── app.js                    # Точка входу
-│   ├── core/
-│   │   ├── boot.js               # PWA + Service Worker init
-│   │   ├── utils.js              # formatTime, escapeHtml, showToast, pad, todayKey, getCoords, getCityName
-│   │   ├── weather.js            # Погода у шапці (Open-Meteo API)
-│   │   ├── supabase.js           # Клієнт Supabase + дата-шар (пости/реакції/коментарі/чат/закладки/push)
-│   │   ├── auth.js               # Фаза Б: вхід Google, currentUser, requireAuth (гейтинг), профіль
-│   │   ├── account-ui.js         # Фаза Б: екрани Приєднайтесь/Профіль/Кабінет
-│   │   ├── sheet-motion.js       # Нативне (iOS) завершення свайп-закриття модалок (кидок + доїзд за залишком)
-│   │   ├── keyboard.js           # 🛑 ЗОНА ОБЕРЕЖНОСТІ. Єдине місце правди про клавіатуру
-│   │   │                         # на мобільних. Читай шапку файлу — там історія 3 невдалих
-│   │   │                         # спроб і блок 🛑, який не можна прибирати
-│   │   ├── chat-core.js          # Своя механіка клавіатури у Чаті/Обговореннях (ще не мігрована)
-│   │   └── messages-ui.js        # Фаза Б: приватний чат (розмова, Повідомлення, Мої оголошення)
+│   ├── core/                     # 31 модуль (звірено 06.08 — до цього в карті було 10)
+│   │   │
+│   │   │  ── 🔴 «ОДНЕ МІСЦЕ ПРАВДИ» — копію НЕ робити, правити тут ──
+│   │   ├── layers.js             # 🔴 Повноекранні шари + системний жест «назад» (iPhone).
+│   │   │                         # 🛑 Не писати власний свайп-назад для шару — 02.08 два
+│   │   │                         # рухи наклались і Вова описав це як «дьоргається»
+│   │   ├── modal.js              # 🔴 Спільний примітив модалки (аркуш знизу / картка),
+│   │   │                         # свайп-закриття, опція dismissible:false (гейт правил)
+│   │   ├── keyboard.js           # 🛑 ЗОНА ОБЕРЕЖНОСТІ. Клавіатура на мобільних.
+│   │   │                         # Читай шапку файлу — там історія 3 невдалих спроб
+│   │   │                         # і блок 🛑, який не можна прибирати
+│   │   ├── list-patch.js         # 🔴 Якір прокрутки: оновити список, не смикнувши екран.
+│   │   │                         # У Safari НЕМА overflow-anchor — тому свій
+│   │   ├── legal.js              # 🔴 Правові тексти (Політика + Правила Дошки).
+│   │   │                         # Копія правового тексту — найгірший вид копії
+│   │   ├── dev-code.js           # 🔴 Нормалізація + повільний хеш коду розробника (PBKDF2)
+│   │   ├── utils.js              # 🔴 showToast (єдиний компонент повідомлень, 132 виклики),
+│   │   │                         # фільтр матюків + антифлуд (дзеркалить тригер у базі),
+│   │   │                         # formatTime, escapeHtml, getCoords, getCityName
+│   │   ├── board-shared.js       # 🔴 cardTitleText / clampChars — заголовки карток Дошки.
+│   │   │                         # Переїхали з tabs/board.js 06.08: core не імпортує з tabs
+│   │   │
+│   │   │  ── дані і акаунт ──
+│   │   ├── supabase.js           # Клієнт Supabase + УВЕСЬ дата-шар (1718 рядків):
+│   │   │                         # пости, реакції, коментарі, чат, закладки, push, скарги
+│   │   ├── auth.js               # Вхід Google, currentUser, requireAuth (гейтинг), профіль
+│   │   ├── account-ui.js         # Екрани «Приєднайтесь» / «Профіль» / «Кабінет жителя»
+│   │   ├── profile-card.js       # Картка профілю людини + оголошення автора (06.08)
+│   │   ├── push.js               # Підписка на push-сповіщення (VAPID-ключ, дозвіл браузера)
+│   │   ├── upload.js             # Надійне завантаження фото у сховище (з повторами)
+│   │   ├── cropper.js            # Обрізка фото перед завантаженням
+│   │   │
+│   │   │  ── застосунок і оболонка ──
+│   │   ├── boot.js               # PWA + Service Worker init. ⚠️ setupSW() не чіпати
+│   │   ├── dev-lock.js           # 🔴 ЗАСЛІНКА РОЗРОБКИ. DEV_LOCK=true → додаток закритий
+│   │   ├── sidebar.js            # Бічне меню (бургер). NAV = пункти, INFO = модалки
+│   │   ├── icons.js              # ICONS — усі іконки одним місцем
+│   │   ├── consent.js            # Банер згоди з Політикою і Правилами
+│   │   ├── install-banner.js     # Пропозиція встановити застосунок на телефон
+│   │   ├── saved-hub.js          # Екран «Збережене»
+│   │   ├── sheet-motion.js       # Нативне (iOS) завершення свайпу: кидок + доїзд за залишком
+│   │   ├── chat-core.js          # Своя механіка клавіатури у Чаті/Обговореннях (не мігрована)
+│   │   ├── messages-ui.js        # ⚠️ ЛЕГАСІ-ГРУПИ V2, а НЕ приватний чат. Недосяжне з
+│   │   │                         # інтерфейсу. Приватний чат → src/tabs/board-chat.js
+│   │   │
+│   │   │  ── довідники і дрібне ──
+│   │   ├── board-categories.js   # Категорії Дошки: назви, кольори, іконки
+│   │   ├── settlements.js        # Населені пункти громади (список)
+│   │   ├── settlements-geo.js    # Їхні координати + сусідні міста
+│   │   ├── bus-schedule.js       # Стан рейсу, позиція автобуса на маршруті
+│   │   ├── weather.js            # Погода (Open-Meteo API)
+│   │   └── weather-icons.js      # Іконки погоди за кодом
 │   └── tabs/
 │       ├── feed.js               # «Стрічка» — сторінки-канали, пости, коментарі (3 рівні),
 │       │                         # композер. Найбільший і найактивніший файл проєкту
@@ -482,11 +542,29 @@ CSTL_NEWS/
         ├── MONETIZATION.md             # 4 джерела доходу
         └── REDESIGN_OTHER_TABS_VISION.md  # План Tier 0-6 (завершено)
 
-.claude/hooks/
-├── pre-edit-read-check.js     # Блокує Edit без попереднього Read
-├── cache-name-reminder.sh     # Нагадує bump CACHE_NAME після критичних змін
-├── context-warning.sh         # ⚠️ 800K / 🔴 900K токенів
-└── check-imports.js           # Запускається перед esbuild у build.js
+.claude/
+├── hooks/                     # 7 хуків (звірено 06.08 — до цього в карті було 4)
+│   ├── pre-edit-read-check.js # Блокує Edit без попереднього Read (HOT_RULES №1)
+│   ├── cache-name-reminder.sh # Нагадує bump CACHE_NAME після критичних змін
+│   ├── context-warning.sh     # ⚠️ 800K / 🔴 900K токенів
+│   ├── token-guard.js         # Сторож витрат токенів
+│   ├── session-git-sync.sh    # git fetch на старті сесії + попередження про відставання
+│   ├── byyou-push-lock.js     # 🔒 Блокує push, поки потік /byyou активний без слова «деплой»
+│   └── byyou-context-guard.sh # При ≥75% контексту не дає тихо вийти з /byyou
+│
+└── commands/                  # 19 скілів (у карті НЕ БУЛО ЖОДНОГО до 06.08)
+    ├── startuem.md · start.md # Старт сесії (start = репо-локальний алиас startuem)
+    ├── finish.md              # Завершити: PR → squash-merge у main → автодеплой
+    ├── byyou.md               # Напівавтономний режим (план → «ок» → потік)
+    ├── fix.md · audit.md      # Баг-фікс · перевірка роботи
+    ├── qa-explore.md          # Браузерний смоук-тест
+    ├── mockup.md · new-file.md
+    └── (контент і маркетинг)  # copywriting · copy-editing · content-strategy · social ·
+                               # launch · community · marketing-ideas · analytics ·
+                               # ai-seo · seo-audit
+
+⚠️ `check-imports.js` лежить НЕ тут, а в `scripts/check-imports.js` — його запускає
+`build.js` перед esbuild. До 06.08 карта показувала його серед хуків.
 ```
 
 ---
