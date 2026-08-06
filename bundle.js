@@ -7521,12 +7521,9 @@
     const body = root.querySelector(".bd-body");
     if (!controls || !body)
       return;
-    if (controls.classList.contains("bd-controls--collapsed"))
-      return;
     const h = controls.offsetHeight;
     if (h <= 0)
       return;
-    _invalidateHeaderH?.();
     if (root.id === "board-content") {
       root.style.setProperty("--bd-h", h + "px");
     } else {
@@ -7567,71 +7564,6 @@
         b.setAttribute("aria-expanded", "false");
       }
     });
-  }
-  var _headerCollapseWired = false;
-  var _invalidateHeaderH = null;
-  function setupHeaderCollapse() {
-    if (_headerCollapseWired)
-      return;
-    const main = document.querySelector(".app-main");
-    if (!main)
-      return;
-    _headerCollapseWired = true;
-    const HIDE_AFTER = 110;
-    const SHOW_AFTER = 70;
-    let lastY = main.scrollTop;
-    let accDown = 0, accUp = 0;
-    let ticking = false;
-    let cachedH = 0;
-    const headerH = (el) => cachedH ||= el.offsetHeight + 6;
-    _invalidateHeaderH = () => {
-      cachedH = 0;
-    };
-    const setShown = (el, on) => el.classList.toggle("bd-controls--shown", on);
-    let elCache = null;
-    const controlsEl = () => {
-      if (!elCache || !elCache.isConnected)
-        elCache = getBoardRoot()?.querySelector(".bd-controls") || null;
-      return elCache;
-    };
-    const apply = () => {
-      ticking = false;
-      if (main.dataset.tab !== "board")
-        return;
-      const el = controlsEl();
-      if (!el)
-        return;
-      const y = main.scrollTop;
-      const dy = y - lastY;
-      lastY = y;
-      if (y <= headerH(el)) {
-        accDown = accUp = 0;
-        setShown(el, false);
-        return;
-      }
-      if (dy > 0) {
-        accDown += dy;
-        accUp = 0;
-        if (accDown >= HIDE_AFTER)
-          setShown(el, false);
-      } else if (dy < 0) {
-        accUp -= dy;
-        accDown = 0;
-        if (accUp >= SHOW_AFTER)
-          setShown(el, true);
-      }
-    };
-    main.addEventListener("scroll", () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(apply);
-      }
-    }, { passive: true });
-    window.addEventListener("resize", () => requestAnimationFrame(() => {
-      _invalidateHeaderH?.();
-      syncBoardBodyOffset();
-      fitBoardAuthors();
-    }), { passive: true });
   }
   function initBoard() {
     initDiscussionsEngine({ getPosts: () => allPosts });
@@ -7688,7 +7620,6 @@
     });
     if (document.querySelector(".app-main")?.dataset.tab === "board")
       maybeShowBoardRules();
-    setupHeaderCollapse();
     onAuthChange(() => {
       if (!isLoggedIn()) {
         setSavedIds(/* @__PURE__ */ new Set());

@@ -123,27 +123,59 @@ ok('нижче за свою висоту шапка зникає повніст
 ok('…і не їде далі за екран без потреби — вона ПРИЛИПЛА, а не загубилась',
    deep.top > -(deep.h + 40), `top ${deep.top} при висоті ${deep.h}`);
 
-// ── 3. Рух угору з середини → шапка повертається (стара поведінка збережена) ──
-for (const y of [660, 620, 580]) await step(y);
-const up = await settled();
-ok('рух угору з середини сторінки повертає шапку у видиме положення',
-   up.shown && up.bottom > up.headerBottom,
-   `клас ${up.shown ? 'є' : 'нема'}, низ ${up.bottom} проти ${up.headerBottom}`);
+// ── 3. 🔴 ПІДЙОМ УГОРУ: шапка виїжджає РАЗОМ З КАРТКОЮ ────────────────────────
+//
+// Вова 06.08 (після першої версії sticky): «коли я доскролюю до верху, верхній
+// блок дьоргається тим, що з'їжджає донизу, потім рівняється до верху — він має
+// виїжджати разом за останньою карткою, по такій логіці як і ховається».
+// Тоді показ робив клас `--shown` (transform), і на підході до верху виходило
+// ДВА рухи один поверх одного: спершу шапка виїжджала вниз, потім її наздоганяла
+// власна позиція в потоці. Клас прибрано; тепер рух має бути один.
+//
+// 🔑 КРИТЕРІЙ — не «чи немає класу», а СИНХРОННІСТЬ: на ділянці, де шапка вже
+// відліпилась, її зсув за крок мусить ДОРІВНЮВАТИ зсуву картки за той самий крок.
+// Будь-який власний рух шапки (показ, анімація, JS-зсув) одразу дасть розбіжність.
+const rise = await page.evaluate(async () => {
+  const main = document.querySelector('.app-main');
+  const el = document.querySelector('#board-content .bd-controls');
+  const card = () => document.querySelector('#board-content .cm-board-note');
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const at = async (y) => {
+    main.scrollTop = y; await frame();
+    return { top: Math.round(el.getBoundingClientRect().top),
+             card: Math.round(card().getBoundingClientRect().top) };
+  };
+  await at(700);
+  const out = [];
+  let prev = await at(120);
+  for (const y of [90, 60, 30, 0]) {
+    const cur = await at(y);
+    out.push({ y, dHeader: cur.top - prev.top, dCard: cur.card - prev.card });
+    prev = cur;
+  }
+  return out;
+});
+const synced = rise.filter(r => r.dHeader === r.dCard);
+ok('на підйомі до верху шапка рухається СИНХРОННО з карткою (один рух, не два)',
+   synced.length === rise.length,
+   rise.map(r => `${r.y}: шапка ${r.dHeader} / картка ${r.dCard}`).join(' · '));
 
-// ── 4. 🔴 Повертаючись у початкову зону, шапка не має стрибати ────────────────
-// Тут вона знову опиняється у своєму місці в потоці, тож клас показу мусить
-// зніматись — інакше він опустив би її НИЖЧЕ, ніж вона стоїть, і вийшов би стрибок.
-for (const y of [300, 150, 60]) await step(y);
-const nearTop = await settled();
-ok('у початковій зоні клас показу знімається (інакше шапка з\'їхала б нижче місця)',
-   !nearTop.shown, `клас ${nearTop.shown ? 'лишився' : 'знято'}`);
-ok('…і позиція знову дорівнює «сторінка мінус скрол»',
-   nearTop.top === FLOW_TOP - 60, `top ${nearTop.top}, очікувано ${FLOW_TOP - 60}`);
+// ── 4. Класів-перемикачів на шапці не лишилось ────────────────────────────────
+// Не «косметика»: будь-який клас, що рухає шапку своїм `transform`, повертає ту
+// саму хворобу — власний рух поверх потокового.
+const cls = await page.evaluate(() => {
+  const el = document.querySelector('#board-content .bd-controls');
+  return { list: [...el.classList].join(' '),
+           transform: getComputedStyle(el).transform };
+});
+ok('шапку не рухає жоден клас-перемикач (transform порожній)',
+   cls.transform === 'none' || cls.transform === 'matrix(1, 0, 0, 1, 0, 0)',
+   `${cls.transform} · класи: ${cls.list}`);
 
 // ── 5. Повернення на самий верх ───────────────────────────────────────────────
 const back = await step(0);
 ok('на самому верху шапка знову повна і на своєму місці',
-   back.top === FLOW_TOP && !back.shown, `top ${back.top}`);
+   back.top === FLOW_TOP, `top ${back.top}, очікувано ${FLOW_TOP}`);
 
 await browser.close();
 await stop();
