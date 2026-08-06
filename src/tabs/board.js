@@ -2411,20 +2411,38 @@ function setupHeaderCollapse() {
   // перестворює `.bd-controls`, і новий вузол приходить без класів — прапорець
   // у замиканні почав би брехати про DOM. `classList.toggle` з тим самим
   // значенням перемальовки не викликає, тож ідемпотентність тут безкоштовна.
+  // 🔴 ДВА КЛАСИ, А НЕ ОДИН, і це не надмірність:
+  //   `--flow`   — прив'язка до скролу (миттєвий `transform`, без анімації);
+  //   `--moving` — шапка ЗАРАЗ зсунута, тобто на екрані вона рухається.
+  // Розділені тому, що на них висять різні речі. Розмиття вимикає саме
+  // `--moving`: у спокої (зсув 0) скло має лишатись — це вигляд екрана, який
+  // людина бачить, поки не торкнулась сторінки. Перша версія вимикала скло
+  // разом із `--flow`, тобто й на нерухомій шапці — вигляд мінявся без потреби.
   const setFlow = (el, px) => {
     el.style.setProperty('--bd-shift', px + 'px');
     el.classList.add('bd-controls--flow');
+    el.classList.toggle('bd-controls--moving', px > 0);
     el.classList.remove('bd-controls--collapsed');
   };
   const setSticky = (el, hidden) => {
-    el.classList.remove('bd-controls--flow');
+    el.classList.remove('bd-controls--flow', 'bd-controls--moving');
     el.classList.toggle('bd-controls--collapsed', hidden);
+  };
+
+  // Кеш вузла шапки. `querySelector` на кожній події прокрутки — зайвий обхід DOM
+  // там, де кадрів найменше. Перевірка `isConnected` потрібна, бо `renderAll()`
+  // перестворює `.bd-controls`, і старе посилання вказувало б на викинутий вузол
+  // (стиль лягав би в нікуди, а шапка застигала б на місці).
+  let elCache = null;
+  const controlsEl = () => {
+    if (!elCache || !elCache.isConnected) elCache = getBoardRoot()?.querySelector('.bd-controls') || null;
+    return elCache;
   };
 
   const apply = () => {
     ticking = false;
     if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
-    const el = getBoardRoot()?.querySelector('.bd-controls');
+    const el = controlsEl();
     if (!el) return;
     const y = main.scrollTop;
     const dy = y - lastY;
@@ -2455,7 +2473,27 @@ function setupHeaderCollapse() {
       if (accUp >= SHOW_AFTER) setSticky(el, false);
     }
   };
+  // 🔴 06.08 — У РЕЖИМІ «В ПОТОЦІ» ЗАСТОСОВУЄМО СИНХРОННО, БЕЗ `requestAnimationFrame`.
+  //
+  // Друга половина скарги «дьоргається верхній блок». `rAF` відкладає запис
+  // `transform` на НАСТУПНИЙ кадр — тобто шапка малюється на кадр позаду контенту,
+  // який браузер уже прокрутив. У липкому режимі це непомітно (там зсув разовий,
+  // з анімацією 0.28с), а в режимі «1:1 за пальцем» саме це і читається як
+  // тремтіння: контент і шапка їдуть з різницею в кадр.
+  //
+  // ℹ️ Той самий висновок уже зроблений у `core/keyboard.js`: «СИНХРОННИЙ apply()
+  // (не через requestAnimationFrame — інакше аркуш на кадр позаду фону = дьоргання)».
+  // Тут повторюється рівно та сама фізика, тому й лікується так само.
+  //
+  // ⚠️ Коштує це дешево: у `apply()` немає жодного читання розкладки — висота
+  // шапки кешована (`headerH`), вузол кешований (`controlsEl`), тобто всередині
+  // лише арифметика і запис стилю. Саме тому синхронність тут безпечна, а не
+  // «прибрали throttle і сподіваємось».
+  //
+  // 🛑 У липкому режимі `rAF` ЛИШАЄТЬСЯ: там зсув разовий, кадрова точність не
+  // потрібна, а зайва робота на кожній події прокрутки — непотрібна витрата.
   main.addEventListener('scroll', () => {
+    if (mode === 'flow') { apply(); return; }
     if (!ticking) { ticking = true; requestAnimationFrame(apply); }
   }, { passive: true });
   // Зміна розміру екрана (поворот, зміна вікна) → перерахувати відступ тіла під шапку.
