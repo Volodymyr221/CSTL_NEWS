@@ -177,7 +177,7 @@ async function openAccount() {
   cab.className = 'acc-cab';
   cab.innerHTML = `
     <div class="acc-cab-top">
-      <button class="acc-cab-back" type="button" aria-label="Назад">←</button>
+      <button class="acc-cab-back" type="button" aria-label="Назад">${ICONS.back}</button>
       <b>Мій кабінет</b>
     </div>
     <div class="acc-cab-scroll">

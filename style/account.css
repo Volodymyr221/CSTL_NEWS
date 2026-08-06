@@ -158,7 +158,15 @@
   position: fixed;
   inset: 0;
   z-index: 3100;
-  background: var(--paper, #F4F1E6);
+  /* 🔴 06.08 — БУЛО `--paper` (#F4F1E6, бежевий). Скарга Вови: «модалка
+     персонального кабінету не стандартизована, вона то і бежевого кольору».
+     Це залишок кремової палітри v3: 29.07 кремові поверхні прибрали з Дошки й
+     екранів FAB (теплий колір на холодному сірому читається брудно-жовтим), але
+     кабінет у той прохід не входив і лишився єдиним бежевим екраном застосунку.
+     Тепер базова поверхня застосунку, як у Стрічки й Автобусів. Саме `--app-bg`,
+     а не `--board-bg`: правило з CLAUDE.md — глибший рівень лише там, де контент
+     лежить окремими картками в дві колонки. */
+  background: var(--app-bg, #ECEEF1);
   transform: translateX(100%);
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
@@ -174,12 +182,33 @@
   gap: 12px;
   padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
 }
-.acc-cab-back { background: none; border: 0; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+/* 🔴 06.08 — ТАП-ЦІЛЬ 44px (Apple HIG). Було `padding: 0 4px` при гліфі 24px,
+   тобто ціль ~32×24 — менша за мінімум, і саме в лівому верхньому куті, куди
+   палець дотягується найгірше. Ту саму помилку вже знаходив аудит 02.08 на
+   круглих кнопках сторінки оголошення (було 36px, стало 44).
+   Кружечок навмисно НЕ малюємо: тут кнопка лежить на суцільному бордовому,
+   де достатньо самого знака — а от площа тапу мусить бути повна. */
+.acc-cab-back {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  margin-left: -10px;   /* компенсація: знак лишається на тому самому місці */
+  background: none; border: 0; padding: 0;
+  color: #fff; font-size: 24px; line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-cab-back:active { opacity: 0.7; }
 .acc-cab-top b { font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
 .acc-cab-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 
 .acc-cab-hero {
-  background: linear-gradient(160deg, #7a3540 0%, #5c252c 100%);
+  /* 🔴 06.08 — БУВ ВЛАСНИЙ ГРАДІЄНТ `#7a3540 → #5c252c`. Це остання бордова
+     поверхня застосунку, до якої не дійшло рішення 03.08 «одна бордова поверхня»
+     (`--brand-grad`). Наслідок бачив Вова: шапка кабінету бордова, а hero під нею
+     ПОМІТНО світліший і рожевіший — два різні бордові впритул один над одним.
+     ⚠️ Той самий клас помилки, що з шапкою Дошки (виправлено 05.08, PR #807):
+     власний градієнт «майже такий самий» гірший за спільний саме тим, що майже. */
+  background: var(--brand-grad);
   color: #fff;
   display: flex;
   align-items: center;
@@ -204,7 +233,12 @@
   position: absolute; right: 0; bottom: 0;
   width: 30px; height: 30px; border-radius: 50%;
   background: #fff; color: var(--red, #722F37);
-  border: 2.5px solid #5c252c;
+  /* ⚠️ Обідок був `#5c252c` — кінцевий колір СТАРОГО градієнта hero. Разом із
+     переходом на `--brand-grad` він осиротів би: тло під кнопкою тепер `#2E0C14`,
+     і світліший обідок читався б випадковим кільцем. Беремо той самий кінцевий
+     колір нового градієнта — обідок знову зливається з тлом і робить свою роботу
+     (відрізає білий кружечок від бордового, а не малює прикрасу). */
+  border: 2.5px solid #2E0C14;
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
@@ -235,7 +269,20 @@
 
 .acc-cab-sec {
   margin: 16px 14px;
-  background: var(--card-cream, #FAF8EF);
+  /* 🔴 06.08 — БУЛО `--card-cream` (#FAF8EF). Теплота R−B = +11 на прохолодному
+     `--app-bg` — рівно та пара, через яку 29.07 стрічка новин і Дошка читались
+     брудно-жовтими. Беремо родину, ЯКУ ВЖЕ ПОРАХОВАНО САМЕ ПІД `--app-bg`:
+     біла картка + обідок `--news-line` (контраст до фону 1.399 — цифра в цифру
+     як `--board-line`↔`--board-bg`).
+     ⚠️ Обідок тут НЕ прикраса і не «щоб було як у новин»: біла картка на
+     `--app-bg` дає лише **1.162:1**, тобто площиною вона не помітна взагалі.
+     Помітність тримає МЕЖА — урок Дошки від 28.07. Приберете обідок «щоб чистіше»
+     — секції попливуть у фон.
+     ⚠️ Назва родини історична (перший споживач — картка новини), а не тематична;
+     нового hex не заводимо навмисно, це та сама хвороба, що чотири різні сірі
+     до 28.07. */
+  background: var(--news-card, #FFFFFF);
+  border: 1px solid var(--news-line, #C9CBCE);
   border-radius: 20px;
   padding: 6px 0;
   box-shadow: 0 2px 14px rgba(0,0,0,0.05);
