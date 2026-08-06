@@ -16,13 +16,16 @@
 // а не що ПОВЕДІНКА працює. Перша версія цих перевірок саме там і впала — на
 // цілком робочому коді. Тому тут піднімається справжній застосунок.
 //
-// 🔴 ЩО САМЕ МІРЯЄМО: фактичний зсув із обчисленого `transform` (матриця) проти
-// позиції скролу. Не наявність класу `--flow`: клас може бути, а зсуву — ні.
+// 🔴 ЩО САМЕ МІРЯЄМО — і чому критерій змінився 06.08 (третій підхід).
+// Раніше тут читався `transform`: шапку рухав JS, і зсув був наслідком. Тепер її
+// рухає САМ БРАУЗЕР (`position: sticky` у потоці), і `transform` при цьому
+// нульовий — прилад, що читає матрицю, показував би «нічого не рухається» на
+// повністю справному екрані. Тому міряємо ФАКТИЧНУ ПОЗИЦІЮ шапки на екрані
+// (`getBoundingClientRect().top`) — рівно те, що бачить око.
 //
-// ⚠️ ТУТ НЕ МОЖНА ЧЕКАТИ ДОЇЗДУ АНІМАЦІЇ, як в інших стендах. Сенс режиму саме в
-// тому, що анімації НЕМА і шапка стоїть рівно там, де палець. Якщо хтось поверне
-// сюди `transition`, перевірка мусить упасти — і впаде, бо на кадрі виміру зсув
-// відставатиме від скролу.
+// 🔑 ЕТАЛОН береться не з голови: шапка лежить першою в потоці, який починається
+// під шапкою застосунку (56px на 390×844). Отже поки вона не прилипла,
+// `top` мусить дорівнювати `56 − scrollTop` — тобто рух РІВНО за сторінкою.
 import { chromium } from 'playwright';
 import { launch, serve, reporter } from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
@@ -55,17 +58,21 @@ await page.waitForTimeout(500);
 
 const SETTLE = 420;   // 0.28с анімації липкого режиму + запас
 
-// Прокрутити і віддати зсув шапки. Два кадри: перший — подія `scroll`,
-// другий — уже застосований стиль.
+// Прокрутити і віддати ПОЛОЖЕННЯ шапки на екрані. Два кадри: перший — подія
+// `scroll`, другий — уже застосований стиль.
 const step = (y) => page.evaluate(v => new Promise(res => {
   document.querySelector('.app-main').scrollTop = v;
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const el = document.querySelector('#board-content .bd-controls');
+    const hdr = document.querySelector('.app-header');
+    const r = el.getBoundingClientRect();
     res({
       y: v,
-      shift: Math.round(-new DOMMatrixReadOnly(getComputedStyle(el).transform).m42),
-      dur: getComputedStyle(el).transitionDuration,
-      collapsed: el.classList.contains('bd-controls--collapsed'),
+      top: Math.round(r.top),
+      bottom: Math.round(r.bottom),
+      headerBottom: Math.round(hdr.getBoundingClientRect().bottom),
+      position: getComputedStyle(el).position,
+      shown: el.classList.contains('bd-controls--shown'),
       h: el.offsetHeight,
     });
   }));
@@ -75,87 +82,68 @@ const settled = async () => {
   await page.waitForTimeout(SETTLE);
   return page.evaluate(() => {
     const el = document.querySelector('#board-content .bd-controls');
+    const hdr = document.querySelector('.app-header');
+    const r = el.getBoundingClientRect();
     return {
-      shift: Math.round(-new DOMMatrixReadOnly(getComputedStyle(el).transform).m42),
-      collapsed: el.classList.contains('bd-controls--collapsed'),
+      top: Math.round(r.top), bottom: Math.round(r.bottom),
+      headerBottom: Math.round(hdr.getBoundingClientRect().bottom),
+      shown: el.classList.contains('bd-controls--shown'),
       h: el.offsetHeight,
     };
   });
 };
 
-// ── 1. Початок сторінки: зсув = позиції скролу, один до одного ────────────────
-await step(0);
+// ── 1. Початок сторінки: шапка їде РІВНО за сторінкою ─────────────────────────
+const base = await step(0);
+const FLOW_TOP = base.top;            // де шапка стоїть у спокої (= низ .app-header)
+ok('у спокої шапка стоїть рівно під шапкою застосунку',
+   FLOW_TOP === base.headerBottom, `${FLOW_TOP} проти ${base.headerBottom}`);
+ok('шапка Дошки лежить у ПОТОЦІ сторінки (position: sticky), а не прибита',
+   base.position === 'sticky', base.position);
+
 const pts = [];
 for (const y of [20, 45, 90]) pts.push(await step(y));
-ok('на початку сторінки зсув шапки = позиції скролу (1:1 за пальцем)',
-   pts.every(p => p.shift === p.y),
-   pts.map(p => `${p.y}→${p.shift}`).join(' · '));
-ok('у режимі «в потоці» анімації немає (інакше шапка відставала б від пальця)',
-   pts.every(p => p.dur.startsWith('0s')), pts[0].dur);
+const oneToOne = pts.filter(p => p.top === FLOW_TOP - p.y);
+ok('на початку сторінки шапка їде РІВНО за сторінкою (1:1, рухає браузер)',
+   oneToOne.length === pts.length,
+   pts.map(p => `скрол ${p.y} → top ${p.top} (очікувано ${FLOW_TOP - p.y})`).join(' · '));
 
-// 🔴 КОНТРОЛЬ. Без нього «1:1» ще нічого не доводить: якби зсув просто дорівнював
-// нулю на всіх точках, а скрол не працював — рівність теж могла б збігтися.
-// Беремо ту саму сцену і перевіряємо, що на НУЛЬОВОМУ скролі зсуву немає, а на
-// ненульовому — є. Тобто прилад справді розрізняє два стани.
-const atZero = await step(0);
-ok('КОНТРОЛЬ — на самому верху зсуву немає (прилад розрізняє стани)',
-   atZero.shift === 0 && pts[2].shift > 0, `0→${atZero.shift}, 90→${pts[2].shift}`);
+// 🔴 КОНТРОЛЬ. Без нього «1:1» ще нічого не доводить: якби шапка просто стояла на
+// місці, а прилад помилявся — розбіжність могла б лишитись непоміченою. Тому
+// окремо стверджуємо, що між нулем і 90px позиція СПРАВДІ змінилась, і рівно на
+// величину прокрутки.
+ok('КОНТРОЛЬ — прилад розрізняє стани (позиція змінилась саме на 90px)',
+   base.top - pts[2].top === 90, `${base.top} → ${pts[2].top}`);
 
-// ── 1.5. 🔴 ПІД ЧАС РУХУ НЕМА РОЗМИТТЯ (причина скарги «дьоргається») ─────────
-//
-// Вова 06.08: «при скролі на початку сторінки дьоргається верхній блок».
-// Заміряно тоді ж: `.bd-controls` = 390×125, і 90% її площі закриває НЕПРОЗОРИЙ
-// `.bd-titlebar` (390×112), а власний фон шапки — `rgba(0,0,0,0)`. Тобто скла
-// видно смужку ~13px, а `backdrop-filter` браузер рахував по всій площі щокадру.
-//
-// ⚠️ Перевіряємо ОБИДВА боки, інакше «немає розмиття» можна було б задовольнити,
-// прибравши скло взагалі — а в спокої воно має лишатись, це вигляд екрана.
-const blurState = await page.evaluate(async () => {
-  const main = document.querySelector('.app-main');
-  const el = document.querySelector('#board-content .bd-controls');
-  const read = () => {
-    const cs = getComputedStyle(el);
-    return (cs.backdropFilter || cs.webkitBackdropFilter || 'none');
-  };
-  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-  main.scrollTop = 0; await frame();
-  const atRest = read();
-  main.scrollTop = 60; await frame();
-  const moving = read();
-  return { atRest, moving };
-});
-ok('під час руху розмиття вимкнене (воно й з\'їдало кадри)',
-   blurState.moving === 'none', blurState.moving);
-ok('…а в спокої скло на місці — вигляд екрана не змінився',
-   blurState.atRest !== 'none' && blurState.atRest.includes('blur'), blurState.atRest);
-
-// ── 2. Пройшли всю висоту шапки → липкий режим, шапка зникла повністю ─────────
+// ── 2. Дійшовши до верху, шапка прилипає ВЖЕ СХОВАНОЮ ─────────────────────────
 await step(700);
 const deep = await settled();
-ok('нижче за свою висоту шапка перемикається в липкий режим і зникає повністю',
-   deep.collapsed && deep.shift >= deep.h,
-   `зсув ${deep.shift} при висоті ${deep.h}`);
+ok('нижче за свою висоту шапка зникає повністю (нижній край вище шапки застосунку)',
+   deep.bottom <= deep.headerBottom, `низ шапки ${deep.bottom}, низ .app-header ${deep.headerBottom}`);
+ok('…і не їде далі за екран без потреби — вона ПРИЛИПЛА, а не загубилась',
+   deep.top > -(deep.h + 40), `top ${deep.top} при висоті ${deep.h}`);
 
 // ── 3. Рух угору з середини → шапка повертається (стара поведінка збережена) ──
 for (const y of [660, 620, 580]) await step(y);
 const up = await settled();
-ok('рух угору з середини сторінки повертає шапку', up.shift === 0 && !up.collapsed,
-   `зсув ${up.shift}`);
+ok('рух угору з середини сторінки повертає шапку у видиме положення',
+   up.shown && up.bottom > up.headerBottom,
+   `клас ${up.shown ? 'є' : 'нема'}, низ ${up.bottom} проти ${up.headerBottom}`);
 
-// ── 4. 🔴 ГОЛОВНА ПАСТКА: далі вгору, у початкову зону — шапка НЕ має ховатись ─
-// Якби прив'язку до потоку вмикали «щойно y < висоти шапки», шапка поїхала б
-// угору НАЗУСТРІЧ рухові пальця, тобто почала б ховатись саме тоді, коли її
-// викликали. Тому режим повертається лише на самому нулі.
+// ── 4. 🔴 Повертаючись у початкову зону, шапка не має стрибати ────────────────
+// Тут вона знову опиняється у своєму місці в потоці, тож клас показу мусить
+// зніматись — інакше він опустив би її НИЖЧЕ, ніж вона стоїть, і вийшов би стрибок.
 for (const y of [300, 150, 60]) await step(y);
 const nearTop = await settled();
-ok('повертаючись угору в початкову зону, шапка лишається показаною',
-   nearTop.shift === 0, `зсув ${nearTop.shift} на скролі 60`);
+ok('у початковій зоні клас показу знімається (інакше шапка з\'їхала б нижче місця)',
+   !nearTop.shown, `клас ${nearTop.shown ? 'лишився' : 'знято'}`);
+ok('…і позиція знову дорівнює «сторінка мінус скрол»',
+   nearTop.top === FLOW_TOP - 60, `top ${nearTop.top}, очікувано ${FLOW_TOP - 60}`);
 
-// ── 5. Доїхали до нуля → прив'язка до потоку відновилась ──────────────────────
-await step(0);
-const again = await step(50);
-ok('після повернення на самий верх прив\'язка «в потоці» відновлюється',
-   again.shift === 50, `скрол 50 → зсув ${again.shift}`);
+// ── 5. Повернення на самий верх ───────────────────────────────────────────────
+const back = await step(0);
+ok('на самому верху шапка знову повна і на своєму місці',
+   back.top === FLOW_TOP && !back.shown, `top ${back.top}`);
 
 await browser.close();
 await stop();

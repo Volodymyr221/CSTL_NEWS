@@ -1,7 +1,16 @@
-// Стенд №19: ЗГОРТАННЯ ШАПКИ ДОШКИ НЕ ЗСУВАЄ СПИСОК.
+// Стенд №19: ЗГОРТАННЯ ПРИБИТОЇ ШАПКИ НЕ ЗСУВАЄ СПИСОК (Обговорення).
 //
 // Вова 28.07: «треба зробити, щоб ховалася оце поле воду з категоріями та і так далі…
 // щоб не займало багато місця».
+//
+// 🔄 06.08 — СТЕНД ПЕРЕОРІЄНТОВАНО З ДОШКИ НА ОБГОВОРЕННЯ, і це не «гасіння».
+// Дошка більше не має прибитої шапки: її шапка переїхала в потік
+// (`position: sticky`, PR по скарзі «дьоргається»), тож `--collapsed` і
+// компенсація `padding-top` там не застосовуються взагалі. А в Обговореннях
+// (`#disc-content`) конструкція лишилась ТОЧНО такою, яку цей стенд і перевіряє:
+// `fixed`-шапка + відступ тіла під неї + згортання через `transform`.
+// ➡️ Тобто перевірка не ослаблена — вона переїхала за своїм предметом.
+// Нову конструкцію Дошки стереже `tests/board-header-flow.mjs` (живий застосунок).
 //
 // 🔴 ЩО САМЕ МІРЯЄМО (урок 27.07: критерій має міряти те, що ПОБАЧИТЬ ВОВА).
 // Не «чи є клас `--collapsed`» і не форму запису CSS, а ДВА наслідки в пікселях:
@@ -36,8 +45,8 @@ const COMM_CSS = zoneCss();
 // цьому не змінилась ані на крок. Це рівно та помилка, що вже коштувала часу 27.07:
 // перевірка чіплялась за ФОРМУ ЗАПИСУ замість наслідку. Тепер вимагаємо лише
 // «зсув по вертикалі на власну висоту», а сам наслідок міряють перевірки нижче.
-if (!/#board-content\s+\.bd-controls--collapsed\s*\{[^}]*translateY\([^)]*-100%/.test(COMM_CSS)) {
-  console.log('❌ у community.css немає зсуву translateY(…-100%…) на #board-content .bd-controls--collapsed');
+if (!/#disc-content\s+\.bd-controls--collapsed[^{]*\{[^}]*translateY\([^)]*-100%/.test(COMM_CSS)) {
+  console.log('❌ у стилях зони немає зсуву translateY(…-100%…) на #disc-content .bd-controls--collapsed');
   console.log('   Якщо згортання свідомо переписали — треба переписати і цей стенд, а не гасити його.');
   process.exit(1);
 }
@@ -65,7 +74,7 @@ ${COMM_CSS}
   <main class="app-main" data-tab="board">
     <div id="page-board" class="page">
       <div class="board-bg" aria-hidden="true"></div>
-      <div id="board-content" class="board-content">
+      <div id="disc-content" class="board-content">
         <div class="bd-controls">
           <div class="bd-titlebar">
             <h2 class="sr-only">Дошка оголошень</h2>
@@ -248,7 +257,7 @@ ok('розгорнута шапка без зсуву (transform: none/identity)
 
 // ── 10. Заголовок лишився для читача екрана ────────────────────────────────────
 const sr = await page.evaluate(() => {
-  const h = document.querySelector('#board-content h2.sr-only');
+  const h = document.querySelector('#disc-content h2.sr-only');
   if (!h) return null;
   const r = h.getBoundingClientRect();
   const cs = getComputedStyle(h);

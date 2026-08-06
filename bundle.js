@@ -7524,10 +7524,14 @@
     if (controls.classList.contains("bd-controls--collapsed"))
       return;
     const h = controls.offsetHeight;
-    if (h > 0)
+    if (h <= 0)
+      return;
+    _invalidateHeaderH?.();
+    if (root.id === "board-content") {
+      root.style.setProperty("--bd-h", h + "px");
+    } else {
       body.style.paddingTop = h + BOARD_BODY_GAP + "px";
-    if (h > 0)
-      _invalidateHeaderH?.();
+    }
   }
   function fitBoardAuthors() {
     const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
@@ -7577,23 +7581,13 @@
     const SHOW_AFTER = 70;
     let lastY = main.scrollTop;
     let accDown = 0, accUp = 0;
-    let mode = "flow";
     let ticking = false;
     let cachedH = 0;
     const headerH = (el) => cachedH ||= el.offsetHeight + 6;
     _invalidateHeaderH = () => {
       cachedH = 0;
     };
-    const setFlow = (el, px) => {
-      el.style.setProperty("--bd-shift", px + "px");
-      el.classList.add("bd-controls--flow");
-      el.classList.toggle("bd-controls--moving", px > 0);
-      el.classList.remove("bd-controls--collapsed");
-    };
-    const setSticky = (el, hidden) => {
-      el.classList.remove("bd-controls--flow", "bd-controls--moving");
-      el.classList.toggle("bd-controls--collapsed", hidden);
-    };
+    const setShown = (el, on) => el.classList.toggle("bd-controls--shown", on);
     let elCache = null;
     const controlsEl = () => {
       if (!elCache || !elCache.isConnected)
@@ -7610,40 +7604,24 @@
       const y = main.scrollTop;
       const dy = y - lastY;
       lastY = y;
-      if (y <= 0) {
-        mode = "flow";
+      if (y <= headerH(el)) {
         accDown = accUp = 0;
-        setFlow(el, 0);
-        return;
-      }
-      if (mode === "flow") {
-        const h = headerH(el);
-        if (y < h) {
-          setFlow(el, y);
-          return;
-        }
-        mode = "sticky";
-        accDown = accUp = 0;
-        setSticky(el, true);
+        setShown(el, false);
         return;
       }
       if (dy > 0) {
         accDown += dy;
         accUp = 0;
         if (accDown >= HIDE_AFTER)
-          setSticky(el, true);
+          setShown(el, false);
       } else if (dy < 0) {
         accUp -= dy;
         accDown = 0;
         if (accUp >= SHOW_AFTER)
-          setSticky(el, false);
+          setShown(el, true);
       }
     };
     main.addEventListener("scroll", () => {
-      if (mode === "flow") {
-        apply();
-        return;
-      }
       if (!ticking) {
         ticking = true;
         requestAnimationFrame(apply);
