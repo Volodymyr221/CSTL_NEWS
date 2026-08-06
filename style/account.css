@@ -458,6 +458,67 @@
 }
 .pcard-since { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); margin-top: 2px; }
 
+/* ── ОГОЛОШЕННЯ АВТОРА В КАРТЦІ ПРОФІЛЮ (06.08, замовлення Вови) ─────────────
+   Мова рядка — та сама, що в списку Дошки з 01.08: фото ліворуч, назва капсом,
+   ціна під нею. Не «схожа», а та сама: людина щойно бачила цей рядок на Дошці,
+   і другий діалект того самого змусив би її розпізнавати заново.
+   📐 Компактність числами: рядок 52px проти 98px на Дошці — тут не треба ані
+   локації (вона в самій картці профілю вище), ані часу, ані закладки. Три рядки
+   = 156px, тобто секція не витісняє з екрана те, заради чого картку відкрили. */
+.pcard-ads {
+  align-self: stretch;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 6px;
+  text-align: left;
+}
+.pcard-ads-h {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--ink-soft, #8a8a8a);
+  margin-bottom: 2px;
+}
+.pcard-ad {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 6px;
+  border: 0; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  font: inherit; text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pcard-ad:active { background: rgba(0, 0, 0, 0.07); }
+.pcard-ad-ph {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 9px;
+  background-size: cover; background-position: center;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+.pcard-ad-ph--none {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;   /* іконка категорії масштабується від шрифту (`.cat-ico` = 1em) */
+}
+.pcard-ad-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* Назва в ОДИН рядок із трикрапкою: у списку з трьох позицій важливо впізнати
+   оголошення, а не прочитати його — повний текст на відстані одного тапу. */
+.pcard-ad-title {
+  font-size: 13.5px; font-weight: 700; color: var(--ink, #2b2b2b);
+  text-transform: uppercase; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pcard-ad-price { font-size: 12px; font-weight: 600; color: var(--red, #722F37); }
+.pcard-ads-more {
+  width: 100%;
+  padding: 8px;
+  border: 0; border-radius: 10px;
+  background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 700;
+  color: var(--red, #722F37);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pcard-ads-more:active { background: rgba(0, 0, 0, 0.05); }
+
 /* Меню камери (Кабінет): «Змінити фото / Видалити фото» */
 .acc-avmenu { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
 .acc-avmenu-item {

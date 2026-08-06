@@ -40,6 +40,7 @@ import { keepScroll } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
+  cardTitleText,
 } from '../core/board-shared.js';
 import {
   initDiscussionsEngine, setDiscussionsData, renderChatCard, openChatModal,
@@ -282,41 +283,11 @@ function boardActionsHtml(post) {
 // Зробити такий рядок капсом 16px/800 означало б поставити на пів списку стіну крику,
 // обрізану посеред слова. Тому безназвене оголошення дістає ЗАГОЛОВОК З ТЕКСТУ —
 // перше речення, — а решта тексту йде в рядок опису під ним.
-const CARD_TITLE_MAX = 80;   // стеля поля вводу (`#bm-title maxlength="80"`) — тримаємо ту саму
-// 🔴 Для ЗАГОЛОВКА, ВИТЯГНУТОГО З ТЕКСТУ, стеля інша — і ось чому.
-// Заміряно: у два рядки капсом при 16px влазить ~34-40 символів. Якщо взяти з тексту
-// цілих 80, клемп обріже показ на другому рядку, а опис під ним почнеться з 81-го
-// символа — і шматок посередині не побачить НІХТО. На знімку це виглядало так:
-// «ПРОДАМ КОРОВУ ТІЛЬНУ ТРЕТІМ ТЕЛЯМ СПОКІЙНА…» / «дзвоніть у будь-який час», а «дійна
-// добре їсть ціна договірна» зникло між ними.
-// Для НАПИСАНОЇ людиною назви такої проблеми немає: вона самостійна одиниця, а не
-// початок абзацу, і обрізати її показом — нормально.
-const CARD_HEAD_MAX = 40;
-
-// Обрізка по СЛОВУ, а не по символу: «ПРОДАМ БУДИНОК В ЖОРНИ…» читається, а
-// «ПРОДАМ БУДИНОК В ЖОРН…» — ні. Ріжемо по пробілу, якщо він не надто рано (60% межі),
-// інакше довге слово лишило б від заголовка недоречно короткий огризок.
-function clampChars(s, max) {
-  if (s.length <= max) return s;
-  const cut = s.slice(0, max);
-  const sp  = cut.lastIndexOf(' ');
-  const body = sp > max * 0.6 ? cut.slice(0, sp) : cut;
-  return body.replace(/[\s,;:.!?—–-]+$/u, '') + '…';
-}
-
-// Заголовок картки: назва, а якщо її немає — перше речення тексту.
-// ⚠️ Регулярка навмисно вимагає, щоб речення ЗАКІНЧУВАЛОСЬ розділовим знаком або
-// текстом: коли в перших 80 символах крапки немає, збігу не буде і ми чесно впадемо
-// в обрізку по словах. Інакше «перше речення» на суцільному тексті без крапок
-// віддавало б усі 1296 символів.
-function cardTitleText(p) {
-  const title = (p.title || '').trim();
-  if (title) return clampChars(title, CARD_TITLE_MAX);
-  const text = (p.text || '').trim();
-  if (!text) return '';
-  const m = text.match(new RegExp(`^[^.!?\\n]{1,${CARD_HEAD_MAX}}(?=[.!?\\n]|$)`, 'u'));
-  return clampChars((m ? m[0] : text).trim(), CARD_HEAD_MAX);
-}
+// 🔑 06.08 — `clampChars` / `cardTitleText` ПЕРЕЇХАЛИ у `core/board-shared.js`.
+// Причина: тих самих заголовків потребує картка профілю (`core/profile-card.js`),
+// а `core` не має імпортувати з `tabs` — це зворотний напрямок залежності.
+// Розбір «чому заголовок узагалі рахується, а не береться як `title || text`»
+// лежить тепер там, при самій функції.
 
 function cardDescText(p) {
   const title = (p.title || '').trim();

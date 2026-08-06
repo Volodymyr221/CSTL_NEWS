@@ -9,11 +9,13 @@
 // (вік — похідне число, не дата). Fail-soft: RPC ще нема / нема профілю →
 // мінімальна картка (фото з кешу + імʼя).
 
-import { openModal } from './modal.js';
-import { fetchPublicProfile, cachedAvatar } from './supabase.js';
-import { avatarCircle, escapeHtml, openPhotoLightbox } from './utils.js';
+import { openModal, closeModal } from './modal.js';
+import { fetchPublicProfile, fetchAuthorAds, cachedAvatar } from './supabase.js';
+import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
+import { cardTitleText } from './board-shared.js';   // той самий заголовок, що на Дошці
+import { catIcon, catColor } from './board-categories.js';
 
 // Відмінок «років»: 1 рік / 2-4 роки / 5-20 років (виняток 11-14 → років).
 function pluralYears(n) {
@@ -59,7 +61,64 @@ function cardHtml(p) {
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ''}">${av}</div>
       <div class="pcard-name">${escapeHtml(name)}</div>
       ${meta}${badge}${bio}${since}
+      <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
+}
+
+// ── ОГОЛОШЕННЯ АВТОРА ────────────────────────────────────────────────────────
+// 🆕 06.08, замовлення Вови: «при відкритті модалки перегляду акаунту треба
+// додати туди оголошення і всі оголошення автора, але щоб це було компактно».
+//
+// 🔑 ТРИ РІШЕННЯ, ЯКІ ВАРТО ПАМʼЯТАТИ.
+//
+// 1. **Список приїжджає ПІСЛЯ показу картки, окремим запитом.** Картка профілю
+//    відкривається з тапу по аватару де завгодно — з чату, з обговорення, зі
+//    сторінки оголошення. Чекати на другий запит, щоб показати перший екран,
+//    означало б платити затримкою скрізь заради секції, якої в багатьох людей
+//    просто немає. Тому блок стоїть у розмітці порожній і `hidden`, а `hidden`
+//    знімається лише коли є що показати — висота не стрибає на порожньому місці.
+//
+// 2. **Показуємо 3, решту — за кнопкою, у тій самій картці.** Окремого екрана
+//    «всі оголошення автора» свідомо НЕ заводимо: у нас 19 оголошень на всю
+//    Дошку, рекорд в однієї людини — 7. Екран заради семи рядків це навігація
+//    заради навігації, а нова сторінка ще й забрала б жест «назад» у картки.
+//
+// 3. **Заголовок рядка — той самий `cardTitleText`, що на Дошці.** 9 із 19
+//    оголошень назви не мають; без цієї функції в рядок ліз би весь текст
+//    (рекорд — 1296 символів). Копію не робимо — функція живе в `board-shared.js`.
+function adRowHtml(p) {
+  const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo || '';
+  const title = cardTitleText(p) || 'Оголошення';
+  const price = formatPrice(p.price, p.currency, p.price_negotiable);
+  const cover = photo
+    ? `<span class="pcard-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>`
+    // Без фото — іконка КАТЕГОРІЇ, а не універсальна «немає зображення»:
+    // кошик/ключ/шестигранник кажуть, що це за оголошення, ще до читання назви.
+    // Ті самі іконки носить список Дошки — людина впізнає їх, а не розгадує.
+    // ⚠️ Колір — КЛАСОМ `cat-c-*`, а не інлайн-стилем: `catColor()` віддає ІМʼЯ
+    // токена ('white', 'amber'), а не CSS-колір. `style="color:white"` дав би
+    // білу іконку на білому тлі — зникла б рівно там, де вона й потрібна.
+    : `<span class="pcard-ad-ph pcard-ad-ph--none cat-c-${escapeHtml(catColor(p.category))}">${catIcon(p.category)}</span>`;
+  return `
+    <button class="pcard-ad" type="button" data-pcard-ad="${escapeHtml(String(p.id))}">
+      ${cover}
+      <span class="pcard-ad-body">
+        <span class="pcard-ad-title">${escapeHtml(title)}</span>
+        ${price ? `<span class="pcard-ad-price">${escapeHtml(price)}</span>` : ''}
+      </span>
+    </button>`;
+}
+
+const ADS_VISIBLE = 3;   // скільки видно до натиску «Показати всі»
+
+function paintAds(box, ads, expanded) {
+  const show = expanded ? ads : ads.slice(0, ADS_VISIBLE);
+  const more = ads.length - show.length;
+  box.innerHTML = `
+    <div class="pcard-ads-h">Оголошення${ads.length > 1 ? ` · ${ads.length}` : ''}</div>
+    ${show.map(adRowHtml).join('')}
+    ${more > 0 ? `<button class="pcard-ads-more" type="button" data-pcard-ads-more>Показати всі ${ads.length}</button>` : ''}`;
+  box.hidden = false;
 }
 
 // Відкрити картку профілю за uid.
@@ -78,6 +137,36 @@ export async function openProfileCard(uid) {
         avwrap.style.cursor = 'zoom-in';
         avwrap.addEventListener('click', () => openPhotoLightbox(url));
       }
+
+      // Оголошення автора — другим, тихим запитом (див. розбір при `adRowHtml`).
+      const box = wrap.querySelector('[data-pcard-ads]');
+      if (!box) return;
+      let ads = [], expanded = false;
+      fetchAuthorAds(uid).then(list => {
+        // ⚠️ `isConnected` — картку могли встигнути закрити, поки йшов запит.
+        if (!box.isConnected || !list.length) return;
+        ads = list;
+        paintAds(box, ads, expanded);
+      });
+
+      // Делегування: розмітку всередині `box` перемальовує `paintAds`, тож
+      // слухачі на самих кнопках не пережили б натиск «Показати всі».
+      box.addEventListener('click', (e) => {
+        if (e.target.closest('[data-pcard-ads-more]')) {
+          expanded = true;
+          paintAds(box, ads, expanded);
+          return;
+        }
+        const row = e.target.closest('[data-pcard-ad]');
+        if (!row) return;
+        const post = ads.find(x => String(x.id) === row.dataset.pcardAd);
+        if (!post) return;
+        // 🔑 Спершу закриваємо картку, потім відкриваємо оголошення. Інакше
+        // сторінка оголошення лягла б ПІД карткою профілю (`app-modal--top`),
+        // і людина побачила б чужий профіль поверх щойно відкритого оголошення.
+        closeModal();
+        window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post } }));
+      });
     },
   });
 }

@@ -935,6 +935,16 @@
       return null;
     }
   }
+  async function fetchAuthorAds(uid, limit = 12) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("posts").select("id, type, title, text, photo, photos, price, currency, price_negotiable, category, location, author, author_name, owner_uid, status, created_at, bumped_at").eq("owner_uid", uid).eq("status", "published").eq("type", "board").order("bumped_at", { ascending: false, nullsLast: true }).limit(limit);
+    if (error) {
+      console.warn("[supabase] fetchAuthorAds:", error.message);
+      return [];
+    }
+    return data || [];
+  }
   async function fetchMyPosts(uid) {
     if (!supa || !uid)
       return [];
@@ -3444,6 +3454,26 @@
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var CARD_TITLE_MAX = 80;
+  var CARD_HEAD_MAX = 40;
+  function clampChars(s, max) {
+    if (s.length <= max)
+      return s;
+    const cut = s.slice(0, max);
+    const sp = cut.lastIndexOf(" ");
+    const body = sp > max * 0.6 ? cut.slice(0, sp) : cut;
+    return body.replace(/[\s,;:.!?—–-]+$/u, "") + "\u2026";
+  }
+  function cardTitleText(p) {
+    const title = (p.title || "").trim();
+    if (title)
+      return clampChars(title, CARD_TITLE_MAX);
+    const text = (p.text || "").trim();
+    if (!text)
+      return "";
+    const m = text.match(new RegExp(`^[^.!?\\n]{1,${CARD_HEAD_MAX}}(?=[.!?\\n]|$)`, "u"));
+    return clampChars((m ? m[0] : text).trim(), CARD_HEAD_MAX);
+  }
   var savedIds = /* @__PURE__ */ new Set();
   function getSavedIds() {
     return savedIds;
@@ -6337,26 +6367,6 @@
       </div>
     </div>
   `;
-  }
-  var CARD_TITLE_MAX = 80;
-  var CARD_HEAD_MAX = 40;
-  function clampChars(s, max) {
-    if (s.length <= max)
-      return s;
-    const cut = s.slice(0, max);
-    const sp = cut.lastIndexOf(" ");
-    const body = sp > max * 0.6 ? cut.slice(0, sp) : cut;
-    return body.replace(/[\s,;:.!?—–-]+$/u, "") + "\u2026";
-  }
-  function cardTitleText(p) {
-    const title = (p.title || "").trim();
-    if (title)
-      return clampChars(title, CARD_TITLE_MAX);
-    const text = (p.text || "").trim();
-    if (!text)
-      return "";
-    const m = text.match(new RegExp(`^[^.!?\\n]{1,${CARD_HEAD_MAX}}(?=[.!?\\n]|$)`, "u"));
-    return clampChars((m ? m[0] : text).trim(), CARD_HEAD_MAX);
   }
   function cardDescText(p) {
     const title = (p.title || "").trim();
@@ -16649,7 +16659,32 @@ END:VEVENT`
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
       <div class="pcard-name">${escapeHtml(name)}</div>
       ${meta}${badge}${bio}${since}
+      <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
+  }
+  function adRowHtml(p) {
+    const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo || "";
+    const title = cardTitleText(p) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    const price = formatPrice(p.price, p.currency, p.price_negotiable);
+    const cover = photo ? `<span class="pcard-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>` : `<span class="pcard-ad-ph pcard-ad-ph--none cat-c-${escapeHtml(catColor(p.category))}">${catIcon(p.category)}</span>`;
+    return `
+    <button class="pcard-ad" type="button" data-pcard-ad="${escapeHtml(String(p.id))}">
+      ${cover}
+      <span class="pcard-ad-body">
+        <span class="pcard-ad-title">${escapeHtml(title)}</span>
+        ${price ? `<span class="pcard-ad-price">${escapeHtml(price)}</span>` : ""}
+      </span>
+    </button>`;
+  }
+  var ADS_VISIBLE = 3;
+  function paintAds(box, ads, expanded) {
+    const show = expanded ? ads : ads.slice(0, ADS_VISIBLE);
+    const more = ads.length - show.length;
+    box.innerHTML = `
+    <div class="pcard-ads-h">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F${ads.length > 1 ? ` \xB7 ${ads.length}` : ""}</div>
+    ${show.map(adRowHtml).join("")}
+    ${more > 0 ? `<button class="pcard-ads-more" type="button" data-pcard-ads-more>\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${ads.length}</button>` : ""}`;
+    box.hidden = false;
   }
   async function openProfileCard(uid) {
     if (!uid)
@@ -16667,6 +16702,31 @@ END:VEVENT`
           avwrap.style.cursor = "zoom-in";
           avwrap.addEventListener("click", () => openPhotoLightbox(url));
         }
+        const box = wrap.querySelector("[data-pcard-ads]");
+        if (!box)
+          return;
+        let ads = [], expanded = false;
+        fetchAuthorAds(uid).then((list) => {
+          if (!box.isConnected || !list.length)
+            return;
+          ads = list;
+          paintAds(box, ads, expanded);
+        });
+        box.addEventListener("click", (e) => {
+          if (e.target.closest("[data-pcard-ads-more]")) {
+            expanded = true;
+            paintAds(box, ads, expanded);
+            return;
+          }
+          const row = e.target.closest("[data-pcard-ad]");
+          if (!row)
+            return;
+          const post = ads.find((x) => String(x.id) === row.dataset.pcardAd);
+          if (!post)
+            return;
+          closeModal();
+          window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post } }));
+        });
       }
     });
   }
