@@ -7526,6 +7526,8 @@
     const h = controls.offsetHeight;
     if (h > 0)
       body.style.paddingTop = h + BOARD_BODY_GAP + "px";
+    if (h > 0)
+      _invalidateHeaderH?.();
   }
   function fitBoardAuthors() {
     const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
@@ -7563,6 +7565,7 @@
     });
   }
   var _headerCollapseWired = false;
+  var _invalidateHeaderH = null;
   function setupHeaderCollapse() {
     if (_headerCollapseWired)
       return;
@@ -7570,41 +7573,63 @@
     if (!main)
       return;
     _headerCollapseWired = true;
-    const TOP_ZONE = 90;
     const HIDE_AFTER = 110;
     const SHOW_AFTER = 70;
     let lastY = main.scrollTop;
     let accDown = 0, accUp = 0;
-    let collapsed = false;
+    let mode = "flow";
     let ticking = false;
-    const setCollapsed = (v) => {
-      if (v === collapsed)
-        return;
-      collapsed = v;
-      getBoardRoot()?.querySelector(".bd-controls")?.classList.toggle("bd-controls--collapsed", v);
+    let cachedH = 0;
+    const headerH = (el) => cachedH ||= el.offsetHeight + 6;
+    _invalidateHeaderH = () => {
+      cachedH = 0;
+    };
+    const setFlow = (el, px) => {
+      el.style.setProperty("--bd-shift", px + "px");
+      el.classList.add("bd-controls--flow");
+      el.classList.remove("bd-controls--collapsed");
+    };
+    const setSticky = (el, hidden) => {
+      el.classList.remove("bd-controls--flow");
+      el.classList.toggle("bd-controls--collapsed", hidden);
     };
     const apply = () => {
       ticking = false;
       if (main.dataset.tab !== "board")
         return;
+      const el = getBoardRoot()?.querySelector(".bd-controls");
+      if (!el)
+        return;
       const y = main.scrollTop;
       const dy = y - lastY;
       lastY = y;
-      if (y <= TOP_ZONE) {
-        setCollapsed(false);
+      if (y <= 0) {
+        mode = "flow";
         accDown = accUp = 0;
+        setFlow(el, 0);
+        return;
+      }
+      if (mode === "flow") {
+        const h = headerH(el);
+        if (y < h) {
+          setFlow(el, y);
+          return;
+        }
+        mode = "sticky";
+        accDown = accUp = 0;
+        setSticky(el, true);
         return;
       }
       if (dy > 0) {
         accDown += dy;
         accUp = 0;
         if (accDown >= HIDE_AFTER)
-          setCollapsed(true);
+          setSticky(el, true);
       } else if (dy < 0) {
         accUp -= dy;
         accDown = 0;
         if (accUp >= SHOW_AFTER)
-          setCollapsed(false);
+          setSticky(el, false);
       }
     };
     main.addEventListener("scroll", () => {
@@ -7614,6 +7639,7 @@
       }
     }, { passive: true });
     window.addEventListener("resize", () => requestAnimationFrame(() => {
+      _invalidateHeaderH?.();
       syncBoardBodyOffset();
       fitBoardAuthors();
     }), { passive: true });
