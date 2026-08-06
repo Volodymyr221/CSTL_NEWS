@@ -6777,7 +6777,7 @@
     const have = menu.querySelector('[data-fab="messages"]');
     const need = canSeeMessages();
     if (need && !have) {
-      menu.insertAdjacentHTML("beforeend", msgFabItemHtml());
+      menu.insertAdjacentHTML("afterbegin", msgFabItemHtml());
       menu.querySelector('[data-fab="messages"]')?.addEventListener("click", () => {
         closeFab();
         requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", openThreadsList);
@@ -6816,6 +6816,7 @@
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        ${canSeeMessages() ? msgFabItemHtml() : ""}
         <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
@@ -6828,7 +6829,6 @@
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
-        ${canSeeMessages() ? msgFabItemHtml() : ""}
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
