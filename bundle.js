@@ -6432,8 +6432,7 @@
           return;
         const dt = new Date(pr.created_at);
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
-          const tail = sinceEl.dataset.more && +sinceEl.dataset.more > 0 ? sinceEl.textContent.slice(sinceEl.textContent.indexOf(" \xB7 ")) : "";
-          sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}${tail}`;
+          sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
         }
       }).catch(() => {
       });
@@ -6582,7 +6581,8 @@
         ${av}
         <span class="cm-ad-author-info">
           <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
-          ${uid ? `<span class="cm-ad-author-since" data-ad-since data-more="${others}">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE${others ? ` \xB7 \u0449\u0435 ${others} ${plural(others, "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C")}` : ""}</span>` : ""}
+          ${uid ? `<span class="cm-ad-author-since" data-ad-since>\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE</span>` : ""}
+          ${uid && others ? `<span class="cm-ad-author-more">\u0429\u0435 ${others} ${plural(others, "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C")} \u0430\u0432\u0442\u043E\u0440\u0430</span>` : ""}
         </span>
         ${uid ? `<span class="cm-ad-author-go" aria-hidden="true">${CHEVRON_ICON_SVG}</span>` : ""}
       </div>

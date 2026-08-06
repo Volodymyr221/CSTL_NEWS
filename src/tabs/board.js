@@ -438,13 +438,12 @@ function wireAdModalChrome(modal, close) {
       if (!pr || !sinceEl.isConnected) return;
       const dt = new Date(pr.created_at);
       if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
-        // ⚠️ Хвіст «· ще N оголошень» дописуємо назад: він порахований з уже
-        // завантаженого списку і до профілю стосунку не має. Без цього мережева
-        // відповідь мовчки стирала б інформацію, яка вже була на екрані.
-        const tail = sinceEl.dataset.more && +sinceEl.dataset.more > 0
-          ? sinceEl.textContent.slice(sinceEl.textContent.indexOf(' · '))
-          : '';
-        sinceEl.textContent = `Учасник CSTL LIFE з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}${tail}`;
+        // ⚠️ 06.08 — ХВІСТ «· ще N оголошень» БІЛЬШЕ НЕ СКЛЕЮЄТЬСЯ З ЦИМ РЯДКОМ.
+        // Кількість оголошень живе окремим елементом (`.cm-ad-author-more`), тож
+        // мережева відповідь фізично не може її стерти. До цього хвіст доводилось
+        // вирізати з тексту і приклеювати назад — крихко: рядок ділився за
+        // видимим роздільником « · », тобто за оформленням, а не за даними.
+        sinceEl.textContent = `Учасник CSTL LIFE з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
       }
       // 🔴 02.08 — ГАЛОЧКУ ПРИБРАНО (пряме рішення Вови: «Галочку не треба ставити
       // всім підряд, тільки офіційним публічним людям, які будуть визначатись вручну»).
@@ -809,7 +808,8 @@ function renderAdAuthor(p) {
         ${av}
         <span class="cm-ad-author-info">
           <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
-          ${uid ? `<span class="cm-ad-author-since" data-ad-since data-more="${others}">Учасник CSTL LIFE${others ? ` · ще ${others} ${plural(others, 'оголошення', 'оголошення', 'оголошень')}` : ''}</span>` : ''}
+          ${uid ? `<span class="cm-ad-author-since" data-ad-since>Учасник CSTL LIFE</span>` : ''}
+          ${uid && others ? `<span class="cm-ad-author-more">Ще ${others} ${plural(others, 'оголошення', 'оголошення', 'оголошень')} автора</span>` : ''}
         </span>
         ${uid ? `<span class="cm-ad-author-go" aria-hidden="true">${CHEVRON_ICON_SVG}</span>` : ''}
       </div>
