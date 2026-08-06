@@ -2283,6 +2283,9 @@ function syncBoardBodyOffset() {
   if (controls.classList.contains('bd-controls--collapsed')) return;
   const h = controls.offsetHeight;
   if (h > 0) body.style.paddingTop = (h + BOARD_BODY_GAP) + 'px';   // h=0 → вкладка схована, лишаємо CSS-запас
+  // Шапку щойно перебудували → її висота могла змінитись (є рядок пошуку чи нема).
+  // Скидаємо кеш, яким `setupHeaderCollapse` рахує межу режиму «в потоці».
+  if (h > 0) _invalidateHeaderH?.();
 }
 
 // Динамічний розмір імені автора у футері картки (рішення Вови): коротке ім'я —
@@ -2340,6 +2343,11 @@ function closeBoardMenus() {
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
 // прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
 let _headerCollapseWired = false;
+// Скидач кеша висоти шапки. Живе на рівні модуля, бо кликати його треба ЗЗОВНІ
+// обробника скролу — з `syncBoardBodyOffset()`, тобто після кожної перебудови
+// шапки. Висота змінюється реально: у неї то є, то немає рядка пошуку (Дошка /
+// Обговорення / «Збережені»), а `flow` рахує по ній межу перемикання режимів.
+let _invalidateHeaderH = null;
 function setupHeaderCollapse() {
   if (_headerCollapseWired) return;
   const main = document.querySelector('.app-main');
@@ -2360,38 +2368,105 @@ function setupHeaderCollapse() {
   //   • повертати ШВИДКО (70, не 320) — рух угору майже завжди означає «хочу
   //     назад / хочу шукати», і 320px там читались би як «шапка застрягла».
   // Це патерн Twitter/Instagram: приховування навмисне, повернення миттєве.
-  const TOP_ZONE   = 90;   // біля самого верху шапка завжди повна (не чіпаємо) — розгортання одразу
+  // 🔴 06.08 — ДВА РЕЖИМИ. Замовлення Вови: «суть у тому, щоб він на початку
+  // сторінки ховався разом зі скролом сторінки», а далі — «при скролі вверх
+  // зʼявлявся так, як зʼявляється, і якщо скрол вниз починається з середини
+  // сторінки — ховався так, як ховається».
+  //
+  // ЩО БУЛО НЕ ТАК. Шапка `position: fixed`, тобто фізично НЕ прокручується. До
+  // 90px (`TOP_ZONE`) її тримали примусово повною, далі вона чекала накопичених
+  // 110px і зникала стрибком за 0.28с. Тобто на початку сторінки вона спершу
+  // «стояла», а потім різко пропадала — рух пальця і рух шапки не збігались.
+  //
+  //   • режим `flow` (від самого верху) — зсув шапки дорівнює позиції скролу
+  //     ОДИН ДО ОДНОГО: прокрутив 40px → шапка піднялась на 40px. Виглядає так,
+  //     ніби вона просто частина сторінки. Анімація на цей час ВИМКНЕНА —
+  //     з нею шапка відставала б від пальця на 0.28с, і це читалось би як гальмо.
+  //   • режим `sticky` (коли вже нижче за її висоту) — стара поведінка без змін:
+  //     110px вниз ховають, 70px угору повертають, плавно.
+  //   • назад у `flow` — лише коли людина доїхала до САМОГО верху (`y <= 0`).
+  //
+  // 🔑 ЧОМУ ПОВЕРНЕННЯ В `flow` САМЕ НА НУЛІ, А НЕ «щойно y < висоти шапки»:
+  // інакше сценарій «глибоко внизу → крутимо вгору» ламався б. Шапка вже
+  // з'явилась (жест угору), людина продовжує вгору, входить у початкову зону — і
+  // прив'язка до потоку потягла б шапку вгору НАЗУСТРІЧ рухові пальця, тобто
+  // вона почала б ховатись саме тоді, коли її викликали. Тому в цій зоні вона
+  // просто лишається показаною, а прив'язка вмикається з нуля.
   const HIDE_AFTER = 110;  // px донизу від зміни напрямку → СХОВАТИ шапку цілком
   const SHOW_AFTER = 70;   // px вгору від зміни напрямку → ПОВЕРНУТИ шапку
   let lastY = main.scrollTop;
   let accDown = 0, accUp = 0;   // накопичений шлях у кожному напрямку
-  let collapsed = false;
+  let mode = 'flow';
   let ticking = false;
-  const setCollapsed = (v) => {
-    if (v === collapsed) return;   // не чіпаємо клас якщо стан не змінився → без миготіння
-    collapsed = v;
-    getBoardRoot()?.querySelector('.bd-controls')?.classList.toggle('bd-controls--collapsed', v);
+
+  // Висота шапки + той самий 6px запас, що в CSS (`--collapsed`): у шапки є
+  // `border-bottom` і нижні кути, і рівно на межі в кутах блискала світла дуга.
+  // Кешуємо: `offsetHeight` на кожному кадрі скролу — це примусовий перерахунок
+  // розкладки, тобто найдорожча річ, яку можна поставити в обробник прокрутки.
+  let cachedH = 0;
+  const headerH = (el) => (cachedH ||= el.offsetHeight + 6);
+  _invalidateHeaderH = () => { cachedH = 0; };
+
+  // ⚠️ Стан НЕ тримаємо у змінній-прапорці (як було до 06.08): `renderAll()`
+  // перестворює `.bd-controls`, і новий вузол приходить без класів — прапорець
+  // у замиканні почав би брехати про DOM. `classList.toggle` з тим самим
+  // значенням перемальовки не викликає, тож ідемпотентність тут безкоштовна.
+  const setFlow = (el, px) => {
+    el.style.setProperty('--bd-shift', px + 'px');
+    el.classList.add('bd-controls--flow');
+    el.classList.remove('bd-controls--collapsed');
   };
+  const setSticky = (el, hidden) => {
+    el.classList.remove('bd-controls--flow');
+    el.classList.toggle('bd-controls--collapsed', hidden);
+  };
+
   const apply = () => {
     ticking = false;
     if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
+    const el = getBoardRoot()?.querySelector('.bd-controls');
+    if (!el) return;
     const y = main.scrollTop;
     const dy = y - lastY;
     lastY = y;
-    if (y <= TOP_ZONE) { setCollapsed(false); accDown = accUp = 0; return; }  // верх — завжди повна
+
+    if (y <= 0) {                       // самий верх → шапка знову «в потоці»
+      mode = 'flow'; accDown = accUp = 0;
+      setFlow(el, 0);
+      return;
+    }
+
+    if (mode === 'flow') {
+      const h = headerH(el);
+      if (y < h) { setFlow(el, y); return; }   // їде рівно за сторінкою
+      // Пройшли всю свою висоту — далі тримати прив'язку нема сенсу (шапки вже
+      // не видно). Перемикаємось у липкий режим БЕЗ стрибка: зсув `flow` у цій
+      // точці (h) дорівнює тому, що дає `--collapsed` (`-100% - 6px`).
+      mode = 'sticky'; accDown = accUp = 0;
+      setSticky(el, true);
+      return;
+    }
+
     if (dy > 0) {                 // рух вниз
       accDown += dy; accUp = 0;   // зміна напрямку скидає протилежний лічильник
-      if (accDown >= HIDE_AFTER) setCollapsed(true);
+      if (accDown >= HIDE_AFTER) setSticky(el, true);
     } else if (dy < 0) {          // рух вгору
       accUp -= dy; accDown = 0;
-      if (accUp >= SHOW_AFTER) setCollapsed(false);
+      if (accUp >= SHOW_AFTER) setSticky(el, false);
     }
   };
   main.addEventListener('scroll', () => {
     if (!ticking) { ticking = true; requestAnimationFrame(apply); }
   }, { passive: true });
   // Зміна розміру екрана (поворот, зміна вікна) → перерахувати відступ тіла під шапку.
-  window.addEventListener('resize', () => requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); }), { passive: true });
+  // ⚠️ Заразом скидаємо кеш висоти шапки: після повороту вона інша, а `flow`
+  // рахує по ній межу режиму — зі старим числом шапка або зникала б зарано, або
+  // висіла б смугою.
+  window.addEventListener('resize', () => requestAnimationFrame(() => {
+    _invalidateHeaderH?.();
+    syncBoardBodyOffset();
+    fitBoardAuthors();
+  }), { passive: true });
 }
 
 export function initBoard() {
