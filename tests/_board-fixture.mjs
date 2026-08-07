@@ -55,6 +55,8 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       // саме «пізня» відповідь відкриває гілки коду, яких миттєва заглушка не
       // торкається взагалі. B-30 сидів рівно в такій гілці.
       const SLOW = ${JSON.stringify(opts.slow || {})};
+      // Профілі живуть на window — щоб стенд міг їх ЗМІНИТИ під час прогону.
+      window.__cstlProfiles = ${JSON.stringify(opts.profiles || [])};
       // Ланцюжок .select().eq().order().limit() має повертати САМ СЕБЕ, а в
       // кінці бути "thenable" — саме так поводиться справжній конструктор
       // запитів supabase-js, і саме тому await працює на будь-якій ланці.
@@ -96,7 +98,30 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
           // Живі підписки стендам не потрібні, але код їх викликає.
           channel: () => ({ on() { return this; }, subscribe() { return this; }, unsubscribe() {} }),
           removeChannel: () => {},
-          rpc: async () => ({ data: null, error: null }),
+          // 🆕 07.08 (потік «Живе оновлення») — RPC профілів справді відповідає.
+          // Було: на БУДЬ-ЯКИЙ виклик поверталось data: null. Тобто get_avatars
+          // мовчки віддавав нічого, кеш імен не заповнювався, і будь-який стенд
+          // бачив лише вморожені імена. Весь механізм живих імен і фото не був
+          // покритий ЖОДНОЮ перевіркою — саме там і жив баг.
+          //
+          // 🔑 window.__cstlProfiles НАВМИСНО мутабельний: стенд міняє його
+          // прямо посеред прогону, і це відтворює головну сцену Вови — інша
+          // людина змінила імʼя та фото, поки мій застосунок відкритий.
+          // (зворотні лапки в цьому блоці заборонені: він у шаблонному рядку)
+          rpc: async (fn, args) => {
+            const all = window.__cstlProfiles || [];
+            if (fn === 'get_avatars') {
+              // Лічильник походів у базу — стенд ним міряє антифлуд.
+              window.__cstlRpcCalls = (window.__cstlRpcCalls || 0) + 1;
+              const want = (args && args.uids) || [];
+              return { data: all.filter(r => want.includes(r.uid)), error: null };
+            }
+            if (fn === 'get_public_profile') {
+              const u = args && args.p_uid;
+              return { data: all.filter(r => r.uid === u), error: null };
+            }
+            return { data: null, error: null };
+          },
           storage: { from: () => ({
             upload: async () => ({ data: null, error: null }),
             getPublicUrl: () => ({ data: { publicUrl: '' } }),
