@@ -6005,7 +6005,7 @@
         return;
       }
       const myProfile = await getProfile();
-      const myName = myProfile && myProfile.name || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const myName = myProfile && myProfile.name || currentUserName();
       const res = await getOrCreateThread({
         postId: post.id,
         authorUid: post.owner_uid,

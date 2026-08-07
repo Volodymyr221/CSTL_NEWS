@@ -19,7 +19,7 @@
 // приватна (RLS «лише свій профіль»), тож імена денормалізовані при створенні.
 
 import {
-  currentUserId, isLoggedIn, requireAuth, getProfile, onAuthChange,
+  currentUserId, currentUserName, isLoggedIn, requireAuth, getProfile, onAuthChange,
 } from '../core/auth.js';
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
@@ -1417,8 +1417,21 @@ export function startChatFromPost(post) {
       showToast('Це ваше оголошення — звернення дивіться у «Мої оголошення»', 3500);
       return;
     }
+    // 🔴 07.08 — ІМʼЯ БРАЛОСЬ ЛИШЕ З АНКЕТИ, І ТОМУ ЛЮДИ БУЛИ «ЖИТЕЛЬ».
+    // Було: `(myProfile && myProfile.name) || 'Житель'` — тобто ланцюжок обривався на
+    // таблиці `profiles`. Але `profiles.name` заповнюється, лише коли людина ПРОЙШЛА
+    // анкету; хто просто ввійшов через Google, має імʼя в сесії, а в анкеті — порожньо.
+    // Наслідок, знайдений Вовою на другому акаунті: головна вітала «Доброї ночі,
+    // Volodymyr» (звідти імʼя видно), а в чаті той самий чоловік звався «Житель».
+    // 🔑 Ланцюжок «анкета → Google → Житель» УЖЕ реалізований у `currentUserName()`
+    // (`core/auth.js`) — тут його просто не питали. Тому не новий fallback, а виклик
+    // наявного: одне місце правди про імʼя людини на весь застосунок.
+    // ⚠️ Чому це взагалі важливо: імʼя пишеться в САМ ТРЕД у момент створення
+    // (`buyer_name`/`author_name`) і далі не оновлюється — БД `profiles` приватна
+    // (RLS «лише свій профіль»), тож прочитати чуже імʼя пізніше нема як. Помилка в
+    // цьому рядку замерзає в розмові НАЗАВЖДИ, а не показується тимчасово.
     const myProfile = await getProfile();
-    const myName = (myProfile && myProfile.name) || 'Житель';
+    const myName = (myProfile && myProfile.name) || currentUserName();
     const res = await getOrCreateThread({
       postId: post.id, authorUid: post.owner_uid, buyerUid: me,
       authorName: post.author || 'Продавець', buyerName: myName,
