@@ -6397,9 +6397,8 @@
   }
   function renderBoardCard(p) {
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
-    const letter = (cardTitleText(p) || "?").trim().charAt(0).toUpperCase();
-    const media = photo ? `<img class="bd-ad-img" src="${escapeHtml(photo)}" alt="" loading="lazy"
-             onerror="this.outerHTML='<div class=\\'bd-ad-img bd-ad-img--mono\\'>${escapeHtml(letter)}</div>'">` : `<div class="bd-ad-img bd-ad-img--mono">${escapeHtml(letter)}</div>`;
+    const ph = `<div class="bd-ad-img bd-ad-img--mono">${catIcon(p.category)}</div>`;
+    const media = photo ? `${ph}<img class="bd-ad-img" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.remove()">` : ph;
     return `
     <article class="cm-board-note bd-card bd-card--board bd-ad" data-post-id="${p.id}">
       ${media}
