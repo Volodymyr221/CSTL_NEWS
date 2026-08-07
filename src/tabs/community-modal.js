@@ -12,6 +12,7 @@ import { uploadBlobWithRetry } from '../core/upload.js';   // повтор uploa
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
+import { createDraftStore } from '../core/draft.js';   // страховка від утрати набраного
 // Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
 import { BOARD_CATEGORIES, catShort, categoryHasPrice } from '../core/board-categories.js';
 import { ICONS } from '../core/icons.js';
@@ -93,6 +94,27 @@ function accountAuthorName() {
 // compressImage винесено у core/utils.js (спільна з «Стрічкою»). Дошка стискає
 // до 800px/0.78 (менші картки-оголошення), тому виклик з явними параметрами.
 
+// 🔴 07.08 — ЧЕРНЕТКА ПОДАЧІ ОГОЛОШЕННЯ (аудит Дошки під MVP, знахідка C-1).
+// Модалка відкривається `dismissible` за замовчуванням: закрити її можна тапом по
+// фону, свайпом вниз і ✕. До цієї зміни будь-який із трьох способів стирав набране
+// НАЗАВЖДИ і без питання — а це найдовша форма застосунку (у живій базі трапляються
+// описи на 1296 символів). Композер «Стрічки» ту саму страховку має з 27.07; тут її
+// просто не було.
+// ⚠️ Ключ ОДИН на форму (без id): оголошення подають по одному, на відміну від
+// «Стрічки», де чернетка окрема на кожну спільноту.
+// ⚠️ ФОТО НЕ ЗБЕРІГАЮТЬСЯ — вибране фото це `File`/`blob:` у памʼяті вкладки, у
+// сховище його не покласти (потрібен IndexedDB — окрема робота). Тому в тості
+// відновлення прямо сказано, що фото треба додати ще раз: краще чесно, ніж мовчки
+// недорахувати. Той самий підхід у «Стрічці».
+const draftStore = createDraftStore(
+  'cstl_bd_draft',
+  // Що вважати непорожньою чернеткою. Локацію свідомо НЕ рахуємо: вона має значення
+  // за замовчуванням («Вся Олицька громада»), тож сама по собі не означає, що людина
+  // почала писати — інакше чернетка створювалась би від самого відкриття форми.
+  d => !!((d.title || '').trim() || (d.text || '').trim() || d.category
+          || (d.price || '').trim() || d.negotiable),
+);
+
 export function openBoardModal(opts = {}) {
   if (document.querySelector('.app-modal--board-compose')) return;
 
@@ -121,6 +143,45 @@ export function openBoardModal(opts = {}) {
     // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
     negotiable: isEdit ? !!editPost.price_negotiable : false,
   };
+
+  // ── Відновлення чернетки (лише для НОВОГО оголошення) ──
+  // ⚠️ Читаємо ДО першого рендеру: розмітка форми будується зі `state`, тож підмінити
+  // значення треба раніше, ніж вона з'явиться на екрані. Інакше довелось би окремо
+  // заповнювати кожне поле в DOM — і воно роз'їхалось би з прев'ю.
+  const restored = isEdit ? null : draftStore.read();
+  if (restored) {
+    // Явний перелік полів, а НЕ `Object.assign(state, restored)`: чернетка приходить
+    // зі сховища, тобто ззовні. Розсипати її по стану цілком означало б дозволити
+    // старій (або зіпсованій) версії підкласти поле, якого форма не чекає — зокрема
+    // `photos`, які там завжди порожні, і `uploadingCount`, що заблокував би відправку.
+    state.title      = restored.title      ?? state.title;
+    state.text       = restored.text       ?? state.text;
+    state.category   = restored.category   ?? state.category;
+    state.price      = restored.price      ?? state.price;
+    state.negotiable = !!restored.negotiable;
+    state.location   = restored.location   ?? state.location;
+    state.contact    = restored.contact    ?? state.contact;
+  }
+
+  // Запис відкладений: `renderPreview()` кличеться на КОЖНЕ натискання клавіші, а
+  // запис у сховище — синхронна операція з серіалізацією. 400мс достатньо, щоб не
+  // писати на кожну літеру, і замало, щоб людина встигла закрити модалку між
+  // останнім символом і збереженням.
+  let draftTimer = null;
+  function saveDraftSoon() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      draftStore.write('', {
+        title: state.title, text: state.text, category: state.category,
+        price: state.price, negotiable: state.negotiable,
+        location: state.location, contact: state.contact,
+        // Самі фото зберегти неможливо (див. коментар до `draftStore`), але ФАКТ
+        // їх наявності — можна. Без нього тост після відновлення або мовчав би про
+        // втрачені знімки, або лякав ними тих, хто фото й не додавав.
+        hadPhotos: state.photos.some(Boolean),
+      });
+    }, 400);
+  }
 
   const bodyHtml = `
     <div class="cm-board-modal-head">
@@ -457,6 +518,14 @@ export function openBoardModal(opts = {}) {
   const previewCanvas = wrap.querySelector('#bm-preview-canvas');
 
   function renderPreview() {
+    // 🔴 07.08 — ЗБЕРЕЖЕННЯ ЧЕРНЕТКИ ЖИВЕ САМЕ ТУТ, і це не випадковість.
+    // `renderPreview()` уже кличеться після КОЖНОЇ зміни будь-якого поля (категорія,
+    // заголовок, ціна, договірна, локація, опис, контакт — вісім обробників). Вішати
+    // збереження на кожен із них означало б вісім місць, які роз'їдуться при першій же
+    // новій властивості форми. Тут — одна точка, яку неможливо забути.
+    // ⚠️ Тільки для НОВОГО оголошення: у режимі редагування чернетка не потрібна
+    // (текст уже збережений у базі) і зашкодила б — підставилась би в наступне нове.
+    if (!isEdit) saveDraftSoon();
     // Д-23: поки категорію не обрано (state.category === '') — приглушений плейсхолдер-тег.
     const cat = state.category ? BOARD_CATEGORIES.find(c => c.id === state.category) : null;
     const catHtml = cat
@@ -500,6 +569,15 @@ export function openBoardModal(opts = {}) {
   renderPreview();
   autoGrowTextarea(wrap.querySelector('#bm-text'));   // поле опису росте по тексту (скрол — сам лист)
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
+
+  // Сказати, що чернетку відновлено. Мовчазне відновлення гірше за жодне: людина
+  // побачила б у формі текст, якого не писала «щойно», і не зрозуміла б, звідки він.
+  // ⚠️ Про фото кажемо ОКРЕМО і лише коли вони справді були — інакше це шум.
+  if (restored) {
+    showToast(restored.hadPhotos
+      ? 'Відновлено незбережене оголошення. Фото потрібно додати ще раз.'
+      : 'Відновлено незбережене оголошення.', 0);
+  }
 
   // Уточнюємо ім'я з профілю в БД (кеш міг бути ще не готовий при відкритті).
   // У edit-режимі НЕ чіпаємо телефон/ім'я — показуємо саме те, що збережено в пості.
@@ -613,6 +691,12 @@ export function openBoardModal(opts = {}) {
       console.info('[submit] Supabase не готовий — payload збережено лише локально:', payload);
     }
 
+    // 🔴 ЧЕРНЕТКУ СТИРАЄМО САМЕ ТУТ — у гілці УСПІХУ, а не в `close()`.
+    // Якби стирання жило в `close()`, то тап повз лист (найчастіший спосіб втратити
+    // набране) сам би й знищив чернетку — тобто страховка рятувала б від усього,
+    // крім того випадку, заради якого заведена. Той самий висновок зроблено у
+    // композері «Стрічки» 27.07.
+    draftStore.clear();
     close();
     if (published) {
       // Дошка вже слухає цю подію (board.js) — оновиться і покаже пост одразу.

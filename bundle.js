@@ -2423,6 +2423,66 @@
     _active?.close();
   }
 
+  // src/core/draft.js
+  var DEFAULT_TTL = 12 * 3600 * 1e3;
+  function ssGet(key, fallback) {
+    try {
+      const v = sessionStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function ssSet(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function ssDel(key) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+    }
+  }
+  function createDraftStore(prefix, meaningful, ttl = DEFAULT_TTL) {
+    const keyOf = (id = "") => `${prefix}${id}`;
+    return {
+      read(id = "") {
+        const d = ssGet(keyOf(id), null);
+        if (!d || typeof d !== "object")
+          return null;
+        if (!d.ts || Date.now() - d.ts > ttl) {
+          ssDel(keyOf(id));
+          return null;
+        }
+        return meaningful(d) ? d : null;
+      },
+      write(id = "", d = {}) {
+        if (!meaningful(d)) {
+          ssDel(keyOf(id));
+          return;
+        }
+        ssSet(keyOf(id), { ...d, ts: Date.now() });
+      },
+      clear(id = "") {
+        ssDel(keyOf(id));
+      }
+    };
+  }
+  function purgeLegacyDrafts(prefix) {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix))
+          keys.push(k);
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {
+    }
+  }
+
   // src/core/board-categories.js
   var A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
   var SVG = {
@@ -2654,6 +2714,13 @@
   function accountAuthorName() {
     return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
   }
+  var draftStore = createDraftStore(
+    "cstl_bd_draft",
+    // Що вважати непорожньою чернеткою. Локацію свідомо НЕ рахуємо: вона має значення
+    // за замовчуванням («Вся Олицька громада»), тож сама по собі не означає, що людина
+    // почала писати — інакше чернетка створювалась би від самого відкриття форми.
+    (d) => !!((d.title || "").trim() || (d.text || "").trim() || d.category || (d.price || "").trim() || d.negotiable)
+  );
   function openBoardModal(opts = {}) {
     if (document.querySelector(".app-modal--board-compose"))
       return;
@@ -2682,6 +2749,35 @@
       // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
       negotiable: isEdit ? !!editPost.price_negotiable : false
     };
+    const restored = isEdit ? null : draftStore.read();
+    if (restored) {
+      state.title = restored.title ?? state.title;
+      state.text = restored.text ?? state.text;
+      state.category = restored.category ?? state.category;
+      state.price = restored.price ?? state.price;
+      state.negotiable = !!restored.negotiable;
+      state.location = restored.location ?? state.location;
+      state.contact = restored.contact ?? state.contact;
+    }
+    let draftTimer = null;
+    function saveDraftSoon() {
+      clearTimeout(draftTimer);
+      draftTimer = setTimeout(() => {
+        draftStore.write("", {
+          title: state.title,
+          text: state.text,
+          category: state.category,
+          price: state.price,
+          negotiable: state.negotiable,
+          location: state.location,
+          contact: state.contact,
+          // Самі фото зберегти неможливо (див. коментар до `draftStore`), але ФАКТ
+          // їх наявності — можна. Без нього тост після відновлення або мовчав би про
+          // втрачені знімки, або лякав ними тих, хто фото й не додавав.
+          hadPhotos: state.photos.some(Boolean)
+        });
+      }, 400);
+    }
     const bodyHtml = `
     <div class="cm-board-modal-head">
       <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>${isEdit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" : "\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
@@ -2979,6 +3075,8 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
+      if (!isEdit)
+        saveDraftSoon();
       const cat = state.category ? BOARD_CATEGORIES.find((c) => c.id === state.category) : null;
       const catHtml = cat ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>` : `<span class="cm-board-cat cm-board-cat--placeholder">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</span>`;
       const firstPhoto = state.photos.find((p) => p);
@@ -3004,6 +3102,9 @@
     renderPreview();
     autoGrowTextarea(wrap.querySelector("#bm-text"));
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
+    if (restored) {
+      showToast(restored.hadPhotos ? "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u043D\u0435\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F. \u0424\u043E\u0442\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437." : "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u043D\u0435\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.", 0);
+    }
     if (isLoggedIn() && !isEdit) {
       getProfile().then((p) => {
         if (p && p.phone && phoneDigits(state.contact) === 0) {
@@ -3110,6 +3211,7 @@
       } else {
         console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
       }
+      draftStore.clear();
       close();
       if (published) {
         window.dispatchEvent(new Event("cstl-posts-changed"));
@@ -14616,59 +14718,15 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
-  var DRAFT_TTL = 12 * 3600 * 1e3;
-  var draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
-  function ssGet(key, fallback) {
-    try {
-      const v = sessionStorage.getItem(key);
-      return v ? JSON.parse(v) : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  function ssSet(key, value) {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(value));
-    } catch {
-    }
-  }
-  function readDraft(pageId) {
-    const d = ssGet(draftKey(pageId), null);
-    if (!d || typeof d !== "object")
-      return null;
-    if (!d.ts || Date.now() - d.ts > DRAFT_TTL) {
-      clearDraft(pageId);
-      return null;
-    }
-    const meaningful = (d.text || "").trim() || d.date || d.time || (d.loc || "").trim();
-    return meaningful ? d : null;
-  }
-  function writeDraft(pageId, d) {
-    const meaningful = (d.text || "").trim() || d.date || d.time || (d.loc || "").trim();
-    if (!meaningful) {
-      clearDraft(pageId);
-      return;
-    }
-    ssSet(draftKey(pageId), { ...d, ts: Date.now() });
-  }
-  function clearDraft(pageId) {
-    try {
-      sessionStorage.removeItem(draftKey(pageId));
-    } catch {
-    }
-  }
-  (function purgeLegacyDrafts() {
-    try {
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("cstl_fd_draft_"))
-          keys.push(k);
-      }
-      keys.forEach((k) => localStorage.removeItem(k));
-    } catch {
-    }
-  })();
+  var DRAFT_PREFIX = "cstl_fd_draft_";
+  var draftStore2 = createDraftStore(
+    DRAFT_PREFIX,
+    (d) => !!((d.text || "").trim() || d.date || d.time || (d.loc || "").trim())
+  );
+  var readDraft = (pageId) => draftStore2.read(pageId);
+  var writeDraft = (pageId, d) => draftStore2.write(pageId, d);
+  var clearDraft = (pageId) => draftStore2.clear(pageId);
+  purgeLegacyDrafts(DRAFT_PREFIX);
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)

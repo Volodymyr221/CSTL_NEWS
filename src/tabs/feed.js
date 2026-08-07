@@ -30,6 +30,7 @@ import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, rest
   from '../core/list-patch.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
+import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -2608,49 +2609,22 @@ const MAX_PHOTOS = 10;
 // редагування) — це окрема фіча, і тоді сховище має бути постійним і видимим людині.
 // Мовчазне «вічне» збереження без списку — гірше за обидва варіанти: текст спливає
 // через дні, а знайти чи прибрати його ніде.
-const DRAFT_TTL = 12 * 3600 * 1000;   // додатковий запобіжник, якщо вкладка висить добу
-const draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
+// 🔄 07.08 — МЕХАНІКА ПЕРЕЇХАЛА У `core/draft.js` (аудит Дошки під MVP).
+// Тут лишається ЛИШЕ те, що специфічне для цього композера: префікс ключа і критерій
+// «що вважати непорожньою чернеткою». Сама робота зі сховищем — спільна.
+// Причина переїзду: подача оголошення (найдовша форма застосунку) страховки не мала
+// взагалі, а копіювати сюдишній код туди означало б завести другу реалізацію того
+// самого — у проєкті вже розходились дві копії списків антиспаму.
+const DRAFT_PREFIX = 'cstl_fd_draft_';
+const draftStore = createDraftStore(
+  DRAFT_PREFIX,
+  d => !!((d.text || '').trim() || d.date || d.time || (d.loc || '').trim()),
+);
+const readDraft  = (pageId) => draftStore.read(pageId);
+const writeDraft = (pageId, d) => draftStore.write(pageId, d);
+const clearDraft = (pageId) => draftStore.clear(pageId);
 
-// Обгортки над sessionStorage: у приватному режимі й на старих движках доступ до нього
-// може кинути виняток — чернетка не та річ, заради якої можна впасти.
-function ssGet(key, fallback) {
-  try { const v = sessionStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function ssSet(key, value) {
-  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-
-function readDraft(pageId) {
-  const d = ssGet(draftKey(pageId), null);
-  if (!d || typeof d !== 'object') return null;
-  if (!d.ts || Date.now() - d.ts > DRAFT_TTL) { clearDraft(pageId); return null; }
-  // Порожня чернетка — не чернетка (інакше показували б тост ні про що).
-  const meaningful = (d.text || '').trim() || d.date || d.time || (d.loc || '').trim();
-  return meaningful ? d : null;
-}
-function writeDraft(pageId, d) {
-  const meaningful = (d.text || '').trim() || d.date || d.time || (d.loc || '').trim();
-  if (!meaningful) { clearDraft(pageId); return; }   // стер усе — чернетки більше нема
-  ssSet(draftKey(pageId), { ...d, ts: Date.now() });
-}
-function clearDraft(pageId) {
-  try { sessionStorage.removeItem(draftKey(pageId)); } catch {}
-}
-
-// Разове прибирання за ПЕРШОЮ версією. Вона писала в `localStorage`, тож у всіх, хто вже
-// встиг оновитись до неї, там лежить «вічна» чернетка. Читати ми її більше не читаємо,
-// але лишати сміття в сховищі людини негарно — виносимо один раз при завантаженні.
-(function purgeLegacyDrafts() {
-  try {
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('cstl_fd_draft_')) keys.push(k);
-    }
-    keys.forEach(k => localStorage.removeItem(k));
-  } catch {}
-})();
+purgeLegacyDrafts(DRAFT_PREFIX);
 
 function openComposer(pageId, editPost = null) {
   const page = pages.find(p => p.id === pageId);
