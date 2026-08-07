@@ -31,11 +31,16 @@
 //
 // ⚠️ `serviceWorkers: 'block'` — інакше запити йдуть через `sw.js` повз
 // `page.route` (восьмий випадок брехливої перевірки в цьому проєкті).
+// 🔴 КОНТРОЛЬ (обовʼязковий):
+//     BUNDLE_REV=origin/main node tests/live-profile.mjs
+// підсовує сторінці `bundle.js` із зазначеної ревізії. На коді ДО цього потоку
+// дві 🔴-перевірки мусять УПАСТИ — інакше стенд міряє не те, що обіцяє.
 import { chromium } from 'playwright';
-import { launch, serve, reporter } from './_lib.mjs';
+import { launch, serve, reporter, projectFile } from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
 
 const { ok, done } = reporter();
+const REV = process.env.BUNDLE_REV || '';
 
 const ME    = { id: 'u-me',    email: 'me@example.com', user_metadata: { name: 'Вова' } };
 const OTHER = 'u-other';
@@ -76,6 +81,10 @@ await mockSupabase(p,
   { posts: POSTS, threads: THREADS, messages: [], thread_user_state: [], announcements: [] },
   { user: ME, profiles: PROFILES });
 await p.route('**://api.open-meteo.com/**', r => r.abort());
+if (REV) {
+  const body = projectFile('bundle.js', REV);
+  await p.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+}
 
 await p.goto(url, { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(1500);
@@ -120,11 +129,17 @@ await p.evaluate((ф) => {
   ];
 }, ФОТО);
 
+// ⏱ Витримати поріг антифлуду (MIN_GAP у `core/refresh-on-return.js`). Це не
+// «підганяння під тест»: поріг існує навмисно, і сцена мусить його ПЕРЕЖИТИ, а не
+// обійти. Якщо колись поріг піднімуть так, що звичайне «пішов і повернувся» в
+// нього не влазить — саме тут стенд і почервоніє, і це буде правильно.
+await p.waitForTimeout(5200);
+
 // Пішли на іншу вкладку і повернулись — рівно той жест, який назвав Вова.
 await p.evaluate(() => window.switchTab && window.switchTab('shotam'));
 await p.waitForTimeout(800);
 await p.evaluate(() => window.switchTab && window.switchTab('board'));
-await p.waitForTimeout(1600);
+await p.waitForTimeout(1800);
 
 await відкритиСписок();
 const потім = await іменаУСписку();
