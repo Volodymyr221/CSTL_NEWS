@@ -1,19 +1,29 @@
 // Стенд №12: ЧЕРНЕТКА КОМПОЗЕРА «Стрічки».
 // Аудит 27.07: тап повз лист знищував набраний допис без питання.
 //
-// ⚠️ Стенд ганяє СПРАВЖНІЙ код: витягує блок функцій чернетки прямо з src/tabs/feed.js
-// і виконує його. Копія тут була б безглузда — вона перевіряла б саму себе, а не те,
-// що поїде на прод.
+// ⚠️ Стенд ганяє СПРАВЖНІЙ код: склеює спільний примітив `src/core/draft.js` з
+// налаштуванням композера зі `src/tabs/feed.js` і виконує це. Копія тут була б
+// безглузда — вона перевіряла б саму себе, а не те, що поїде на прод.
+//
+// 🔄 07.08 — механіка чернетки переїхала у `core/draft.js`, бо ту саму страховку
+// дістала подача оголошення на Дошці (аудит під MVP: найдовша форма застосунку не
+// мала її взагалі). Стенд тепер перевіряє СПІЛЬНИЙ модуль у зборі з налаштуванням
+// «Стрічки» — тобто рівно те, що виконується на проді.
 import { readFileSync } from 'fs';
 import { projectFile } from './_lib.mjs';
 
-const SRC = projectFile('src/tabs/feed.js');
+const SRC  = projectFile('src/tabs/feed.js');
+const CORE = projectFile('src/core/draft.js');
 
-// ── дістаємо рівно блок чернетки ──
-const from = SRC.indexOf('const DRAFT_TTL');
+// ── спільний примітив: знімаємо `export`, щоб виконати як звичайний блок ──
+const core = CORE.replace(/\bexport\s+function\b/g, 'function')
+                 .replace(/\bexport\s+const\b/g, 'const');
+
+// ── налаштування композера «Стрічки»: префікс ключа + критерій непорожньої ──
+const from = SRC.indexOf('const DRAFT_PREFIX');
 const to   = SRC.indexOf('function openComposer');
-if (from < 0 || to < 0 || to < from) { console.log('❌ не знайшов блок чернетки у feed.js'); process.exit(1); }
-const block = SRC.slice(from, to);
+if (from < 0 || to < 0 || to < from) { console.log('❌ не знайшов налаштування чернетки у feed.js'); process.exit(1); }
+const block = core + '\n' + SRC.slice(from, to);
 
 // ── мінімальне оточення: ДВА сховища ──
 // sessionStorage — те, де чернетка живе тепер (гине разом із закриттям застосунку).
@@ -27,8 +37,11 @@ const ss = mk(), ls = mk();
 const store = ss.m;                      // «сховище» в перевірках нижче = сесійне
 globalThis.sessionStorage = ss.api;
 globalThis.localStorage   = ls.api;
-const api = new Function(`${block}\nreturn { readDraft, writeDraft, clearDraft, draftKey, DRAFT_TTL };`)();
-const { readDraft, writeDraft, clearDraft, draftKey, DRAFT_TTL } = api;
+const api = new Function(`${block}\nreturn { readDraft, writeDraft, clearDraft, purgeLegacyDrafts, DRAFT_PREFIX, DEFAULT_TTL };`)();
+const { readDraft, writeDraft, clearDraft, purgeLegacyDrafts, DRAFT_PREFIX, DEFAULT_TTL } = api;
+// Ті самі два помічники, що були в стенді до переїзду — щоб перевірки нижче не мінялись.
+const draftKey  = (pageId) => `${DRAFT_PREFIX}${pageId}`;
+const DRAFT_TTL = DEFAULT_TTL;
 
 const res = []; const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${n}${i ? '  — ' + i : ''}`); };
 const reset = () => { ss.m.clear(); ls.m.clear(); };
@@ -114,9 +127,9 @@ ok('у постійному сховищі її НЕМА', ls.m.size === 0, `п�
 // Прибирання за першою версією: у неї чернетка лежала в постійному сховищі.
 ls.m.set('cstl_fd_draft_p9', JSON.stringify({ text: 'спадок першої версії', ts: Date.now() }));
 ls.m.set('cstl_other_key', 'не чіпати');
-// У джерелі це самовиклична функція — беремо її разом з дужками і просто виконуємо.
-const purge = SRC.slice(SRC.indexOf('(function purgeLegacyDrafts'), SRC.indexOf('function openComposer'));
-new Function(purge)();
+// 🔄 07.08: у джерелі це вже не самовиклична функція, а виклик спільного
+// `purgeLegacyDrafts(DRAFT_PREFIX)` з `core/draft.js` — кличемо так само, як feed.js.
+purgeLegacyDrafts(DRAFT_PREFIX);
 ok('стара «вічна» чернетка прибирається зі сховища', !ls.m.has('cstl_fd_draft_p9'));
 ok('чужі ключі прибирання не чіпає', ls.m.get('cstl_other_key') === 'не чіпати');
 
