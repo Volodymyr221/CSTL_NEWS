@@ -6889,6 +6889,13 @@
       return 0;
     return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== "chat" ? 1 : 0), 0);
   }
+  function closeFab() {
+    const fab = document.getElementById("board-fab");
+    if (!fab)
+      return;
+    fab.classList.remove("open");
+    document.getElementById("board-trigger")?.setAttribute("aria-expanded", "false");
+  }
   function syncMsgFab() {
     if (discOpen)
       return;
@@ -7197,12 +7204,6 @@
     const fab = document.getElementById("board-fab");
     const fabBtn = document.getElementById("board-trigger");
     const fabBack = document.getElementById("board-fab-backdrop");
-    const closeFab2 = () => {
-      if (!fab)
-        return;
-      fab.classList.remove("open");
-      fabBtn?.setAttribute("aria-expanded", "false");
-    };
     const toggleFab = () => {
       if (!fab)
         return;
@@ -7210,7 +7211,7 @@
       fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
     };
     fabBtn?.addEventListener("click", toggleFab);
-    fabBack?.addEventListener("click", closeFab2);
+    fabBack?.addEventListener("click", closeFab);
     if (!_threadsEvtWired) {
       _threadsEvtWired = true;
       window.addEventListener("cstl-threads-changed", () => syncMsgFab());
@@ -7219,7 +7220,7 @@
     el.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
-        closeFab2();
+        closeFab();
         if (act === "disc-create") {
           requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
           return;

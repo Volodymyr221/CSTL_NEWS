@@ -32,25 +32,51 @@ const CDN = '**://cdn.jsdelivr.net/npm/@supabase/supabase-js**';
  * Ставить підроблену базу на сторінку.
  * @param page      сторінка Playwright (route ще НЕ має бути перехоплений)
  * @param tables    { posts: [...], announcements: [...], ... } — що віддавати
+ * @param opts      { user } — 🆕 07.08: підроблений ЗАЛОГІНЕНИЙ житель.
+ *
+ * 🔑 Навіщо `user` (баг B-30). Половина Дошки живе за `isLoggedIn()`, і поки
+ * заглушка вміла лише «ніхто не ввійшов», жоден стенд не міг доторкнутись до
+ * цієї половини — зокрема до входу в листування. Саме там і сидів B-30: пункт
+ * «Повідомлення» мовчки не відкривався, а всі 46 стендів були зелені.
+ * ⚠️ За замовчуванням `user` = null, тобто чотири наявні стенди Дошки бачать
+ * рівно те, що бачили (публічний вигляд) — фікстура розширена, не змінена.
  */
-export async function mockSupabase(page, tables = {}) {
+export async function mockSupabase(page, tables = {}, opts = {}) {
+  const user = opts.user || null;
   // 1. Замість бібліотеки з CDN — крихітна заглушка з тим самим інтерфейсом.
   await page.route(CDN, r => r.fulfill({
     contentType: 'application/javascript',
     body: `(() => {
       const T = ${JSON.stringify(tables)};
+      const U = ${JSON.stringify(user)};
+      const SESSION = U ? { user: U } : null;
+      // 🆕 07.08 (B-30): { назваТаблиці: мс } — відповідь приходить ПІЗНО.
+      // Живий телефон майже ніколи не встигає віддати все до першого рендера, і
+      // саме «пізня» відповідь відкриває гілки коду, яких миттєва заглушка не
+      // торкається взагалі. B-30 сидів рівно в такій гілці.
+      const SLOW = ${JSON.stringify(opts.slow || {})};
       // Ланцюжок .select().eq().order().limit() має повертати САМ СЕБЕ, а в
       // кінці бути "thenable" — саме так поводиться справжній конструктор
       // запитів supabase-js, і саме тому await працює на будь-якій ланці.
       const q = (table) => {
         const self = {
-          then(res) { return Promise.resolve({ data: T[table] || [], error: null }).then(res); },
+          then(res) {
+            const payload = { data: T[table] || [], error: null };
+            const ms = SLOW[table] || 0;
+            const pr = ms
+              ? new Promise(r => setTimeout(() => r(payload), ms))
+              : Promise.resolve(payload);
+            return pr.then(res);
+          },
         };
         // Читання і ЗАПИС однаково повертають ланцюжок: застосунок пише
         // аналітику (logEvent -> insert) на кожному перемиканні вкладки,
         // (зворотні лапки тут заборонені: увесь блок лежить у шаблонному рядку)
         // і без цих методів стенд падав ще до першої перевірки.
-        for (const m of ['select','eq','neq','in','is','order','limit','range','single','maybeSingle',
+        // ⚠️ 07.08: доданий 'not' — без нього fetchUnreadByThread падав із
+        // «.not is not a function», ланцюг рвався і розмови не приїжджали ЗОВСІМ.
+        // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
+        for (const m of ['select','eq','neq','in','is','not','order','limit','range','single','maybeSingle',
                          'filter','or','gt','lt','gte','lte','like','ilike','contains',
                          'insert','upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
@@ -59,10 +85,10 @@ export async function mockSupabase(page, tables = {}) {
       window.supabase = {
         createClient: () => ({
           from: q,
-          // Ніхто не залогінений — стенди перевіряють ПУБЛІЧНИЙ вигляд Дошки.
+          // Без opts.user — ніхто не залогінений (публічний вигляд Дошки, як було).
           auth: {
-            getSession: async () => ({ data: { session: null }, error: null }),
-            getUser:    async () => ({ data: { user: null }, error: null }),
+            getSession: async () => ({ data: { session: SESSION }, error: null }),
+            getUser:    async () => ({ data: { user: U }, error: null }),
             onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
             signInWithOAuth: async () => ({ data: null, error: null }),
             signOut: async () => ({ error: null }),
