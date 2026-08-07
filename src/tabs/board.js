@@ -1130,6 +1130,37 @@ function myActiveAdsCount() {
 // доданий пізніше, лишився б мертвим на дотик.
 // ⚠️ Гард `discOpen` лишається: в Обговорень своя шапка й свій FAB, і ця логіка їх
 // не стосується (пряме рішення Вови: «Ні, обговорення не чіпаємо»).
+
+// 🔴 07.08 — БАГ B-30. Згортання FAB-меню живе НА РІВНІ МОДУЛЯ, а не всередині
+// `renderAll()`.
+//
+// Що було: `const closeFab` оголошувався ЛОКАЛЬНО в `renderAll()`, а `syncMsgFab()`
+// (функція рівня модуля) його викликала. Це різні області видимості, тож у
+// зібраному `bundle.js` виклик перетворювався на звернення до неіснуючого
+// глобального імені → `ReferenceError` у момент тапу. Обробник падав на першому ж
+// рядку, і ні `requireAuth`, ні `openThreadsList` не встигали виконатись:
+// **пункт «Повідомлення» не відкривав нічого, мовчки.**
+//
+// 🔑 Чому це не ловилось. Ламався ЛИШЕ пункт, вставлений `syncMsgFab()` — тобто
+// в людини БЕЗ власних оголошень, але З розмовами (пункт домальовується після
+// асинхронного приїзду розмов). Той самий пункт, намальований `renderFab()`,
+// отримував обробник із правильної області видимості і працював. А будь-який
+// наступний повний рендер (тап по фільтру, вихід на іншу вкладку і назад)
+// перемальовував пункт і «лікував» його — тому в пісочниці баг не відтворювався.
+// Знайдено Вовою живим тестом на другому акаунті 07.08.
+//
+// 🛑 Не повертати оголошення всередину `renderAll()`. Функція шукає вузли
+// НАЖИВО (`getElementById`), а не тримає їх у замиканні від моменту рендера —
+// саме тому вона однаково правильна і для обробника, повішеного рендером, і для
+// того, що вставляється пізніше. Дублів id тут не буває: контент лежить рівно в
+// одному корені за раз (`openDiscussions`/`closeDiscussions`).
+function closeFab() {
+  const fab = document.getElementById('board-fab');
+  if (!fab) return;
+  fab.classList.remove('open');
+  document.getElementById('board-trigger')?.setAttribute('aria-expanded', 'false');
+}
+
 function syncMsgFab() {
   if (discOpen) return;
   const menu = document.getElementById('board-fab-menu');
@@ -1740,11 +1771,8 @@ function renderAll() {
   const fab     = document.getElementById('board-fab');
   const fabBtn  = document.getElementById('board-trigger');
   const fabBack = document.getElementById('board-fab-backdrop');
-  const closeFab = () => {
-    if (!fab) return;
-    fab.classList.remove('open');
-    fabBtn?.setAttribute('aria-expanded', 'false');
-  };
+  // ⚠️ `closeFab` — на рівні модуля (баг B-30, див. коментар над ним). Тут лишається
+  // тільки `toggleFab`: він потрібен рівно одному вузлу — кнопці цього рендера.
   const toggleFab = () => {
     if (!fab) return;
     const open = fab.classList.toggle('open');
