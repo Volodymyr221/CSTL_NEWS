@@ -74,9 +74,24 @@ const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 // Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
 // видалені) → нічого; COMMUNITY_ALL → «Олицька громада» (COMMUNITY_ALL_LABEL);
 // конкретний НП → його назву. Guard прибрано ЛИШЕ для показу — фільтр не чіпаємо.
+// 🔴 07.08 — НАЗВА ЛОКАЦІЇ: ОДНЕ МІСЦЕ ПРАВДИ (скарга Вови по знімку).
+// На одному екрані сусідні картки писали «Вся Олицька громада» і «Олицька громада»,
+// і виглядало це як два різні варіанти вибору. Насправді варіант ОДИН:
+//   `COMMUNITY_ALL`       = 'Вся Олицька громада' — технічне значення в базі;
+//   `COMMUNITY_ALL_LABEL` = 'Олицька громада'     — те, що бачить людина.
+// Різниця на екрані бралась не з вибору людини, а з того, чи заповнене поле:
+// картка робила `p.location || COMMUNITY_ALL_LABEL`, тобто заповнене показувала
+// СИРИМ значенням, а порожнє (старі оголошення, до появи поля) — підписом.
+// ➡️ Тепер назву дає ця функція, і всі три місця показу кличуть саме її.
+// ⚠️ Правило ТІЛЬКИ про показ. Фільтр і збереження працюють з `COMMUNITY_ALL` —
+// підміняти значення в даних не можна, інакше зламається відбір за громадою.
+export function locLabel(loc) {
+  return (!loc || loc === COMMUNITY_ALL) ? COMMUNITY_ALL_LABEL : loc;
+}
+
 function renderLoc(loc, extraClass = '') {
   if (!loc) return '';
-  const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+  const label = locLabel(loc);
   // ⚠️ Назва загорнута у ВЛАСНИЙ span, а не лежить голим текстом: інакше довгу назву
   // не обрізати трикрапкою — у flex-контейнері голий текст стає анонімним елементом,
   // до якого `text-overflow` не застосовується.
@@ -349,7 +364,7 @@ function renderBoardCard(p) {
         <h3 class="bd-ad-title">${escapeHtml(cardTitleText(p))}</h3>
         ${renderCardDesc(p)}
         <div class="bd-ad-foot">
-          <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+          <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(locLabel(p.location))}</span>
           ${renderPrice(p)}
         </div>
       </div>
@@ -739,7 +754,7 @@ function renderAdMeta(p) {
   const quiet = t === 'Договірна';
   return `
     <div class="cm-ad-meta">
-      <span class="cm-ad-meta-loc">${PIN_ICON_SVG}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+      <span class="cm-ad-meta-loc">${PIN_ICON_SVG}${escapeHtml(locLabel(p.location))}</span>
       <span class="cm-ad-meta-dot">·</span>
       <span>${renderPostTime(p)}</span>
       ${quiet ? `<span class="cm-ad-meta-dot">·</span>
