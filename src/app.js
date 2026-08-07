@@ -6,7 +6,7 @@ import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка�
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';
-import { initAuth, currentUserId } from './core/auth.js';
+import { initAuth, currentUserId, refreshOwnProfile } from './core/auth.js';
 import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
 import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
@@ -17,6 +17,7 @@ import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
+import { initRefreshOnReturn, onReturn } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 
 // Поточна активна вкладка
@@ -292,6 +293,13 @@ async function init() {
   initBoard();
   initChatsHub();
   initProfileCardTaps();   // тап по аватару → картка профілю
+  // 🔴 07.08 — САМООНОВЛЕННЯ ПУБЛІЧНИХ ДАНИХ. Кличеться БЕЗ умов і після всіх
+  // init-ів зон: базовий контракт (свіжі імена й фото при поверненні) має діяти
+  // навіть там, де зона нічого свого не підписала. Зонна робота — через
+  // `onReturn(...)` у самих зонах, а не списком тут.
+  initRefreshOnReturn();
+  // Власний профіль — окремий кеш в `auth.js`, тож окрема підписка.
+  onReturn('', () => refreshOwnProfile());
   initAdminShortcut();     // 5 тапів по лічильнику версії → адмінка
   initKbDebugShortcut();   // 5 тапів по назві «CSTL LIFE» → діагностика клавіатури
   handleInviteHash();                            // вступ за посиланням при відкритті

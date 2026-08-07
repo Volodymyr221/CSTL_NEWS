@@ -854,6 +854,22 @@
   }
   var _avatarCache = /* @__PURE__ */ new Map();
   var _nameCache = /* @__PURE__ */ new Map();
+  var PROFILE_TTL = 5 * 60 * 1e3;
+  var PROFILE_TTL_NEG = 90 * 1e3;
+  var _profileAt = /* @__PURE__ */ new Map();
+  var _inflight = /* @__PURE__ */ new Map();
+  var _profileGen = 1;
+  function profileFresh(uid) {
+    if (!_avatarCache.has(uid))
+      return false;
+    const at = _profileAt.get(uid) || 0;
+    const ttl = _avatarCache.get(uid) ? PROFILE_TTL : PROFILE_TTL_NEG;
+    return Date.now() - at < ttl;
+  }
+  function invalidateProfiles() {
+    _profileAt.clear();
+    _profileGen++;
+  }
   function cachedAvatar(uid) {
     return uid ? _avatarCache.get(uid) || "" : "";
   }
@@ -867,41 +883,69 @@
     return escapeHtml(cachedName(uid) || name || fallback);
   }
   async function fetchAvatars(uids) {
-    const need = [...new Set(uids)].filter((u) => u && !_avatarCache.has(u));
-    if (!supa || !need.length)
+    const uniq = [...new Set(uids)].filter(Boolean);
+    const wait = uniq.map((u) => _inflight.get(u)).filter(Boolean);
+    const need = uniq.filter((u) => !profileFresh(u) && !_inflight.has(u));
+    if (!supa || !need.length && !wait.length)
       return;
-    try {
-      const { data, error } = await supa.rpc("get_avatars", { uids: need });
-      if (error) {
-        need.forEach((u) => _avatarCache.set(u, ""));
-        return;
-      }
-      (data || []).forEach((r) => {
-        if (r && r.uid) {
-          _avatarCache.set(r.uid, r.avatar_url || "");
-          if (r.name)
-            _nameCache.set(r.uid, r.name);
+    const stamp = (u) => _profileAt.set(u, Date.now());
+    if (need.length) {
+      const pr = (async () => {
+        try {
+          const { data, error } = await supa.rpc("get_avatars", { uids: need });
+          if (error) {
+            need.forEach((u) => {
+              if (!_avatarCache.has(u))
+                _avatarCache.set(u, "");
+              stamp(u);
+            });
+            return;
+          }
+          (data || []).forEach((r) => {
+            if (!r || !r.uid)
+              return;
+            _avatarCache.set(r.uid, r.avatar_url || "");
+            if (r.name)
+              _nameCache.set(r.uid, r.name);
+            stamp(r.uid);
+          });
+          need.forEach((u) => {
+            if (!_avatarCache.has(u))
+              _avatarCache.set(u, "");
+            stamp(u);
+          });
+        } catch (_) {
+          need.forEach((u) => {
+            if (!_avatarCache.has(u))
+              _avatarCache.set(u, "");
+            stamp(u);
+          });
         }
-      });
-      need.forEach((u) => {
-        if (!_avatarCache.has(u))
-          _avatarCache.set(u, "");
-      });
-    } catch (_) {
-      need.forEach((u) => _avatarCache.set(u, ""));
+      })();
+      need.forEach((u) => _inflight.set(u, pr));
+      wait.push(pr);
     }
+    try {
+      await Promise.all(wait);
+    } catch (_) {
+    }
+    need.forEach((u) => _inflight.delete(u));
   }
   async function hydrateAvatars(root) {
     if (!root || !root.querySelectorAll)
       return;
-    const els2 = [...root.querySelectorAll("[data-av-circle][data-av-uid]")].filter((e) => !e.dataset.avDone);
+    const gen = String(_profileGen);
+    const els2 = [...root.querySelectorAll("[data-av-circle][data-av-uid]")].filter((e) => e.dataset.avGen !== gen);
     if (!els2.length)
       return;
     await fetchAvatars(els2.map((e) => e.dataset.avUid));
     els2.forEach((el) => {
-      el.dataset.avDone = "1";
+      el.dataset.avGen = gen;
       const url = cachedAvatar(el.dataset.avUid);
       if (!url)
+        return;
+      const img = el.querySelector("img");
+      if (img && img.getAttribute("src") === url)
         return;
       const base = el.classList[0];
       el.classList.add(base + "--img");
@@ -912,14 +956,15 @@
   async function hydrateNames(root) {
     if (!root || !root.querySelectorAll)
       return;
-    const els2 = [...root.querySelectorAll("[data-name-uid]")].filter((e) => !e.dataset.nameDone);
+    const gen = String(_profileGen);
+    const els2 = [...root.querySelectorAll("[data-name-uid]")].filter((e) => e.dataset.nameGen !== gen);
     if (!els2.length)
       return;
     await fetchAvatars(els2.map((e) => e.dataset.nameUid));
     els2.forEach((el) => {
-      el.dataset.nameDone = "1";
+      el.dataset.nameGen = gen;
       const nm = cachedName(el.dataset.nameUid);
-      if (nm)
+      if (nm && el.textContent !== nm)
         el.textContent = nm;
     });
   }
@@ -1858,6 +1903,18 @@
     } catch (_) {
     }
   }
+  async function refreshOwnProfile() {
+    if (!_user)
+      return;
+    const \u0431\u0443\u043B\u043E\u0406\u043C\u02BC\u044F = _profileName, \u0431\u0443\u043B\u043E\u0424\u043E\u0442\u043E = _profileAvatar;
+    try {
+      await getProfile();
+    } catch (_) {
+      return;
+    }
+    if (\u0431\u0443\u043B\u043E\u0406\u043C\u02BC\u044F !== _profileName || \u0431\u0443\u043B\u043E\u0424\u043E\u0442\u043E !== _profileAvatar)
+      emitAuthChange();
+  }
   async function initAuth() {
     const supa2 = getSupabase();
     if (!supa2)
@@ -2075,6 +2132,53 @@
       if (widget)
         widget.style.visibility = "hidden";
     }
+  }
+
+  // src/core/refresh-on-return.js
+  var MIN_GAP = 5e3;
+  var _subs = [];
+  var _wired = false;
+  var _lastHydrate = 0;
+  function fire(reason) {
+    const now = Date.now();
+    let invalidated = false;
+    const \u0434\u043E\u0437\u0440\u0456\u043B\u043E = (s) => (!s.tab || s.tab === currentTab()) && now - s.last >= MIN_GAP;
+    const \u0433\u043E\u0442\u043E\u0432\u0456 = _subs.filter(\u0434\u043E\u0437\u0440\u0456\u043B\u043E);
+    if (\u0433\u043E\u0442\u043E\u0432\u0456.length || now - _lastHydrate >= MIN_GAP) {
+      invalidateProfiles();
+      invalidated = true;
+    }
+    for (const s of \u0433\u043E\u0442\u043E\u0432\u0456) {
+      s.last = now;
+      try {
+        s.fn(reason);
+      } catch (e) {
+        console.warn("[refresh-on-return]", e && e.message);
+      }
+    }
+    if (invalidated) {
+      _lastHydrate = now;
+      hydrateNames(document.body);
+      hydrateAvatars(document.body);
+    }
+  }
+  function currentTab() {
+    return document.querySelector(".app-main")?.dataset.tab || "";
+  }
+  function onReturn(tab, fn) {
+    _subs.push({ tab: tab || "", fn, last: Date.now() });
+    initRefreshOnReturn();
+  }
+  function initRefreshOnReturn() {
+    if (_wired)
+      return;
+    _wired = true;
+    _lastHydrate = Date.now();
+    window.addEventListener("cstl-tab-changed", () => fire("tab"));
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible")
+        fire("visible");
+    });
   }
 
   // src/core/upload.js
@@ -6185,6 +6289,7 @@
   var _threadsUnsub = null;
   function initBoardChat() {
     refreshUnreadBadge();
+    onReturn("", () => refreshUnreadBadge());
     window.addEventListener("cstl-disc-seen", paintTabDots);
     if ("serviceWorker" in navigator && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", (e) => {
@@ -7765,6 +7870,7 @@
         openAdModalStandalone(p);
     });
     window.addEventListener("cstl-posts-changed", () => refreshBoardKeepingPlace());
+    onReturn("board", () => refreshBoardKeepingPlace());
     if (isSupabaseReady()) {
       subscribePosts(() => {
         const main = document.querySelector(".app-main");
@@ -16798,11 +16904,11 @@ END:VEVENT`
       }
     });
   }
-  var _wired = false;
+  var _wired2 = false;
   function initProfileCardTaps() {
-    if (_wired)
+    if (_wired2)
       return;
-    _wired = true;
+    _wired2 = true;
     document.addEventListener("click", (e) => {
       const av = e.target.closest("[data-av-uid]");
       if (!av)
@@ -16816,14 +16922,14 @@ END:VEVENT`
   }
 
   // src/app.js
-  var currentTab = "community";
+  var currentTab2 = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
   window.switchTab = function(tab) {
     if (tab === "news" || tab === "events")
       tab = "shotam";
-    if (tab === currentTab)
+    if (tab === currentTab2)
       return;
-    const oldPage = document.getElementById(`page-${currentTab}`);
+    const oldPage = document.getElementById(`page-${currentTab2}`);
     const newPage = document.getElementById(`page-${tab}`);
     if (!oldPage || !newPage)
       return;
@@ -16852,7 +16958,7 @@ END:VEVENT`
       activeTab.classList.add("active");
     if (main)
       main.dataset.tab = tab;
-    currentTab = tab;
+    currentTab2 = tab;
     window.dispatchEvent(new CustomEvent("cstl-tab-changed"));
     logEvent(currentUserId() || getAnonId(), "tab_view", { tab, meta: { device: _analyticsDevice } });
   };
@@ -17049,6 +17155,8 @@ END:VEVENT`
     initBoard();
     initChatsHub();
     initProfileCardTaps();
+    initRefreshOnReturn();
+    onReturn("", () => refreshOwnProfile());
     initAdminShortcut();
     initKbDebugShortcut();
     handleInviteHash();
@@ -17069,7 +17177,7 @@ END:VEVENT`
         handlePostHash();
       });
     }
-    logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab, meta: { device: _analyticsDevice } });
+    logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab2, meta: { device: _analyticsDevice } });
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {

@@ -413,6 +413,50 @@ export async function signChatPhotos(rows) {
 const _avatarCache = new Map();   // uid -> url ('' = нема фото)
 const _nameCache   = new Map();   // uid -> живе імʼя профілю (той самий RPC get_avatars)
 
+// 🔴 07.08 — СТРОК ПРИДАТНОСТІ. До цього дня обидві Map жили ВІЧНО.
+//
+// Скарга Вови: «зайшов з другого акаунту і змінив імʼя та встановив фото, але
+// мені не оновило це відразу в додатку, приходиться закрити додаток повністю і
+// зайти». Корінь був саме тут: `fetchAvatars` брав лише ще НЕВІДОМІ uid, тож
+// дізнались імʼя один раз — тримали до кінця життя вкладки. Повне закриття
+// застосунку скидало памʼять, і це був ЄДИНИЙ спосіб побачити свіже.
+//
+// 🔑 Чому TTL, а не «перечитувати щоразу»: один екран Стрічки згадує десятки
+// різних uid, і запит на кожен рендер перетворив би прокрутку на шквал у базу.
+// TTL дає просте правило — у межах кількох хвилин показуємо кешоване, далі
+// перепитуємо. Явна інвалідація (`invalidateProfiles`) додає другий, ДЕШЕВИЙ
+// привід: людина повернулась на вкладку.
+//
+// ⚠️ Негативи (`''` = профілю немає / RPC не відповів) живуть ВТРИЧІ менше.
+// Інакше одна невдала відповідь мережі замикала б людину без фото на 5 хвилин,
+// хоча фото в неї є.
+const PROFILE_TTL     = 5 * 60 * 1000;   // 5 хв — знайдений профіль
+const PROFILE_TTL_NEG = 90 * 1000;       // 1.5 хв — «нічого не знайшли»
+const _profileAt = new Map();            // uid -> коли записали (мс)
+const _inflight  = new Map();            // uid -> запит, який зараз у польоті
+
+// Покоління кешу. Росте на кожній інвалідації; `hydrateNames`/`hydrateAvatars`
+// звіряють його з позначкою на вузлі, тому свіжий кеш доїжджає й до ВЖЕ
+// намальованого екрана (до 07.08 вузол позначався `data-*-done` один раз
+// назавжди — і навіть оновлений кеш нікуди не потрапляв).
+let _profileGen = 1;
+export function profileGen() { return _profileGen; }
+
+function profileFresh(uid) {
+  if (!_avatarCache.has(uid)) return false;
+  const at = _profileAt.get(uid) || 0;
+  const ttl = _avatarCache.get(uid) ? PROFILE_TTL : PROFILE_TTL_NEG;
+  return (Date.now() - at) < ttl;
+}
+
+// 🔑 ОДНЕ МІСЦЕ, ЯКЕ КАЖЕ «ЗАБУДЬ, ЩО ЗНАВ ПРО ЛЮДЕЙ».
+// Кличе `core/refresh-on-return.js` при поверненні на вкладку. Сам по собі
+// виклик у мережу НЕ ходить — лише знімає свіжість; піде наступна гідрація.
+export function invalidateProfiles() {
+  _profileAt.clear();
+  _profileGen++;
+}
+
 // Синхронний доступ до кешу — для рендеру «зараз» (порожньо → літера-fallback).
 export function cachedAvatar(uid) {
   return uid ? (_avatarCache.get(uid) || '') : '';
@@ -436,55 +480,107 @@ export function liveName(name, uid, fallback = 'Житель') {
 
 // Батч-підвантаження аватарів за списком uid. Тягне лише ще невідомі, заповнює кеш.
 export async function fetchAvatars(uids) {
-  const need = [...new Set(uids)].filter(u => u && !_avatarCache.has(u));
-  if (!supa || !need.length) return;
-  try {
-    const { data, error } = await supa.rpc('get_avatars', { uids: need });
-    if (error) { need.forEach(u => _avatarCache.set(u, '')); return; }  // RPC нема / помилка → fallback
-    (data || []).forEach(r => { if (r && r.uid) { _avatarCache.set(r.uid, r.avatar_url || ''); if (r.name) _nameCache.set(r.uid, r.name); } });
-    need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); });  // негативи (нема профілю)
-  } catch (_) { need.forEach(u => _avatarCache.set(u, '')); }
+  // ⚠️ 07.08: умова була `!_avatarCache.has(u)` — «знаємо взагалі?». Стала
+  // `!profileFresh(u)` — «знаємо СВІЖЕ?». Одне слово різниці, і саме воно
+  // тримало старе імʼя до перезапуску застосунку.
+  const uniq = [...new Set(uids)].filter(Boolean);
+  // 🔑 ЗЛИТТЯ ЗАПИТІВ У ПОЛЬОТІ (07.08). `hydrateNames` і `hydrateAvatars`
+  // майже завжди кличуться ПАРОЮ і по тих самих людях (див. `board-chat.js`,
+  // `feed.js`, `board-discussions.js`) — а що перша ще не встигла відповісти,
+  // друга бачила кеш порожнім і слала ДРУГИЙ запит про те саме. Тобто кожен
+  // екран із людьми ходив у базу двічі. Заміряно стендом `live-profile`:
+  // 2 виклики `get_avatars` там, де потрібен один.
+  const wait = uniq.map(u => _inflight.get(u)).filter(Boolean);
+  const need = uniq.filter(u => !profileFresh(u) && !_inflight.has(u));
+  if (!supa || (!need.length && !wait.length)) return;
+  const stamp = (u) => _profileAt.set(u, Date.now());
+
+  if (need.length) {
+    const pr = (async () => {
+      try {
+        const { data, error } = await supa.rpc('get_avatars', { uids: need });
+        // RPC нема / помилка → лишаємо те, що вже знали (а не затираємо порожнім:
+        // одна невдала відповідь мережі не має стирати з екрана правильне фото).
+        if (error) { need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); stamp(u); }); return; }
+        (data || []).forEach(r => {
+          if (!r || !r.uid) return;
+          _avatarCache.set(r.uid, r.avatar_url || '');
+          // ⚠️ Порожнє імʼя НЕ затирає відоме: у профілі можна стерти імʼя, і тоді
+          // чесніше лишити попереднє, ніж показати порожнечу замість людини.
+          if (r.name) _nameCache.set(r.uid, r.name);
+          stamp(r.uid);
+        });
+        need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); stamp(u); });  // негативи
+      } catch (_) { need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); stamp(u); }); }
+    })();
+    need.forEach(u => _inflight.set(u, pr));
+    wait.push(pr);
+  }
+  // ⚠️ Прибирати з реєстру ОБОВʼЯЗКОВО і в разі помилки — інакше один збій
+  // мережі назавжди позначив би людину як «уже питаємо» і її профіль не
+  // оновився б більше ніколи.
+  try { await Promise.all(wait); } catch (_) { /* fail-soft */ }
+  need.forEach(u => _inflight.delete(u));
 }
 
 // Прогресивна гідрація: після вставки HTML знаходить АВАТАР-КРУЖЕЧКИ (маркер
 // data-av-circle від avatarCircle), підтягує їхні фото і замінює літеру на <img>
 // для тих, у кого фото є. Літера-first → фото-коли-готове (не блокує рендер;
-// data-av-done проти повтору).
+// data-av-gen проти зайвого повтору в межах одного покоління кешу).
 // ВАЖЛИВО: фільтр саме по [data-av-circle], а НЕ по [data-av-uid]. Останній мають
 // також не-аватарні таргети тапу (напр. `.pm-head-titles` — ім'я в шапці чату для
 // відкриття картки профілю); вставка <img> у них давала «квадратне фото» на весь
 // екран, бо в них немає фіксованого розміру/overflow (баг, Вова 17.07).
+// ⚠️ 07.08: позначка `data-av-done="1"` (один раз назавжди) стала `data-av-gen`
+// із номером ПОКОЛІННЯ кешу. Після `invalidateProfiles()` покоління росте, тож
+// уже намальований екран гідрується ще раз і показує свіже фото. Зі старою
+// позначкою оновлений кеш до відкритого екрана не доходив узагалі.
 export async function hydrateAvatars(root) {
   if (!root || !root.querySelectorAll) return;
-  const els = [...root.querySelectorAll('[data-av-circle][data-av-uid]')].filter(e => !e.dataset.avDone);
+  const gen = String(_profileGen);
+  const els = [...root.querySelectorAll('[data-av-circle][data-av-uid]')].filter(e => e.dataset.avGen !== gen);
   if (!els.length) return;
   await fetchAvatars(els.map(e => e.dataset.avUid));
   els.forEach(el => {
-    el.dataset.avDone = '1';
+    el.dataset.avGen = gen;
     const url = cachedAvatar(el.dataset.avUid);
-    if (!url) return;                       // фото нема → лишаємо літеру
+    if (!url) return;                       // фото нема → лишаємо як є (див. нижче)
+    const img = el.querySelector('img');
+    // Те саме фото вже стоїть — не перемальовуємо. Інакше кожне повернення на
+    // вкладку перезавантажувало б ту саму картинку і кружечки блимали б.
+    if (img && img.getAttribute('src') === url) return;
     const base = el.classList[0];           // базовий клас місця (bd-avatar / pm-avatar)
     el.classList.add(base + '--img');
     el.style.background = 'none';
     el.innerHTML = `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
   });
 }
+// 🛑 ЧОГО ЦЕ СВІДОМО НЕ РОБИТЬ: не повертає літеру назад, якщо людина ФОТО
+// ПРИБРАЛА. Щоб намалювати літеру правильно, потрібні колір за іменем і клас
+// `--anon` — тобто копія `avatarCircle()` з `core/utils.js`. Копія того самого
+// в цьому проєкті вже двічі розходилась (два списки антиспаму, дві розмітки
+// пункту FAB), і платити цим за рідкісний випадок не варто. Замовлення Вови —
+// «поставив фото → видно одразу», і саме це закрито. Знадобиться зняття фото —
+// робити через `avatarCircle`, а не другою реалізацією тут.
 
 // Прогресивна гідрація ІМЕН (близнюк hydrateAvatars): знаходить елементи з
 // data-name-uid і підмінює вморожене імʼя (денормалізоване в рядок повідомлення)
 // на ЖИВЕ імʼя з профілю за uid. Так перейменування акаунту відображається і на
 // старих повідомленнях — усі репліки одного uid показують одне поточне імʼя.
 // Той самий батч-RPC що аватари (get_avatars повертає name). Fail-soft: імені
-// нема в кеші → лишаємо текст як був. data-name-done проти повтору.
+// нема в кеші → лишаємо текст як був. data-name-gen проти зайвого повтору.
+// ⚠️ 07.08: `data-name-done` (одноразово) → `data-name-gen` із номером покоління
+// кешу, з тієї самої причини, що в `hydrateAvatars`.
 export async function hydrateNames(root) {
   if (!root || !root.querySelectorAll) return;
-  const els = [...root.querySelectorAll('[data-name-uid]')].filter(e => !e.dataset.nameDone);
+  const gen = String(_profileGen);
+  const els = [...root.querySelectorAll('[data-name-uid]')].filter(e => e.dataset.nameGen !== gen);
   if (!els.length) return;
   await fetchAvatars(els.map(e => e.dataset.nameUid));
   els.forEach(el => {
-    el.dataset.nameDone = '1';
+    el.dataset.nameGen = gen;
     const nm = cachedName(el.dataset.nameUid);
-    if (nm) el.textContent = nm;            // жива назва профілю перекриває вморожену
+    if (nm && el.textContent !== nm) el.textContent = nm;   // жива назва перекриває вморожену
   });
 }
 

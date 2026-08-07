@@ -31,6 +31,7 @@ import {
   hydrateAvatars, hydrateNames, nameUid,
   CHAT_BUCKET,
 } from '../core/supabase.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся → свіже» (07.08)
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — інакше сире фото падало «Load failed»
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
@@ -1642,6 +1643,10 @@ function showChatPushBanner({ title, body, threadId, url }) {
 let _threadsUnsub = null;
 export function initBoardChat() {
   refreshUnreadBadge();
+  // 🔴 07.08 — повернувся в застосунок → перечитати непрочитане.
+  // Без вкладки (перший аргумент порожній): бейдж живе в шапці й у таб-барі, тобто
+  // видимий з будь-якого екрана. Імена й фото співрозмовників оновлює сам примітив.
+  onReturn('', () => refreshUnreadBadge());
   // 30.07: крапка вкладки «Обговорення» — джерело подій у board-discussions.js
   // (прочитали тему / прийшов живий коментар). Слухаємо, бо прямий виклик звідти
   // дав би коло імпортів.

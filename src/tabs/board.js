@@ -19,6 +19,7 @@ import { openBoardModal } from './community-modal.js';
 // повернувся, коли фільтр став кружечком у шапці (рішення Вови).
 import { catColor, catIcon, catShort, catLabel, ALL_ICON, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached } from './board-chat.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
@@ -2508,6 +2509,13 @@ export function initBoard() {
   // ⚠️ Саме `refreshBoardKeepingPlace`, а не `renderBoard`: друге збирає вкладку заново
   // і кидає на початок списку (та сама скарга, що була у «Стрічці» 27.07).
   window.addEventListener('cstl-posts-changed', () => refreshBoardKeepingPlace());
+
+  // 🔴 07.08 — ПОВЕРНУВСЯ НА ДОШКУ → СПИСОК ПЕРЕЧИТАНО.
+  // Імена і фото оновлює сам примітив (гідрація по маркерах), тут — тільки те,
+  // чого він не знає: самі оголошення (нове чуже, завершене, знята ціна).
+  // ⚠️ Свідомо `refreshBoardKeepingPlace`, а не `renderBoard`: людина повертається
+  // у ТУ САМУ точку списку, і перебудова вкладки кинула б її на початок.
+  onReturn('board', () => refreshBoardKeepingPlace());
 
   // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────
   // Досі підписки на `posts` не було: нове оголошення сусіда зʼявлялось лише після
