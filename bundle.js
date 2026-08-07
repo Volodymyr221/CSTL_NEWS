@@ -6005,7 +6005,7 @@
         return;
       }
       const myProfile = await getProfile();
-      const myName = myProfile && myProfile.name || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const myName = myProfile && myProfile.name || currentUserName();
       const res = await getOrCreateThread({
         postId: post.id,
         authorUid: post.owner_uid,
@@ -6425,6 +6425,9 @@
   var PHONE_ICON_SVG = ICONS.phone;
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  function locLabel(loc) {
+    return !loc || loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+  }
   function phoneOf(p) {
     const contact = p && p.contact ? String(p.contact).trim() : "";
     const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
@@ -6513,7 +6516,7 @@
         <h3 class="bd-ad-title">${escapeHtml(cardTitleText(p))}</h3>
         ${renderCardDesc(p)}
         <div class="bd-ad-foot">
-          <span class="bd-ad-loc">${PIN_ICON_SVG2}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+          <span class="bd-ad-loc">${PIN_ICON_SVG2}${escapeHtml(locLabel(p.location))}</span>
           ${renderPrice(p)}
         </div>
       </div>
@@ -6677,7 +6680,7 @@
     const quiet = t === "\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430";
     return `
     <div class="cm-ad-meta">
-      <span class="cm-ad-meta-loc">${PIN_ICON_SVG2}${escapeHtml(p.location || COMMUNITY_ALL_LABEL)}</span>
+      <span class="cm-ad-meta-loc">${PIN_ICON_SVG2}${escapeHtml(locLabel(p.location))}</span>
       <span class="cm-ad-meta-dot">\xB7</span>
       <span>${renderPostTime(p)}</span>
       ${quiet ? `<span class="cm-ad-meta-dot">\xB7</span>
@@ -11896,7 +11899,7 @@
     const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo;
     const raw = p.title && p.title.trim() || (p.text || "").trim();
     const title = raw.length > 70 ? raw.slice(0, 70).replace(/\s+\S*$/, "") + "\u2026" : raw || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
+    const locLabel2 = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
     const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
     const color = catColor(p.category);
     const cover = photo ? `<span class="hm-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>` : `<span class="hm-ad-ph hm-ad-ph--none">${catIcon(p.category)}</span>`;
@@ -11907,7 +11910,7 @@
         <span class="cm-board-cat cm-board-cat--${escapeHtml(color)} hm-ad-cat">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
         <span class="hm-ad-name">${escapeHtml(title)}</span>
         <span class="hm-ad-meta">
-          ${locLabel ? `<span class="hm-ad-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
+          ${locLabel2 ? `<span class="hm-ad-loc">${BW_PIN_SVG}${escapeHtml(locLabel2)}</span>` : "<span></span>"}
           ${ts ? `<span>${formatTime(ts)}</span>` : ""}
         </span>
       </span>
