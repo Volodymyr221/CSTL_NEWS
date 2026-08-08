@@ -3516,15 +3516,15 @@
     let wasOpen = false, focused = false;
     const apply = () => {
       const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
-      const open = focused && document.documentElement.clientHeight - vv.height > 80;
-      if (open) {
-        screen.style.height = vv.height + "px";
-        screen.style.top = vv.offsetTop + "px";
-      } else {
+      const docH = document.documentElement.clientHeight;
+      const kb = Math.max(0, Math.round(docH - (vv.offsetTop + vv.height)));
+      const open = focused && kb > 80;
+      screen.style.paddingBottom = open ? kb + "px" : "";
+      screen.classList.toggle("pm-kb-open", open);
+      if (screen.style.height) {
         screen.style.height = "";
         screen.style.top = "";
       }
-      screen.classList.toggle("pm-kb-open", open);
       if (open && stream && (!wasOpen || atBottom)) {
         requestAnimationFrame(() => {
           stream.scrollTop = stream.scrollHeight;
@@ -3550,6 +3550,7 @@
       vv.removeEventListener("scroll", apply);
       input?.removeEventListener("focus", onFocus);
       input?.removeEventListener("blur", onBlur);
+      screen.style.paddingBottom = "";
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
@@ -5384,7 +5385,6 @@
     });
     api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
     api._cleanup.push(setupKeyboardResize(api.screen));
-    setTimeout(() => input.focus(), 250);
     return api;
   }
   function openThreadsList() {
@@ -6168,12 +6168,14 @@
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
     const msgBadge = document.getElementById("board-fab-msg-badge");
+    const fabBtn = document.getElementById("board-trigger");
     const chats = isLoggedIn() ? _unreadChats : 0;
+    fabBtn?.classList.toggle("has-unread", chats > 0);
     if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
         fabBadge.textContent = "";
-        fabBadge.style.display = "none";
+        fabBadge.classList.remove("is-on");
       }
       if (msgBadge) {
         msgBadge.textContent = "";
@@ -6194,7 +6196,7 @@
     }
     if (fabBadge) {
       fabBadge.textContent = label;
-      fabBadge.style.display = "block";
+      fabBadge.classList.add("is-on");
     }
     if (msgBadge) {
       msgBadge.textContent = label;
@@ -7079,8 +7081,21 @@
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
+      <!-- \u{1F534} 09.08 \u2014 \u0422\u0420\u0415\u0422\u042F \u0406\u041A\u041E\u041D\u041A\u0410 \u041D\u0410 \u041A\u041D\u041E\u041F\u0426\u0406: \u041A\u041E\u041D\u0412\u0415\u0420\u0422 \u041F\u0420\u0418 \u041D\u0415\u041F\u0420\u041E\u0427\u0418\u0422\u0410\u041D\u0418\u0425.
+           \u0417\u0430\u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438: \xAB\u043A\u043E\u043B\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0456 \u0439\u043E\u043C\u0443 \u043D\u0430\u0434\u0445\u043E\u0434\u0438\u0442\u044C
+           \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F, \u0456\u043A\u043E\u043D\u043A\u0430 FAB \u043C\u0456\u043D\u044F\u0454\u0442\u044C\u0441\u044F \u0437 \u043F\u043B\u044E\u0441\u0438\u043A\u0430 \u043D\u0430 \u0456\u043A\u043E\u043D\u043A\u0443 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0456
+           \u043F\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u043B\u0430\u0448\u043A\u043E\u044E \u0437 \u0447\u0438\u0441\u043B\u043E\u043C\xBB.
+           \u26A0\uFE0F \u0406\u043A\u043E\u043D\u043A\u0430 \u043C\u0456\u043D\u044F\u0454\u0442\u044C\u0441\u044F, \u0430 \u0414\u0406\u042F \u041A\u041D\u041E\u041F\u041A\u0418 \u2014 \u041D\u0406: \u0442\u0430\u043F \u0456 \u0434\u0430\u043B\u0456 \u0440\u043E\u0437\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E
+           (toggleFab), \u0434\u0435 \xAB\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\xBB \u043F\u0435\u0440\u0448\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C. \u0426\u0435 \u0432\u0438\u0431\u0456\u0440 \u0412\u043E\u0432\u0438 (\u0432\u0430\u0440\u0456\u0430\u043D\u0442
+           \xAB\u0410\xBB), \u0456 \u0441\u0430\u043C\u0435 \u0432\u0456\u043D \u0437\u043D\u0456\u043C\u0430\u0454 \u0440\u0438\u0437\u0438\u043A \xAB\u043A\u043D\u043E\u043F\u043A\u0430 \u0437\u043C\u0456\u043D\u0438\u043B\u0430 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u043F\u0456\u0434 \u043F\u0430\u043B\u044C\u0446\u0435\u043C\xBB.
+           \u{1F511} \u0422\u0440\u0438 \u043D\u0430\u043A\u043B\u0430\u0434\u0435\u043D\u0456 \u0456\u043A\u043E\u043D\u043A\u0438 \u0437 cross-fade, \u0430 \u043D\u0435 \u0437\u0430\u043C\u0456\u043D\u0430 innerHTML: \u043F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u043D\u043D\u044F
+           \u043A\u043B\u0430\u0441\u043E\u043C \u043D\u0435 \u0447\u0456\u043F\u0430\u0454 DOM, \u0442\u043E\u0436 \u0431\u0435\u0439\u0434\u0436 (board-trigger-badge) \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0436\u0438\u0432\u0438\u043C
+           \u0432\u0443\u0437\u043B\u043E\u043C \u0456 \u0439\u043E\u0433\u043E \u043D\u0435 \u0442\u0440\u0435\u0431\u0430 \u043F\u0435\u0440\u0435\u043C\u0430\u043B\u044C\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0440\u0430\u0437\u043E\u043C \u0437 \u0456\u043A\u043E\u043D\u043A\u043E\u044E.
+           \u26A0\uFE0F \u0411\u0435\u0437 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0443 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 \u2014 \u0432\u0456\u043D \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E
+           \u0440\u044F\u0434\u043A\u0430, \u0456 \u043B\u0430\u043F\u043A\u0430 \u0437\u0430\u043A\u0440\u0438\u043B\u0430 \u0431 \u0439\u043E\u0433\u043E. \u0421\u0442\u043E\u0440\u043E\u0436 check-imports \u043B\u043E\u0432\u0438\u0442\u044C \u0446\u0435 \u043D\u0430 \u0437\u0431\u0456\u0440\u0446\u0456. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-msg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>

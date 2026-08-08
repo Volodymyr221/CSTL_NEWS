@@ -753,8 +753,15 @@ textarea.cm-board-input.bm-invalid {
   box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
 }
 .board-trigger--fixed .cm-board-trigger-text { display: none; }
-/* Дві накладені іконки (бульбашка + ✕) — плавний cross-fade при відкритті */
+/* ТРИ накладені іконки (плюс · конверт · ✕) — плавний cross-fade.
+   🔴 09.08 — конверт додано: замовлення Вови «іконка FAB міняється з плюсика на
+   іконку повідомлення, коли надходить повідомлення».
+   Стани, і їх рівно три:
+     меню закрите, непрочитаних нема  → плюс
+     меню закрите, є непрочитані      → конверт (клас `.has-unread` ставить JS)
+     меню розкрите                    → ✕ (перебиває обидва) */
 .board-trigger--fixed .cm-board-trigger-icon,
+.board-trigger--fixed .cm-board-trigger-msg,
 .board-trigger--fixed .cm-board-trigger-close {
   position: absolute;
   inset: 0;
@@ -769,8 +776,13 @@ textarea.cm-board-input.bm-invalid {
   transition: opacity 0.2s ease;
 }
 .board-trigger--fixed .cm-board-trigger-icon svg,
+.board-trigger--fixed .cm-board-trigger-msg svg,
 .board-trigger--fixed .cm-board-trigger-close svg { width: 28px; height: 28px; }
-.board-trigger--fixed .cm-board-trigger-close { opacity: 0; pointer-events: none; }
+.board-trigger--fixed .cm-board-trigger-close,
+.board-trigger--fixed .cm-board-trigger-msg { opacity: 0; pointer-events: none; }
+/* Є непрочитані й меню закрите → плюс поступається конверту. */
+.board-trigger--fixed.has-unread .cm-board-trigger-icon { opacity: 0; }
+.board-trigger--fixed.has-unread .cm-board-trigger-msg  { opacity: 1; }
 /* Бейдж непрочитаних чатів у кутку FAB (число ставить refreshUnreadBadge) */
 .board-trigger-badge {
   position: absolute; top: -3px; right: -3px;
@@ -778,8 +790,11 @@ textarea.cm-board-input.bm-invalid {
   border-radius: 9px; background: var(--red, #722F37); color: #fff;
   font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
   border: 2px solid #fff; box-sizing: content-box;
+  /* Видимістю керує КЛАС (`is-on` ставить paintUnreadBadge), а не інлайн-стиль:
+     інлайн бив би правило приховання при розкритому меню (див. нижче). */
   display: none;
 }
+.board-trigger-badge.is-on { display: block; }
 /* Лічильник непрочитаних у пункті «Повідомлення» FAB-меню (число ставить refreshUnreadBadge) */
 /* 🔴 30.07 — НАКЛАДКА НА КУТОК КРУЖЕЧКА, а не число в плашці.
    Вова: «коли приходить повідомлення, біля повідомлення вкладки зʼявляється N
@@ -961,6 +976,10 @@ textarea.cm-board-input.bm-invalid {
    відтінок — щоб натиснутий стан читався як «активна», а не як інша кнопка. */
 .board-fab.open .board-trigger--fixed { z-index: 152; background: var(--brand-grad-press); border-color: var(--red-dark); }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-icon { opacity: 0; }
+/* ⚠️ Конверт гасимо ТУТ, поруч із рештою правил відкритого стану, а не біля свого
+   оголошення вище: інакше два правила про одну кнопку лежали б у різних кінцях
+   файлу і наступна правка неминуче забула б одне з них. */
+.board-fab.open .board-trigger--fixed .cm-board-trigger-msg { opacity: 0; }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-close { opacity: 1; }
 .board-fab.open .board-trigger-badge { display: none; }
 

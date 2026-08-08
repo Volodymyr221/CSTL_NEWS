@@ -652,7 +652,23 @@ export async function openChat(convOrThread, post, activeId = null) {
   api.screen.querySelector('.pm-send')?.addEventListener('pointerdown', e => e.preventDefault());
 
   api._cleanup.push(setupKeyboardResize(api.screen));   // real-time трекінг + очистка слухачів
-  setTimeout(() => input.focus(), 250);
+  // 🔴 09.08 — АВТОФОКУС ПРИБРАНО. Тут стояло `setTimeout(() => input.focus(), 250)`.
+  //
+  // Скарга Вови зі знімком: «відкриваю приватне повідомлення — чат підстрибує
+  // догори, клавіатури немає, а знизу просвічується минула сторінка».
+  //
+  // 🔑 ЦЕ БУВ ТРИГЕР, і ось чому. iOS відкриває клавіатуру ЛИШЕ у відповідь на дію
+  // пальця; програмний `focus()` він приймає на рівні DOM (поле стає focused), а
+  // клавіатуру не показує. `setupKeyboardResize` же вирішує «клавіатура відкрита»
+  // саме по фокусу — і стискав екран під висоту, якої насправді немає. Звідси і
+  // «підстрибнув», і Дошка знизу.
+  // ⚠️ Той самий 250мс збігався з анімацією виїзду аркуша (0.28s) — тобто фокус
+  //    падав у момент, коли висоти ще їхали. Гірший момент важко придумати.
+  //
+  // 🛑 Не повертати «щоб зручніше було одразу писати». Людина частіше відкриває чат
+  //    ПЕРЕЧИТАТИ, ніж відповісти; клавіатура на пів екрана при вході їй заважає.
+  //    Захотіла написати — тапнула по полю, і тоді це справжня дія пальця, на яку
+  //    iOS відкриє клавіатуру нормально.
   return api;
 }
 
@@ -1512,11 +1528,22 @@ export function paintUnreadBadge() {
   // ⚠️ Число рахується ОДНЕ (`_unreadChats`) і роздається обом — два лічильники
   // того самого вже розходились у B-27, повторювати не будемо.
   const msgBadge = document.getElementById('board-fab-msg-badge');
+  // 🔴 09.08 — САМА КНОПКА FAB МІНЯЄ ІКОНКУ, а не лише отримує число.
+  // Вова: «коли користувач публікує оголошення і йому надходить повідомлення,
+  // іконка FAB міняється з плюсика на іконку повідомлення і підсвічується
+  // плашкою з числом».
+  // ⚠️ Перемикаємо КЛАС, а не `innerHTML`: три іконки вже лежать у розмітці і
+  //    роблять cross-fade засобами CSS. Заміна розмітки знесла б і бейдж, який
+  //    живе в тій самій кнопці, — довелось би малювати його заново щоразу.
+  // ⚠️ ДІЯ кнопки не змінюється — тап і далі розкриває меню (вибір Вови,
+  //    варіант «А»). Саме тому це безпечно: під пальцем міняється лише вигляд.
+  const fabBtn = document.getElementById('board-trigger');
 
   const chats = isLoggedIn() ? _unreadChats : 0;
+  fabBtn?.classList.toggle('has-unread', chats > 0);
   if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
-    if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
+    if (fabBadge) { fabBadge.textContent = ''; fabBadge.classList.remove('is-on'); }
     if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
     paintTabDots();   // 30.07: і в гілці «нема непрочитаних» — інакше крапка Дошки застигла б
     return;
@@ -1531,7 +1558,12 @@ export function paintUnreadBadge() {
     }
     badge.textContent = label;
   }
-  if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
+  // 🔴 09.08 — ВИДИМІСТЬ КЛАСОМ, А НЕ ІНЛАЙНОМ. Було `style.display='block'`, і це
+  // тихо ламало правило `.board-fab.open .board-trigger-badge { display: none }`:
+  // інлайн б'є будь-яке правило з таблиці стилів, тож при РОЗКРИТОМУ меню число
+  // лишалось висіти на кнопці, хоч задум (коментар нижче в board.css) прямо каже
+  // ховати його — там уже показано ✕. Знайдено при перевірці конверта 09.08.
+  if (fabBadge) { fabBadge.textContent = label; fabBadge.classList.add('is-on'); }
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'block'; }
   paintTabDots();   // 30.07: крапки в таб-барі йдуть тим самим кроком, що й бейджі
 }

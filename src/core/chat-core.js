@@ -164,17 +164,42 @@ export function setupKeyboardResize(screen) {
     const atBottom = stream
       ? (stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60)
       : false;
-    // Клавіатура «відкрита» лише коли поле У ФОКУСІ і видима область помітно менша.
-    // БЕЗ фокусу не покладаємось на vv.height (під body-lock він буває «застряглий»
-    // на значенні з відкритою клавіатурою → екран лишався коротким, знизу визирала Дошка).
-    const open = focused && (document.documentElement.clientHeight - vv.height) > 80;
-    if (open) {
-      screen.style.height = vv.height + 'px';
-      screen.style.top = vv.offsetTop + 'px';
-    } else {
-      screen.style.height = ''; screen.style.top = '';   // повна висота з CSS (top:0; bottom:0)
-    }
+
+    // 🔴 09.08 — ЕКРАН БІЛЬШЕ НЕ СТИСКАЄТЬСЯ. Було:
+    //     screen.style.height = vv.height + 'px';
+    //     screen.style.top    = vv.offsetTop + 'px';
+    //
+    // Скарга Вови зі знімком: чат «підстрибнув» догори, клавіатури немає, а знизу
+    // просвічується Дошка з таб-баром.
+    //
+    // 🔑 ЧОМУ ЦЕ БУВ КЛАС ПОМИЛОК, А НЕ ОДИН БАГ. `.pm-screen` стоїть `top:0;
+    // bottom:0`, тобто сам собою накриває весь екран. Задати йому `height` — це
+    // ЄДИНИЙ спосіб зробити його коротшим за екран. Тож будь-яка хиба у визначенні
+    // «клавіатура відкрита» — застрягле `vv.height`, фокус без клавіатури, гонка з
+    // анімацією виїзду — неминуче відкривала сторінку під чатом.
+    // Заслінка `focused && …` тут уже стояла (див. історію нижче) і не врятувала:
+    // програмний автофокус робив `focused` істинним без клавіатури.
+    //
+    // ➡️ Тепер компенсуємо клавіатуру ВІДСТУПОМ ЗНИЗУ, а не висотою. Екран завжди
+    // на весь viewport, композер підіймається над клавіатурою так само, але
+    // найгірший можливий збій — смуга власного фону чату. Чужа сторінка під чатом
+    // не з'явиться вже НІЯК: коротшим за екран він стати не може.
+    //
+    // 📐 Висота клавіатури в координатах розкладки: від низу видимої області до
+    // низу вікна. `vv.offsetTop` враховуємо, бо iOS може зсунути видиму область.
+    const docH = document.documentElement.clientHeight;
+    const kb = Math.max(0, Math.round(docH - (vv.offsetTop + vv.height)));
+    // Поріг 80px: дрібні коливання (панель URL, автозаповнення) не мусять смикати
+    // розкладку. `focused` лишаємо як додаткову умову — вона зменшує хибні
+    // спрацювання, але більше НЕ є єдиним запобіжником: навіть якщо помилиться,
+    // сторінка знизу не відкриється.
+    const open = focused && kb > 80;
+    screen.style.paddingBottom = open ? kb + 'px' : '';
     screen.classList.toggle('pm-kb-open', open);
+    // ⚠️ `height`/`top` більше не чіпаємо ніде — але чистимо, якщо лишились від
+    //    попередньої версії у вже відкритому екрані (наприклад після оновлення
+    //    застосунку з відкритим чатом).
+    if (screen.style.height) { screen.style.height = ''; screen.style.top = ''; }
     if (open && stream && (!wasOpen || atBottom)) {
       requestAnimationFrame(() => { stream.scrollTop = stream.scrollHeight; });
     }
@@ -192,7 +217,8 @@ export function setupKeyboardResize(screen) {
     vv.removeEventListener('scroll', apply);
     input?.removeEventListener('focus', onFocus);
     input?.removeEventListener('blur', onBlur);
-    screen.style.height = ''; screen.style.top = '';
+    screen.style.paddingBottom = '';
+    screen.style.height = ''; screen.style.top = '';   // спадок старої версії — прибрати про всяк
     screen.classList.remove('pm-kb-open');
     unlock();
   };
