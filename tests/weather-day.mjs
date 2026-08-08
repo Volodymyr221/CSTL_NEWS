@@ -253,6 +253,42 @@ function контраст(rgb, [r2, g2, b2] = [255, 255, 255]) {
     ok('стрічка годин гортається вбік', s.стрічкаГортається, 'scrollWidth > clientWidth');
     ok('на екрані видно щонайменше 3 картки одразу',
        s.видимихКарток >= 3, `${s.видимихКарток} повністю видимих`);
+
+    // 🔴 08.08 — ПОКАЖЧИК ПРОКРУТКИ. Вова: «людина має розуміти, що є ще що можна
+    // скролити». Кружечки-слайди відкинуто (їх було б 24) — замість них смужка,
+    // де довжина повзунка = видима частка дня, плюс згасання краю.
+    // 🛑 ГОЛОВНЕ ТУТ — НЕ НАЯВНІСТЬ СМУЖКИ, А ЩО ВОНА НЕ БРЕШЕ: у кінці списку
+    //    згасання мусить зникати, інакше воно обіцяє продовження, якого нема.
+    const пк = await p.evaluate(async () => {
+      const l = document.querySelector('.wxd-hours');
+      const b = document.querySelector('.wxd-scroll');
+      const t = document.querySelector('.wxd-scroll-thumb');
+      const зняти = () => ({
+        схована: !b || b.hasAttribute('hidden'),
+        ширинаПовзунка: t ? Math.round(t.getBoundingClientRect().width) : 0,
+        ширинаСмуги: b ? Math.round(b.getBoundingClientRect().width) : 0,
+        зсув: t && b ? Math.round(t.getBoundingClientRect().left - b.getBoundingClientRect().left) : -1,
+        more: l.classList.contains('has-more'),
+        prev: l.classList.contains('has-prev'),
+      });
+      const напочатку = зняти();
+      l.scrollLeft = 0; l.dispatchEvent(new Event('scroll'));
+      const нуль = зняти();
+      l.scrollLeft = l.scrollWidth; l.dispatchEvent(new Event('scroll'));
+      await new Promise(r => setTimeout(r, 60));
+      return { напочатку, нуль, вкінці: зняти() };
+    });
+    ok('покажчик прокрутки показано (стрічка гортається)',
+       !пк.нуль.схована, JSON.stringify(пк.нуль));
+    ok('🔴 довжина повзунка = видима частка дня (менша за смугу, але видима)',
+       пк.нуль.ширинаПовзунка > 8 && пк.нуль.ширинаПовзунка < пк.нуль.ширинаСмуги,
+       `${пк.нуль.ширинаПовзунка}px зі ${пк.нуль.ширинаСмуги}px`);
+    ok('🔴 повзунок їде вправо разом зі стрічкою',
+       пк.вкінці.зсув > пк.нуль.зсув, `${пк.нуль.зсув}px → ${пк.вкінці.зсув}px`);
+    ok('🔴 на початку згасає ПРАВИЙ край (є що гортати), лівого згасання нема',
+       пк.нуль.more && !пк.нуль.prev, `more:${пк.нуль.more} prev:${пк.нуль.prev}`);
+    ok('🔴 у кінці згасання праворуч ЗНИКАЄ — не обіцяє неіснуючого продовження',
+       !пк.вкінці.more && пк.вкінці.prev, `more:${пк.вкінці.more} prev:${пк.вкінці.prev}`);
   }
   await ctx.close();
 }

@@ -557,6 +557,7 @@ export function openWeatherDayModal(dayIndex) {
 
     <div class="wxd-sec-title">Погодинно</div>
     <ul class="wxd-hours" tabindex="0">${hoursHtml}</ul>
+    <div class="wxd-scroll" aria-hidden="true"><span class="wxd-scroll-thumb"></span></div>
 
     ${порада ? `<div class="wxd-advice"><span class="wxd-advice-ic" aria-hidden="true">${ICONS.bulb}</span>${escapeHtml(порада)}</div>` : ''}
 
@@ -588,14 +589,58 @@ export function openWeatherDayModal(dayIndex) {
     //    прокручена картка стає рівно там, де стояла б перша — на одній лінії з
     //    текстом шапки і рядками фактів.
     onMount: (wrap) => {
-      if (isToday) return;
       const стрічка = wrap.querySelector('.wxd-hours');
-      const перша = стрічка?.children[0];
-      const ранок = стрічка?.children[7];        // 07:00, якщо доба повна
-      if (стрічка && перша && ранок) стрічка.scrollLeft = ранок.offsetLeft - перша.offsetLeft;
+      if (!стрічка) return;
+      const перша = стрічка.children[0];
+      if (!isToday) {
+        const ранок = стрічка.children[7];        // 07:00, якщо доба повна
+        if (перша && ранок) стрічка.scrollLeft = ранок.offsetLeft - перша.offsetLeft;
+      }
+      wireHoursScrollHint(wrap, стрічка);
     },
   });
   wireWeatherSwipe(el, close);
+}
+
+// 🔴 08.08 — ПОКАЖЧИК «ТУТ Є ЩЕ, ГОРТАЙ».
+// Вова: «людина має розуміти, що є ще що можна скролити… можливо зверху додати
+// якісь позначення у вигляді кружечків, типу як перший слайд, другий слайд».
+// 🛑 КРУЖЕЧКИ ТУТ НЕ ПІДХОДЯТЬ, і Вова погодився: їх було б 24 (повна доба) або 11
+// (залишок сьогодні). Крапки читаються, коли їх три-п'ять; двадцять чотири
+// зливаються в сіру смужку, з якої нічого не зрозуміло, і забирають висоту.
+// ➡️ Той самий СЕНС («де я і скільки ще»), але у формі, що масштабується: тонка
+// смужка-прогрес, довжина повзунка = яка частка дня видима.
+// Плюс згасання вмісту на краю — щоб край не читався як кінець списку.
+//
+// ⚠️ ЗГАСАННЯ ЗРОБЛЕНО МАСКОЮ, А НЕ НАКЛАДЕНИМ ГРАДІЄНТОМ, і це не примха: аркуш
+//    має вертикальний градієнт, тобто «колір фону» на висоті стрічки не один, і
+//    градієнт-заглушка кольором просто не збіглася б із тлом. Маска ж гасить сам
+//    вміст і працює на будь-якому фоні.
+// ⚠️ Маска ставиться КЛАСОМ, а не постійно: на кінці списку згасання прибирається,
+//    інакше воно обіцяло б продовження, якого немає.
+function wireHoursScrollHint(wrap, стрічка) {
+  const смуга = wrap.querySelector('.wxd-scroll');
+  const повзунок = wrap.querySelector('.wxd-scroll-thumb');
+  const оновити = () => {
+    const хід = стрічка.scrollWidth - стрічка.clientWidth;
+    // Гортати нема куди — і смуга, і згасання зникають. Показувати покажчик
+    // прокрутки там, де прокрутки немає, — це та сама неправда, лише про інтерфейс.
+    if (хід <= 1) {
+      смуга?.setAttribute('hidden', '');
+      стрічка.classList.remove('has-more', 'has-prev');
+      return;
+    }
+    смуга?.removeAttribute('hidden');
+    const частка = стрічка.clientWidth / стрічка.scrollWidth;
+    if (повзунок) {
+      повзунок.style.width = `${(частка * 100).toFixed(2)}%`;
+      повзунок.style.left = `${((стрічка.scrollLeft / стрічка.scrollWidth) * 100).toFixed(2)}%`;
+    }
+    стрічка.classList.toggle('has-more', стрічка.scrollLeft < хід - 1);
+    стрічка.classList.toggle('has-prev', стрічка.scrollLeft > 1);
+  };
+  стрічка.addEventListener('scroll', оновити, { passive: true });
+  оновити();
 }
 
 // Свайп вниз по аркушу закриває модалку. Не заважає скраберу: якщо палець

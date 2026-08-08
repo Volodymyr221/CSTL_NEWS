@@ -11790,6 +11790,7 @@
 
     <div class="wxd-sec-title">\u041F\u043E\u0433\u043E\u0434\u0438\u043D\u043D\u043E</div>
     <ul class="wxd-hours" tabindex="0">${hoursHtml}</ul>
+    <div class="wxd-scroll" aria-hidden="true"><span class="wxd-scroll-thumb"></span></div>
 
     ${\u043F\u043E\u0440\u0430\u0434\u0430 ? `<div class="wxd-advice"><span class="wxd-advice-ic" aria-hidden="true">${ICONS.bulb}</span>${escapeHtml(\u043F\u043E\u0440\u0430\u0434\u0430)}</div>` : ""}
 
@@ -11819,16 +11820,41 @@
       //    прокручена картка стає рівно там, де стояла б перша — на одній лінії з
       //    текстом шапки і рядками фактів.
       onMount: (wrap) => {
-        if (isToday)
-          return;
         const \u0441\u0442\u0440\u0456\u0447\u043A\u0430 = wrap.querySelector(".wxd-hours");
-        const \u043F\u0435\u0440\u0448\u0430 = \u0441\u0442\u0440\u0456\u0447\u043A\u0430?.children[0];
-        const \u0440\u0430\u043D\u043E\u043A = \u0441\u0442\u0440\u0456\u0447\u043A\u0430?.children[7];
-        if (\u0441\u0442\u0440\u0456\u0447\u043A\u0430 && \u043F\u0435\u0440\u0448\u0430 && \u0440\u0430\u043D\u043E\u043A)
-          \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft = \u0440\u0430\u043D\u043E\u043A.offsetLeft - \u043F\u0435\u0440\u0448\u0430.offsetLeft;
+        if (!\u0441\u0442\u0440\u0456\u0447\u043A\u0430)
+          return;
+        const \u043F\u0435\u0440\u0448\u0430 = \u0441\u0442\u0440\u0456\u0447\u043A\u0430.children[0];
+        if (!isToday) {
+          const \u0440\u0430\u043D\u043E\u043A = \u0441\u0442\u0440\u0456\u0447\u043A\u0430.children[7];
+          if (\u043F\u0435\u0440\u0448\u0430 && \u0440\u0430\u043D\u043E\u043A)
+            \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft = \u0440\u0430\u043D\u043E\u043A.offsetLeft - \u043F\u0435\u0440\u0448\u0430.offsetLeft;
+        }
+        wireHoursScrollHint(wrap, \u0441\u0442\u0440\u0456\u0447\u043A\u0430);
       }
     });
     wireWeatherSwipe(el, close);
+  }
+  function wireHoursScrollHint(wrap, \u0441\u0442\u0440\u0456\u0447\u043A\u0430) {
+    const \u0441\u043C\u0443\u0433\u0430 = wrap.querySelector(".wxd-scroll");
+    const \u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A = wrap.querySelector(".wxd-scroll-thumb");
+    const \u043E\u043D\u043E\u0432\u0438\u0442\u0438 = () => {
+      const \u0445\u0456\u0434 = \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollWidth - \u0441\u0442\u0440\u0456\u0447\u043A\u0430.clientWidth;
+      if (\u0445\u0456\u0434 <= 1) {
+        \u0441\u043C\u0443\u0433\u0430?.setAttribute("hidden", "");
+        \u0441\u0442\u0440\u0456\u0447\u043A\u0430.classList.remove("has-more", "has-prev");
+        return;
+      }
+      \u0441\u043C\u0443\u0433\u0430?.removeAttribute("hidden");
+      const \u0447\u0430\u0441\u0442\u043A\u0430 = \u0441\u0442\u0440\u0456\u0447\u043A\u0430.clientWidth / \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollWidth;
+      if (\u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A) {
+        \u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A.style.width = `${(\u0447\u0430\u0441\u0442\u043A\u0430 * 100).toFixed(2)}%`;
+        \u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A.style.left = `${(\u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft / \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollWidth * 100).toFixed(2)}%`;
+      }
+      \u0441\u0442\u0440\u0456\u0447\u043A\u0430.classList.toggle("has-more", \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft < \u0445\u0456\u0434 - 1);
+      \u0441\u0442\u0440\u0456\u0447\u043A\u0430.classList.toggle("has-prev", \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft > 1);
+    };
+    \u0441\u0442\u0440\u0456\u0447\u043A\u0430.addEventListener("scroll", \u043E\u043D\u043E\u0432\u0438\u0442\u0438, { passive: true });
+    \u043E\u043D\u043E\u0432\u0438\u0442\u0438();
   }
   function wireWeatherSwipe(overlay, close) {
     const sheet = overlay.querySelector(".app-modal-sheet");

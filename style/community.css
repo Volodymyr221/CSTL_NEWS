@@ -264,8 +264,9 @@
    замовлення Вови — «щоб старшим людям було легко дізнатися про погоду». */
 .wxd-hours {
   display: flex; gap: 8px;
-  list-style: none; margin: 0 -16px 16px; padding: 0 16px 4px;
+  list-style: none; margin: 0 -16px; padding: 0 16px 4px;
   overflow-x: auto;
+  margin-bottom: 10px;                /* смужка-прогрес нижче має власний відступ */
   scroll-snap-type: x proximity;
   /* 🔴 08.08 — БЕЗ ЦЬОГО РЯДКА КАРТКА ПРИЛИПАЄ ДО САМОГО КРАЮ ЕКРАНА.
      Скарга Вови: «перша карточка дуже близько притиснута до лівого краю екрану.
@@ -284,6 +285,40 @@
   scrollbar-width: none;
 }
 .wxd-hours::-webkit-scrollbar { display: none; }
+/* Згасання вмісту на краях — «список продовжується». Маска, а не накладений
+   градієнт: аркуш має ВЕРТИКАЛЬНИЙ градієнт, тож єдиного «кольору фону» на висоті
+   стрічки не існує і заглушка кольором не збіглася б із тлом. Класи ставить JS,
+   тому на кінці списку згасання зникає й не обіцяє неіснуючого продовження. */
+.wxd-hours.has-more {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%);
+}
+.wxd-hours.has-prev {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px);
+          mask-image: linear-gradient(90deg, transparent 0, #000 44px);
+}
+.wxd-hours.has-prev.has-more {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+}
+
+/* Смужка-прогрес під стрічкою. Замість кружечків-слайдів: їх було б 24 на повну
+   добу, а тут довжина повзунка сама каже, яку частку дня видно. */
+.wxd-scroll {
+  position: relative;
+  width: 108px; height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.20);
+  overflow: hidden;
+}
+.wxd-scroll[hidden] { display: none; }
+.wxd-scroll-thumb {
+  position: absolute; top: 0; bottom: 0;
+  min-width: 14px;                    /* на повній добі повзунок був би ~20px; менше — вже не видно */
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.85);
+}
 .wxd-h {
   flex: 0 0 auto;
   width: 78px;
