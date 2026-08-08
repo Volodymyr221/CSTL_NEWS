@@ -99,10 +99,14 @@ const s = await p.evaluate(() => {
     вільнеВРядку: (() => {
       const row = document.querySelector('.hm-wx-main');
       if (!row) return 0;
-      const діти = [...row.children];
+      // ⚠️ Рахуємо лише ВИДИМІ діти. Перша версія брала всі підряд — і після появи
+      // адаптивної іконки (`display: none` на вузьких екранах) додавала зайвий
+      // проміжок за неї, показуючи «-1px» там, де насправді все влазить.
+      // `display: none` у flex-розкладці не займає ні ширини, ні проміжку.
+      const діти = [...row.children].filter(e => getComputedStyle(e).display !== 'none');
       const зайнято = діти.reduce((n, e) => n + e.getBoundingClientRect().width, 0);
       const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-      return Math.round(row.clientWidth - зайнято - gap * (діти.length - 1));
+      return Math.round(row.clientWidth - зайнято - gap * Math.max(0, діти.length - 1));
     })(),
     висота: рамка ? Math.round(рамка.height) : 0,
   };
@@ -152,5 +156,61 @@ ok('назва не порожня', s.місцеТекст.length > 0, s.міс
 // 118px, після — 121px. Поріг 140 ловить справжнє роздування, а не 3px.
 ok('віджет не роздувся (≤140px)', s.висота > 0 && s.висота <= 140, `${s.висота}px`);
 
-await ctx.close(); await b.close(); await stop();
+await ctx.close();
+
+// ── 6. АДАПТИВНІСТЬ ПО РЕАЛЬНИХ ШИРИНАХ ПРИСТРОЇВ ───────────────────────────
+// 🔴 ЗАМОВЛЕННЯ ВОВИ (08.08): «можливо нам краще зробити такий адаптивний, щоб
+// адаптувався під розмір екрану… якщо екран вужчий, то таке, як до цього було, без
+// іконки. Якщо влазить іконка — зробити більше. Але щоб на комп'ютерні версії воно
+// не велике».
+//
+// 🔴 І ЗАРАЗОМ — ДЕФЕКТ, ЯКИЙ ЗНАЙШОВСЯ САМЕ ТУТ. Підняття кеглів 08.08 міряли лише
+// на 390px. На 375px (iPhone SE, 13 mini) вільного місця в рядку лишалось РІВНО 0, і
+// «Мінлива хмарність» обрізалась — на проді, у живих людей з малими айфонами.
+// ➡️ Урок: «влазить» — це не про один екран, а про ВЕСЬ ряд ширин. Тому перевірка
+// ганяє чотири реальні ширини, а не одну зручну.
+const ШИРИНИ = [
+  { w: 375, назва: 'iPhone SE / 13 mini', іконка: false },
+  { w: 390, назва: 'iPhone 12-14',        іконка: false },
+  { w: 430, назва: 'iPhone 14 Pro Max',   іконка: true  },
+  { w: 1280, назва: 'десктоп',            іконка: true  },
+];
+
+const біди = [];
+for (const в of ШИРИНИ) {
+  const c = await b.newContext({ viewport: { width: в.w, height: 900 },
+    isMobile: в.w < 500, hasTouch: в.w < 500, serviceWorkers: 'block' });
+  const стор = await c.newPage();
+  await mockSupabase(стор, { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] });
+  await стор.route('**://api.open-meteo.com/**', r =>
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify(ПОГОДА) }));
+  await стор.goto(url, { waitUntil: 'domcontentloaded' });
+  await стор.waitForTimeout(2200);
+  await стор.evaluate(() => document.querySelector('.consent-accept')?.click());
+  await стор.waitForTimeout(2400);
+  const м = await стор.evaluate(() => {
+    const d = document.querySelector('.hm-wx-desc');
+    const now = document.querySelector('.hm-wx-now');
+    const row = document.querySelector('.hm-wx-main');
+    return {
+      обрізано: d ? d.scrollWidth > d.clientWidth : true,
+      іконкаВидима: !!now && getComputedStyle(now).display !== 'none',
+      іконкаPx: now ? Math.round(now.getBoundingClientRect().width) : 0,
+      висотаРядка: row ? Math.round(row.getBoundingClientRect().height) : 0,
+    };
+  });
+  if (м.обрізано) біди.push(`${в.w}px: опис ОБРІЗАНО`);
+  if (м.іконкаВидима !== в.іконка) біди.push(`${в.w}px: іконка ${м.іконкаВидима ? 'є' : 'нема'}, а має бути ${в.іконка ? 'є' : 'нема'}`);
+  if (м.іконкаВидима && м.іконкаPx > 40) біди.push(`${в.w}px: іконка роздулась до ${м.іконкаPx}px`);
+  await c.close();
+}
+
+ok('🔴 опис не обрізається НА ЖОДНІЙ реальній ширині (375·390·430·1280)',
+   !біди.some(b => /ОБРІЗАНО/.test(b)), біди.filter(b => /ОБРІЗАНО/.test(b)).join(' · ') || 'усі чисті');
+ok('🔴 велика іконка зʼявляється лише там, де для неї є місце',
+   !біди.some(b => /іконка (є|нема)/.test(b)), біди.filter(b => /іконка (є|нема)/.test(b)).join(' · ') || 'межа тримається');
+ok('на десктопі іконка не роздувається (≤40px)',
+   !біди.some(b => /роздулась/.test(b)), біди.filter(b => /роздулась/.test(b)).join(' · ') || 'у межах');
+
+await b.close(); await stop();
 done();

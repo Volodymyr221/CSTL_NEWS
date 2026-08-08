@@ -207,6 +207,7 @@ export async function renderWeatherBlock() {
           <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
           <div class="hm-wx-sub">${escapeHtml(subLine(temp, feels, hint))}</div>
         </div>
+        <span class="hm-wx-now" aria-hidden="true">${info.icon}</span>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
           <span class="hm-wx-place-pin" aria-hidden="true">${ICONS.pin}</span>
