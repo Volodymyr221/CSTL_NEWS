@@ -275,5 +275,71 @@ ok('🔴 «Сніг» і «Дощ» — різні картинки',
 ok('🔴 «Крижаний дощ» показується дощем, а не снігом',
    [...(малюнки.get('Крижаний дощ') || [])][0] === [...(малюнки.get('Дощ') || [])][0]);
 
+// ── 6. КЛІТИНКА «СЬОГОДНІ» ОПИСУЄ ТЕ, ЩО ПОПЕРЕДУ ──────────────────────────
+// 🔴 Знахідка Вови наживо (Метельне, 22:00): «пише по іконці дощ, але дощу не було
+// і не планується». Іконка бралась із `daily.weather_code` — найзначніша погода за
+// ВСЮ календарну добу, включно з годинами, що вже минули. Тобто о десятій вечора
+// клітинка показувала ранок.
+// ⚠️ Годинник ПІДМІНЕНО на 22:00: без цього сцену неможливо відтворити вдень, і
+//    сторож був би зелений цілий день — рівно та помилка, яку я вже двічі зробив
+//    у стенді модалки.
+// Сцена: дощ був о 3-6 ранку (денний код 61), попереду до кінця доби чисто.
+{
+  const базаUTC = Date.UTC(2026, 7, 8, 20, 0, 0);        // 22:00 за Києвом
+  const дата = n => new Date(базаUTC + 7200e3 + n * 864e5).toISOString().slice(0, 10);
+  const H = [], Tm = [], P = [], C = [];
+  for (let d = 0; d < 7; d++) for (let h = 0; h < 24; h++) {
+    H.push(`${дата(d)}T${String(h).padStart(2, '0')}:00`);
+    Tm.push(19);
+    P.push(d === 0 ? (h >= 3 && h <= 6 ? 70 : 0) : 10);
+    C.push(d === 0 ? (h >= 3 && h <= 6 ? 61 : 2) : 2);
+  }
+  const НАБІР = {
+    utc_offset_seconds: 7200,
+    current: { temperature_2m: 19, apparent_temperature: 19, weather_code: 2 },
+    daily: { time: Array.from({ length: 7 }, (_, i) => дата(i)),
+             weather_code: [61, 2, 2, 2, 2, 2, 2],       // ← за всю добу «дощ»
+             temperature_2m_max: [24, 24, 27, 25, 23, 23, 25],
+             temperature_2m_min: [16, 15, 15, 16, 14, 12, 13] },
+    hourly: { time: H, temperature_2m: Tm, precipitation_probability: P, weather_code: C },
+  };
+  const прогнати = async (revCss) => {
+    const c = await b.newContext({ viewport: { width: 390, height: 844 },
+      isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    const стор = await c.newPage();
+    await стор.addInitScript(`{ const F=Date; const T=${базаUTC};
+      class D extends F { constructor(...a){ if(!a.length) super(T); else super(...a);} static now(){return T;} }
+      window.Date = D; }`);
+    await mockSupabase(стор, { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] });
+    await стор.route('**://api.open-meteo.com/**', r =>
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify(НАБІР) }));
+    if (REV) {
+      const body = projectFile('bundle.js', revCss || REV);
+      await стор.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+    }
+    await стор.goto(url, { waitUntil: 'domcontentloaded' });
+    await стор.waitForTimeout(1200);
+    await стор.evaluate(() => document.querySelector('.consent-accept')?.click());
+    await стор.waitForSelector('.hm-wx-day', { timeout: 15000 });
+    const r = await стор.evaluate(() => ({
+      капсула: document.querySelector('.hm-wx-desc')?.textContent.trim() || '',
+      сьогодні: document.querySelector('.hm-wx-day--today .hm-wx-icon img')?.getAttribute('alt') || '',
+      завтра: document.querySelectorAll('.hm-wx-day .hm-wx-icon img')[1]?.getAttribute('alt') || '',
+    }));
+    await c.close();
+    return r;
+  };
+  const мет = await прогнати();
+  ok('🔴 о 22:00 клітинка «сьогодні» НЕ показує дощ, якого попереду немає',
+     мет.сьогодні !== 'Дощ', `клітинка: ${мет.сьогодні}`);
+  ok('🔴 клітинка «сьогодні» збігається з капсулою',
+     мет.сьогодні === мет.капсула, `клітинка «${мет.сьогодні}» · капсула «${мет.капсула}»`);
+  ok('інші дні лишились на денному коді (там минулого немає)',
+     мет.завтра === 'Мінлива хмарність', мет.завтра);
+  // Контроль: сам набір справді містить «дощ» на рівні доби — інакше перевірка
+  // проходила б на порожньому місці.
+  ok('контроль: денний код у наборі саме «дощ» (61)', НАБІР.daily.weather_code[0] === 61);
+}
+
 await b.close(); await stop();
 done();
