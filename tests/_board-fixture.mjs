@@ -60,10 +60,27 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       // Ланцюжок .select().eq().order().limit() має повертати САМ СЕБЕ, а в
       // кінці бути "thenable" — саме так поводиться справжній конструктор
       // запитів supabase-js, і саме тому await працює на будь-якій ланці.
+      // 🔴 07.08 — ЗАГЛУШКА ТЕПЕР СПРАВДІ ФІЛЬТРУЄ по .eq() і .neq().
+      //
+      // Було: усі фільтри — порожні заглушки, тобто на будь-який запит
+      // поверталась УСЯ таблиця. Наслідок побачив стенд board-owner: він
+      // повідомив, що в «Моїх оголошеннях» видно ЧУЖЕ оголошення. Насправді
+      // fetchMyPosts фільтрує на СЕРВЕРІ (.eq owner_uid), і застосунок цілком
+      // правий — брехала заглушка. Це правило проєкту номер один: якщо перевірка
+      // завалила те, що вже працює, першою підозрюваною є перевірка.
+      //
+      // ⚠️ .or() лишається заглушкою свідомо: емулювати мову фільтрів PostgREST
+      // тут означало б писати другу базу. Стенди, яким потрібен .or (напр. свої
+      // треди), мусять давати фікстуру, вже звужену під сцену.
       const q = (table) => {
+        const умови = [];
         const self = {
           then(res) {
-            const payload = { data: T[table] || [], error: null };
+            let рядки = T[table] || [];
+            for (const c of умови) {
+              рядки = рядки.filter(r => c.не ? r[c.поле] !== c.значення : r[c.поле] === c.значення);
+            }
+            const payload = { data: рядки, error: null };
             const ms = SLOW[table] || 0;
             const pr = ms
               ? new Promise(r => setTimeout(() => r(payload), ms))
@@ -78,10 +95,13 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         // ⚠️ 07.08: доданий 'not' — без нього fetchUnreadByThread падав із
         // «.not is not a function», ланцюг рвався і розмови не приїжджали ЗОВСІМ.
         // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
-        for (const m of ['select','eq','neq','in','is','not','order','limit','range','single','maybeSingle',
+        for (const m of ['select','in','is','not','order','limit','range','single','maybeSingle',
                          'filter','or','gt','lt','gte','lte','like','ilike','contains',
                          'insert','upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
+        // Ці два справді звужують набір (див. пояснення вище).
+        self.eq  = (поле, значення) => { умови.push({ поле, значення, не: false }); return self; };
+        self.neq = (поле, значення) => { умови.push({ поле, значення, не: true  }); return self; };
         return self;
       };
       window.supabase = {

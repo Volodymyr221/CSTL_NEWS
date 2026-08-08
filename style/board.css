@@ -2116,6 +2116,33 @@ textarea.cm-board-input.bm-invalid {
   font-size: 14px;
   line-height: 1.5;
 }
+/* 🔴 07.08 (B-2) — «Скинути фільтри» В САМОМУ ПОРОЖНЬОМУ СТАНІ.
+   Розкладка: `.bd-empty` має padding 60px/24px, тобто на екрані 390px вміст
+   отримує 342px. Кнопка `inline-block` з padding 12px/18px і font-size 14px
+   (line-height 1.5 = 21px) дає висоту 21 + 24 = 45px — на 1px більше за тап-ціль
+   Apple HIG 44px, тому додаткової `min-height` не треба. Ширина по тексту
+   («Скинути фільтри» ≈ 132px), тобто в 342px влазить із запасом і на найвужчому
+   екрані не переноситься.
+   `margin-top: 18px` відділяє її від речення про причину — рівно один крок ритму
+   зони (той самий, що між рядками картки), а не нова величина.
+   Колір — `--red` на прозорому: це ДРУГОРЯДНА дія (виправити свій фільтр), і
+   заливати її брендовим градієнтом означало б змагатись за увагу з FAB «Подати
+   оголошення», який тут головний. */
+.bd-empty-reset {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 12px 18px;
+  border: 1px solid var(--board-line);
+  border-radius: 12px;
+  background: var(--board-card);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-empty-reset:active { background: var(--board-press); }
 /* Немає оголошень у конкретному НП (перед секцією «Олицька громада») — компактніше за .bd-empty.
    2 рядки: перший темніший (факт), другий приглушеніший (підказка).
    position:relative;z-index:1 — інакше ховається під .board-bg (fixed, z-index:0),
