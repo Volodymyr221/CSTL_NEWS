@@ -2180,6 +2180,12 @@
         fire("visible");
     });
   }
+  function forceReturnRefresh() {
+    _subs.forEach((s) => {
+      s.last = 0;
+    });
+    fire("force");
+  }
 
   // src/core/upload.js
   async function uploadBlobWithRetry(blob, folder = "", retries = 2, bucket = void 0) {
@@ -16944,18 +16950,38 @@ END:VEVENT`
   // src/app.js
   var currentTab2 = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
+  var _scrollByTab = /* @__PURE__ */ new Map();
+  var SMOOTH_MAX = 2;
+  function scrollTabToTop() {
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    if (main.scrollTop > 0) {
+      const \u0434\u0430\u043B\u0435\u043A\u043E = main.scrollTop > window.innerHeight * SMOOTH_MAX;
+      main.scrollTo({ top: 0, behavior: \u0434\u0430\u043B\u0435\u043A\u043E ? "auto" : "smooth" });
+      _scrollByTab.set(currentTab2, 0);
+    }
+    forceReturnRefresh();
+  }
   window.switchTab = function(tab) {
     if (tab === "news" || tab === "events")
       tab = "shotam";
-    if (tab === currentTab2)
+    if (tab === currentTab2) {
+      scrollTabToTop();
       return;
+    }
     const oldPage = document.getElementById(`page-${currentTab2}`);
     const newPage = document.getElementById(`page-${tab}`);
     if (!oldPage || !newPage)
       return;
     const main = document.querySelector(".app-main");
+    const \u043C\u0438\u043D\u0443\u043B\u0435 = main ? main.scrollTop : 0;
     newPage.style.opacity = "0";
     newPage.style.display = "block";
+    if (main) {
+      _scrollByTab.set(currentTab2, \u043C\u0438\u043D\u0443\u043B\u0435);
+      main.scrollTop = _scrollByTab.get(tab) || 0;
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         oldPage.style.opacity = "0";
@@ -16967,8 +16993,6 @@ END:VEVENT`
           oldPage.style.opacity = "";
           oldPage.style.transition = "";
           newPage.style.transition = "";
-          if (main)
-            main.scrollTop = 0;
         }, 220);
       });
     });
