@@ -16976,8 +16976,8 @@ END:VEVENT`
   var currentTab2 = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
   var _scrollByTab = /* @__PURE__ */ new Map();
-  var UP_MIN_MS = 300;
-  var UP_MAX_MS = 620;
+  var UP_MIN_MS = 380;
+  var UP_MAX_MS = 900;
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -16997,12 +16997,12 @@ END:VEVENT`
       main.scrollTop = 0;
       return;
     }
-    const \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C = Math.min(UP_MAX_MS, Math.max(UP_MIN_MS, 260 + \u0441\u0442\u0430\u0440\u0442 * 0.11));
+    const \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C = Math.min(UP_MAX_MS, Math.max(UP_MIN_MS, 280 + \u0441\u0442\u0430\u0440\u0442 * 0.24));
     const t0 = performance.now();
-    const \u043A\u0440\u0438\u0432\u0430 = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const \u043A\u0440\u0438\u0432\u0430 = (t) => 0.5 * (1 - Math.cos(Math.PI * t));
     const \u043A\u0440\u043E\u043A = (\u0437\u0430\u0440\u0430\u0437) => {
       const t = Math.min(1, (\u0437\u0430\u0440\u0430\u0437 - t0) / \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C);
-      main.scrollTop = Math.round(\u0441\u0442\u0430\u0440\u0442 * (1 - \u043A\u0440\u0438\u0432\u0430(t)));
+      main.scrollTop = \u0441\u0442\u0430\u0440\u0442 * (1 - \u043A\u0440\u0438\u0432\u0430(t));
       _upAnim = t < 1 ? requestAnimationFrame(\u043A\u0440\u043E\u043A) : null;
     };
     _upAnim = requestAnimationFrame(\u043A\u0440\u043E\u043A);
@@ -17032,26 +17032,16 @@ END:VEVENT`
     stopScrollUp();
     const main = document.querySelector(".app-main");
     const \u043C\u0438\u043D\u0443\u043B\u0435 = main ? main.scrollTop : 0;
-    newPage.style.opacity = "0";
+    oldPage.style.display = "none";
+    oldPage.style.opacity = "";
+    oldPage.style.transition = "";
     newPage.style.display = "block";
+    newPage.style.opacity = "";
+    newPage.style.transition = "";
     if (main) {
       _scrollByTab.set(currentTab2, \u043C\u0438\u043D\u0443\u043B\u0435);
       main.scrollTop = _scrollByTab.get(tab) || 0;
     }
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        oldPage.style.opacity = "0";
-        oldPage.style.transition = "opacity 0.22s ease";
-        newPage.style.transition = "opacity 0.28s ease";
-        newPage.style.opacity = "1";
-        setTimeout(() => {
-          oldPage.style.display = "none";
-          oldPage.style.opacity = "";
-          oldPage.style.transition = "";
-          newPage.style.transition = "";
-        }, 220);
-      });
-    });
     document.querySelectorAll(".tab-item").forEach((t) => t.classList.remove("active"));
     const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
     if (activeTab)
