@@ -19,19 +19,41 @@ const WX_SNOW_SHOWERS = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4I
 const WX_THUNDERSTORMS = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgaWQ9InRodW5kZXJzdG9ybXMiIGNsaXAtcGF0aD0idXJsKCNjbGlwMF8yMDQ1XzI5MTA0KSI+CjxnIGlkPSJTa3kiPgo8ZyBpZD0iQ2xvdWRzIj4KPGcgaWQ9IkNsb3VkIj4KPHBhdGggaWQ9IkNsb3VkXzIiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTQuODM3MyA0OC4yMTE1QzU5LjgyNzUgNDAuMTM4IDcwLjI2NDkgMzYuODI0IDc5LjAwODYgNDAuNDgyM0M4Ny43NDE3IDQ0LjEzNiA5Mi42ODM4IDUzLjg4MjcgOTAuMzg4NyA2My4wODU2Qzk3LjY4MjkgNjIuNzY3MSAxMDQgNjguNzA2NyAxMDQgNzYuMDI4MUMxMDQgODMuMTE1OCA5OC4wNDc3IDg5IDkwLjk3NjggODlDODkuODcyMyA4OSA4OC45NzY4IDg4LjEwNCA4OC45NzY4IDg2Ljk5ODZDODguOTc2OCA4NS44OTMzIDg5Ljg3MjMgODQuOTk3MyA5MC45NzY4IDg0Ljk5NzNDOTUuODYzOSA4NC45OTczIDEwMCA4MC44Nzk5IDEwMCA3Ni4wMjgxQzEwMCA3MS4wMjYyIDk1LjYyMjMgNjYuODYzNyA5MC41NjMxIDY3LjA4NDZMODcuODg2NyA2Ny4yMDE0Qzg3LjI1NjMgNjcuMjI5IDg2LjY0OTggNjYuOTU3MSA4Ni4yNTA2IDY2LjQ2ODFDODUuODUxNCA2NS45NzkgODUuNzA2MyA2NS4zMzAxIDg1Ljg1OTEgNjQuNzE3NEw4Ni41MDc3IDYyLjExNjVDODguMzIwMyA1NC44NDg0IDg0LjM5MTEgNDcuMDcyNyA3Ny40NjU3IDQ0LjE3NTJDNzAuNTI1IDQxLjI3MTMgNjIuMTg4NyA0My45MjcyIDU4LjIzOTEgNTAuMzE3MUw1Ny4yMDA1IDUxLjk5NzVDNTYuNjI0NyA1Mi45MjkxIDU1LjQwNzUgNTMuMjI0NCA1NC40NjkzIDUyLjY2MDJMNTIuNzc2OCA1MS42NDI0QzQ5LjgxMTggNDkuODU5MiA0NS45MzIgNDkuOTY2NCA0My4wNzExIDUxLjkxMDVDNDAuMjIwOSA1My44NDc0IDM4LjcwOTggNTcuMzkyMiAzOS4yOTE5IDYwLjc3NDVMMzkuNjI2IDYyLjcxNTRDMzkuODExNCA2My43OTI0IDM5LjA5OTIgNjQuODE5IDM4LjAyNjEgNjUuMDIxOEwzNi4wOTIyIDY1LjM4NzJDMzEuMTQyMyA2Ni4zMjI1IDI3LjU3MjUgNzEuMDQ0MSAyOC4wNDM4IDc2LjAzMDdDMjguNTE1NCA4MS4wMjA3IDMyLjkxMDEgODQuOTk4MyAzNy45NTIxIDg0Ljk5NzNDMzkuMDU2NiA4NC45OTcgMzkuOTUyMiA4NS44OTI5IDM5Ljk1MjUgODYuOTk4MkMzOS45NTI3IDg4LjEwMzUgMzkuMDU3NSA4OC45OTk4IDM3Ljk1MjkgODlDMzAuODY5NiA4OS4wMDE1IDI0LjcyOTYgODMuNDc1NSAyNC4wNjE1IDc2LjQwNzZDMjMuMzkzNyA2OS4zNDEyIDI4LjM5MDggNjIuNzY4OSAzNS4zNSA2MS40NTRDMzQuNDk5OCA1Ni41MTQ4IDM2LjY4MjkgNTEuNDEzMSA0MC44MjQgNDguNTk5MUM0NC45NzUzIDQ1Ljc3ODEgNTAuNTM2NCA0NS42MjUgNTQuODM3MyA0OC4yMTE1WiIgZmlsbD0iI0U2RUZGQyIvPgo8L2c+CjwvZz4KPC9nPgo8ZyBpZD0iTGlnaHRuaW5nIj4KPHBhdGggaWQ9IkxpZ2h0bmluZyBCb2x0IiBkPSJNNjAuMDAwMyA2OEw1MiA5MC45MDkySDYwLjAwMDNMNTUuOTk5NSAxMTBMNzYgODMuMjcyOEg2My45OTk2TDcxLjk5OTkgNjhINjAuMDAwM1oiIGZpbGw9IiNGNkE4MjMiLz4KPC9nPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzIwNDVfMjkxMDQiPgo8cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4=';
 const WX_CLOUDY = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgaWQ9ImNsb3VkeSIgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzIwNDVfMjg4MTgpIj4KPGcgaWQ9IlNreSI+CjxnIGlkPSJDbG91ZHMiPgo8ZyBpZD0iQ2xvdWQiPgo8cGF0aCBpZD0iQ2xvdWRfMiIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01NC44MzcxIDQ4LjIxMTVDNTEuMDczOSA0NS45NDgzIDQ2LjM0NTcgNDUuNzgyNiA0Mi40NDE1IDQ3LjY2NjRDNDEuODgzNyA0Ny45MzU1IDQxLjM0MjggNDguMjQ2NSA0MC44MjM5IDQ4LjU5OTFDMzYuNjgyNiA1MS40MTMzIDM0LjQ5OTggNTYuNTE1MSAzNS4zNDk5IDYxLjQ1NEMyOC4zOTA3IDYyLjc2ODkgMjMuMzkzNiA2OS4zNDEyIDI0LjA2MTQgNzYuNDA3NkMyNC43MjkzIDgzLjQ3NCAzMC44Njc4IDg5LjAwMTEgMzcuOTUxOSA4OUMzNy45NTE2IDg5IDM3Ljk1MjIgODkgMzcuOTUxOSA4OUg5MC45NzY3QzkxLjg2MDggODkgOTIuNzI3MyA4OC45MDggOTMuNTY2OSA4OC43MzMzQzk1LjA1MzEgODguNDIzOSA5Ni40NTQ3IDg3Ljg1NSA5Ny43MTk2IDg3LjA3NzRDOTkuMzEzMSA4Ni4wOTc5IDEwMC42ODkgODQuNzg3IDEwMS43NDQgODMuMjQ2NUMxMDIuMzIgODIuNDA0OSAxMDIuODAxIDgxLjQ5NDcgMTAzLjE2OCA4MC41MzI0QzEwMy43MDUgNzkuMTI1IDEwNCA3Ny42MDYzIDEwNCA3Ni4wMjgxQzEwNCA3NS45MTM4IDEwMy45OTggNzUuNzk5NyAxMDMuOTk1IDc1LjY4NjFDMTAzLjg0IDY5LjkwMDYgOTkuNzQzNCA2NS4wMzY2IDk0LjM5MDYgNjMuNTQ0N0M5My4xMTU4IDYzLjE4OTQgOTEuNzY5NyA2My4wMjUzIDkwLjM4ODYgNjMuMDg1NkM5MC43MjExIDYxLjc1MiA5MC45MDE3IDYwLjQwNjkgOTAuOTQwOSA1OS4wNzA2QzkxLjE3MTYgNTEuMTg2MSA4Ni40NzY0IDQzLjYwNjcgNzkuMDA4NSA0MC40ODIzQzcwLjI2NDggMzYuODI0IDU5LjgyNzQgNDAuMTM4IDU0LjgzNzEgNDguMjExNVpNOTAuOTc2NyA4NC45OTczQzk1Ljg2NDkgODQuOTk3MyAxMDAgODAuODc4OCAxMDAgNzYuMDI4MUMxMDAgNzEuNjUzMSA5Ni42NDk4IDY3LjkxNzggOTIuNDIxNiA2Ny4yMDAzQzkyLjExOTYgNjcuMTQ5MSA5MS44MTMxIDY3LjExMzIgOTEuNTAzIDY3LjA5MzdDOTEuMTkyOSA2Ny4wNzQxIDkwLjg3OTMgNjcuMDcwOCA5MC41NjI5IDY3LjA4NDZMODcuODg2NiA2Ny4yMDE0Qzg3LjI1NjIgNjcuMjI5IDg2LjY0OTcgNjYuOTU3MSA4Ni4yNTA1IDY2LjQ2ODFDODUuODUxMyA2NS45NzkgODUuNzA2MiA2NS4zMzAxIDg1Ljg1OSA2NC43MTc0TDg2LjUwNzYgNjIuMTE2NUM4Ni42MjA5IDYxLjY2MjIgODYuNzExNyA2MS4yMDYgODYuNzgwOCA2MC43NDkxQzg3LjgxNzIgNTMuODk1OSA4My45NTg1IDQ2Ljg5MTcgNzcuNDY1NiA0NC4xNzUyQzcwLjUyNDYgNDEuMjcxMiA2Mi4xODg0IDQzLjkyNzQgNTguMjM5IDUwLjMxNzFMNTcuMjAwMyA1MS45OTc1QzU3LjIwMDEgNTEuOTk4IDU3LjE5OTggNTEuOTk4NCA1Ny4xOTk1IDUxLjk5ODlDNTYuNjIzNCA1Mi45Mjk0IDU1LjQwNjkgNTMuMjI0MSA1NC40NjkyIDUyLjY2MDJMNTIuNzc2NyA1MS42NDI0QzQ5LjgxMTYgNDkuODU5MiA0NS45MzE5IDQ5Ljk2NjQgNDMuMDcxIDUxLjkxMDVDNDIuNzE0NyA1Mi4xNTI2IDQyLjM3OTMgNTIuNDE5OSA0Mi4wNjY0IDUyLjcwODhDMzkuODc1NiA1NC43MzEyIDM4Ljc4MjQgNTcuODE1MiAzOS4yOTE4IDYwLjc3NDVMMzkuNjI1OSA2Mi43MTU0QzM5LjYyNiA2Mi43MTU4IDM5LjYyNiA2Mi43MTYyIDM5LjYyNjEgNjIuNzE2NkMzOS44MTA3IDYzLjc5MjggMzkuMDk5MSA2NC44MTg1IDM4LjAyNjkgNjUuMDIxNkMzOC4wMjY2IDY1LjAyMTcgMzguMDI3MSA2NS4wMjE2IDM4LjAyNjkgNjUuMDIxNkwzNi4wOTIgNjUuMzg3MkMzMS4xNDEzIDY2LjMyMjYgMjcuNTcyNCA3MS4wNDQ5IDI4LjA0MzcgNzYuMDMwN0MyOC41MTUyIDgxLjAxOTkgMzIuOTA5MiA4NC45OTgzIDM3Ljk1MTkgODQuOTk3M0g5MC45NzY3WiIgZmlsbD0iI0U2RUZGQyIvPgo8L2c+CjwvZz4KPC9nPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzIwNDVfMjg4MTgiPgo8cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4=';
 
-// WMO weather code (Open-Meteo) → { icon: <img>, text: опис укр. } — межі кодів ідентичні
-// попередній emoji-версії (community-blocks.js), не перевигадую класифікацію.
+// WMO weather code (Open-Meteo) → { icon: <img>, text: опис укр.}
+//
+// 🔴 08.08 — ПЕРЕПИСАНО НА ЯВНІ КОДИ. Замовлення Вови: «треба перевірити, чи ці ікони
+// правильно показують — чи точно там буде хмарно, чи точно дощ».
+//
+// Було: діапазони «до N», успадковані від старої emoji-версії. На них ловилось дві
+// СПРАВЖНІ помилки, обидві зимові:
+//   • **66, 67 — крижаний дощ** потрапляв у гілку `code <= 77` і показувався як
+//     **СНІГ**. Це протилежна порада людині: сніг — це «одягнись тепліше», крижаний
+//     дощ — «під ногами лід, дороги стають ковзанкою»;
+//   • **56, 57 — крижана мряка** потрапляла в `code <= 65` і ставала просто «Дощ».
+//
+// 🔑 Чому діапазони й помилились: WMO-коди НЕ суцільні. Між 3 і 45 немає нічого, між
+// 57 і 61 теж — і «до 65» тихо загрібало у «Дощ» те, що лежить у пропусках. Тому тут
+// перелічені саме ті коди, які Open-Meteo справді віддає, і жодного зайвого діапазону.
+// Довідник: open-meteo.com/en/docs → WMO Weather interpretation codes.
+//
+// ⚠️ Тексти «Крижаний дощ» / «Крижана мряка» коротші за «Мінлива хмарність» (17
+// символів, найдовший у словнику), тож на ширину рядка вони не впливають.
 export function weatherCodeInfo(code) {
   const img = (src, alt) => `<img class="wx-ic" src="${src}" alt="${alt}">`;
-  if (code === 0) return { icon: img(WX_CLEAR_DAY, 'Ясно'), text: 'Ясно' };
-  if (code <= 2)  return { icon: img(WX_PARTLY_CLOUDY, 'Мінлива хмарність'), text: 'Мінлива хмарність' };
-  if (code === 3) return { icon: img(WX_OVERCAST, 'Хмарно'), text: 'Хмарно' };
-  if (code <= 48) return { icon: img(WX_FOG, 'Туман'), text: 'Туман' };
-  if (code <= 55) return { icon: img(WX_DRIZZLE, 'Мряка'), text: 'Мряка' };
-  if (code <= 65) return { icon: img(WX_RAIN, 'Дощ'), text: 'Дощ' };
-  if (code <= 77) return { icon: img(WX_SNOW, 'Сніг'), text: 'Сніг' };
-  if (code <= 82) return { icon: img(WX_RAIN, 'Зливи'), text: 'Зливи' };
-  if (code <= 86) return { icon: img(WX_SNOW_SHOWERS, 'Снігові зливи'), text: 'Снігові зливи' };
-  if (code >= 95) return { icon: img(WX_THUNDERSTORMS, 'Гроза'), text: 'Гроза' };
-  return { icon: img(WX_CLOUDY, '—'), text: '—' };
+  const дай = (src, text) => ({ icon: img(src, text), text });
+
+  if (code === 0) return дай(WX_CLEAR_DAY, 'Ясно');
+  if (code === 1 || code === 2) return дай(WX_PARTLY_CLOUDY, 'Мінлива хмарність');
+  if (code === 3) return дай(WX_OVERCAST, 'Хмарно');
+  if (code === 45 || code === 48) return дай(WX_FOG, 'Туман');
+  if (code === 51 || code === 53 || code === 55) return дай(WX_DRIZZLE, 'Мряка');
+  if (code === 56 || code === 57) return дай(WX_DRIZZLE, 'Крижана мряка');
+  if (code === 61 || code === 63 || code === 65) return дай(WX_RAIN, 'Дощ');
+  if (code === 66 || code === 67) return дай(WX_RAIN, 'Крижаний дощ');
+  if (code >= 71 && code <= 77) return дай(WX_SNOW, 'Сніг');
+  if (code >= 80 && code <= 82) return дай(WX_RAIN, 'Зливи');
+  if (code === 85 || code === 86) return дай(WX_SNOW_SHOWERS, 'Снігові зливи');
+  if (code >= 95) return дай(WX_THUNDERSTORMS, 'Гроза');
+  // Невідомий код — чесна хмара без обіцянок, а не вигаданий стан.
+  return дай(WX_CLOUDY, '—');
 }

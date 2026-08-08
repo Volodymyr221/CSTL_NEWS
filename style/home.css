@@ -512,13 +512,22 @@
 .hm-wx-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: var(--hm-s3); }
 .hm-wx-day {
   appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 6px 0; border-radius: 9px; color: rgba(255, 255, 255, .8);
 }
 .hm-wx-day:active { background: rgba(255, 255, 255, .12); }
 .hm-wx-day--today { color: #fff; background: rgba(255, 255, 255, .1); }
 .hm-wx-wd   { font: 600 10px/1 system-ui, -apple-system, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
-.hm-wx-icon { font-size: 15px; line-height: 1; }
+/* 🔴 08.08 — ІКОНКИ ДНІВ ПОБІЛЬШАЛИ 15 → 21px. Вова: «можна трішки їх зробити
+   більшими, тому що їх погано видно… і можливо чіткішими».
+   📐 Ціна порахована, а не вгадана: комірка дня це колонка
+   `підпис 10 + gap + іконка + gap + градуси 11.5 + padding 12`. Разом із іконкою
+   15px виходило 55px. Щоб +6px на іконці не стали +6px на віджеті, проміжок
+   зменшено 3 → 2px (двічі в колонці), тож комірка росте лише на 4px.
+   🔑 Про «чіткіше»: це растровані з SVG лінійні іконки Meteocons, і на 15px тонкі
+   штрихи просто не мали куди лягти — на 21px та сама лінія отримує повний піксель.
+   Тобто «чіткість» тут купується РОЗМІРОМ, іншого важеля в цих іконках немає. */
+.hm-wx-icon { font-size: 21px; line-height: 1; }
 .hm-wx-max  { font: 600 11.5px/1 system-ui, -apple-system, sans-serif; }
 
 /* Скелет погоди — та сама висота, що готовий блок, інакше шапка сіпнеться,
