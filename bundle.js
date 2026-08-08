@@ -16951,14 +16951,44 @@ END:VEVENT`
   var currentTab2 = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
   var _scrollByTab = /* @__PURE__ */ new Map();
-  var SMOOTH_MAX = 2;
+  var UP_MIN_MS = 300;
+  var UP_MAX_MS = 620;
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  var _upAnim = null;
+  function stopScrollUp() {
+    if (_upAnim) {
+      cancelAnimationFrame(_upAnim);
+      _upAnim = null;
+    }
+  }
+  function animateScrollUp(main) {
+    const \u0441\u0442\u0430\u0440\u0442 = main.scrollTop;
+    if (\u0441\u0442\u0430\u0440\u0442 <= 0)
+      return;
+    stopScrollUp();
+    if (reducedMotion()) {
+      main.scrollTop = 0;
+      return;
+    }
+    const \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C = Math.min(UP_MAX_MS, Math.max(UP_MIN_MS, 260 + \u0441\u0442\u0430\u0440\u0442 * 0.11));
+    const t0 = performance.now();
+    const \u043A\u0440\u0438\u0432\u0430 = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const \u043A\u0440\u043E\u043A = (\u0437\u0430\u0440\u0430\u0437) => {
+      const t = Math.min(1, (\u0437\u0430\u0440\u0430\u0437 - t0) / \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C);
+      main.scrollTop = Math.round(\u0441\u0442\u0430\u0440\u0442 * (1 - \u043A\u0440\u0438\u0432\u0430(t)));
+      _upAnim = t < 1 ? requestAnimationFrame(\u043A\u0440\u043E\u043A) : null;
+    };
+    _upAnim = requestAnimationFrame(\u043A\u0440\u043E\u043A);
+  }
+  ["touchstart", "wheel", "pointerdown"].forEach((ev) => window.addEventListener(ev, stopScrollUp, { passive: true }));
   function scrollTabToTop() {
     const main = document.querySelector(".app-main");
     if (!main)
       return;
     if (main.scrollTop > 0) {
-      const \u0434\u0430\u043B\u0435\u043A\u043E = main.scrollTop > window.innerHeight * SMOOTH_MAX;
-      main.scrollTo({ top: 0, behavior: \u0434\u0430\u043B\u0435\u043A\u043E ? "auto" : "smooth" });
+      animateScrollUp(main);
       _scrollByTab.set(currentTab2, 0);
     }
     forceReturnRefresh();
@@ -16974,6 +17004,7 @@ END:VEVENT`
     const newPage = document.getElementById(`page-${tab}`);
     if (!oldPage || !newPage)
       return;
+    stopScrollUp();
     const main = document.querySelector(".app-main");
     const \u043C\u0438\u043D\u0443\u043B\u0435 = main ? main.scrollTop : 0;
     newPage.style.opacity = "0";
