@@ -17,7 +17,7 @@ import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
-import { initRefreshOnReturn, onReturn } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
+import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 
 // Поточна активна вкладка
@@ -27,6 +27,35 @@ let currentTab = 'community';
 // протягом сесії) — прикріплюємо до кожної події tab_view.
 const _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
 
+// 🔴 08.08 — ЗАПАМʼЯТАНА ПРОКРУТКА КОЖНОЇ ВКЛАДКИ (див. пояснення у `switchTab`).
+// Ключ — імʼя вкладки, значення — `scrollTop` на момент виходу з неї.
+// ⚠️ У памʼяті, а не в `sessionStorage`: це стан ОДНОГО сеансу роботи, і переживати
+// перезапуск застосунку він не має — свіжий старт має починатись згори.
+const _scrollByTab = new Map();
+
+// Поріг «далеко»: понад два екрани прокрутки їдемо миттєво, ближче — плавно.
+// 🔑 Чому не «завжди плавно», як в Instagram: на Дошці з 3000px плавний доїзд триває
+// близько пів секунди, і людина, яка тапнула «щоб швидко нагору», встигає тапнути ще
+// раз. Миттєвий стрибок здалеку читається як «мене почули», а плавний зблизька — як
+// рух, а не телепорт. Зміниш число — зміниться лише відчуття, нічого не зламається.
+const SMOOTH_MAX = 2;
+
+// Повторний тап по активній вкладці: вгору + легке оновлення даних.
+function scrollTabToTop() {
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  if (main.scrollTop > 0) {
+    const далеко = main.scrollTop > window.innerHeight * SMOOTH_MAX;
+    main.scrollTo({ top: 0, behavior: далеко ? 'auto' : 'smooth' });
+    _scrollByTab.set(currentTab, 0);
+  }
+  // 🔑 «Легке оновлення» — це НЕ новий механізм. Той самий примітив, що працює при
+  // поверненні на вкладку (`core/refresh-on-return.js`): перечитує дані на місці, без
+  // перезавантаження сторінки і без блимання, і має власний поріг проти шквалу.
+  // Тап по активній вкладці — просто ще один законний привід його покликати.
+  forceReturnRefresh();
+}
+
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
   // Слот «Новини» став вкладкою «Шо в селі» (стрічка подій + свят). Новини живуть
@@ -34,7 +63,11 @@ window.switchTab = function(tab) {
   // Громади «Афіша →») перенаправляємо на 'shotam'.
   if (tab === 'news' || tab === 'events') tab = 'shotam';
 
-  if (tab === currentTab) return;
+  // 🔴 08.08 — ПОВТОРНИЙ ТАП ПО АКТИВНІЙ ВКЛАДЦІ = ВГОРУ + ЛЕГКЕ ОНОВЛЕННЯ.
+  // Замовлення Вови: «прокрутив вниз до самого низу і хоче швидко повернутися наверх,
+  // щоб пальцем не скролити — може ще раз натиснути на стрічку, як це в Instagram».
+  // Було: `if (tab === currentTab) return` — тап по активній вкладці не робив НІЧОГО.
+  if (tab === currentTab) { scrollTabToTop(); return; }
 
   const oldPage = document.getElementById(`page-${currentTab}`);
   const newPage = document.getElementById(`page-${tab}`);
@@ -42,9 +75,36 @@ window.switchTab = function(tab) {
 
   const main = document.querySelector('.app-main');
 
+  // 🔴 08.08 — ПРОКРУТКА У КОЖНОЇ ВКЛАДКИ СВОЯ.
+  //
+  // Скарга Вови: «прокрутив дві повних сторінки на Дошці, переходжу на Громаду — і
+  // такий самий діапазон прокруту зразу відображається на Громаді, а потім різко
+  // переключається на початок».
+  //
+  // 🔑 Причина не в тому, що сторінки «синхронізовані», а в тому, що сторінка ОДНА:
+  // `.app-main` — єдиний скролер застосунку (`style/base.css`), усі `#page-*` лежать
+  // усередині нього. Прокрутка не «передається» між вкладками — вона фізично та сама.
+  // А ривок давало те, що скидання `scrollTop = 0` стояло в `setTimeout(…, 220)`, тобто
+  // ПІСЛЯ того, як нова вкладка вже намальована: спершу кадр на чужому зміщенні, за
+  // 220мс — стрибок угору.
+  //
+  // Лікуємо не скиданням раніше (тоді вкладка просто завжди починалась би згори, і
+  // повернення на Дошку губило б місце), а ПАМʼЯТТЮ на вкладку: йдемо — запамʼятали,
+  // входимо — поставили її власне зміщення ще ДО першого кадру.
+  // ⚠️ Запамʼятовуємо ДО показу нової сторінки, а ставимо ПІСЛЯ: поки нова сторінка
+  // ще прихована, скролер не має її висоти, і задане зміщення браузер обрізав би по
+  // старій межі. Порядок «зберегли → показали → поставили» — єдиний, за якого обидві
+  // величини правдиві.
+  const минуле = main ? main.scrollTop : 0;
+
   // Плавний fade перехід
   newPage.style.opacity = '0';
   newPage.style.display = 'block';
+
+  if (main) {
+    _scrollByTab.set(currentTab, минуле);
+    main.scrollTop = _scrollByTab.get(tab) || 0;   // перший вхід → 0
+  }
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -58,7 +118,6 @@ window.switchTab = function(tab) {
         oldPage.style.opacity = '';
         oldPage.style.transition = '';
         newPage.style.transition = '';
-        if (main) main.scrollTop = 0;
       }, 220);
     });
   });
