@@ -11610,9 +11610,10 @@
       const now = new Date(Date.now() + offsetSec * 1e3);
       const today = now.toISOString().slice(0, 10);
       const nowH = now.getUTCHours();
-      const \u043C\u043E\u043A\u0440\u0430 = \u043F\u0435\u0440\u0448\u0430\u041C\u043E\u043A\u0440\u0430\u0413\u043E\u0434\u0438\u043D\u0430(h, today, nowH);
+      const \u043C\u043E\u043A\u0440\u0430 = \u043F\u0435\u0440\u0448\u0430\u041C\u043E\u043A\u0440\u0430\u0413\u043E\u0434\u0438\u043D\u0430(h, today, nowH - 1);
       if (\u043C\u043E\u043A\u0440\u0430) {
-        return \u043C\u043E\u043A\u0440\u0430.precip >= 60 ? `\u043E\u043F\u0430\u0434\u0438 \u043E ${pad(\u043C\u043E\u043A\u0440\u0430.h)}:00` : `\u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u043E\u043F\u0430\u0434\u0438 \u043E ${pad(\u043C\u043E\u043A\u0440\u0430.h)}:00`;
+        const \u043A\u043E\u043B\u0438 = \u043C\u043E\u043A\u0440\u0430.h === nowH ? "\u0437\u0430\u0440\u0430\u0437" : `\u043E ${pad(\u043C\u043E\u043A\u0440\u0430.h)}:00`;
+        return \u043C\u043E\u043A\u0440\u0430.precip >= 60 ? `\u043E\u043F\u0430\u0434\u0438 ${\u043A\u043E\u043B\u0438}` : `\u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u043E\u043F\u0430\u0434\u0438 ${\u043A\u043E\u043B\u0438}`;
       }
       if (d?.temperature_2m_max?.length > 1) {
         const diff = Math.round(d.temperature_2m_max[1]) - Math.round(d.temperature_2m_max[0]);
@@ -11686,11 +11687,12 @@
       return null;
     return nums.reduce((a, b) => a + b, 0) / nums.length;
   }
-  function wxAdvice(hours, dayMaxT) {
+  function wxAdvice(hours, dayMaxT, nowHour = null) {
     const rain = hours.find((h) => h.precip !== null && h.precip >= RAIN_MIN);
     if (rain) {
       const \u0441\u043B\u043E\u0432\u043E = rain.precip >= 60 ? "\u0414\u0443\u0436\u0435 \u0439\u043C\u043E\u0432\u0456\u0440\u043D\u0438\u0439 \u0434\u043E\u0449" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0434\u043E\u0449";
-      return `${\u0441\u043B\u043E\u0432\u043E} \u0437 ${rain.hh}:00 \u2014 ${Math.round(rain.precip)}%`;
+      const \u043A\u043E\u043B\u0438 = rain.h === nowHour ? "\u0437\u0430\u0440\u0430\u0437" : `\u0437 ${rain.hh}:00`;
+      return `${\u0441\u043B\u043E\u0432\u043E} ${\u043A\u043E\u043B\u0438} \u2014 ${Math.round(rain.precip)}%`;
     }
     const evening = hours.filter((h) => h.h >= 18);
     const evFeels = evening.map((h) => h.feels ?? h.t).filter((v) => v !== null);
@@ -11780,7 +11782,7 @@
       \u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430 ? ["\u0412\u0456\u0442\u0435\u0440", `\u0434\u043E ${Math.round(\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.wind)} \u043A\u043C/\u0433\u043E\u0434${\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.dir ? `, ${\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.dir}` : ""}`] : null,
       \u0432\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C !== null ? ["\u0412\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C", `${Math.round(\u0432\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C)}% \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 \u0437\u0430 \u0434\u0435\u043D\u044C`] : null
     ].filter(Boolean);
-    const \u043F\u043E\u0440\u0430\u0434\u0430 = wxAdvice(hours, tMax);
+    const \u043F\u043E\u0440\u0430\u0434\u0430 = wxAdvice(hours, tMax, isToday ? nowHour : null);
     const bodyHtml = `
     <div class="wxd-head">
       <div class="wxd-head-top">
@@ -13735,34 +13737,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const pill = document.querySelector("#page-shotam .fd-newposts");
     if (!pill)
       return;
-    const bar = document.querySelector("#page-shotam .fd-topbar");
-    const bottom = bar ? bar.getBoundingClientRect().bottom : 72;
+    const header = document.querySelector(".app-header");
+    const bottom = header ? header.getBoundingClientRect().bottom : 56;
     pill.style.top = `${Math.max(8, bottom + 8)}px`;
   }
   function layoutCircles() {
     const el = document.querySelector("#feed-circles .fd-circles");
     if (!el)
       return;
-    el.style.setProperty("--sh", "0");
-    el.style.setProperty("--sh-tight", "0");
     el.classList.remove("is-fit");
     if (el.scrollWidth <= el.clientWidth + 1)
       el.classList.add("is-fit");
     planCollapsedPad(el);
-    el.style.removeProperty("--sh");
-    el.style.removeProperty("--sh-tight");
-  }
-  var NAME_RANGE = 60;
-  var TIGHT_RANGE = 180;
-  function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
-    const s = Math.max(0, scrollTop);
-    const clamp012 = (v) => Math.min(1, Math.max(0, v));
-    return {
-      name: clamp012(s / nameRange),
-      // Друга фаза стартує рівно там, де закінчилась перша — без паузи між ними
-      // (пауза між рухом пальця і реакцією екрана вже читалась як ривок, 24.07).
-      tight: clamp012((s - nameRange) / tightRange)
-    };
   }
   var CIRCLE_RING = 62;
   var CIRCLE_PAD = 16;
@@ -15472,25 +15458,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           wireClamps(list);
         document.querySelectorAll(".fd-screen").forEach(wireClamps);
       });
-      const main = document.querySelector(".app-main");
-      const bar = root.querySelector(".fd-topbar");
-      if (main && bar) {
-        let shRaf = 0;
-        const applyShrink = () => {
-          shRaf = 0;
-          const p = shrinkProgress(main.scrollTop);
-          bar.style.setProperty("--sh", p.name.toFixed(3));
-          bar.style.setProperty("--sh-tight", p.tight.toFixed(3));
-          positionNewPostsPill();
-        };
-        const onShrink = () => {
-          if (!shRaf)
-            shRaf = requestAnimationFrame(applyShrink);
-        };
-        main.addEventListener("scroll", onShrink, { passive: true });
-        window.addEventListener("cstl-tab-changed", onShrink);
-        onShrink();
-      }
+      positionNewPostsPill();
       subscribePageComments((payload) => {
         const t = payload.eventType;
         if (t === "DELETE")
