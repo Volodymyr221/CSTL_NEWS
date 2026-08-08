@@ -104,7 +104,16 @@
   padding: 2px 0 7px;
 }
 .cm-weather-icon { font-size: 38px; line-height: 1; }
-.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .wx-ro-ic .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
+/* 🔴 08.08 — ДОДАНО `.hm-wx-icon`: у семиденному ряду на головній іконки були
+   НЕВИДИМІ. Вони весь час лежали в розмітці (`community-blocks.js`, `dayInfo.icon`),
+   але це `<img>`, а розмір йому задавало лише правило нижче — і `.hm-wx-icon` у
+   переліку не було. Заміряно браузером: 7 іконок у DOM, розмір кожної **0×0 px**.
+   ⚠️ `font-size: 15px` на `.hm-wx-icon` тут не рятує: для `<img>` кегль нічого не
+   означає, доки немає `width` в `em`. Саме тому дефект і виглядав як «іконки просто
+   немає», а не як «іконка не того розміру».
+   🔑 Дописано в ІСНУЮЧЕ правило, а не новим: розмір іконки погоди — одне місце на всі
+   чотири поверхні, інакше п'ята розійдеться з рештою (у проєкті так уже було). */
+.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .wx-ro-ic .wx-ic, .hm-wx-icon .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
 .cm-weather-temp {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 38px; font-weight: 700; line-height: 0.9;
