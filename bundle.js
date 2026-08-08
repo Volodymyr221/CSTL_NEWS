@@ -11537,7 +11537,8 @@
       const forecastHtml = day.time.map((dateStr, i) => {
         const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
         const wd = WEEKDAYS_UA[d.getDay()];
-        const dayInfo = weatherCodeInfo(day.weather_code[i]);
+        const \u043A\u043E\u0434\u0414\u043D\u044F = i === 0 ? \u043D\u0430\u0439\u0437\u043D\u0430\u0447\u043D\u0456\u0448\u0430\u041F\u043E\u0433\u043E\u0434\u0430\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u0443(data, dateStr) ?? day.weather_code[i] : day.weather_code[i];
+        const dayInfo = weatherCodeInfo(\u043A\u043E\u0434\u0414\u043D\u044F);
         const tMax = Math.round(day.temperature_2m_max[i]);
         return `
         <button type="button" class="hm-wx-day${i === 0 ? " hm-wx-day--today" : ""}" data-wx-day="${i}"
@@ -11585,6 +11586,47 @@
     if (hint)
       return hint;
     return `\u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${feels}\xB0`;
+  }
+  function \u0432\u0430\u0433\u0430\u041F\u043E\u0433\u043E\u0434\u0438(code) {
+    if (code >= 95)
+      return 8;
+    if (code >= 71 && code <= 77)
+      return 7;
+    if (code === 85 || code === 86)
+      return 7;
+    if (code >= 80 && code <= 82)
+      return 6;
+    if (code >= 61 && code <= 67)
+      return 6;
+    if (code >= 51 && code <= 57)
+      return 5;
+    if (code === 45 || code === 48)
+      return 4;
+    if (code === 3)
+      return 3;
+    if (code === 1 || code === 2)
+      return 2;
+    return 1;
+  }
+  function \u043D\u0430\u0439\u0437\u043D\u0430\u0447\u043D\u0456\u0448\u0430\u041F\u043E\u0433\u043E\u0434\u0430\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u0443(data, dateStr) {
+    const h = data.hourly;
+    if (!h?.time || !h.weather_code)
+      return null;
+    const offsetSec = data.utc_offset_seconds ?? 7200;
+    const nowH = new Date(Date.now() + offsetSec * 1e3).getUTCHours();
+    let best = null;
+    for (let i = 0; i < h.time.length; i++) {
+      if (!h.time[i].startsWith(dateStr))
+        continue;
+      if (+h.time[i].slice(11, 13) < nowH)
+        continue;
+      const c = h.weather_code[i];
+      if (typeof c !== "number" || !Number.isFinite(c))
+        continue;
+      if (best === null || \u0432\u0430\u0433\u0430\u041F\u043E\u0433\u043E\u0434\u0438(c) > \u0432\u0430\u0433\u0430\u041F\u043E\u0433\u043E\u0434\u0438(best))
+        best = c;
+    }
+    return best;
   }
   var RAIN_MIN = 40;
   function \u043F\u0435\u0440\u0448\u0430\u041C\u043E\u043A\u0440\u0430\u0413\u043E\u0434\u0438\u043D\u0430(hourly, dateStr, fromHour = -1) {
