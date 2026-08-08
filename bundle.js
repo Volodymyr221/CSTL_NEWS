@@ -11586,6 +11586,23 @@
       return hint;
     return `\u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${feels}\xB0`;
   }
+  var RAIN_MIN = 40;
+  function \u043F\u0435\u0440\u0448\u0430\u041C\u043E\u043A\u0440\u0430\u0413\u043E\u0434\u0438\u043D\u0430(hourly, dateStr, fromHour = -1) {
+    const t = hourly?.time, p = hourly?.precipitation_probability;
+    if (!t || !p)
+      return null;
+    for (let i = 0; i < t.length; i++) {
+      if (!t[i].startsWith(dateStr))
+        continue;
+      const h = +t[i].slice(11, 13);
+      if (h <= fromHour)
+        continue;
+      const v = p[i];
+      if (typeof v === "number" && Number.isFinite(v) && v >= RAIN_MIN)
+        return { h, precip: v };
+    }
+    return null;
+  }
   function weatherHint(data) {
     const h = data.hourly, d = data.daily;
     try {
@@ -11593,17 +11610,9 @@
       const now = new Date(Date.now() + offsetSec * 1e3);
       const today = now.toISOString().slice(0, 10);
       const nowH = now.getUTCHours();
-      if (h?.time && h.precipitation_probability) {
-        for (let i = 0; i < h.time.length; i++) {
-          const t = h.time[i];
-          if (!t.startsWith(today))
-            continue;
-          const hour = +t.slice(11, 13);
-          if (hour <= nowH)
-            continue;
-          if ((h.precipitation_probability[i] ?? 0) >= 60)
-            return `\u043E\u043F\u0430\u0434\u0438 \u043E ${pad(hour)}:00`;
-        }
+      const \u043C\u043E\u043A\u0440\u0430 = \u043F\u0435\u0440\u0448\u0430\u041C\u043E\u043A\u0440\u0430\u0413\u043E\u0434\u0438\u043D\u0430(h, today, nowH);
+      if (\u043C\u043E\u043A\u0440\u0430) {
+        return \u043C\u043E\u043A\u0440\u0430.precip >= 60 ? `\u043E\u043F\u0430\u0434\u0438 \u043E ${pad(\u043C\u043E\u043A\u0440\u0430.h)}:00` : `\u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u043E\u043F\u0430\u0434\u0438 \u043E ${pad(\u043C\u043E\u043A\u0440\u0430.h)}:00`;
       }
       if (d?.temperature_2m_max?.length > 1) {
         const diff = Math.round(d.temperature_2m_max[1]) - Math.round(d.temperature_2m_max[0]);
@@ -11678,7 +11687,7 @@
     return nums.reduce((a, b) => a + b, 0) / nums.length;
   }
   function wxAdvice(hours, dayMaxT) {
-    const rain = hours.find((h) => (h.precip ?? -1) >= 40);
+    const rain = hours.find((h) => h.precip !== null && h.precip >= RAIN_MIN);
     if (rain) {
       const \u0441\u043B\u043E\u0432\u043E = rain.precip >= 60 ? "\u0414\u0443\u0436\u0435 \u0439\u043C\u043E\u0432\u0456\u0440\u043D\u0438\u0439 \u0434\u043E\u0449" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0434\u043E\u0449";
       return `${\u0441\u043B\u043E\u0432\u043E} \u0437 ${rain.hh}:00 \u2014 ${Math.round(rain.precip)}%`;
