@@ -11516,11 +11516,13 @@
         new Promise((r) => setTimeout(() => r(null), 3e3))
       ]);
       const weatherRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=7&timezone=auto`
       );
       const cityName = await cityP || "\u041E\u043B\u0438\u043A\u0430";
       const data = await weatherRes.json();
-      _wxData = { ...data, city: cityName };
+      if (data && data.error)
+        throw new Error(`Open-Meteo: ${data.reason || "\u0432\u0456\u0434\u043C\u043E\u0432\u0430"}`);
+      _wxData = { ...data, city: cityName, fetchedAt: Date.now() };
       const cur = data.current;
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
@@ -11652,68 +11654,44 @@
       renderWeatherBlock();
     });
   }
-  var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
-  function wxGeom(points) {
-    const vals = points.map((p) => p.v);
-    let min = Math.min(...vals), max = Math.max(...vals);
-    if (min === max) {
-      min -= 1;
-      max += 1;
+  function wxNum(v) {
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  var WX_EMPTY = "\u2014";
+  var WX_DROP = '<svg class="cat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.502 19.423c2.602 2.105 6.395 2.105 8.996 0c2.602 -2.105 3.262 -5.708 1.566 -8.546l-4.89 -7.26c-.42 -.625 -1.287 -.803 -1.936 -.397a1.4 1.4 0 0 0 -.41 .397l-4.893 7.26c-1.695 2.838 -1.035 6.441 1.567 8.546z"/></svg>';
+  var WIND_DIRS_UA = ["\u041F\u043D", "\u041F\u043D\u0421\u0445", "\u0421\u0445", "\u041F\u0434\u0421\u0445", "\u041F\u0434", "\u041F\u0434\u0417\u0445", "\u0417\u0445", "\u041F\u043D\u0417\u0445"];
+  function windDirUA(deg) {
+    const n = wxNum(deg);
+    if (n === null)
+      return null;
+    return WIND_DIRS_UA[Math.round((n % 360 + 360) % 360 / 45) % 8];
+  }
+  function wxAvg(values) {
+    const nums = values.map(wxNum).filter((v) => v !== null);
+    if (!nums.length)
+      return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+  function wxAdvice(hours, dayMaxT) {
+    const rain = hours.find((h) => (h.precip ?? -1) >= 40);
+    if (rain) {
+      const \u0441\u043B\u043E\u0432\u043E = rain.precip >= 60 ? "\u0414\u0443\u0436\u0435 \u0439\u043C\u043E\u0432\u0456\u0440\u043D\u0438\u0439 \u0434\u043E\u0449" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0438\u0439 \u0434\u043E\u0449";
+      return `${\u0441\u043B\u043E\u0432\u043E} \u0437 ${rain.hh}:00 \u2014 ${Math.round(rain.precip)}%`;
     }
-    const innerW = WX.W - WX.padL - WX.padR;
-    const innerH = WX.H - WX.padTop - WX.padB;
-    return {
-      min,
-      max,
-      innerW,
-      innerH,
-      x: (i) => WX.padL + innerW * i / (points.length - 1),
-      y: (v) => WX.padTop + innerH - (v - min) / (max - min) * innerH
-    };
-  }
-  function wxLineChart(points, { unit = "\xB0", color = "#FFFFFF" } = {}) {
-    const g = wxGeom(points);
-    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${g.x(i).toFixed(1)},${g.y(p.v).toFixed(1)}`).join(" ");
-    const area = `${line} L${g.x(points.length - 1).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} L${g.x(0).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} Z`;
-    const xLabels = points.map((p, i) => i % 2 === 0 ? `<text x="${g.x(i).toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "").join("");
-    const yAxis = [g.min, (g.min + g.max) / 2, g.max].map((v) => {
-      const yy = g.y(v);
-      return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/><text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${Math.round(v)}${unit}</text>`;
-    }).join("");
-    return `
-    <svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
-      <defs><linearGradient id="wxfill" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
-        <stop offset="1" stop-color="${color}" stop-opacity="0"/>
-      </linearGradient></defs>
-      ${yAxis}
-      <path d="${area}" fill="url(#wxfill)"/>
-      <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-      ${xLabels}
-    </svg>`;
-  }
-  function wxBarChart(points) {
-    const innerW = WX.W - WX.padL - WX.padR;
-    const innerH = WX.H - WX.padTop - WX.padB;
-    const bw = innerW / points.length * 0.6;
-    const bars = points.map((p, i) => {
-      const cx = WX.padL + innerW * (i + 0.5) / points.length;
-      const h = Math.max(1, Math.min(100, p.v) / 100 * innerH);
-      const yTop = WX.padTop + innerH - h;
-      const label = i % 2 === 0 ? `<text x="${cx.toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "";
-      const pct = p.v >= 20 && i % 2 === 0 ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}%</text>` : "";
-      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#wxbar)" fill-opacity="${(0.5 + 0.5 * Math.min(100, p.v) / 100).toFixed(2)}"/>${pct}${label}`;
-    }).join("");
-    const yAxis = [0, 50, 100].map((v) => {
-      const yy = WX.padTop + innerH - v / 100 * innerH;
-      return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/><text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${v}</text>`;
-    }).join("");
-    return `<svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
-      <defs><linearGradient id="wxbar" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#2F80FF"/>
-      </linearGradient></defs>
-      ${yAxis}${bars}
-    </svg>`;
+    const evening = hours.filter((h) => h.h >= 18);
+    const evFeels = evening.map((h) => h.feels ?? h.t).filter((v) => v !== null);
+    if (evFeels.length && dayMaxT !== null && dayMaxT >= 18) {
+      const \u043D\u0438\u0437 = Math.min(...evFeels);
+      if (\u043D\u0438\u0437 <= 12)
+        return `\u0423\u0432\u0435\u0447\u0435\u0440\u0456 \u043F\u043E\u0445\u043E\u043B\u043E\u0434\u0430\u0454 \u0434\u043E ${Math.round(\u043D\u0438\u0437)}\xB0 \u2014 \u0432\u0456\u0437\u044C\u043C\u0456\u0442\u044C \u0449\u043E\u0441\u044C \u0442\u0435\u043F\u043B\u0456\u0448\u0435`;
+    }
+    const winds = hours.map((h) => h.wind).filter((v) => v !== null);
+    if (winds.length) {
+      const \u043C\u0430\u043A\u0441 = Math.max(...winds);
+      if (\u043C\u0430\u043A\u0441 >= 30)
+        return `\u0421\u0438\u043B\u044C\u043D\u0438\u0439 \u0432\u0456\u0442\u0435\u0440, \u0434\u043E ${Math.round(\u043C\u0430\u043A\u0441)} \u043A\u043C/\u0433\u043E\u0434`;
+    }
+    return null;
   }
   function openWeatherDayModal(dayIndex) {
     if (!_wxData || !_wxData.hourly)
@@ -11723,119 +11701,119 @@
     const dateStr = daily.time[dayIndex];
     if (!dateStr)
       return;
-    const idxs = [];
+    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
+    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
+    const nowDateStr = nowLocal.toISOString().slice(0, 10);
+    const nowHour = nowLocal.getUTCHours();
+    const isToday = dateStr === nowDateStr;
+    let idxs = [];
     hourly.time.forEach((t, i) => {
       if (t.startsWith(dateStr))
         idxs.push(i);
     });
     if (!idxs.length)
       return;
-    const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
-    const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
-    const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
+    const \u0443\u0441\u0456\u0413\u043E\u0434\u0438\u043D\u0438 = idxs;
+    if (isToday) {
+      const \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 = idxs.filter((i) => +hourly.time[i].slice(11, 13) >= nowHour);
+      idxs = \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456.length ? \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 : \u0443\u0441\u0456\u0413\u043E\u0434\u0438\u043D\u0438.slice(-1);
+    }
+    const hours = idxs.map((i) => {
+      const \u043A\u043E\u0434 = wxNum(hourly.weather_code?.[i]);
+      return {
+        h: +hourly.time[i].slice(11, 13),
+        hh: hourly.time[i].slice(11, 13),
+        t: wxNum(hourly.temperature_2m?.[i]),
+        feels: wxNum(hourly.apparent_temperature?.[i]),
+        precip: wxNum(hourly.precipitation_probability?.[i]),
+        wind: wxNum(hourly.wind_speed_10m?.[i]),
+        dir: windDirUA(hourly.wind_direction_10m?.[i]),
+        // Код погоди відсутній → НЕ підставляємо 0 («Ясно»): картка лишиться без іконки.
+        info: \u043A\u043E\u0434 === null ? null : weatherCodeInfo(\u043A\u043E\u0434)
+      };
+    });
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
-    const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-    const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-    const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-    const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
+    const dayName = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
+    const dateLabel = `${d.getDate()} ${CM_MONTHS[d.getMonth()]}`;
+    const tMax = wxNum(daily.temperature_2m_max?.[dayIndex]);
+    const tMin = wxNum(daily.temperature_2m_min?.[dayIndex]);
+    const cur = _wxData.current || {};
+    const headCode = isToday ? wxNum(cur.weather_code) : wxNum(daily.weather_code?.[dayIndex]);
+    const headInfo = headCode === null ? null : weatherCodeInfo(headCode);
+    const curT = isToday ? wxNum(cur.temperature_2m) : null;
+    const curFeels = isToday ? wxNum(cur.apparent_temperature) : null;
+    const hoursHtml = hours.map((h) => {
+      if (h.t === null)
+        return "";
+      const \u0437\u0430\u0440\u0430\u0437 = isToday && h.h === nowHour;
+      return `
+      <li class="wxd-h${\u0437\u0430\u0440\u0430\u0437 ? " wxd-h--now" : ""}">
+        <span class="wxd-h-time">${\u0437\u0430\u0440\u0430\u0437 ? "\u0417\u0430\u0440\u0430\u0437" : `${h.hh}:00`}</span>
+        <span class="wxd-h-ic" aria-hidden="true">${h.info ? h.info.icon : ""}</span>
+        <span class="wxd-h-t">${Math.round(h.t)}\xB0</span>
+        <span class="wxd-h-p${(h.precip ?? 0) >= 40 ? " wxd-h-p--wet" : ""}">
+          <span class="wxd-drop" aria-hidden="true">${WX_DROP}</span>${h.precip === null ? WX_EMPTY : `${Math.round(h.precip)}%`}</span>
+        <span class="wxd-h-w">${h.wind === null ? WX_EMPTY : `${Math.round(h.wind)} \u043A\u043C/\u0433\u043E\u0434`}</span>
+      </li>`;
+    }).join("");
+    const \u0432\u0456\u0442\u0440\u0438 = hours.filter((h) => h.wind !== null);
+    const \u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430 = \u0432\u0456\u0442\u0440\u0438.length ? \u0432\u0456\u0442\u0440\u0438.reduce((a, b) => b.wind > a.wind ? b : a) : null;
+    const \u0432\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C = wxAvg(\u0443\u0441\u0456\u0413\u043E\u0434\u0438\u043D\u0438.map((i) => hourly.relative_humidity_2m?.[i]));
+    const \u0441\u0445\u0456\u0434 = (daily.sunrise?.[dayIndex] || "").slice(11, 16);
+    const \u0437\u0430\u0445\u0456\u0434 = (daily.sunset?.[dayIndex] || "").slice(11, 16);
+    const \u0444\u0430\u043A\u0442\u0438 = [
+      \u0441\u0445\u0456\u0434 && \u0437\u0430\u0445\u0456\u0434 ? ["\u0421\u0445\u0456\u0434 \u0456 \u0437\u0430\u0445\u0456\u0434", `${\u0441\u0445\u0456\u0434} \u2014 ${\u0437\u0430\u0445\u0456\u0434}`] : null,
+      \u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430 ? ["\u0412\u0456\u0442\u0435\u0440", `\u0434\u043E ${Math.round(\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.wind)} \u043A\u043C/\u0433\u043E\u0434${\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.dir ? `, ${\u043D\u0430\u0439\u0432\u0456\u0442\u0440\u044F\u043D\u0456\u0448\u0430.dir}` : ""}`] : null,
+      \u0432\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C !== null ? ["\u0412\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C", `${Math.round(\u0432\u043E\u043B\u043E\u0433\u0456\u0441\u0442\u044C)}% \u0443 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443 \u0437\u0430 \u0434\u0435\u043D\u044C`] : null
+    ].filter(Boolean);
+    const \u043F\u043E\u0440\u0430\u0434\u0430 = wxAdvice(hours, tMax);
     const bodyHtml = `
-    <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
-      <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+    <div class="wxd-head">
+      <div class="wxd-head-top">
+        <div class="wxd-head-day">${escapeHtml(dayName)} \xB7 ${escapeHtml(dateLabel)}</div>
+        ${tMax !== null && tMin !== null ? `<div class="wxd-head-range">${Math.round(tMax)}\xB0 <span>/ ${Math.round(tMin)}\xB0</span></div>` : ""}
       </div>
-      <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
-    </div>
-    <div class="wx-chart-block">
-      <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
-      <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: "\xB0" })}
-        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-        <div class="wx-readout"></div>
+      <div class="wxd-head-place">${escapeHtml(_wxData.city || "\u041E\u043B\u0438\u043A\u0430")}</div>
+      <div class="wxd-head-now">
+        ${headInfo ? `<span class="wxd-head-ic" aria-hidden="true">${headInfo.icon}</span>` : ""}
+        <div class="wxd-head-txt">
+          <div class="wxd-head-desc">${escapeHtml(headInfo ? headInfo.text : WX_EMPTY)}</div>
+          ${curT !== null ? `<div class="wxd-head-sub">\u0437\u0430\u0440\u0430\u0437 ${Math.round(curT)}\xB0${curFeels !== null ? `, \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F ${Math.round(curFeels)}\xB0` : ""}</div>` : ""}
+        </div>
       </div>
     </div>
-    <div class="wx-chart-block">
-      <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
-      <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
-        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-        <div class="wx-readout"></div>
-      </div>
-    </div>`;
-    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
-    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
-    const nowDateStr = nowLocal.toISOString().slice(0, 10);
-    const nowHour = nowLocal.getUTCHours();
-    const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
+
+    <div class="wxd-sec-title">\u041F\u043E\u0433\u043E\u0434\u0438\u043D\u043D\u043E</div>
+    <ul class="wxd-hours" tabindex="0">${hoursHtml}</ul>
+
+    ${\u043F\u043E\u0440\u0430\u0434\u0430 ? `<div class="wxd-advice"><span class="wxd-advice-ic" aria-hidden="true">${ICONS.bulb}</span>${escapeHtml(\u043F\u043E\u0440\u0430\u0434\u0430)}</div>` : ""}
+
+    ${\u0444\u0430\u043A\u0442\u0438.length ? `<ul class="wxd-facts">${\u0444\u0430\u043A\u0442\u0438.map(([k, v]) => `
+      <li class="wxd-fact"><span class="wxd-fact-k">${escapeHtml(k)}</span><span class="wxd-fact-v">${escapeHtml(v)}</span></li>`).join("")}</ul>` : ""}
+
+    <div class="wxd-src">\u0414\u0430\u043D\u0456 Open-Meteo${_wxData.fetchedAt ? ` \xB7 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E ${formatTime(_wxData.fetchedAt)}` : ""}</div>`;
     const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
       swipeClose: false,
-      onMount: (wrap) => wireWeatherScrubber(wrap, {
-        tempPts,
-        precipPts,
-        iconPts,
-        initialIdx: initialIdx >= 0 ? initialIdx : null
-      })
+      // 🔴 МАЙБУТНІЙ ДЕНЬ ВІДКРИВАЄТЬСЯ НА РАНКУ, А НЕ НА ПІВНОЧІ.
+      // Стрічка чесно містить усі 24 години (ховати нічні — це ховати дані), але
+      // перше, що людина бачить, має бути те, заради чого вона зайшла. Заміряно на
+      // знімку: при старті з 00:00 у полі зору 00…04 — тобто «Понеділок» зустрічає
+      // порожньою ніччю, а приклад Вови («о восьмій сонце, о десятій дощ») лежить
+      // за екран прокрутки вправо.
+      // Сьогоднішній день не чіпаємо: там перша картка і так «Зараз».
+      onMount: (wrap) => {
+        if (isToday)
+          return;
+        const \u0441\u0442\u0440\u0456\u0447\u043A\u0430 = wrap.querySelector(".wxd-hours");
+        const \u0440\u0430\u043D\u043E\u043A = \u0441\u0442\u0440\u0456\u0447\u043A\u0430?.children[7];
+        if (\u0441\u0442\u0440\u0456\u0447\u043A\u0430 && \u0440\u0430\u043D\u043E\u043A)
+          \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft = \u0440\u0430\u043D\u043E\u043A.offsetLeft - \u0441\u0442\u0440\u0456\u0447\u043A\u0430.offsetLeft;
+      }
     });
     wireWeatherSwipe(el, close);
-  }
-  function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
-    const n = tempPts.length;
-    if (!n)
-      return;
-    const gTemp = wxGeom(tempPts);
-    const wraps = [...overlay.querySelectorAll(".wx-chart-svg-wrap")];
-    function place(idx) {
-      idx = Math.max(0, Math.min(n - 1, idx));
-      const xPct = gTemp.x(idx) / WX.W * 100;
-      wraps.forEach((wrap) => {
-        const kind = wrap.dataset.wx;
-        const cursor = wrap.querySelector(".wx-cursor");
-        const readout = wrap.querySelector(".wx-readout");
-        cursor.style.left = xPct + "%";
-        cursor.classList.add("is-on");
-        const p = kind === "temp" ? tempPts[idx] : precipPts[idx];
-        const val = kind === "temp" ? `${Math.round(p.v)}\xB0` : `${Math.round(p.v)}%`;
-        const icHtml = kind === "temp" ? `<span class="wx-ro-ic">${iconPts[idx]}</span>` : "";
-        readout.innerHTML = `${icHtml}<span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
-        readout.style.left = xPct + "%";
-        readout.classList.add("is-on");
-      });
-    }
-    function idxFromX(wrap, clientX) {
-      const r = wrap.getBoundingClientRect();
-      const frac = (clientX - r.left) / r.width;
-      const usable = (frac * WX.W - WX.padL) / (WX.W - WX.padL - WX.padR);
-      return Math.round(usable * (n - 1));
-    }
-    wraps.forEach((wrap) => {
-      wrap.addEventListener("pointerdown", (e) => {
-        wrap.setPointerCapture(e.pointerId);
-        place(idxFromX(wrap, e.clientX));
-        e.preventDefault();
-      });
-      wrap.addEventListener("pointermove", (e) => {
-        if (e.pressure === 0 && e.buttons === 0)
-          return;
-        if (!wrap.hasPointerCapture(e.pointerId))
-          return;
-        place(idxFromX(wrap, e.clientX));
-      });
-      const end = (e) => {
-        try {
-          wrap.releasePointerCapture(e.pointerId);
-        } catch (_) {
-        }
-      };
-      wrap.addEventListener("pointerup", end);
-      wrap.addEventListener("pointercancel", end);
-    });
-    if (initialIdx != null)
-      place(initialIdx);
   }
   function wireWeatherSwipe(overlay, close) {
     const sheet = overlay.querySelector(".app-modal-sheet");
@@ -11845,7 +11823,7 @@
     const drag = createDragTracker();
     const fade = createBackdropFade(overlay.querySelector(".app-modal-backdrop"));
     sheet.addEventListener("touchstart", (e) => {
-      if (e.target.closest(".wx-chart-svg-wrap"))
+      if (e.target.closest(".wxd-hours"))
         return;
       if (sheet.scrollTop > 2)
         return;

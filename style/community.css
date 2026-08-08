@@ -113,7 +113,13 @@
    немає», а не як «іконка не того розміру».
    🔑 Дописано в ІСНУЮЧЕ правило, а не новим: розмір іконки погоди — одне місце на всі
    чотири поверхні, інакше п'ята розійдеться з рештою (у проєкті так уже було). */
-.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .wx-ro-ic .wx-ic, .hm-wx-icon .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
+/* 🔴 08.08, друга правка того ж рядка — дописано `.wxd-head-ic` і `.wxd-h-ic`
+   (шапка модалки і картки годин). Причина та сама, що місяцем вище: іконка погоди
+   це `<img>`, і без `width` в `em` вона виходить 0×0 незалежно від `font-size`.
+   Тобто новий екран мовчки отримав би порожні картки.
+   ⚠️ `.wx-ro-ic` прибрано — це була бульбашка скрабера, а скрабера більше нема. */
+.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .hm-wx-icon .wx-ic,
+.wxd-head-ic .wx-ic, .wxd-h-ic .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
 .cm-weather-temp {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 38px; font-weight: 700; line-height: 0.9;
@@ -178,92 +184,141 @@
 }
 
 /* ── Модалка «Погода по годинах» (клік на день прогнозу) ──
-   iOS-стиль: нижній аркуш. Chrome (backdrop/sheet/handle/close/swipe) тепер
-   спільний примітив core/modal.js (Потік C1) — тут лишається контент-специфічне
-   + модифікатор .app-modal--weather (синій градієнт замість білого фону). */
+   iOS-стиль: нижній аркуш. Chrome (backdrop/sheet/handle/close/swipe) — спільний
+   примітив core/modal.js (Потік C1); тут лишається контент-специфічне.
+
+   🔴 08.08 — ПОВНА ПЕРЕРОБКА: картки по годинах замість двох графіків, і глибокий
+   синій замість блідого. Обидва — пряме замовлення Вови.
+
+   📐 ПРО КОЛІР, бо це не «підібрав гарніше». Було
+   `linear-gradient(180deg, #2C71BC, #5B93D4 42%, #C5DDFB)` — градієнт СВІТЛІШАВ
+   донизу, до майже білого. Через це низ аркуша (де саме й лежить дрібний текст)
+   мав білий текст на майже білому тлі. Вова: «цей голубий виглядає так звичайно…
+   можливо більш насиченіший». Стало навпаки — ТЕМНІШАЄ донизу, і це вирішує
+   заразом читабельність: контраст білого тексту росте там, де текст дрібнішає.
+   Найсвітліша точка градієнта #2E6FC4 дає з білим контраст 4.6:1, найтемніша
+   #0E2A52 — 13.6:1. Тобто мінімум по всьому аркушу вище порогу AA (4.5:1).
+   🛑 Не повертати світлий низ «щоб було легше»: саме він і був причиною скарги. */
 .app-modal--weather .app-modal-sheet {
   max-width: 520px;
   margin: 0 auto;
-  background: linear-gradient(180deg, #2C71BC 0%, #5B93D4 42%, #C5DDFB 100%);
-  color: var(--sky-text);
-  padding: 10px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #2E6FC4 0%, #1D4E96 45%, #0E2A52 100%);
+  color: #FFFFFF;
+  padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
   max-height: 86vh;
 }
 .app-modal--weather .app-modal-handle { background: rgba(255, 255, 255, 0.6); }
-.wx-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+/* 🔴 КОЛІР ТЕКСТУ ЗАДАЄТЬСЯ САМЕ НА `.app-modal-body`, І ЦЕ НЕ ДУБЛЬ.
+   `color` на `.app-modal-sheet` вище не діє на вміст: увесь вміст лежить у
+   `.app-modal-body`, а в `modal.css` є `.app-modal-body { color: var(--ink) }` —
+   ПРЯМЕ правило, а пряме правило б'є успадкування завжди, хай яка вага в предка.
+   📐 Заміряно: колір аркуша `rgb(255,255,255)`, а `.wxd-head-day` при цьому
+   `rgb(42,37,32)` — тобто темно-коричневий `--ink` на синьому.
+   🔑 Це ж пояснює, чому СТАРА модалка виглядала «звичайно», як казав Вова: там
+   стояло `color: var(--sky-text)` на аркуші, і воно так само не діяло — текст
+   малювався тим самим `--ink`. Тобто бляклість була не в градієнті, а тут. */
+.app-modal--weather .app-modal-body { color: #FFFFFF; }
+
+/* ── Шапка ── */
+.wxd-head { margin-bottom: 14px; }
+.wxd-head-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
 }
-.wx-head-icon { font-size: 40px; line-height: 1; }
-.wx-head-info { flex: 1; min-width: 0; }
-.wx-head-day { font-size: 18px; font-weight: 800; }
-.wx-head-desc { font-size: 13px; opacity: 0.9; }
-.wx-head-range { font-size: 15px; font-weight: 700; white-space: nowrap; }
-.wx-chart-block { margin-top: 16px; }
-.wx-chart-title {
+.wxd-head-day { font-size: 20px; font-weight: 800; }
+.wxd-head-range { font-size: 17px; font-weight: 800; white-space: nowrap; }
+.wxd-head-range span { opacity: 0.7; font-weight: 700; }
+.wxd-head-place { font-size: 13px; opacity: 0.75; margin-top: 1px; }
+.wxd-head-now { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+/* Іконка стану — велика, це головний знак шапки. `.wx-ic` всередині масштабується
+   від font-size (правило width:1em нижче, спільне для всіх іконок погоди). */
+.wxd-head-ic { font-size: 46px; line-height: 1; flex-shrink: 0; }
+.wxd-head-txt { min-width: 0; }
+.wxd-head-desc { font-size: 17px; font-weight: 700; }
+.wxd-head-sub { font-size: 14px; opacity: 0.85; margin-top: 2px; }
+
+.wxd-sec-title {
   font-size: 13px; font-weight: 700;
-  opacity: 0.92;
-  margin-bottom: 6px;
-  display: flex; align-items: center; gap: 6px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  opacity: 0.7;
+  margin-bottom: 8px;
 }
-.wx-chart {
-  width: 100%;
-  display: block;
-  overflow: visible;
+
+/* ── Стрічка годин ──
+   Гортається вбік. Це головний елемент модалки, тож числа тут НАВМИСНО крупні:
+   замовлення Вови — «щоб старшим людям було легко дізнатися про погоду». */
+.wxd-hours {
+  display: flex; gap: 8px;
+  list-style: none; margin: 0 -16px 16px; padding: 0 16px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
-.wx-chart-svg-wrap {
-  position: relative;                 /* база для курсора/бульбашки скрабера */
-  background: rgba(30, 70, 140, 0.22);   /* єдиний фон для обох графіків (раніше графік температури мав інший, світліший) */
+.wxd-hours::-webkit-scrollbar { display: none; }
+.wxd-h {
+  flex: 0 0 auto;
+  width: 78px;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 6px 9px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+/* Поточна година — не просто підпис «Зараз», а видима пляма: людина має знайти
+   «де я» одним поглядом, не читаючи. */
+.wxd-h--now {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.wxd-h-time { font-size: 14px; font-weight: 700; opacity: 0.9; }
+.wxd-h-ic { font-size: 32px; line-height: 1; }
+.wxd-h-t { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.wxd-h-p {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0.8;
+}
+/* Від 40% крапля перестає бути тлом і стає попередженням. Той самий поріг, за
+   яким `wxAdvice` пише «можливий дощ» — щоб рядок поради і картки не сперечались. */
+.wxd-h-p--wet { opacity: 1; color: #9FD2FF; }
+.wxd-drop { width: 13px; height: 13px; display: inline-flex; }
+.wxd-drop svg { width: 100%; height: 100%; }
+.wxd-h-w { font-size: 11px; opacity: 0.62; white-space: nowrap; }
+
+/* ── Порада ── */
+.wxd-advice {
+  display: flex; align-items: flex-start; gap: 9px;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
-  padding: 10px 4px 4px;
-  touch-action: none;                 /* палець тягне скрабер, а не скролить сторінку */
+  padding: 11px 13px;
+  font-size: 14.5px; font-weight: 600; line-height: 1.35;
+  margin-bottom: 14px;
 }
-.wx-axis {
-  font-size: 9px;
-  fill: rgba(255, 255, 255, 0.75);
-  font-weight: 600;
+.wxd-advice-ic { width: 19px; height: 19px; flex-shrink: 0; opacity: 0.9; margin-top: 1px; }
+.wxd-advice-ic svg { width: 100%; height: 100%; }
+
+/* ── Факти дня ── */
+.wxd-facts { list-style: none; margin: 0; padding: 0; }
+.wxd-fact {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 11px 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 14.5px;
 }
-.wx-val {
-  font-size: 10px;
-  fill: #FFFFFF;
-  font-weight: 800;
+.wxd-fact:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.wxd-fact-k { opacity: 0.72; }
+.wxd-fact-v { font-weight: 700; text-align: right; }
+
+/* Підпис джерела. Дрібний навмисно — він не для читання щодня, а для того щоб
+   на питання «звідки ці числа» була відповідь на самому екрані. */
+.wxd-src {
+  margin-top: 14px;
+  font-size: 11.5px;
+  opacity: 0.55;
+  text-align: center;
 }
-/* тонкі лінії шкали (сітка) */
-.wx-grid {
-  stroke: rgba(255, 255, 255, 0.22);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;  /* товщина не тягнеться при preserveAspectRatio=none */
-}
-/* Скрабер: вертикальна лінія + точка + бульбашка-підказка */
-.wx-cursor {
-  position: absolute; top: 10px; bottom: 4px;
-  width: 0; border-left: 1.5px solid rgba(255, 255, 255, 0.85);
-  transform: translateX(-0.75px);
-  opacity: 0; transition: opacity 0.12s;
-  pointer-events: none;
-}
-.wx-cursor.is-on { opacity: 1; }
-.wx-cursor-dot {
-  position: absolute; top: -3px; left: 50%;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #FFFFFF; transform: translateX(-50%);
-}
-.wx-readout {
-  position: absolute; top: -4px;
-  transform: translate(-50%, -100%);
-  background: rgba(20, 40, 80, 0.92);
-  color: #FFFFFF; border-radius: 10px;
-  padding: 4px 8px; white-space: nowrap;
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 700;
-  opacity: 0; transition: opacity 0.12s;
-  pointer-events: none; z-index: 2;
-}
-.wx-readout.is-on { opacity: 1; }
-.wx-ro-ic { font-size: 14px; }
-.wx-ro-h { opacity: 0.85; font-weight: 600; }
 
 /* ── Блок 2: Світло ── */
 .cm-power-status {
@@ -866,7 +921,16 @@
 .tab-bar .tab-item.active .tab-label {
   font-weight: 700;
 }
-.tab-bar .tab-item.active::before {
+/* ⚠️ 08.08 — «Громаду» ВИКЛЮЧЕНО з рисочки, і це не косметика, а розвʼязання
+   конфлікту за псевдоелемент. У «Громади» свій індикатор — велика кругла кнопка,
+   а її біла підкладка живе саме на `.tab-item--home::before` (див. tabbar.css).
+   Ця ж рисочка перебивала ту підкладку за вагою селектора (три класи проти двох),
+   тож на активній «Громаді» підкладка не малювалась зовсім — а це рівно той стан,
+   у якому Вова і бачив стик язичка з баром.
+   📐 Сама рисочка на «Громаді» й до того була НЕВИДИМА: вона лежить на top:4px,
+   тобто всередині кола (коло z-index 1001, рисочка — auto), і коло її накривало.
+   Тобто виключення нічого не забирає з вигляду, лише знімає суперечку. */
+.tab-bar .tab-item.active:not(.tab-item--home)::before {
   content: '';
   position: absolute;
   top: 4px;
