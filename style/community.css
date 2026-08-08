@@ -221,8 +221,24 @@
 
 /* ── Шапка ── */
 .wxd-head { margin-bottom: 14px; }
+/* 🔴 08.08 — ПРАВОРУЧ ЗАРЕЗЕРВОВАНО МІСЦЕ ПІД ✕.
+   Скарга Вови: «кругла кнопка налягає на надписи. Зроби так, як це в інших модалках».
+   📐 Заміряно на аркуші 390px (координати від кутка аркуша):
+     ✕ займає y 12…44 · x 344…376
+     `.wxd-head-range` («26° / 16°») — y 37…64 · x 308…374
+   Тобто перекриття 7px по вертикалі і майже повне по горизонталі: нижня дуга кнопки
+   лягала просто на градуси.
+   🔑 Прийом узято не з голови, а той самий, що вже стоїть у модалці Дошки:
+   `.cm-board-modal-head { padding: 0 46px 0 18px }` — «правий 46px, місце під ✕».
+   Тут аркуш має власні бічні 16px, тож щоб контент закінчився за тих самих 46px від
+   краю (390−46 = 344), рядку треба рівно 30px — але це стик у стик із кнопкою.
+   Беремо 40px: правий край рядка стає 374−40 = 334, тобто до кнопки лишається
+   10px чистого просвіту.
+   ⚠️ Падінг саме на РЯДКУ, а не на `.wxd-head`: нижче лежить опис стану, і він
+   мусить іти на всю ширину — кнопка туди вже не дістає. */
 .wxd-head-top {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding-right: 40px;
 }
 .wxd-head-day { font-size: 20px; font-weight: 800; }
 .wxd-head-range { font-size: 17px; font-weight: 800; white-space: nowrap; }
@@ -248,13 +264,61 @@
    замовлення Вови — «щоб старшим людям було легко дізнатися про погоду». */
 .wxd-hours {
   display: flex; gap: 8px;
-  list-style: none; margin: 0 -16px 16px; padding: 0 16px 4px;
+  list-style: none; margin: 0 -16px; padding: 0 16px 4px;
   overflow-x: auto;
+  margin-bottom: 10px;                /* смужка-прогрес нижче має власний відступ */
   scroll-snap-type: x proximity;
+  /* 🔴 08.08 — БЕЗ ЦЬОГО РЯДКА КАРТКА ПРИЛИПАЄ ДО САМОГО КРАЮ ЕКРАНА.
+     Скарга Вови: «перша карточка дуже близько притиснута до лівого краю екрану.
+     Зроби початок на тому самому рівні, де починається текст».
+     🔑 Причина не в падінгу — він тут є (16px, `padding: 0 16px 4px`). Причина в
+     тому, що `scroll-snap-align: start` вирівнює картку по краю СКРОЛПОРТУ, а
+     скролпорт — це padding-box, тобто самісінький край аркуша. Тож щойно стрічку
+     гортали (або програмно прокручували на 07:00), снап тягнув картку в нуль і
+     зʼїдав відступ. `scroll-padding-left` зсуває снап-лінію на ті самі 16px, на
+     яких стоїть увесь текст модалки.
+     📐 Заміряно: до — картка на 0px проти тексту на 16px; після — 16 і 16.
+     ⚠️ Це працює і для пальця, і для програмної прокрутки; правити лише формулу
+     прокрутки в JS було б половинчасто — перший же свайп повернув би картку в край. */
+  scroll-padding-left: 16px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 .wxd-hours::-webkit-scrollbar { display: none; }
+/* Згасання вмісту на краях — «список продовжується». Маска, а не накладений
+   градієнт: аркуш має ВЕРТИКАЛЬНИЙ градієнт, тож єдиного «кольору фону» на висоті
+   стрічки не існує і заглушка кольором не збіглася б із тлом. Класи ставить JS,
+   тому на кінці списку згасання зникає й не обіцяє неіснуючого продовження. */
+.wxd-hours.has-more {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%);
+}
+.wxd-hours.has-prev {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px);
+          mask-image: linear-gradient(90deg, transparent 0, #000 44px);
+}
+.wxd-hours.has-prev.has-more {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+}
+
+/* Смужка-прогрес під стрічкою. Замість кружечків-слайдів: їх було б 24 на повну
+   добу, а тут довжина повзунка сама каже, яку частку дня видно. */
+.wxd-scroll {
+  position: relative;
+  width: 108px; height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.20);
+  overflow: hidden;
+}
+.wxd-scroll[hidden] { display: none; }
+.wxd-scroll-thumb {
+  position: absolute; top: 0; bottom: 0;
+  min-width: 14px;                    /* на повній добі повзунок був би ~20px; менше — вже не видно */
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.85);
+}
 .wxd-h {
   flex: 0 0 auto;
   width: 78px;
@@ -1394,6 +1458,8 @@
   border: none;
   background: rgba(255,255,255,0.15);
   color: #fff;
+  /* 08.08 — векторний ✕, як у примітиві модалок; flex центрує SVG (гліф центрувався сам). */
+  display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   cursor: pointer;
   z-index: 2;

@@ -1032,7 +1032,9 @@ function openPhotoLightbox(photos, startIdx) {
   const wrap = document.createElement('div');
   wrap.className = 'cm-photo-lightbox';
   wrap.innerHTML = `
-    <button class="cm-photo-lightbox-close" type="button" aria-label="Закрити">✕</button>
+    <!-- 08.08: ✕ векторний (ICONS.close), як у примітиві core/modal.js — лайтбокс
+         будується власним кодом, тож єдиної правки в примітиві йому не досить. -->
+    <button class="cm-photo-lightbox-close" type="button" aria-label="Закрити">${ICONS.close}</button>
     <div class="cm-photo-lightbox-track">
       ${photos.map(ph => `<div class="cm-photo-lightbox-slide"><img src="${escapeHtml(ph)}" alt=""></div>`).join('')}
     </div>
