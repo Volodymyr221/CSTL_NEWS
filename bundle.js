@@ -3516,15 +3516,15 @@
     let wasOpen = false, focused = false;
     const apply = () => {
       const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
-      const open = focused && document.documentElement.clientHeight - vv.height > 80;
-      if (open) {
-        screen.style.height = vv.height + "px";
-        screen.style.top = vv.offsetTop + "px";
-      } else {
+      const docH = document.documentElement.clientHeight;
+      const kb = Math.max(0, Math.round(docH - (vv.offsetTop + vv.height)));
+      const open = focused && kb > 80;
+      screen.style.paddingBottom = open ? kb + "px" : "";
+      screen.classList.toggle("pm-kb-open", open);
+      if (screen.style.height) {
         screen.style.height = "";
         screen.style.top = "";
       }
-      screen.classList.toggle("pm-kb-open", open);
       if (open && stream && (!wasOpen || atBottom)) {
         requestAnimationFrame(() => {
           stream.scrollTop = stream.scrollHeight;
@@ -3550,6 +3550,7 @@
       vv.removeEventListener("scroll", apply);
       input?.removeEventListener("focus", onFocus);
       input?.removeEventListener("blur", onBlur);
+      screen.style.paddingBottom = "";
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
@@ -5384,7 +5385,6 @@
     });
     api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
     api._cleanup.push(setupKeyboardResize(api.screen));
-    setTimeout(() => input.focus(), 250);
     return api;
   }
   function openThreadsList() {
