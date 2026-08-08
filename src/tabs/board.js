@@ -1260,8 +1260,21 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
+      <!-- 🔴 09.08 — ТРЕТЯ ІКОНКА НА КНОПЦІ: КОНВЕРТ ПРИ НЕПРОЧИТАНИХ.
+           Замовлення Вови: «коли користувач публікує оголошення і йому надходить
+           повідомлення, іконка FAB міняється з плюсика на іконку повідомлення і
+           підсвічується плашкою з числом».
+           ⚠️ Іконка міняється, а ДІЯ КНОПКИ — НІ: тап і далі розкриває меню
+           (toggleFab), де «Повідомлення» першим пунктом. Це вибір Вови (варіант
+           «А»), і саме він знімає ризик «кнопка змінила призначення під пальцем».
+           🔑 Три накладені іконки з cross-fade, а не заміна innerHTML: перемикання
+           класом не чіпає DOM, тож бейдж (board-trigger-badge) лишається живим
+           вузлом і його не треба перемальовувати разом з іконкою.
+           ⚠️ Без зворотних лапок у цьому коментарі — він усередині шаблонного
+           рядка, і лапка закрила б його. Сторож check-imports ловить це на збірці. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-msg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>

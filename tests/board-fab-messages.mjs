@@ -161,5 +161,88 @@ ok('за всю сцену немає ReferenceError по closeFab',
    !pageErrors.some(m => /closeFab/.test(m)),
    pageErrors.filter(m => /closeFab/.test(m)).join(' | ') || 'нема');
 
+// ── 🔴 09.08 — КНОПКА FAB МІНЯЄ ІКОНКУ НА КОНВЕРТ ПРИ НЕПРОЧИТАНИХ ───────────
+// Замовлення Вови: «коли користувач публікує оголошення і йому надходить
+// повідомлення, іконка FAB міняється з плюсика на іконку повідомлення і
+// підсвічується плашкою з числом».
+//
+// ⚠️ МІРЯЄМО ВИДИМІСТЬ, А НЕ НАЯВНІСТЬ КЛАСУ. Клас можна поставити і не влучити
+//    в CSS (у цій сесії таке вже було з `.tab-item--home::before`, який мовчки
+//    перебивало інше правило). Тому питаємо в браузера обчислену `opacity`
+//    кожної з трьох іконок — тобто те, що бачить око.
+// ⚠️ Три стани перевіряються ОКРЕМО, бо між ними легко зламати саме перехід:
+//    у відкритому меню конверт мусить поступитись ✕, інакше вони накладуться.
+{
+  const стан = () => p.evaluate(() => {
+    const btn = document.getElementById('board-trigger');
+    if (!btn) return null;
+    const вид = (sel) => {
+      const e = btn.querySelector(sel);
+      return e ? getComputedStyle(e).opacity === '1' : null;
+    };
+    const bd = document.getElementById('board-trigger-badge');
+    return {
+      плюс: вид('.cm-board-trigger-icon'),
+      конверт: вид('.cm-board-trigger-msg'),
+      хрестик: вид('.cm-board-trigger-close'),
+      бейджВидно: !!bd && getComputedStyle(bd).display !== 'none',
+      бейджТекст: bd ? bd.textContent.trim() : '',
+    };
+  });
+
+  // Меню могло лишитись розкритим від попередньої сцени — закриваємо.
+  await p.evaluate(() => document.getElementById('board-fab')?.classList.remove('open'));
+  await p.waitForTimeout(250);
+  const без = await стан();
+  ok('сцена: кнопка FAB на місці', !!без, без ? 'є' : 'немає');
+  if (без) {
+    ok('🔴 без непрочитаних видно ПЛЮС, конверта немає',
+       без.плюс === true && без.конверт === false, JSON.stringify(без));
+
+    // Ставимо стан «є непрочитані» тим самим способом, що й застосунок:
+    // клас на кнопці + клас на бейджі (див. paintUnreadBadge у board-chat.js).
+    await p.evaluate(() => {
+      document.getElementById('board-trigger')?.classList.add('has-unread');
+      const bd = document.getElementById('board-trigger-badge');
+      if (bd) { bd.textContent = '1'; bd.classList.add('is-on'); }
+    });
+    await p.waitForTimeout(300);
+    const є = await стан();
+    ok('🔴 з непрочитаними ПЛЮС поступається КОНВЕРТУ',
+       є.плюс === false && є.конверт === true, JSON.stringify(є));
+    ok('🔴 бейдж із числом видно разом із конвертом',
+       є.бейджВидно && є.бейджТекст === '1', `видно: ${є.бейджВидно}, текст «${є.бейджТекст}»`);
+
+    await p.evaluate(() => document.getElementById('board-trigger')?.click());
+    await p.waitForTimeout(400);
+    const відкрито = await стан();
+    ok('🔴 у розкритому меню ✕ перебиває і плюс, і конверт',
+       відкрито.хрестик === true && відкрито.конверт === false && відкрито.плюс === false,
+       JSON.stringify(відкрито));
+    // Знайдено 09.08 при перевірці конверта: `paintUnreadBadge` ставив видимість
+    // бейджа ІНЛАЙНОМ, і це тихо перебивало правило приховання при розкритому меню.
+    ok('🔴 у розкритому меню бейдж схований (інлайн-стиль не перебиває правило)',
+       відкрито.бейджВидно === false, `видно: ${відкрито.бейджВидно}`);
+  }
+}
+
+// ⚠️ ЧЕСНО ПРО МЕЖУ ПОПЕРЕДНЬОЇ СЦЕНИ. Вона ставить класи РУКАМИ, бо довести
+// сцену до справжніх непрочитаних у моку означало б завести живі треди з чужими
+// повідомленнями. Тобто сцена доводить, що CSS правильний, але НЕ доводить, що
+// `paintUnreadBadge` користується класом, а не інлайном. Перевірено контролем:
+// повернув інлайн у код — сцена лишилась зеленою.
+// ➡️ Тому саме цей бік тримає перевірка ТЕКСТУ: у фарбувальника бейджа кнопки не
+// має бути `style.display`. Вузько й прямо названо, чому не поведінково.
+{
+  const CHAT_JS = projectFile('src/tabs/board-chat.js');
+  const тіло = /export function paintUnreadBadge[\s\S]*?\n}/.exec(CHAT_JS)?.[0] || '';
+  const інлайн = /fabBadge\.style\.display/.test(тіло);
+  ok('сцена: тіло paintUnreadBadge знайдено', тіло.length > 0, `${тіло.length} символів`);
+  ok('🔴 видимість бейджа кнопки — класом, а не інлайном',
+     !інлайн && /fabBadge\.classList/.test(тіло),
+     інлайн ? 'знайдено fabBadge.style.display — інлайн переб\'є правило приховання'
+            : 'через classList');
+}
+
 await ctx.close(); await b.close(); await stop();
 done();
