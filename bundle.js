@@ -7209,11 +7209,27 @@
     if (wasOpen)
       menu.removeAttribute("hidden");
   }
+  function emptyStateHtml() {
+    if (activeType === "saved") {
+      return "\u0423 \xAB\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0437\u0430\u043A\u043B\u0430\u0434\u043A\u0443 \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438.";
+    }
+    const \u043F\u0440\u0438\u0447\u0438\u043D\u0438 = [];
+    if (activeCategory !== "all")
+      \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0443 \xAB${escapeHtml(catLabel(activeCategory))}\xBB`);
+    if (activeLocation !== COMMUNITY_ALL)
+      \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0434\u043B\u044F \xAB${escapeHtml(locLabel(activeLocation))}\xBB`);
+    if (searchQuery.trim())
+      \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0437\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery.trim())}\xBB`);
+    if (!\u043F\u0440\u0438\u0447\u0438\u043D\u0438.length)
+      return "\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
+    const \u0442\u0435\u043A\u0441\u0442 = `\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043B\u043E\u0441\u044C ${\u043F\u0440\u0438\u0447\u0438\u043D\u0438.join(" ")}`;
+    return `${\u0442\u0435\u043A\u0441\u0442}
+    <button class="bd-empty-reset" type="button" data-bd-reset>\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0444\u0456\u043B\u044C\u0442\u0440\u0438</button>`;
+  }
   function renderBody() {
     const filtered = getFilteredPosts();
     if (!filtered.length) {
-      const msg = activeType === "saved" ? "\u0423 \xAB\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0437\u0430\u043A\u043B\u0430\u0434\u043A\u0443 \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
-      return `<div class="bd-empty">${msg}</div>`;
+      return `<div class="bd-empty">${emptyStateHtml()}</div>`;
     }
     const rankTs = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
     const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
@@ -7366,10 +7382,6 @@
           });
           return;
         }
-        if (act === "messages") {
-          openThreadsList();
-          return;
-        }
         if (act === "mine")
           openMyAds();
       });
@@ -7391,6 +7403,14 @@
         input.focus();
       }
       renderBodyOnly(el);
+    });
+    el.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-bd-reset]"))
+        return;
+      activeCategory = "all";
+      activeLocation = COMMUNITY_ALL;
+      searchQuery = "";
+      renderAll();
     });
     const wireMenuButton = (btnId, menuId, onPick) => {
       const btn = document.getElementById(btnId);
