@@ -11524,7 +11524,7 @@
       setWeatherTitle(cityName);
       const forecastHtml = day.time.map((dateStr, i) => {
         const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-        const wd = i === 0 ? "\u0421\u044C\u043E\u0433" : WEEKDAYS_UA[d.getDay()];
+        const wd = WEEKDAYS_UA[d.getDay()];
         const dayInfo = weatherCodeInfo(day.weather_code[i]);
         const tMax = Math.round(day.temperature_2m_max[i]);
         return `
