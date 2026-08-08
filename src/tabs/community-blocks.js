@@ -144,16 +144,38 @@ export async function renderWeatherBlock() {
           getCityName(lat, lon).catch(() => null),
           new Promise(r => setTimeout(() => r(null), 3000)),
         ]);
+    // 🔴 08.08 — ЗАПИТ РОЗШИРЕНО ПІД МОДАЛКУ ПО ГОДИНАХ.
+    // Вова: «інформація має бути правдива, а не просто написано аби написати».
+    // Це правило починається САМЕ ТУТ: показати можна рівно те, що ми попросили.
+    // Макет, який приніс Вова, малював вітер, вологість, схід/захід, тиск, видимість
+    // і УФ — шість показників, яких у нашій відповіді не було ЖОДНОГО. Домалювати їх
+    // означало б їх вигадати, тож потрібні поля додано в запит, а зайві не додано.
+    // ⚠️ ЧОГО ТУТ СВІДОМО НЕМА — і це не забудькуватість:
+    //   • `relative_humidity_2m_mean` у `daily` — поле НОВІШЕ за решту, і я не маю
+    //     як його перевірити (егрес-проксі цього середовища не пускає до
+    //     api.open-meteo.com). Невідомий параметр Open-Meteo відповідає помилкою на
+    //     ВЕСЬ запит, тобто погода зникла б цілком. Вологість рахуємо з `hourly`,
+    //     яке точно є, і чесно підписуємо «у середньому за день».
+    //   • тиск, видимість, УФ — Вова їх не обрав; не тягнемо байти заради рядка,
+    //     який ніхто не читає.
     const weatherRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,weather_code,apparent_temperature` +
-      `&hourly=temperature_2m,precipitation_probability,weather_code` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m` +
+      `&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset` +
       `&forecast_days=7&timezone=auto`
     );
     const cityName = (await cityP) || 'Олика';
     const data = await weatherRes.json();
-    _wxData = { ...data, city: cityName }; // кеш для модалки по годинах
+    // Open-Meteo на негодящий параметр відповідає 400 з `{error:true, reason:...}`,
+    // а не порожнім тілом. Без цієї перевірки ми пішли б далі з `data.current ===
+    // undefined` і впали б у catch із загальним «недоступна» — тобто справжня
+    // причина (яке саме поле не те) не дійшла б ні до консолі, ні до мене.
+    if (data && data.error) throw new Error(`Open-Meteo: ${data.reason || 'відмова'}`);
+    // `fetchedAt` — час ЦІЄЇ відповіді. Модалка підписує ним дані внизу («оновлено
+    // 5 хв тому»), і це не прикраса: кеш живе між перемиканнями вкладок, тож без
+    // мітки людина не має як відрізнити свіжі числа від тих, що лежать з ранку.
+    _wxData = { ...data, city: cityName, fetchedAt: Date.now() }; // кеш для модалки по годинах
     const cur  = data.current;
     const day  = data.daily;
     const info = weatherCodeInfo(cur.weather_code);
@@ -337,77 +359,90 @@ function openPlaceSheet() {
 }
 
 // ── Модалка «Погода по годинах» ──────────────────────────────────────────────
-// Два графіки (iOS-стиль): температура за годинами + ймовірність опадів за годинами.
-// Дані беремо з кешу _wxData (hourly), зрізаємо 24 години обраного дня.
+// 🔴 08.08 — ПЕРЕПИСАНО З ГРАФІКІВ НА КАРТКИ ПО ГОДИНАХ.
+//
+// Замовлення Вови: «воно трошки може бути незрозуміло для старших людей… зробити
+// погодинно, такими карточками, як в синоптику… вони відкрили карточку, вони
+// побачили, що там вісім годин сонце, дев'ять годин сонце, в десять годин,
+// наприклад, починається вже дощ… І саме головне, інформація має бути правдива,
+// а не просто написано аби написати».
+//
+// 🔑 МОДАЛКА ВІДПОВІДАЄ НА ОДНЕ ПИТАННЯ: «що буде о котрій годині». Усе, що не
+// служить цьому питанню, звідси прибрано — разом із двома графіками і скрабером
+// (рішення Вови 08.08, замість «лишаємо як є» від 05.08). Тягнути палець по
+// кривій — найважчий з можливих способів дізнатись, чи буде дощ о шостій.
+//
+// 🛑 ТРИ ПРАВИЛА ПРАВДИВОСТІ. Вони важливіші за вигляд, і кожне з них — це
+//    виправлення конкретного дефекту, знайденого 08.08 при читанні коду:
+//    1. Показуємо лише те, що є у відповіді. Порожнє значення — це «—», НІКОЛИ
+//       не нуль. Було `precipitation_probability ?? 0`, тобто пропуск даних
+//       читався як упевнене «дощу не буде».
+//    2. Минулі години не показуються. Було: модалка малювала всі 24 години від
+//       00:00, тож о 14:07 чотирнадцять уже прожитих годин стояли нарівні з
+//       прогнозом.
+//    3. Один день — один опис. Було: капсула брала `current.weather_code`
+//       («Мінлива хмарність»), а шапка модалки `daily.weather_code`
+//       («Хмарно») — два різні тексти за півекрана один від одного. Тепер для
+//       СЬОГОДНІ обидві поверхні беруть `current`, для інших днів — `daily`.
 
-// Спільна геометрія графіків (лінія/бари/скрабер). padR більший — місце під праву шкалу °.
-const WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
+/** Число або null. Саме null, а не 0: нуль — це значення, а не його відсутність. */
+function wxNum(v) {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+const WX_EMPTY = '—';
 
-function wxGeom(points) {
-  const vals = points.map(p => p.v);
-  let min = Math.min(...vals), max = Math.max(...vals);
-  if (min === max) { min -= 1; max += 1; }
-  const innerW = WX.W - WX.padL - WX.padR;
-  const innerH = WX.H - WX.padTop - WX.padB;
-  return {
-    min, max, innerW, innerH,
-    x: i => WX.padL + (innerW * i) / (points.length - 1),
-    y: v => WX.padTop + innerH - ((v - min) / (max - min)) * innerH,
-  };
+// Крапля для відсотка опадів. Локальна, а не в `core/icons.js`: реєстр там тримає
+// лише те, що повторюється між ≥2 файлами — це його власне правило.
+// Джерело: Tabler Icons `droplet` (MIT), той самий набір що й решта іконок сайту.
+const WX_DROP = '<svg class="cat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.502 19.423c2.602 2.105 6.395 2.105 8.996 0c2.602 -2.105 3.262 -5.708 1.566 -8.546l-4.89 -7.26c-.42 -.625 -1.287 -.803 -1.936 -.397a1.4 1.4 0 0 0 -.41 .397l-4.893 7.26c-1.695 2.838 -1.035 6.441 1.567 8.546z"/></svg>';
+
+/** Сторона світу словами. 8 румбів: людині не потрібні 16, а «335°» не потрібні тим паче. */
+const WIND_DIRS_UA = ['Пн', 'ПнСх', 'Сх', 'ПдСх', 'Пд', 'ПдЗх', 'Зх', 'ПнЗх'];
+function windDirUA(deg) {
+  const n = wxNum(deg);
+  if (n === null) return null;
+  return WIND_DIRS_UA[Math.round((((n % 360) + 360) % 360) / 45) % 8];
 }
 
-// Лінія температури + ПРАВА шкала ° (Y-тіки min/середина/max) + підписи годин кожні 2 год.
-function wxLineChart(points, { unit = '°', color = '#FFFFFF' } = {}) {
-  const g = wxGeom(points);
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${g.x(i).toFixed(1)},${g.y(p.v).toFixed(1)}`).join(' ');
-  const area = `${line} L${g.x(points.length - 1).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} L${g.x(0).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} Z`;
-  const xLabels = points.map((p, i) => i % 2 === 0
-    ? `<text x="${g.x(i).toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : '').join('');
-  const yAxis = [g.min, (g.min + g.max) / 2, g.max].map(v => {
-    const yy = g.y(v);
-    return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/>`
-         + `<text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${Math.round(v)}${unit}</text>`;
-  }).join('');
-  return `
-    <svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
-      <defs><linearGradient id="wxfill" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
-        <stop offset="1" stop-color="${color}" stop-opacity="0"/>
-      </linearGradient></defs>
-      ${yAxis}
-      <path d="${area}" fill="url(#wxfill)"/>
-      <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-      ${xLabels}
-    </svg>`;
+/** Середнє лише по НАЯВНИХ значеннях. Порожній набір → null, не 0. */
+function wxAvg(values) {
+  const nums = values.map(wxNum).filter(v => v !== null);
+  if (!nums.length) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
-// Стовпчиковий графік ймовірності опадів (0..100 %). Сині бари, підписи кожні 2 год.
-function wxBarChart(points) {
-  const innerW = WX.W - WX.padL - WX.padR;
-  const innerH = WX.H - WX.padTop - WX.padB;
-  const bw = (innerW / points.length) * 0.6;
-  const bars = points.map((p, i) => {
-    const cx = WX.padL + (innerW * (i + 0.5)) / points.length;
-    const h = Math.max(1, (Math.min(100, p.v) / 100) * innerH);
-    const yTop = WX.padTop + innerH - h;
-    const label = i % 2 === 0
-      ? `<text x="${cx.toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : '';
-    const pct = p.v >= 20 && (i % 2 === 0)
-      ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}%</text>` : '';
-    return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#wxbar)" fill-opacity="${(0.5 + 0.5 * Math.min(100, p.v) / 100).toFixed(2)}"/>${pct}${label}`;
-  }).join('');
-  // Права шкала % (0 / 50 / 100) — тонкі лінії сітки, як у графіка температури.
-  const yAxis = [0, 50, 100].map(v => {
-    const yy = WX.padTop + innerH - (v / 100) * innerH;
-    return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/>`
-         + `<text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${v}</text>`;
-  }).join('');
-  return `<svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
-      <defs><linearGradient id="wxbar" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#2F80FF"/>
-      </linearGradient></defs>
-      ${yAxis}${bars}
-    </svg>`;
+// 🔴 ОДНА ПОРАДА, А НЕ СПИСОК ПОРАД — і кожна названа числом, з якого зроблена.
+// Той самий принцип, що в `subLine` вище: рівно одне повідомлення, виграє
+// найважливіше. Порада, яку не можна перевірити оком по картках нижче, — це
+// «написано аби написати», тож кожна називає годину або градус.
+// 🛑 Немає підстав — немає рядка. Порожній рядок краще за вигаданий.
+function wxAdvice(hours, dayMaxT) {
+  // 1. Дощ — і саме ПОЧАТОК дощу, а не найгірша година.
+  // ⚠️ Перша редакція шукала спершу годину з ≥60%, і на реальному наборі це дало
+  //    «дощ близько 20:00 — 80%», хоча падати починало о 18:00 (55%). Тобто порада
+  //    мовчазно казала «до восьмої сухо» — рівно та підміна, від якої Вова
+  //    застерігав. Тому беремо ПЕРШУ годину за порогом, а сила слова залежить від
+  //    її ж відсотка.
+  const rain = hours.find(h => (h.precip ?? -1) >= 40);
+  if (rain) {
+    const слово = rain.precip >= 60 ? 'Дуже ймовірний дощ' : 'Можливий дощ';
+    return `${слово} з ${rain.hh}:00 — ${Math.round(rain.precip)}%`;
+  }
+  // 2. Вечірнє похолодання. Має сенс лише коли вдень справді тепло: інакше
+  //    «увечері 11°» — це не новина, а просто опис прохолодного дня.
+  const evening = hours.filter(h => h.h >= 18);
+  const evFeels = evening.map(h => h.feels ?? h.t).filter(v => v !== null);
+  if (evFeels.length && dayMaxT !== null && dayMaxT >= 18) {
+    const низ = Math.min(...evFeels);
+    if (низ <= 12) return `Увечері похолодає до ${Math.round(низ)}° — візьміть щось тепліше`;
+  }
+  // 3. Вітер. 30 км/год — межа, за якою він відчутний, а не «свіжо».
+  const winds = hours.map(h => h.wind).filter(v => v !== null);
+  if (winds.length) {
+    const макс = Math.max(...winds);
+    if (макс >= 30) return `Сильний вітер, до ${Math.round(макс)} км/год`;
+  }
+  return null;
 }
 
 export function openWeatherDayModal(dayIndex) {
@@ -417,49 +452,6 @@ export function openWeatherDayModal(dayIndex) {
   const dateStr = daily.time[dayIndex];
   if (!dateStr) return;
 
-  // Зрізаємо 24 години обраного дня (hourly.time відсортовані, timezone=auto, старт 00:00).
-  const idxs = [];
-  hourly.time.forEach((t, i) => { if (t.startsWith(dateStr)) idxs.push(i); });
-  if (!idxs.length) return;
-
-  const tempPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
-  const precipPts = idxs.map(i => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
-  // Іконка погоди на кожну годину (для скрабера — тягнеш палець, бачиш що о цій годині).
-  const iconPts = idxs.map(i => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
-
-  const d = new Date(dateStr + 'T00:00:00');
-  const dayName = dayIndex === 0 ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()];
-  const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
-  const info = weatherCodeInfo(daily.weather_code[dayIndex]);
-  const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
-  const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
-
-  const bodyHtml = `
-    <div class="wx-head">
-      <div class="wx-head-icon">${info.icon}</div>
-      <div class="wx-head-info">
-        <div class="wx-head-day">${escapeHtml(dayName)} · ${dateLabel}</div>
-        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
-      </div>
-      <div class="wx-head-range">${tMax}° / ${tMin}°</div>
-    </div>
-    <div class="wx-chart-block">
-      <div class="wx-chart-title">🌡️ Температура, °C</div>
-      <div class="wx-chart-svg-wrap" data-wx="temp">
-        ${wxLineChart(tempPts, { unit: '°' })}
-        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-        <div class="wx-readout"></div>
-      </div>
-    </div>
-    <div class="wx-chart-block">
-      <div class="wx-chart-title">💧 Ймовірність опадів, %</div>
-      <div class="wx-chart-svg-wrap" data-wx="precip">
-        ${wxBarChart(precipPts)}
-        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-        <div class="wx-readout"></div>
-      </div>
-    </div>`;
-
   // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
   // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
   // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
@@ -467,82 +459,124 @@ export function openWeatherDayModal(dayIndex) {
   const nowLocal = new Date(Date.now() + offsetSec * 1000);
   const nowDateStr = nowLocal.toISOString().slice(0, 10);
   const nowHour = nowLocal.getUTCHours();
-  const initialIdx = dateStr === nowDateStr ? tempPts.findIndex(p => p.h === nowHour) : -1;
+  const isToday = dateStr === nowDateStr;
 
-  // swipeClose:false — власний wireWeatherSwipe нижче (ігнорує свайп що почався
-  // на скрабер-графіку, спільний примітив цього не вміє).
+  // Зрізаємо години обраного дня (hourly.time відсортовані, timezone=auto, старт 00:00).
+  let idxs = [];
+  hourly.time.forEach((t, i) => { if (t.startsWith(dateStr)) idxs.push(i); });
+  if (!idxs.length) return;
+  const усіГодини = idxs;
+  // ПРАВИЛО 2 — минулого не показуємо.
+  if (isToday) {
+    const майбутні = idxs.filter(i => +hourly.time[i].slice(11, 13) >= nowHour);
+    // Пізній вечір: якщо не лишилось жодної повної години — лишаємо останню наявну,
+    // щоб модалка не відкривалась порожньою.
+    idxs = майбутні.length ? майбутні : усіГодини.slice(-1);
+  }
+
+  const hours = idxs.map(i => {
+    const код = wxNum(hourly.weather_code?.[i]);
+    return {
+      h: +hourly.time[i].slice(11, 13),
+      hh: hourly.time[i].slice(11, 13),
+      t: wxNum(hourly.temperature_2m?.[i]),
+      feels: wxNum(hourly.apparent_temperature?.[i]),
+      precip: wxNum(hourly.precipitation_probability?.[i]),
+      wind: wxNum(hourly.wind_speed_10m?.[i]),
+      dir: windDirUA(hourly.wind_direction_10m?.[i]),
+      // Код погоди відсутній → НЕ підставляємо 0 («Ясно»): картка лишиться без іконки.
+      info: код === null ? null : weatherCodeInfo(код),
+    };
+  });
+
+  const d = new Date(dateStr + 'T00:00:00');
+  const dayName = isToday ? 'Сьогодні' : WEEKDAYS_UA_FULL[d.getDay()];
+  const dateLabel = `${d.getDate()} ${CM_MONTHS[d.getMonth()]}`;
+  const tMax = wxNum(daily.temperature_2m_max?.[dayIndex]);
+  const tMin = wxNum(daily.temperature_2m_min?.[dayIndex]);
+
+  // ПРАВИЛО 3 — для сьогодні опис береться звідти ж, звідки його бере капсула.
+  const cur = _wxData.current || {};
+  const headCode = isToday ? wxNum(cur.weather_code) : wxNum(daily.weather_code?.[dayIndex]);
+  const headInfo = headCode === null ? null : weatherCodeInfo(headCode);
+  const curT = isToday ? wxNum(cur.temperature_2m) : null;
+  const curFeels = isToday ? wxNum(cur.apparent_temperature) : null;
+
+  const hoursHtml = hours.map(h => {
+    if (h.t === null) return '';   // без градусів картка нічого не каже — не малюємо її
+    const зараз = isToday && h.h === nowHour;
+    return `
+      <li class="wxd-h${зараз ? ' wxd-h--now' : ''}">
+        <span class="wxd-h-time">${зараз ? 'Зараз' : `${h.hh}:00`}</span>
+        <span class="wxd-h-ic" aria-hidden="true">${h.info ? h.info.icon : ''}</span>
+        <span class="wxd-h-t">${Math.round(h.t)}°</span>
+        <span class="wxd-h-p${(h.precip ?? 0) >= 40 ? ' wxd-h-p--wet' : ''}">
+          <span class="wxd-drop" aria-hidden="true">${WX_DROP}</span>${h.precip === null ? WX_EMPTY : `${Math.round(h.precip)}%`}</span>
+        <span class="wxd-h-w">${h.wind === null ? WX_EMPTY : `${Math.round(h.wind)} км/год`}</span>
+      </li>`;
+  }).join('');
+
+  // ── Смуга дня. Кожне поле малюється ЛИШЕ якщо воно прийшло. ──
+  // Вітер — НАЙСИЛЬНІШИЙ за показані години, а не «зараз»: одне правило працює і
+  // для сьогодні, і для майбутніх днів, де жодного «зараз» не існує.
+  const вітри = hours.filter(h => h.wind !== null);
+  const найвітряніша = вітри.length ? вітри.reduce((a, b) => (b.wind > a.wind ? b : a)) : null;
+  // Вологість — середнє по ВСІХ годинах доби (не лише показаних), тому й підпис
+  // «у середньому за день». Рахуємо самі, бо готового денного поля не запитуємо
+  // (пояснення — у коментарі до запиту вище).
+  const вологість = wxAvg(усіГодини.map(i => hourly.relative_humidity_2m?.[i]));
+  const схід = (daily.sunrise?.[dayIndex] || '').slice(11, 16);
+  const захід = (daily.sunset?.[dayIndex] || '').slice(11, 16);
+
+  const факти = [
+    схід && захід ? ['Схід і захід', `${схід} — ${захід}`] : null,
+    найвітряніша ? ['Вітер', `до ${Math.round(найвітряніша.wind)} км/год${найвітряніша.dir ? `, ${найвітряніша.dir}` : ''}`] : null,
+    вологість !== null ? ['Вологість', `${Math.round(вологість)}% у середньому за день`] : null,
+  ].filter(Boolean);
+
+  const порада = wxAdvice(hours, tMax);
+
+  const bodyHtml = `
+    <div class="wxd-head">
+      <div class="wxd-head-top">
+        <div class="wxd-head-day">${escapeHtml(dayName)} · ${escapeHtml(dateLabel)}</div>
+        ${tMax !== null && tMin !== null
+          ? `<div class="wxd-head-range">${Math.round(tMax)}° <span>/ ${Math.round(tMin)}°</span></div>` : ''}
+      </div>
+      <div class="wxd-head-place">${escapeHtml(_wxData.city || 'Олика')}</div>
+      <div class="wxd-head-now">
+        ${headInfo ? `<span class="wxd-head-ic" aria-hidden="true">${headInfo.icon}</span>` : ''}
+        <div class="wxd-head-txt">
+          <div class="wxd-head-desc">${escapeHtml(headInfo ? headInfo.text : WX_EMPTY)}</div>
+          ${curT !== null
+            ? `<div class="wxd-head-sub">зараз ${Math.round(curT)}°${curFeels !== null ? `, відчувається ${Math.round(curFeels)}°` : ''}</div>`
+            : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="wxd-sec-title">Погодинно</div>
+    <ul class="wxd-hours" tabindex="0">${hoursHtml}</ul>
+
+    ${порада ? `<div class="wxd-advice"><span class="wxd-advice-ic" aria-hidden="true">${ICONS.bulb}</span>${escapeHtml(порада)}</div>` : ''}
+
+    ${факти.length ? `<ul class="wxd-facts">${факти.map(([k, v]) => `
+      <li class="wxd-fact"><span class="wxd-fact-k">${escapeHtml(k)}</span><span class="wxd-fact-v">${escapeHtml(v)}</span></li>`).join('')}</ul>` : ''}
+
+    <div class="wxd-src">Дані Open-Meteo${_wxData.fetchedAt ? ` · оновлено ${formatTime(_wxData.fetchedAt)}` : ''}</div>`;
+
+  // swipeClose:false — власний wireWeatherSwipe нижче.
   const { close, el } = openModal({
     bodyHtml,
     variant: 'sheet',
     className: 'app-modal--weather',
     swipeClose: false,
-    onMount: (wrap) => wireWeatherScrubber(wrap, {
-      tempPts, precipPts, iconPts,
-      initialIdx: initialIdx >= 0 ? initialIdx : null,
-    }),
   });
   wireWeatherSwipe(el, close);
 }
 
-// Скрабер (перетягування пальцем по графіку): снапить до найближчої години,
-// показує спільну вертикальну лінію + бульбашку з іконкою і значенням.
-// initialIdx — якщо задано, курсор одразу показується на цій годині (актуальна
-// година, лише коли відкрито «Сьогодні»), без потреби торкатись графіка.
-function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
-  const n = tempPts.length;
-  if (!n) return;
-  const gTemp = wxGeom(tempPts);
-  const wraps = [...overlay.querySelectorAll('.wx-chart-svg-wrap')];
-
-  function place(idx) {
-    idx = Math.max(0, Math.min(n - 1, idx));
-    const xPct = (gTemp.x(idx) / WX.W) * 100;   // однакова X-геометрія для обох графіків
-    wraps.forEach(wrap => {
-      const kind = wrap.dataset.wx;
-      const cursor = wrap.querySelector('.wx-cursor');
-      const readout = wrap.querySelector('.wx-readout');
-      cursor.style.left = xPct + '%';
-      cursor.classList.add('is-on');
-      const p = kind === 'temp' ? tempPts[idx] : precipPts[idx];
-      const val = kind === 'temp' ? `${Math.round(p.v)}°` : `${Math.round(p.v)}%`;
-      // Іконка погоди — лише в бульбашці температури; графік опадів дублював той самий
-      // емодзі, хоча має показувати ЛИШЕ ймовірність опадів (година+відсоток).
-      const icHtml = kind === 'temp' ? `<span class="wx-ro-ic">${iconPts[idx]}</span>` : '';
-      readout.innerHTML = `${icHtml}<span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
-      readout.style.left = xPct + '%';
-      readout.classList.add('is-on');
-    });
-  }
-  function idxFromX(wrap, clientX) {
-    const r = wrap.getBoundingClientRect();
-    // Врахувати внутрішні відступи графіка (padL/padR) — X-вісь займає не всю ширину.
-    const frac = (clientX - r.left) / r.width;
-    const usable = (frac * WX.W - WX.padL) / (WX.W - WX.padL - WX.padR);
-    return Math.round(usable * (n - 1));
-  }
-  wraps.forEach(wrap => {
-    wrap.addEventListener('pointerdown', e => {
-      wrap.setPointerCapture(e.pointerId);
-      place(idxFromX(wrap, e.clientX));
-      e.preventDefault();
-    });
-    wrap.addEventListener('pointermove', e => {
-      if (e.pressure === 0 && e.buttons === 0) return;
-      if (!wrap.hasPointerCapture(e.pointerId)) return;
-      place(idxFromX(wrap, e.clientX));
-    });
-    // Відпустив палець — курсор ЛИШАЄТЬСЯ на обраній годині (не ховається), щоб
-    // бачити погоду на цю годину й далі, без потреби тримати палець притиснутим.
-    const end = e => { try { wrap.releasePointerCapture(e.pointerId); } catch (_) {} };
-    wrap.addEventListener('pointerup', end);
-    wrap.addEventListener('pointercancel', end);
-  });
-
-  if (initialIdx != null) place(initialIdx);
-}
-
 // Свайп вниз по аркушу закриває модалку. Не заважає скраберу: якщо палець
-// на графіку — свайп ігнорується (там працює скрабер). close — від primitive
+// на стрічці годин — свайп ігнорується (там гортання вбік). close — від primitive
 // core/modal.js (Потік C1, крок 6).
 function wireWeatherSwipe(overlay, close) {
   const sheet = overlay.querySelector('.app-modal-sheet');
@@ -551,7 +585,11 @@ function wireWeatherSwipe(overlay, close) {
   const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
   const fade = createBackdropFade(overlay.querySelector('.app-modal-backdrop'));
   sheet.addEventListener('touchstart', e => {
-    if (e.target.closest('.wx-chart-svg-wrap')) return;   // графік → скрабер, не свайп
+    // 08.08: був виняток для `.wx-chart-svg-wrap` (графіка вже нема). Тепер виняток
+    // для стрічки годин, і причина та сама: там палець возить вміст ВБІК, і якщо
+    // дозволити цьому жесту тягнути ще й аркуш, гортання годин перетворюється на
+    // випадкове закриття модалки.
+    if (e.target.closest('.wxd-hours')) return;
     if (sheet.scrollTop > 2) return;
     startY = e.touches[0].clientY;
     dragging = true;
