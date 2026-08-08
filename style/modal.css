@@ -18,13 +18,23 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
 }
+/* 🔴 08.08 — ВСЕРЕДИНІ ВЕКТОРНИЙ ✕ (`ICONS.close`), а не текстовий гліф.
+   Скарга Вови: «всередині хрестик невекторний, зроби в усіх модалках».
+   Було `✕` (U+2715) — його малює ШРИФТ ПРИСТРОЮ, тож на кожному телефоні виходив
+   свій хрестик: інша товщина ліній, інші пропорції, часом зсув від оптичного центру.
+   Тепер це той самий Tabler-контур, що й решта іконок хроми, з тим самим
+   `stroke-width`.
+   ⚠️ `display:flex` тут ОБОВʼЯЗКОВО: текстовий гліф центрувався сам (рядком), а
+   inline-SVG — ні, і без цього хрестик сидів би вище центру кола.
+   ⚠️ `font-size` лишається органом керування розміром: `.cat-ico` = 1em. */
 .app-modal-close {
   position: absolute; top: 12px; right: 14px;
   background: var(--gray-light);
   border: 0;
   width: 32px; height: 32px;
   border-radius: 50%;
-  font-size: 14px; color: var(--ink-soft, #888);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--ink-soft, #888);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   z-index: 1;
 }

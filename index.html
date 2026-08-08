@@ -150,7 +150,11 @@
           <button class="modal-icon-btn" id="modal-remind-btn" type="button" aria-label="Нагадування" hidden></button>
           <button class="modal-icon-btn" id="modal-save-btn" type="button" aria-label="Зберегти" hidden></button>
         </div>
-        <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
+        <!-- 08.08: ✕ векторний, як у примітиві core/modal.js. Тут контур вписано
+             в розмітку, а не взято з ICONS: ця кнопка статична в index.html і
+             жоден JS її не малює. Path той самий (Tabler `x`) — при зміні іконки
+             в реєстрі оновити й тут. -->
+        <button class="modal-close-btn" onclick="closeArticleModal()" aria-label="Закрити"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
         <div class="modal-meta-tags" id="modalMetaTags"></div>
       </div>
       <div id="article-modal-content" class="article-modal-content"></div>

@@ -2241,6 +2241,124 @@
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
   var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
+  // src/core/icons.js
+  var A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var ICONS = {
+    // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
+    // admin.html тримає ВЛАСНУ ICO_USERS — то standalone-файл без бандлера, за
+    // задумом Потоку 7 його не чіпаємо; при зміні цього svg свідомо синхронити й там)
+    users: `<svg ${A}><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>`,
+    // Телефон / дзвінок (дедуп: раніше 2 байт-в-байт копії — board.js, community-blocks.js)
+    phone: `<svg ${A}><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>`,
+    // Локація / мітка на карті
+    pin: `<svg ${A}><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/></svg>`,
+    // Пошук / лупа
+    search: `<svg ${A}><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>`,
+    // Галочка / підтвердження
+    check: `<svg ${A}><path d="M5 12l5 5l10 -10"/></svg>`,
+    // Попередження (трикутник — конвенційна форма для warning, не коло)
+    warning: `<svg ${A}><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0"/><path d="M12 16h.01"/></svg>`,
+    // Календар / дата
+    calendar: `<svg ${A}><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/><path d="M11 15h1"/><path d="M12 15v3"/></svg>`,
+    // Годинник / час
+    clock: `<svg ${A}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></svg>`,
+    // Замок / приватність
+    lock: `<svg ${A}><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>`,
+    // Налаштування / шестерня
+    settings: `<svg ${A}><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>`,
+    // Смітник / видалити
+    trash: `<svg ${A}><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>`,
+    // Олівець / редагувати (дедуп: раніше 2 копії — board.js EDIT_ICON_SVG, community-modal.js PENCIL_ICON_SVG)
+    pencil: `<svg ${A}><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>`,
+    // Хрестик / закрити
+    close: `<svg ${A}><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>`,
+    // 🆕 06.08 — «назад» (шеврон вліво). Той самий знак, що на кнопці закриття
+    // сторінки оголошення. Заведено сюди, бо споживачів стало двоє, і другий —
+    // Кабінет, де досі стояв ТЕКСТОВИЙ гліф «←». Гліф — це літера: у нього своя
+    // товщина, свій оптичний центр і свій шрифт, тож поруч із векторними
+    // іконками він завжди трохи не той і трохи не там. Той самий висновок уже
+    // записаний при `.cm-ad-author-go` у board.css.
+    back: `<svg ${A}><path d="M15 18l-6-6 6-6"/></svg>`,
+    // Шеврон вправо / розгорнути
+    chevronRight: `<svg ${A}><path d="M9 6l6 6l-6 6"/></svg>`,
+    // 🆕 05.08 — стрілка вниз для елементів вибору («відкриється список»).
+    // Замовлення Вови: «всі ікони, включаючи стрілочку донизу, мають бути
+    // векторними». До цього в кнопці населеного пункту стояв текстовий символ ▾:
+    // він не масштабується під розмір поруч, у різних шрифтах виглядає по-різному
+    // і не бере товщину лінії решти іконок — тобто виглядав чужим і дрібним.
+    chevronDown: `<svg ${A}><path d="M6 9l6 6l6 -6"/></svg>`,
+    // Стрілка вправо / далі
+    arrowRight: `<svg ${A}><path d="M5 12l14 0"/><path d="M13 18l6 -6"/><path d="M13 6l6 6"/></svg>`,
+    // Око / перегляд
+    eye: `<svg ${A}><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg>`,
+    // Ракета / опублікувати
+    rocket: `<svg ${A}><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/><path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/><path d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>`,
+    // Фото / зображення
+    photo: `<svg ${A}><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>`,
+    // Документ / файл (стаття)
+    fileText: `<svg ${A}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/></svg>`,
+    // Робот / AI-позначка
+    robot: `<svg ${A}><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4"/><path d="M12 2v2"/><path d="M9 12v9"/><path d="M15 12v9"/><path d="M5 16l4 -2"/><path d="M15 14l4 2"/><path d="M9 18h6"/><path d="M10 8v.01"/><path d="M14 8v.01"/></svg>`,
+    // Планшет зі списком / «Мої оголошення» (clipboard-list)
+    clipboard: `<svg ${A}><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>`,
+    // Архів / коробка (archive)
+    archive: `<svg ${A}><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10"/><path d="M10 12l4 0"/></svg>`,
+    // Повідомлення / чат-бульбашка (message)
+    message: `<svg ${A}><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/></svg>`,
+    // Стрілка вгору / підняти (arrow-up)
+    arrowUp: `<svg ${A}><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>`,
+    // ── Потік 7 (12.07, варіант 5) — реальні Tabler-шляхи, зібрані агентом з github.com/tabler/tabler-icons ──
+    // Одна людина / профіль (Tabler user)
+    user: `<svg ${A}><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></svg>`,
+    // Зірка (Tabler star)
+    star: `<svg ${A}><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/></svg>`,
+    // Автобус (Tabler bus)
+    bus: `<svg ${A}><path d="M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8"/><path d="M16 5l1.5 7l4.5 0"/><path d="M2 10l15 0"/><path d="M7 5l0 5"/><path d="M12 5l0 5"/></svg>`,
+    // Мегафон / оголошення (Tabler speakerphone)
+    megaphone: `<svg ${A}><path d="M18 8a3 3 0 0 1 0 6"/><path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5"/><path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8"/></svg>`,
+    // Лампочка / світло (Tabler bulb)
+    bulb: `<svg ${A}><path d="M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7"/><path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3"/><path d="M9.7 17l4.6 0"/></svg>`,
+    // Глобус / світ (Tabler world)
+    globe: `<svg ${A}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/></svg>`,
+    // Поділитись (Tabler share)
+    share: `<svg ${A}><path d="M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></svg>`,
+    // Дзвіночок / сповіщення (Tabler bell)
+    bell: `<svg ${A}><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>`,
+    // Закладка (Tabler bookmark)
+    bookmark: `<svg ${A}><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4"/></svg>`,
+    // Конверт / пошта (Tabler mail)
+    mail: `<svg ${A}><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"/><path d="M3 7l9 6l9 -6"/></svg>`,
+    // Газета / новини (Tabler news)
+    newspaper: `<svg ${A}><path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11"/><path d="M8 8l4 0"/><path d="M8 12l4 0"/><path d="M8 16l4 0"/></svg>`,
+    // Візок / купівля (Tabler shopping-cart)
+    cart: `<svg ${A}><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17h-11v-14h-2"/><path d="M6 5l14 1l-1 7h-13"/></svg>`,
+    // Дім (Tabler home)
+    home: `<svg ${A}><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>`,
+    // Громада / поселення (Tabler building-community)
+    community: `<svg ${A}><path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v17h-8"/><path d="M13 7l0 .01"/><path d="M17 7l0 .01"/><path d="M17 11l0 .01"/><path d="M17 15l0 .01"/></svg>`,
+    // Цінник / тег (Tabler tag)
+    tag: `<svg ${A}><path d="M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3"/></svg>`,
+    // Посилання (Tabler link)
+    link: `<svg ${A}><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>`,
+    // Щит (Tabler shield) — категорія «Для захисників» на картці збору.
+    // ⚠️ Не `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, і на зборі коштів
+    // читався б як попередження про шахрайство (ця помилка вже ловилась 05.08).
+    shield: `<svg ${A}><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></svg>`,
+    // Щит із галочкою (Tabler shield-check) — «збір перевірено».
+    // 🔴 Малюється ЛИШЕ при `verified: true` у даних. Позначка «перевірено», яку
+    // ставлять усім підряд, гірша за її відсутність: вона знецінює саме те слово,
+    // заради якого існує.
+    shieldCheck: `<svg ${A}><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/><path d="M15 19l2 2l4 -4"/></svg>`,
+    // Скріпка / вкладення (Tabler paperclip)
+    paperclip: `<svg ${A}><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5"/></svg>`,
+    // Знак питання / допомога (Tabler help)
+    help: `<svg ${A}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 17l0 .01"/><path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4"/></svg>`,
+    // Instagram (Tabler brand-instagram) — соцмережі Olyka Castle у футері сайдбару
+    brandInstagram: `<svg ${A}><path d="M4 8a4 4 0 0 1 4 -4h8a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M16.5 7.5v.01"/></svg>`,
+    // Facebook (Tabler brand-facebook)
+    brandFacebook: `<svg ${A}><path d="M7 10v4h3v7h4v-7h3l1 -4h-4v-2a1 1 0 0 1 1 -1h3v-4h-3a5 5 0 0 0 -5 5v2h-3"/></svg>`
+  };
+
   // src/core/sheet-motion.js
   var FLICK_V = 0.45;
   var FLICK_MIN = 8;
@@ -2387,12 +2505,15 @@
 
   // src/core/modal.js
   var _active = null;
+  function closeBtnHtml() {
+    return `<button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${ICONS.close}</button>`;
+  }
   function buildSheet({ title, bodyHtml, dismissible }) {
     return `
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ""}>
       ${dismissible ? '<div class="app-modal-handle"></div>' : ""}
-      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>' : ""}
+      ${dismissible ? closeBtnHtml() : ""}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
@@ -2401,7 +2522,7 @@
     return `
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-card" role="dialog" aria-modal="true">
-      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>' : ""}
+      ${dismissible ? closeBtnHtml() : ""}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
@@ -2599,24 +2720,24 @@
   }
 
   // src/core/board-categories.js
-  var A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
   var SVG = {
     // Купити — корзина
-    cart: `<svg ${A}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
+    cart: `<svg ${A2}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
     // Продам — цінник
-    tag: `<svg ${A}><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+    tag: `<svg ${A2}><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
     // Віддам безкоштовно — подарунок
-    gift: `<svg ${A}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
+    gift: `<svg ${A2}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
     // Шукаю — лупа
-    search: `<svg ${A}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+    search: `<svg ${A2}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
     // Послуги — ключ
-    wrench: `<svg ${A}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-6.3 6.3a2.1 2.1 0 0 1-3-3l6.3-6.3a6 6 0 0 1 7.9-7.9l-3.1 3.1z"/></svg>`,
+    wrench: `<svg ${A2}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-6.3 6.3a2.1 2.1 0 0 1-3-3l6.3-6.3a6 6 0 0 1 7.9-7.9l-3.1 3.1z"/></svg>`,
     // Знайдено — галочка в колі
-    check: `<svg ${A}><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`,
+    check: `<svg ${A2}><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`,
     // Загубилось — знак «?» у колі
-    help: `<svg ${A}><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    help: `<svg ${A2}><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
     // Всі — повзунки (налаштування фільтра; дефолт кнопки фільтра)
-    sliders: `<svg ${A}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>`
+    sliders: `<svg ${A2}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>`
   };
   var BOARD_CATEGORIES = [
     { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", color: "green", icon: SVG.cart },
@@ -2647,124 +2768,6 @@
     const c = byId(id);
     return c ? c.short || c.label : id;
   }
-
-  // src/core/icons.js
-  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
-  var ICONS = {
-    // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
-    // admin.html тримає ВЛАСНУ ICO_USERS — то standalone-файл без бандлера, за
-    // задумом Потоку 7 його не чіпаємо; при зміні цього svg свідомо синхронити й там)
-    users: `<svg ${A2}><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>`,
-    // Телефон / дзвінок (дедуп: раніше 2 байт-в-байт копії — board.js, community-blocks.js)
-    phone: `<svg ${A2}><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>`,
-    // Локація / мітка на карті
-    pin: `<svg ${A2}><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/></svg>`,
-    // Пошук / лупа
-    search: `<svg ${A2}><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>`,
-    // Галочка / підтвердження
-    check: `<svg ${A2}><path d="M5 12l5 5l10 -10"/></svg>`,
-    // Попередження (трикутник — конвенційна форма для warning, не коло)
-    warning: `<svg ${A2}><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0"/><path d="M12 16h.01"/></svg>`,
-    // Календар / дата
-    calendar: `<svg ${A2}><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/><path d="M11 15h1"/><path d="M12 15v3"/></svg>`,
-    // Годинник / час
-    clock: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></svg>`,
-    // Замок / приватність
-    lock: `<svg ${A2}><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>`,
-    // Налаштування / шестерня
-    settings: `<svg ${A2}><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>`,
-    // Смітник / видалити
-    trash: `<svg ${A2}><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>`,
-    // Олівець / редагувати (дедуп: раніше 2 копії — board.js EDIT_ICON_SVG, community-modal.js PENCIL_ICON_SVG)
-    pencil: `<svg ${A2}><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>`,
-    // Хрестик / закрити
-    close: `<svg ${A2}><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>`,
-    // 🆕 06.08 — «назад» (шеврон вліво). Той самий знак, що на кнопці закриття
-    // сторінки оголошення. Заведено сюди, бо споживачів стало двоє, і другий —
-    // Кабінет, де досі стояв ТЕКСТОВИЙ гліф «←». Гліф — це літера: у нього своя
-    // товщина, свій оптичний центр і свій шрифт, тож поруч із векторними
-    // іконками він завжди трохи не той і трохи не там. Той самий висновок уже
-    // записаний при `.cm-ad-author-go` у board.css.
-    back: `<svg ${A2}><path d="M15 18l-6-6 6-6"/></svg>`,
-    // Шеврон вправо / розгорнути
-    chevronRight: `<svg ${A2}><path d="M9 6l6 6l-6 6"/></svg>`,
-    // 🆕 05.08 — стрілка вниз для елементів вибору («відкриється список»).
-    // Замовлення Вови: «всі ікони, включаючи стрілочку донизу, мають бути
-    // векторними». До цього в кнопці населеного пункту стояв текстовий символ ▾:
-    // він не масштабується під розмір поруч, у різних шрифтах виглядає по-різному
-    // і не бере товщину лінії решти іконок — тобто виглядав чужим і дрібним.
-    chevronDown: `<svg ${A2}><path d="M6 9l6 6l6 -6"/></svg>`,
-    // Стрілка вправо / далі
-    arrowRight: `<svg ${A2}><path d="M5 12l14 0"/><path d="M13 18l6 -6"/><path d="M13 6l6 6"/></svg>`,
-    // Око / перегляд
-    eye: `<svg ${A2}><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg>`,
-    // Ракета / опублікувати
-    rocket: `<svg ${A2}><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/><path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/><path d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>`,
-    // Фото / зображення
-    photo: `<svg ${A2}><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>`,
-    // Документ / файл (стаття)
-    fileText: `<svg ${A2}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/></svg>`,
-    // Робот / AI-позначка
-    robot: `<svg ${A2}><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4"/><path d="M12 2v2"/><path d="M9 12v9"/><path d="M15 12v9"/><path d="M5 16l4 -2"/><path d="M15 14l4 2"/><path d="M9 18h6"/><path d="M10 8v.01"/><path d="M14 8v.01"/></svg>`,
-    // Планшет зі списком / «Мої оголошення» (clipboard-list)
-    clipboard: `<svg ${A2}><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>`,
-    // Архів / коробка (archive)
-    archive: `<svg ${A2}><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10"/><path d="M10 12l4 0"/></svg>`,
-    // Повідомлення / чат-бульбашка (message)
-    message: `<svg ${A2}><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/></svg>`,
-    // Стрілка вгору / підняти (arrow-up)
-    arrowUp: `<svg ${A2}><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>`,
-    // ── Потік 7 (12.07, варіант 5) — реальні Tabler-шляхи, зібрані агентом з github.com/tabler/tabler-icons ──
-    // Одна людина / профіль (Tabler user)
-    user: `<svg ${A2}><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></svg>`,
-    // Зірка (Tabler star)
-    star: `<svg ${A2}><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/></svg>`,
-    // Автобус (Tabler bus)
-    bus: `<svg ${A2}><path d="M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8"/><path d="M16 5l1.5 7l4.5 0"/><path d="M2 10l15 0"/><path d="M7 5l0 5"/><path d="M12 5l0 5"/></svg>`,
-    // Мегафон / оголошення (Tabler speakerphone)
-    megaphone: `<svg ${A2}><path d="M18 8a3 3 0 0 1 0 6"/><path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5"/><path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8"/></svg>`,
-    // Лампочка / світло (Tabler bulb)
-    bulb: `<svg ${A2}><path d="M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7"/><path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3"/><path d="M9.7 17l4.6 0"/></svg>`,
-    // Глобус / світ (Tabler world)
-    globe: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/></svg>`,
-    // Поділитись (Tabler share)
-    share: `<svg ${A2}><path d="M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></svg>`,
-    // Дзвіночок / сповіщення (Tabler bell)
-    bell: `<svg ${A2}><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>`,
-    // Закладка (Tabler bookmark)
-    bookmark: `<svg ${A2}><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4"/></svg>`,
-    // Конверт / пошта (Tabler mail)
-    mail: `<svg ${A2}><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"/><path d="M3 7l9 6l9 -6"/></svg>`,
-    // Газета / новини (Tabler news)
-    newspaper: `<svg ${A2}><path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11"/><path d="M8 8l4 0"/><path d="M8 12l4 0"/><path d="M8 16l4 0"/></svg>`,
-    // Візок / купівля (Tabler shopping-cart)
-    cart: `<svg ${A2}><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17h-11v-14h-2"/><path d="M6 5l14 1l-1 7h-13"/></svg>`,
-    // Дім (Tabler home)
-    home: `<svg ${A2}><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>`,
-    // Громада / поселення (Tabler building-community)
-    community: `<svg ${A2}><path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v17h-8"/><path d="M13 7l0 .01"/><path d="M17 7l0 .01"/><path d="M17 11l0 .01"/><path d="M17 15l0 .01"/></svg>`,
-    // Цінник / тег (Tabler tag)
-    tag: `<svg ${A2}><path d="M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3"/></svg>`,
-    // Посилання (Tabler link)
-    link: `<svg ${A2}><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>`,
-    // Щит (Tabler shield) — категорія «Для захисників» на картці збору.
-    // ⚠️ Не `warning`: трикутник із оклику означає НЕБЕЗПЕКУ, і на зборі коштів
-    // читався б як попередження про шахрайство (ця помилка вже ловилась 05.08).
-    shield: `<svg ${A2}><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></svg>`,
-    // Щит із галочкою (Tabler shield-check) — «збір перевірено».
-    // 🔴 Малюється ЛИШЕ при `verified: true` у даних. Позначка «перевірено», яку
-    // ставлять усім підряд, гірша за її відсутність: вона знецінює саме те слово,
-    // заради якого існує.
-    shieldCheck: `<svg ${A2}><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/><path d="M15 19l2 2l4 -4"/></svg>`,
-    // Скріпка / вкладення (Tabler paperclip)
-    paperclip: `<svg ${A2}><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5"/></svg>`,
-    // Знак питання / допомога (Tabler help)
-    help: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 17l0 .01"/><path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4"/></svg>`,
-    // Instagram (Tabler brand-instagram) — соцмережі Olyka Castle у футері сайдбару
-    brandInstagram: `<svg ${A2}><path d="M4 8a4 4 0 0 1 4 -4h8a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M16.5 7.5v.01"/></svg>`,
-    // Facebook (Tabler brand-facebook)
-    brandFacebook: `<svg ${A2}><path d="M7 10v4h3v7h4v-7h3l1 -4h-4v-2a1 1 0 0 1 1 -1h3v-4h-3a5 5 0 0 0 -5 5v2h-3"/></svg>`
-  };
 
   // src/tabs/community-modal.js
   var PENCIL_ICON_SVG = ICONS.pencil;
@@ -6962,7 +6965,9 @@
     const wrap = document.createElement("div");
     wrap.className = "cm-photo-lightbox";
     wrap.innerHTML = `
-    <button class="cm-photo-lightbox-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    <!-- 08.08: \u2715 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u0438\u0439 (ICONS.close), \u044F\u043A \u0443 \u043F\u0440\u0438\u043C\u0456\u0442\u0438\u0432\u0456 core/modal.js \u2014 \u043B\u0430\u0439\u0442\u0431\u043E\u043A\u0441
+         \u0431\u0443\u0434\u0443\u0454\u0442\u044C\u0441\u044F \u0432\u043B\u0430\u0441\u043D\u0438\u043C \u043A\u043E\u0434\u043E\u043C, \u0442\u043E\u0436 \u0454\u0434\u0438\u043D\u043E\u0457 \u043F\u0440\u0430\u0432\u043A\u0438 \u0432 \u043F\u0440\u0438\u043C\u0456\u0442\u0438\u0432\u0456 \u0439\u043E\u043C\u0443 \u043D\u0435 \u0434\u043E\u0441\u0438\u0442\u044C. -->
+    <button class="cm-photo-lightbox-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">${ICONS.close}</button>
     <div class="cm-photo-lightbox-track">
       ${photos.map((ph) => `<div class="cm-photo-lightbox-slide"><img src="${escapeHtml(ph)}" alt=""></div>`).join("")}
     </div>
@@ -11804,13 +11809,23 @@
       // порожньою ніччю, а приклад Вови («о восьмій сонце, о десятій дощ») лежить
       // за екран прокрутки вправо.
       // Сьогоднішній день не чіпаємо: там перша картка і так «Зараз».
+      // ⚠️ ЗСУВ РАХУЄТЬСЯ ВІД ПЕРШОЇ КАРТКИ, А НЕ ВІД САМОЇ СТРІЧКИ — і це не
+      //    причісування, а виправлення. Було `ранок.offsetLeft - стрічка.offsetLeft`,
+      //    але `offsetLeft` дитини ВКЛЮЧАЄ `padding-left` стрічки (16px). Виходило, що
+      //    прокрутка з'їдала цей відступ, і картка 07:00 ставала впритул до краю
+      //    екрана — рівно те, на що поскаржився Вова: «перша карточка дуже близько
+      //    притиснута до лівого краю».
+      //    Різниця двох `offsetLeft` дітей від падінга не залежить взагалі, тож
+      //    прокручена картка стає рівно там, де стояла б перша — на одній лінії з
+      //    текстом шапки і рядками фактів.
       onMount: (wrap) => {
         if (isToday)
           return;
         const \u0441\u0442\u0440\u0456\u0447\u043A\u0430 = wrap.querySelector(".wxd-hours");
+        const \u043F\u0435\u0440\u0448\u0430 = \u0441\u0442\u0440\u0456\u0447\u043A\u0430?.children[0];
         const \u0440\u0430\u043D\u043E\u043A = \u0441\u0442\u0440\u0456\u0447\u043A\u0430?.children[7];
-        if (\u0441\u0442\u0440\u0456\u0447\u043A\u0430 && \u0440\u0430\u043D\u043E\u043A)
-          \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft = \u0440\u0430\u043D\u043E\u043A.offsetLeft - \u0441\u0442\u0440\u0456\u0447\u043A\u0430.offsetLeft;
+        if (\u0441\u0442\u0440\u0456\u0447\u043A\u0430 && \u043F\u0435\u0440\u0448\u0430 && \u0440\u0430\u043D\u043E\u043A)
+          \u0441\u0442\u0440\u0456\u0447\u043A\u0430.scrollLeft = \u0440\u0430\u043D\u043E\u043A.offsetLeft - \u043F\u0435\u0440\u0448\u0430.offsetLeft;
       }
     });
     wireWeatherSwipe(el, close);

@@ -10,9 +10,23 @@
 //   'center' — центрована картка, scale-in. Акаунт (join/profile/cabinet екрани).
 
 import { escapeHtml } from './utils.js';
+import { ICONS } from './icons.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from './sheet-motion.js';
 
 let _active = null;   // { el, close } — лише одна активна модалка примітиву за раз
+
+// 🔴 08.08 — ✕ ВЕКТОРНИЙ, А НЕ СИМВОЛ. Скарга Вови: «ця кругла кнопка закриття,
+// всередині хрестик невекторний. Зроби в усіх модалках, стандартизуй».
+// Було `✕` (U+2715) — звичайний текстовий гліф, тобто його малює шрифт пристрою.
+// Наслідок: на кожному телефоні свій хрестик — інша товщина, інші пропорції, іноді
+// зсув від центру; і він НЕ підхоплює `stroke-width` решти іконок застосунку.
+// Стало `ICONS.close` — той самий Tabler-контур, що й усі інші іконки хроми.
+// 🔑 Правку зроблено САМЕ ТУТ, у примітиві: `core/modal.js` будує аркуш і картку
+// для ВСІХ модалок застосунку, тож одне місце стандартизує їх усі одразу. Правити
+// це по кожній модалці окремо означало б заводити п'яту копію того самого хрестика.
+function closeBtnHtml() {
+  return `<button class="app-modal-close" type="button" aria-label="Закрити">${ICONS.close}</button>`;
+}
 
 // `dismissible: false` — модалка, яку не можна просто відхилити: немає ✕, немає
 // рисочки-грабера (вона обіцяє свайп, якого не буде), закриття по фону і по Escape
@@ -23,7 +37,7 @@ function buildSheet({ title, bodyHtml, dismissible }) {
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ''}>
       ${dismissible ? '<div class="app-modal-handle"></div>' : ''}
-      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="Закрити">✕</button>' : ''}
+      ${dismissible ? closeBtnHtml() : ''}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ''}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
@@ -33,7 +47,7 @@ function buildCenter({ title, bodyHtml, dismissible }) {
   return `
     <div class="app-modal-backdrop"></div>
     <div class="app-modal-card" role="dialog" aria-modal="true">
-      ${dismissible ? '<button class="app-modal-close" type="button" aria-label="Закрити">✕</button>' : ''}
+      ${dismissible ? closeBtnHtml() : ''}
       ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ''}
       <div class="app-modal-body">${bodyHtml}</div>
     </div>`;
