@@ -261,5 +261,37 @@ if (плавність) {
      плавність.пік <= 100, `${плавність.пік}px`);
 }
 
+// (3) РЯД СПІЛЬНОТ У «СТРІЧЦІ» ЇДЕ РАЗОМ ЗІ СТОРІНКОЮ.
+// Вова: «зробимо так, щоб верхній блок з іконками спільнот у стрічці скролився разом
+// зі сторінкою… логіку таку саму, як в інстаграмі, тільки без історій поки».
+// ⚠️ Міряємо РУХ, а не `position: static`. Значення властивості можна лишити
+//    правильним і однаково приліпити бар чимось іншим (батьківський sticky, fixed
+//    у медіа-запиті). Рухається чи ні — це те, що бачить людина.
+// ⚠️ У моку стрічка порожня, тож прокручувати нема що: висоту додаємо в СПИСОК
+//    ПОСТІВ, тобто туди ж, куди її дав би справжній контент, а не в сам бар.
+const стрічка = await p.evaluate(async () => {
+  await new Promise(r => { window.switchTab('shotam'); setTimeout(r, 1500); });
+  const main = document.querySelector('.app-main');
+  const bar = document.querySelector('#page-shotam .fd-topbar');
+  if (!bar) return null;
+  const список = document.querySelector('#page-shotam .fd-list') || bar.parentElement;
+  const filler = document.createElement('div');
+  filler.style.height = '1600px';
+  список.appendChild(filler);
+  await new Promise(r => setTimeout(r, 120));
+  main.scrollTop = 0; await new Promise(r => setTimeout(r, 120));
+  const до = bar.getBoundingClientRect().top;
+  main.scrollTop = 400; await new Promise(r => setTimeout(r, 200));
+  const після = bar.getBoundingClientRect().top;
+  filler.remove();
+  return { поїхав: Math.round(до - після), позиція: getComputedStyle(bar).position };
+});
+ok('сцена: «Стрічка» відкрилась і ряд спільнот на місці', !!стрічка,
+   стрічка ? `position: ${стрічка.позиція}` : 'топбару немає');
+if (стрічка) {
+  ok('🔴 ряд спільнот їде разом зі сторінкою (не липне до верху)',
+     стрічка.поїхав >= 380, `при прокрутці 400px бар поїхав на ${стрічка.поїхав}px`);
+}
+
 await ctx.close(); await b.close(); await stop();
 done();
