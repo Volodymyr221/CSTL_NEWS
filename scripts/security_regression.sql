@@ -79,6 +79,25 @@ select pg_temp.зафіксувати('анонім','рекламодавці (
 select pg_temp.зафіксувати('анонім','статистика профілів адмінки','not admin',
   coalesce((admin_profile_stats()->>'error'),'ВІДДАЛА ДАНІ'));
 
+-- 🔴 СТОРОЖ ПОДАННЯ `ads_public`.
+--    Радник Supabase позначає це подання як ERROR `security_definer_view` — і в
+--    загальному випадку слушно: подання-визначник оминає RLS базової таблиці.
+--    Тут це ЗРОБЛЕНО СВІДОМО і замін немає:
+--      • `security_invoker = on` → подання виконувалось би від аноніма, у якого
+--        прав на `ads` немає → вітрина порожня;
+--      • колонкові GRANT замість подання → `authenticated` втратив би
+--        `client_phone`, а адмін заходить саме як `authenticated` → адмінка
+--        осліпла б МОВЧКИ (та сама пастка, що і з REVOKE);
+--      • повернути публічну політику → повертає рівно ту діру, яку закрили.
+--    ➡️ Витікати нема чому: контактних колонок у поданні ФІЗИЧНО немає.
+--       Але саме тому потрібен сторож — якщо колись хтось напише
+--       `create or replace view ads_public as select *`, діра повернеться мовчки.
+select pg_temp.зафіксувати('анонім','у ads_public немає контактних колонок','ні',
+  case when exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='ads_public'
+                       and column_name in ('client_phone','client_email','client_name','paid_amount'))
+       then '🔴 З’ЯВИЛИСЬ' else 'ні' end);
+
 -- Службові функції: після кроку 5 обидві мають бути «заборонено».
 select pg_temp.зафіксувати('анонім','RPC heal_orphan_page_comments','заборонено',
   pg_temp.спроба_rpc('select public.heal_orphan_page_comments()'));
