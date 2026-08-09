@@ -20,6 +20,7 @@ import {
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
   fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
+  officialMarkHtml,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -154,7 +155,7 @@ function circlesHtml() {
   return `<div class="fd-circles">${pages.map(p => `
     <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, 'fd-circle-ava')}</span>
-      <span class="fd-circle-label">${escapeHtml(p.name)}</span>
+      <span class="fd-circle-label">${escapeHtml(p.name)}${p.official === true ? officialMarkHtml() : ''}</span>
     </button>`).join('')}</div>`;
 }
 
@@ -641,7 +642,7 @@ function postCardHtml(post, onPage = false) {
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
-          <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
+          <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>${page.official === true ? officialMarkHtml() : ''}
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
@@ -2166,7 +2167,7 @@ async function openPageScreen(pageId, reopen = false) {
              кадр скролу — саме це й давало мікроривки. -->
         <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
-          <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+          <div class="fd-screen-name">${escapeHtml(page.name)}${page.official === true ? officialMarkHtml() : ''}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
         </div>
       </div>
