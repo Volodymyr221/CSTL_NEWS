@@ -138,7 +138,10 @@ const COLLECTOR = () => {
   };
 
   // ── §1 + §10: клікабельні вузли ───────────────────────────────────────────
-  const КЛІК = 'a,button,[role="button"],input,select,textarea,label[for],[onclick],[data-tab],[data-fab],[data-nav],[data-action],[tabindex]:not([tabindex="-1"])';
+  // ⚠️ `[data-tab]` у цей список НЕ входить свідомо: його носить `<main
+  // class="app-main" data-tab="…">`, тобто вся сторінка. Кнопки таб-бару —
+  // звичайні `<button>` і покриті першим же селектором.
+  const КЛІК = 'a,button,[role="button"],input,select,textarea,label[for],[onclick],[data-fab],[data-nav],[data-action],[data-account-btn],[tabindex]:not([tabindex="-1"])';
   const кандидати = new Set(document.querySelectorAll(КЛІК));
   // Плюс усе, що виглядає клікабельним через курсор (у проєкті багато делегатів
   // на `div` з `data-*`, і формальний список їх не покриє).
@@ -149,6 +152,17 @@ const COLLECTOR = () => {
   const цілі = [];
   for (const el of кандидати) {
     if (!видимий(el)) continue;
+    // 🔴 ТРЕТЯ ПОЛОМКА ПРИЛАДУ (знайдена на кроці 5). `cursor: pointer`
+    // УСПАДКОВУЄТЬСЯ, тож нутрощі іконок — `svg`, `path`, `circle`, `rect` —
+    // потрапляли у вимір як самостійні тап-цілі. Разом це давало 599 із 1384
+    // «цілей» (43%) і роздувало показник «менших за 44px» до безглуздих 83%:
+    // `path` розміром 2×2 всередині кнопки 44×44 — це не маленька тап-ціль, це
+    // просто малюнок. Те саме з `.tab-label` усередині `.tab-item`.
+    // Правило: нутрощі `<svg>` не рахуємо ніколи; вузол, який став кандидатом
+    // ЛИШЕ через успадкований курсор, не рахуємо, якщо він лежить усередині
+    // справжнього інтерактивного елемента.
+    if (el.closest('svg')) continue;
+    if (!el.matches(КЛІК) && el.parentElement?.closest(КЛІК)) continue;
     const r = el.getBoundingClientRect();
     const s = getComputedStyle(el);
     цілі.push({
@@ -340,13 +354,19 @@ async function selftest(p) {
     document.head.appendChild(st);
     const скло = document.createElement('div'); скло.id = 'кт-скло';
     const скло2 = document.createElement('div'); скло2.id = 'кт-скло2'; скло.appendChild(скло2);
+    // Кнопка нормального розміру з іконкою всередині — контроль на те, що
+    // нутрощі `<svg>` і вкладена підпис-обгортка НЕ рахуються окремими цілями.
+    const зІконкою = document.createElement('button');
+    зІконкою.id = 'кт-зіконкою';
+    зІконкою.style.cssText = 'position:fixed;left:80px;top:70px;width:48px;height:48px';
+    зІконкою.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 2 L8 8"></path><circle cx="4" cy="4" r="2"></circle></svg><span class="кт-підпис">Ок</span>';
     const жива = document.createElement('button'); жива.id = 'кт-жива'; жива.textContent = 'A';
     const мертва = document.createElement('button'); мертва.id = 'кт-мертва'; мертва.textContent = 'Б';
     const заекраном = document.createElement('button'); заекраном.id = 'кт-заекраном'; заекраном.textContent = 'За краєм';
-    document.body.append(скло, жива, мертва, заекраном);
+    document.body.append(скло, жива, мертва, заекраном, зІконкою);
     // eslint-disable-next-line no-eval
     const дані = eval('(' + код + ')()');
-    скло.remove(); жива.remove(); мертва.remove(); заекраном.remove(); st.remove();
+    скло.remove(); жива.remove(); мертва.remove(); заекраном.remove(); зІконкою.remove(); st.remove();
     return {
       живаActive:   !!дані.цілі.find(c => c.вузол.includes('кт-жива'))?.active,
       мертваActive: !!дані.цілі.find(c => c.вузол.includes('кт-мертва'))?.active,
@@ -360,6 +380,9 @@ async function selftest(p) {
       правилВсього:  дані.правилActive,
       живихРеальних: дані.цілі.filter(c => !c.вузол.includes('кт-') && c.active).length,
       заекраном:     !!дані.цілі.find(c => c.вузол.includes('кт-заекраном')),
+      кнопкаЗІконкою: !!дані.цілі.find(c => c.вузол.includes('кт-зіконкою')),
+      нутрощіІконки: дані.цілі.filter(c => /^(svg|path|circle|rect|line|polyline)/.test(c.вузол)).length,
+      вкладенийПідпис: !!дані.цілі.find(c => c.вузол.includes('кт-підпис')),
     };
   }, COLLECTOR.toString());
 
@@ -375,6 +398,11 @@ async function selftest(p) {
       знайдено.живихРеальних > 0],
     ['🔴 вузол ЗА краєм екрана у вимір НЕ потрапив (як закрите бічне меню)',
       знайдено.заекраном === false],
+    ['сама кнопка з іконкою порахована як ціль', знайдено.кнопкаЗІконкою === true],
+    [`🔴 нутрощі <svg> НЕ рахуються окремими тап-цілями (знайдено ${знайдено.нутрощіІконки})`,
+      знайдено.нутрощіІконки === 0],
+    ['🔴 підпис усередині кнопки не рахується окремою ціллю',
+      знайдено.вкладенийПідпис === false],
   ];
   let погано = 0;
   for (const [назва, добре] of рядки) { if (!добре) погано++; console.log(`${добре ? '✅' : '❌'} ${назва}`); }
