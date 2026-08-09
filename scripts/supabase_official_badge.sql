@@ -201,6 +201,40 @@ $function$;
 revoke all on function public.admin_list_profiles(text) from public, anon;
 grant execute on function public.admin_list_profiles(text) to authenticated;
 
+-- ── КРОК 16Б. ГАЛОЧКА ЇДЕ РАЗОМ З ІМЕНЕМ ────────────────────────────────────
+-- 🔴 ДРУГЕ ЗАМОВЛЕННЯ ВОВИ (09.08, дослівно): *«якщо вона є, вона має
+-- відображатися ВСЮДИ де пише ім'я користувача… бо хтось може зареєструватися
+-- під таким іменем, а користувачі можуть просто прочитати, але не тапнути і не
+-- відкрити картку жителя»*.
+--
+-- 🔑 Чому саме `get_avatars`, а не новий запит. У застосунку вже є ОДНЕ місце
+-- правди про чужі імена: кожна поверхня несе `data-name-uid`, а `hydrateNames`
+-- підставляє живе імʼя батчем через цю функцію. Додавши сюди `official`, ми
+-- отримуємо галочку в шапці чату, у списку розмов, в Обговореннях, у коментарях
+-- і в авторі оголошення ОДНИМ рядком — без обходу кожного екрана.
+-- Окремий RPC «дай офіційність» був би другим джерелом того самого і колись
+-- розійшовся б із першим (у проєкті так уже двічі розходились копії).
+--
+-- ⚠️ DROP + CREATE + GRANT, а не `create or replace` — набір полів міняється,
+-- Postgres відповів би `42P13` (той самий урок, що з `get_public_profile`).
+-- Заміряно, які права були: EXECUTE у PUBLIC, anon, authenticated, service_role.
+drop function if exists public.get_avatars(uuid[]);
+
+create function public.get_avatars(uids uuid[])
+returns table(uid uuid, name text, avatar_url text, official boolean)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $function$
+  select p.uid, p.name, p.avatar_url, p.official
+  from public.profiles p
+  where p.uid = any(uids[1:500])
+$function$;
+
+grant execute on function public.get_avatars(uuid[])
+  to anon, authenticated, service_role;
+
 -- ── КРОК 17. ЗАБОРОНЕНІ ІМЕНА ───────────────────────────────────────────────
 -- Потік 1 закрив підробку ПІДПИСУ (клієнт більше не диктує, як підписати
 -- повідомлення). Але ім'я у профілі людина вписує собі сама — і сервер сумлінно

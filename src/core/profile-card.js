@@ -10,7 +10,7 @@
 // мінімальна картка (фото з кешу + імʼя).
 
 import { openModal, closeModal } from './modal.js';
-import { fetchPublicProfile, fetchAuthorAds, cachedAvatar } from './supabase.js';
+import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, officialMarkHtml } from './supabase.js';
 import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
@@ -71,8 +71,12 @@ function cardHtml(p) {
   // два різні знаки; звести їх в один означало б збрехати про статус людини.
   // ⚠️ `=== true`: поки міграцію не накотили, поле приходить `undefined` і знака
   // просто немає — картка виглядає точно як зараз.
-  const official = (p && p.official === true)
-    ? `<span class="cm-ad-verified" role="img" aria-label="Офіційний акаунт" title="Офіційний акаунт">✓</span>` : '';
+  // ⚠️ Розмітка знака береться зі спільної функції, а не пишеться тут своя копія.
+  // Картка профілю — єдине місце, де галочка НЕ їде гідрацією: вона малюється з
+  // відповіді `get_public_profile` ще до того, як вузол потрапить у документ.
+  // Але сам ЗНАК мусить бути фізично тим самим, що й скрізь — інакше два майже
+  // однакові кола розійшлись би розміром при першій же правці стилю.
+  const official = (p && p.official === true) ? officialMarkHtml() : '';
 
   return `
     <div class="pcard">

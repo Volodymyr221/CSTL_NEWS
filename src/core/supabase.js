@@ -444,6 +444,10 @@ export async function signChatPhotos(rows) {
 // або помилка — усе лишається на літері-fallback, як було до Потоку 12.
 const _avatarCache = new Map();   // uid -> url ('' = нема фото)
 const _nameCache   = new Map();   // uid -> живе імʼя профілю (той самий RPC get_avatars)
+// 🔵 09.08 — uid -> офіційний акаунт (синя галочка). Їде тим самим батч-запитом,
+// що імʼя і фото, і живе за тими самими правилами свіжості. Окремого запиту НЕ
+// заводимо: галочка потрібна рівно там, де вже показується імʼя.
+const _officialCache = new Map();
 
 // 🔴 07.08 — СТРОК ПРИДАТНОСТІ. До цього дня обидві Map жили ВІЧНО.
 //
@@ -499,6 +503,43 @@ export function cachedName(uid) {
   return uid ? (_nameCache.get(uid) || '') : '';
 }
 
+// 🔵 ОФІЦІЙНА ГАЛОЧКА — ОДИН ЗНАК НА ВЕСЬ ЗАСТОСУНОК (09.08).
+//
+// 🔴 ЗАМОВЛЕННЯ ВОВИ, дослівно: *«якщо вона є, вона має відображатися ВСЮДИ де
+// пише ім'я користувача… бо хтось може зареєструватися під таким іменем, а
+// користувачі можуть просто прочитати, але не тапнути і не відкрити картку»*.
+// Тобто галочка в картці профілю сама по собі не працює: підробку помічають у
+// списку розмов і в шапці чату, куди ніхто не «заходить» окремо.
+//
+// 🔑 Чому це живе в дата-шарі, а не в кожній вкладці: у застосунку вже є ОДНЕ
+// місце правди про імена — кожна поверхня несе `data-name-uid`, а `hydrateNames`
+// підставляє живе імʼя (див. `core/refresh-on-return.js`). Галочка їде тим самим
+// шляхом, тож нові екрани отримають її задарма, а розійтись копіям нема де.
+export function cachedOfficial(uid) {
+  return uid ? _officialCache.get(uid) === true : false;
+}
+
+// Розмітка знака. Береться і гідрацією, і екранами, які малюють імʼя без uid
+// (напр. назва спільноти) — щоб знак усюди був фізично однаковий.
+// ⚠️ `aria-label` обовʼязковий: читач екрана промовчав би про сам символ «✓»,
+// тобто незрячий користувач не дізнався б головного — що акаунт офіційний.
+export function officialMarkHtml() {
+  return '<span class="cstl-verified" role="img" aria-label="Офіційний акаунт" title="Офіційний акаунт">✓</span>';
+}
+
+// Поставити/зняти знак ПОРУЧ із вузлом імені.
+// 🔑 Знак — СУСІД, а не вміст вузла. Причина не стильова: `hydrateNames` оновлює
+// живе імʼя через `textContent`, і знак, покладений усередину, стирався б на
+// кожному оновленні профілю. Сусіда `textContent` не чіпає.
+export function markOfficial(nameEl, uid) {
+  if (!nameEl) return;
+  const on = cachedOfficial(uid);
+  const next = nameEl.nextElementSibling;
+  const has = next && next.classList && next.classList.contains('cstl-verified');
+  if (on && !has) nameEl.insertAdjacentHTML('afterend', officialMarkHtml());
+  else if (!on && has) next.remove();   // галочку зняли в адмінці — знімаємо й тут
+}
+
 // Спільні хелпери гідрації імен (для board / board-discussions — щоб не дублювати).
 // nameUid → атрибут-маркер, який hydrateNames знайде і підмінить на живе імʼя.
 // liveName → одразу підставляє вже кешоване живе імʼя (щоб не мигало), інакше
@@ -540,6 +581,11 @@ export async function fetchAvatars(uids) {
           // ⚠️ Порожнє імʼя НЕ затирає відоме: у профілі можна стерти імʼя, і тоді
           // чесніше лишити попереднє, ніж показати порожнечу замість людини.
           if (r.name) _nameCache.set(r.uid, r.name);
+          // ⚠️ `=== true`, а не «щось істинне»: поки міграцію не накотили, поля в
+          // відповіді немає взагалі (`undefined`) — і галочки просто не буде.
+          // Записуємо лише коли поле реально приїхало, інакше стара, правильна
+          // позначка стерлась би на першій же відповіді без цього поля.
+          if (r.official !== undefined) _officialCache.set(r.uid, r.official === true);
           stamp(r.uid);
         });
         need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); stamp(u); });  // негативи
@@ -611,8 +657,12 @@ export async function hydrateNames(root) {
   await fetchAvatars(els.map(e => e.dataset.nameUid));
   els.forEach(el => {
     el.dataset.nameGen = gen;
-    const nm = cachedName(el.dataset.nameUid);
+    const uid = el.dataset.nameUid;
+    const nm = cachedName(uid);
     if (nm && el.textContent !== nm) el.textContent = nm;   // жива назва перекриває вморожену
+    // 🔵 Галочка їде разом з іменем — тим самим проходом, по тих самих вузлах.
+    // Саме це і робить її «всюди, де видно імʼя» без правок у кожному екрані.
+    markOfficial(el, uid);
   });
 }
 
@@ -1454,10 +1504,23 @@ export async function fetchAnalyticsSummary(periodDays = 7) {
 export async function fetchPages() {
   if (!supa) return [];
   const { data, error } = await supa.from('pages')
-    .select('id, name, theme, avatar_url, banner_url, is_system, sort_order')
+    // ⚠️ `official` (09.08) — синя галочка спільноти. Якщо колонки ще немає,
+    // PostgREST відповість помилкою на ВЕСЬ запит і Стрічка лишиться порожньою,
+    // тому нижче стоїть запасний шлях без цього поля.
+    .select('id, name, theme, avatar_url, banner_url, is_system, sort_order, official')
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
-  if (error) { console.warn('[supabase] fetchPages:', error.message); return []; }
+  if (error) {
+    // 🔑 Запасний шлях, а не «про всяк випадок»: код і міграція доїжджають окремо
+    // (той самий урок, що з бургер-меню 09.08 — новий скрипт і старий CSS).
+    // Без нього одне відсутнє поле лишило б людину БЕЗ УСІЄЇ Стрічки.
+    const legacy = await supa.from('pages')
+      .select('id, name, theme, avatar_url, banner_url, is_system, sort_order')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (legacy.error) { console.warn('[supabase] fetchPages:', legacy.error.message); return []; }
+    return legacy.data || [];
+  }
   return data || [];
 }
 
@@ -1466,13 +1529,26 @@ export async function fetchPages() {
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (pageId != null) q = q.eq('page_id', pageId);
   const { data, error } = await q;
-  if (error) { console.warn('[supabase] fetchPagePosts:', error.message); return []; }
+  if (error) {
+    // Той самий запобіжник, що у `fetchPages`: без нього відсутня колонка
+    // `official` (міграція ще не накотилась) залишила б Стрічку ПОРОЖНЬОЮ —
+    // ціна незрівнянно більша за відсутню галочку.
+    let q2 = supa.from('page_posts')
+      .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (pageId != null) q2 = q2.eq('page_id', pageId);
+    const legacy = await q2;
+    if (legacy.error) { console.warn('[supabase] fetchPagePosts:', legacy.error.message); return []; }
+    return legacy.data || [];
+  }
   return data || [];
 }
 

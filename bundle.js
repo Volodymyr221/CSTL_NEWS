@@ -869,6 +869,7 @@
   }
   var _avatarCache = /* @__PURE__ */ new Map();
   var _nameCache = /* @__PURE__ */ new Map();
+  var _officialCache = /* @__PURE__ */ new Map();
   var PROFILE_TTL = 5 * 60 * 1e3;
   var PROFILE_TTL_NEG = 90 * 1e3;
   var _profileAt = /* @__PURE__ */ new Map();
@@ -890,6 +891,23 @@
   }
   function cachedName(uid) {
     return uid ? _nameCache.get(uid) || "" : "";
+  }
+  function cachedOfficial(uid) {
+    return uid ? _officialCache.get(uid) === true : false;
+  }
+  function officialMarkHtml() {
+    return '<span class="cstl-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442">\u2713</span>';
+  }
+  function markOfficial(nameEl, uid) {
+    if (!nameEl)
+      return;
+    const on = cachedOfficial(uid);
+    const next = nameEl.nextElementSibling;
+    const has = next && next.classList && next.classList.contains("cstl-verified");
+    if (on && !has)
+      nameEl.insertAdjacentHTML("afterend", officialMarkHtml());
+    else if (!on && has)
+      next.remove();
   }
   function nameUid(uid) {
     return uid ? ` data-name-uid="${escapeHtml(uid)}"` : "";
@@ -922,6 +940,8 @@
             _avatarCache.set(r.uid, r.avatar_url || "");
             if (r.name)
               _nameCache.set(r.uid, r.name);
+            if (r.official !== void 0)
+              _officialCache.set(r.uid, r.official === true);
             stamp(r.uid);
           });
           need.forEach((u) => {
@@ -978,9 +998,11 @@
     await fetchAvatars(els2.map((e) => e.dataset.nameUid));
     els2.forEach((el) => {
       el.dataset.nameGen = gen;
-      const nm = cachedName(el.dataset.nameUid);
+      const uid = el.dataset.nameUid;
+      const nm = cachedName(uid);
       if (nm && el.textContent !== nm)
         el.textContent = nm;
+      markOfficial(el, uid);
     });
   }
   async function fetchPublicProfile(uid) {
@@ -1581,23 +1603,34 @@
   async function fetchPages() {
     if (!supa)
       return [];
-    const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system, sort_order").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+    const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system, sort_order, official").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
     if (error) {
-      console.warn("[supabase] fetchPages:", error.message);
-      return [];
+      const legacy = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system, sort_order").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+      if (legacy.error) {
+        console.warn("[supabase] fetchPages:", legacy.error.message);
+        return [];
+      }
+      return legacy.data || [];
     }
     return data || [];
   }
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url, official)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
     if (error) {
-      console.warn("[supabase] fetchPagePosts:", error.message);
-      return [];
+      let q2 = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+      if (pageId != null)
+        q2 = q2.eq("page_id", pageId);
+      const legacy = await q2;
+      if (legacy.error) {
+        console.warn("[supabase] fetchPagePosts:", legacy.error.message);
+        return [];
+      }
+      return legacy.data || [];
     }
     return data || [];
   }
@@ -6735,16 +6768,6 @@
         const dt = new Date(pr.created_at);
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
           sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
-        }
-        const nameEl = modal.querySelector(".cm-ad-author-name");
-        if (pr.official === true && nameEl && !nameEl.querySelector(".cm-ad-verified")) {
-          const v = document.createElement("span");
-          v.className = "cm-ad-verified";
-          v.textContent = "\u2713";
-          v.setAttribute("role", "img");
-          v.setAttribute("aria-label", "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442");
-          v.title = "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442";
-          nameEl.appendChild(v);
         }
       }).catch(() => {
       });
@@ -13162,7 +13185,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return `<div class="fd-circles">${pages.map((p) => `
     <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, "fd-circle-ava")}</span>
-      <span class="fd-circle-label">${escapeHtml(p.name)}</span>
+      <span class="fd-circle-label">${escapeHtml(p.name)}${p.official === true ? officialMarkHtml() : ""}</span>
     </button>`).join("")}</div>`;
   }
   function postImages(post) {
@@ -13520,7 +13543,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       <header class="fd-card-head${hasPhoto ? " fd-card-head--onphoto" : ""}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
-          <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
+          <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>${page.official === true ? officialMarkHtml() : ""}
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E</span>" : ""}
@@ -14660,7 +14683,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
              \u043A\u0430\u0434\u0440 \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u0441\u0430\u043C\u0435 \u0446\u0435 \u0439 \u0434\u0430\u0432\u0430\u043B\u043E \u043C\u0456\u043A\u0440\u043E\u0440\u0438\u0432\u043A\u0438. -->
         <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
-          <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+          <div class="fd-screen-name">${escapeHtml(page.name)}${page.official === true ? officialMarkHtml() : ""}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
         </div>
       </div>
@@ -17000,7 +17023,7 @@ END:VEVENT`
     const bio = bioText ? `<div class="pcard-bio"><span class="pcard-bio-h">\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><p>${escapeHtml(bioText)}</p></div>` : "";
     const jd = p && p.created_at ? joinDate(p.created_at) : "";
     const since = jd ? `<div class="pcard-since">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${jd}</div>` : "";
-    const official = p && p.official === true ? `<span class="cm-ad-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442">\u2713</span>` : "";
+    const official = p && p.official === true ? officialMarkHtml() : "";
     return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
