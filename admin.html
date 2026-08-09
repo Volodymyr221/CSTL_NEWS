@@ -481,6 +481,13 @@ let articles       = [];      // чернетки/готове до публік
 let articleDraft   = null;    // null = список; об'єкт = форма створення/редагування
 let communities    = [];      // спільноти-канали «Стрічки» (pages), відсортовані за sort_order
 let ownerCounts    = {};      // page_id → кількість власників/адмінів (для підпису в списку)
+// 🆕 09.08 — жителі для розділу «Люди» (офіційна галочка).
+// ⚠️ Вантажаться ОКРЕМО від loadAll() і лише при вході в розділ: `profiles` під
+// RLS «own profile read» віддає адмінці лише ЇЇ ВЛАСНИЙ рядок, тож звичайним
+// `supa.from('profiles')` список не зібрати — потрібна RPC `admin_list_profiles`.
+// Тягнути її в loadAll() означало б робити зайвий запит на кожен вхід в адмінку.
+let people         = [];
+let peopleQuery    = '';      // рядок пошуку; у змінній, бо renderApp() перемальовує розділ цілком
 let communityEdit  = null;    // page_id який зараз редагуємо (null = ніхто)
 
 // ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
@@ -725,7 +732,11 @@ async function loadAll() {
       supa.from('admins').select('*').order('created_at', { ascending: true }),
       supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
       // Спільноти-канали «Стрічки» — за порядком sort_order (керується тут же).
-      supa.from('pages').select('id, name, theme, avatar_url, banner_url, sort_order, is_system')
+      // ⚠️ `official` (09.08) — синя галочка спільноти. Колонка додана міграцією
+      // `scripts/supabase_official_badge.sql`; поле лише читається, ставить його
+      // RPC `admin_set_official` (пряме `update` адмінці не пройде — право на
+      // колонку відібране в усіх клієнтських ролей, включно з адміном).
+      supa.from('pages').select('id, name, theme, avatar_url, banner_url, sort_order, is_system, official')
           .order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
       supa.from('page_admins').select('page_id'),   // для підрахунку власників на картці
       // Скарги на оголошення. RLS віддає їх ЛИШЕ адміну — редактор побачив би нуль
@@ -780,6 +791,10 @@ function menuItems() {
     { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
     { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
     { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     count: () => communities.length },
+    // 🆕 09.08 — «Люди». Лічильник рахує ОФІЦІЙНИХ, а не всіх жителів: загальна
+    // кількість профілів у плитці нічого не підказує (вона просто росте), а
+    // «скільки людей із галочкою» — це саме те, що адмін звідси і робить.
+    { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: isAdmin,     count: () => people.filter(p => p.official).length },
     { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     count: () => admins.length },
     { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     count: () => 0 },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     count: () => 0 },
@@ -838,6 +853,7 @@ function renderTabContent() {
   if (activeTab === 'comments')       return renderCommentsModeration(el);
   if (activeTab === 'reports')        return renderAdReports(el);
   if (activeTab === 'communities')    return renderCommunities(el);
+  if (activeTab === 'people')         return renderPeople(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'spend')          return renderSpend(el);
@@ -1748,6 +1764,55 @@ function ccErr(error) {
 }
 
 // Рядок спільноти у списку (аватар · назва · тема/власники · дії · стрілки порядку).
+// ── ОФІЦІЙНА ГАЛОЧКА (09.08, замовлення Вови) ─────────────────────────
+// «Додай можливість для призначення синьої галочки з адмінки спільнотам та певним
+// користувачам… просто буде користувач Олександр Прендецький, це голова міської
+// ради — йому треба додати офіційну галочку, щоб користувачі розуміли, що це він».
+//
+// 🛑 НЕ ПЛУТАТИ З `trusted`. Той означає «підтверджений житель» і дає
+// автопублікацію оголошень без модерації; його має 1 профіль з 11 і ставиться він
+// не вручну. Галочка — окрема колонка `official`, і саме тому в списку людей
+// нижче показані ОБИДВІ позначки різними значками: інакше адмін не бачив би, що
+// саме він міняє.
+//
+// 🔑 Чому через RPC, а не `update`: право на колонку `official` відібране в усіх
+// клієнтських ролей — а адмінка ходить у базу звичайним Google-входом, тобто
+// теж `authenticated`. Пряме `update` не пройшло б навіть у Вови. Сторож
+// `is_admin()` живе ВСЕРЕДИНІ `admin_set_official`.
+const officialTick = (on) => on
+  ? ' <span title="Офіційний акаунт" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#1D74E8;color:#fff;font-size:10px;font-weight:800;vertical-align:middle">✓</span>'
+  : '';
+
+const officialBtn = (kind, id, on) =>
+  `<button class="btn" data-official-kind="${kind}" data-official-id="${escapeHtml(String(id))}"
+     data-official-value="${on ? '0' : '1'}" style="padding:5px 10px;font-size:13px">
+     ${on ? '✓ Зняти галочку' : '✓ Зробити офіційним'}</button>`;
+
+// Один обробник на обидва списки (люди і спільноти) — щоб копії не розійшлись.
+function bindOfficialButtons(el) {
+  el.querySelectorAll('[data-official-kind]').forEach(b => b.addEventListener('click', async () => {
+    const kind = b.dataset.officialKind;
+    const id   = b.dataset.officialId;
+    const val  = b.dataset.officialValue === '1';
+    b.disabled = true;
+    const prev = b.textContent;
+    b.textContent = 'Зберігаю…';
+    const { error } = await supa.rpc('admin_set_official', { p_kind: kind, p_id: id, p_value: val });
+    if (error) {
+      b.disabled = false; b.textContent = prev;
+      // Машинні коди з бази → людський текст. База не має вирішувати, якою мовою
+      // говорити з людиною (той самий підхід, що в скаргах).
+      const raw = String(error.message || error);
+      if (raw.includes('official_not_admin')) return showToast('Це може робити лише адмін', 4000);
+      if (raw.includes('official_not_found')) return showToast('Запис не знайдено — онови сторінку', 4000);
+      return showToast('Не вдалося: ' + raw, 5000);
+    }
+    showToast(val ? 'Галочку поставлено ✓' : 'Галочку знято');
+    if (kind === 'page') { await loadAll(); renderApp(); }
+    else { await loadPeople(peopleQuery); renderApp(); }
+  }));
+}
+
 function ccRow(p, i) {
   const n = ownerCounts[p.id] || 0;
   const av = p.avatar_url
@@ -1757,10 +1822,11 @@ function ccRow(p, i) {
   return `<article class="card" style="display:flex;align-items:center;gap:12px">
     ${av}
     <div style="flex:1;min-width:0">
-      <div style="font-weight:600">${escapeHtml(p.name)}${p.is_system ? ' <span class="badge" style="background:#e0e0e0;color:#555">системна</span>' : ''}</div>
+      <div style="font-weight:600">${escapeHtml(p.name)}${officialTick(p.official)}${p.is_system ? ' <span class="badge" style="background:#e0e0e0;color:#555">системна</span>' : ''}</div>
       <div style="font-size:13px;color:#666">${escapeHtml(p.theme || '—')} · ${n} ${pluralOwners(n)}</div>
-      <div style="margin-top:6px;display:flex;gap:6px">
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn" data-cc-edit="${p.id}" style="padding:5px 10px;font-size:13px">✏ Редагувати</button>
+        ${officialBtn('page', p.id, p.official)}
         <button class="btn btn--delete" data-cc-del="${p.id}" data-cc-name="${escapeHtml(p.name)}" style="padding:5px 10px;font-size:13px">🗑 Видалити</button>
       </div>
     </div>
@@ -1856,9 +1922,81 @@ function renderCommunities(el) {
     await loadAll(); renderApp();
   });
 
+  bindOfficialButtons(el);
   el.querySelectorAll('[data-cc-move]').forEach(b => b.addEventListener('click', () => moveCommunity(+b.dataset.ccId, b.dataset.ccMove)));
   el.querySelectorAll('[data-cc-edit]').forEach(b => b.addEventListener('click', () => { communityEdit = +b.dataset.ccEdit; renderApp(); }));
   el.querySelectorAll('[data-cc-del]').forEach(b => b.addEventListener('click', () => deleteCommunity(+b.dataset.ccDel, b.dataset.ccName)));
+}
+
+// ── TAB: Люди (офіційна галочка) ──────────────────────────────────────
+// 🔴 Розділу людей в адмінці не було взагалі — і зробити його «як усі інші» не
+// вийшло б: політика `own profile read` пускає в `profiles` лише у ВЛАСНИЙ рядок,
+// а адмінка ходить у базу звичайним Google-входом. Тому список дає RPC
+// `admin_list_profiles` зі сторожем `is_admin()` усередині.
+//
+// ⚠️ Показуємо ДВІ різні позначки, і це не надмірність: `official` (синя галочка,
+// «це справді та публічна особа») і `trusted` («підтверджений житель», дає
+// автопублікацію без модерації). Їх уже раз сплутали — 02.08 галочка малювалась
+// за `trusted`, і Вова її прибрав. Якщо не показати обидві, адмін не бачитиме,
+// що саме він змінює.
+async function loadPeople(q) {
+  const { data, error } = await supa.rpc('admin_list_profiles', { p_query: q || null });
+  if (error) {
+    people = [];
+    // fail-soft: міграцію ще не накатано → розділ каже про це прямо, а не мовчить.
+    return String(error.message || error);
+  }
+  people = data || [];
+  return null;
+}
+
+function personRow(p) {
+  const nm = [p.name, p.surname].filter(Boolean).join(' ').trim() || '—';
+  const av = p.avatar_url
+    ? `<img src="${escapeHtml(p.avatar_url)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none">`
+    : `<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;flex:none;color:#999;font-weight:700">${escapeHtml(nm.slice(0, 1).toUpperCase())}</div>`;
+  const trusted = p.trusted
+    ? ' <span class="badge" style="background:#C5E1A5;color:#2e5e1f">довірений</span>' : '';
+  return `<article class="card" style="display:flex;align-items:center;gap:12px">
+    ${av}
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600">${escapeHtml(nm)}${officialTick(p.official)}${trusted}</div>
+      <div style="font-size:13px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.email || p.uid)}${p.settlement ? ' · ' + escapeHtml(p.settlement) : ''}</div>
+      <div style="margin-top:6px">${officialBtn('profile', p.uid, p.official)}</div>
+    </div>
+  </article>`;
+}
+
+async function renderPeople(el) {
+  el.innerHTML = '<p style="color:#999">Завантаження…</p>';
+  const err = await loadPeople(peopleQuery);
+
+  if (err) {
+    el.innerHTML = `<article class="card"><div style="font-weight:600;margin-bottom:6px">Список людей недоступний</div>
+      <div style="font-size:13px;color:#666">${escapeHtml(err)}</div>
+      <div style="font-size:13px;color:#999;margin-top:8px">Схоже, міграцію офіційності ще не накатано — <code>scripts/supabase_official_badge.sql</code>.</div></article>`;
+    return;
+  }
+
+  const officialCount = people.filter(p => p.official).length;
+  el.innerHTML = `
+    <form class="add-form" id="pp-form" style="margin-bottom:10px">
+      <div class="add-form-title">Пошук жителя</div>
+      <input class="input" id="pp-q" type="search" placeholder="Ім'я, прізвище або email" value="${escapeHtml(peopleQuery)}" autocomplete="off">
+      <p style="font-size:12px;color:#999;margin:4px 0 8px">Порожньо → останні зареєстровані. Офіційні завжди вгорі списку.</p>
+      <button class="btn btn--primary" type="submit">Знайти</button>
+    </form>
+    <div class="section-title">Жителі (${people.length})
+      <span style="font-weight:400;color:#999;font-size:12px">· з галочкою: ${officialCount}</span></div>
+    <div id="pp-list">${people.map(personRow).join('') || '<p style="color:#999">Нікого не знайдено.</p>'}</div>
+  `;
+
+  document.getElementById('pp-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    peopleQuery = document.getElementById('pp-q').value.trim();
+    renderApp();
+  });
+  bindOfficialButtons(el);
 }
 
 // Рядок власника в екрані редагування.

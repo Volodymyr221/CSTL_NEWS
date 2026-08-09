@@ -157,6 +157,38 @@ export async function submitAdReport(postId, reason, details) {
   return { ok: false, error: r.error };
 }
 
+// ── ТЕЛЕФОН З ОГОЛОШЕННЯ — ПО ЗАПИТУ ────────────────────────────────────
+//
+// 🔴 09.08 (потік 2, крок 10). Дошка читає пости через `select('*')`, тобто
+// колонка `contact` приїжджає в кожній вибірці: заміряно на живій базі —
+// **4 телефони з 11 опублікованих оголошень качались усім**, включно з
+// незалогіненим, одним запитом і не відкриваючи жодного оголошення.
+// Тепер номер віддає RPC `get_post_contact` (`scripts/supabase_post_contact.sql`):
+// лише авторизованому, з журналом і стелею 30 номерів на годину.
+//
+// ⚠️ Порядок розгортання навмисний: спершу RPC (адитивна, нічого не ламає) і цей
+// код, і лише ПОТІМ — закриття самої колонки (частина Б тієї ж міграції). Інакше
+// був би проміжок, коли номер уже не приходить, а попросити його ще нема як.
+const CONTACT_ERRORS = {
+  contact_auth:    'Щоб побачити номер, треба увійти',
+  contact_flood:   'Забагато номерів за годину — спробуй пізніше',
+  contact_no_post: 'Оголошення вже недоступне',
+};
+
+// → { ok: true, contact: '+380…' | null } або { ok: false, error: 'людський текст' }
+// `contact: null` — телефон не вказаний узагалі, це НЕ помилка.
+export async function fetchPostContact(postId) {
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.rpc('get_post_contact', { p_post_id: postId }));
+  if (r.ok) return { ok: true, contact: r.data ?? null };
+  // ⚠️ Машинний код шукаємо і в `raw`, і в `error`: `netCall` пропускає сирий
+  // текст бази в `raw`, а `error` уже перекладений на людську мову — покластись
+  // лише на друге означало б втратити код і показати загальне «щось пішло не так».
+  const hay = `${r.raw || ''} ${r.error || ''}`;
+  const code = Object.keys(CONTACT_ERRORS).find(k => hay.includes(k));
+  return { ok: false, error: code ? CONTACT_ERRORS[code] : r.error };
+}
+
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
 
 export async function fetchPublishedAnnouncements() {
@@ -1444,17 +1476,48 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
   return data || [];
 }
 
-// Лайки постів → Map post_id → { count, my }. userKey = uid або anonId.
+// Лайки постів → Map post_id → { count, my }. userKey = uid залогіненого або null.
+//
+// 🔴 09.08 (потік 2, крок 9) — ДВА ДЖЕРЕЛА, БО ГІСТЬ БІЛЬШЕ НЕ БАЧИТЬ РЯДКІВ.
+// Раніше тут був один запит `select('post_id, user_id')`, і політика читання
+// `USING (true)` віддавала повні рядки будь-кому — тобто з публічним ключем із
+// `bundle.js` можна було зібрати, хто саме що лайкнув (заміряно на живій базі:
+// 11 рядків, 5 унікальних uid). Після міграції
+// `scripts/supabase_page_reactions_guest.sql` рядки бачить лише авторизований, а
+// гість бере ЧИСЛА з подання `page_reaction_counts` (uid у ньому немає взагалі).
+//
+// ⚠️ ЗАПАСНИЙ ШЛЯХ ОБОВʼЯЗКОВИЙ, і не «про всяк випадок»: цей код потрапляє на
+// сайт окремим деплоєм, а міграція накочується руками — тобто вони НЕОДМІННО
+// якийсь час житимуть у різних станах, у будь-якому порядку. Без запасного
+// шляху одна з половин показала б 0 лайків усюди. Той самий прийом уже
+// застосований у проєкті для колонки `reply_to_uid` (див. COMMENT_COLS нижче).
 export async function fetchPageReactions(userKey) {
   if (!supa) return new Map();
-  const { data, error } = await supa.from('page_reactions').select('post_id, user_id');
-  if (error) { console.warn('[supabase] fetchPageReactions:', error.message); return new Map(); }
   const map = new Map();
-  for (const r of (data || [])) {
-    if (!map.has(r.post_id)) map.set(r.post_id, { count: 0, my: false });
-    const e = map.get(r.post_id); e.count++;
-    if (r.user_id === userKey) e.my = true;
+  const bump = (postId, mine) => {
+    if (!map.has(postId)) map.set(postId, { count: 0, my: false });
+    const e = map.get(postId);
+    e.count++;
+    if (mine) e.my = true;
+  };
+
+  // Гість: лише кількості. Якщо подання ще не накотили — пробуємо стару дорогу.
+  if (!userKey) {
+    const { data, error } = await supa.from('page_reaction_counts').select('post_id, cnt');
+    if (!error) {
+      for (const r of (data || [])) map.set(r.post_id, { count: r.cnt || 0, my: false });
+      return map;
+    }
+    const legacy = await supa.from('page_reactions').select('post_id');
+    if (legacy.error) { console.warn('[supabase] fetchPageReactions (гість):', legacy.error.message); return map; }
+    for (const r of (legacy.data || [])) bump(r.post_id, false);
+    return map;
   }
+
+  // Залогінений: рядки видно, тож одного запиту вистачає і на число, і на «мій лайк».
+  const { data, error } = await supa.from('page_reactions').select('post_id, user_id');
+  if (error) { console.warn('[supabase] fetchPageReactions:', error.message); return map; }
+  for (const r of (data || [])) bump(r.post_id, r.user_id === userKey);
   return map;
 }
 

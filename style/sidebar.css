@@ -26,7 +26,21 @@
 }
 .sidebar-toggle:active span { opacity: 0.6; }
 
-/* Затемнення + легкий блюр фону під сайдбаром (Вова 16.07) */
+/* Затемнення + легкий блюр фону під сайдбаром (Вова 16.07)
+   🔴 09.08 — ХОВАЄТЬСЯ САМИМ CSS, БЕЗ ТАЙМЕРА В JS (баг «зависле затемнення»).
+   Було: показ/приховування атрибутом `hidden` (= display:none), який знімався
+   через `setTimeout(…, 260)` у `closeSidebar()`. Два наслідки, обидва живі:
+     1. Таймер, поставлений перед відходом застосунку у фон (тап по Instagram),
+        на iOS не гарантований — заморожується разом зі сторінкою. Не спрацював →
+        затемнення лишалось на екрані назавжди, вже без самого меню.
+     2. Поки таймер не спрацював, прозоре затемнення (`opacity:0`, але `display`
+        звичайний) лежить поверх УСЬОГО екрана і перехоплює всі тапи.
+   Стало: видимість описана тут — `visibility` перемикається рівно наприкінці
+   згасання (`transition: visibility 0s linear 0.25s` = «зачекай 0.25с і зникни
+   миттєво»), а `pointer-events: none` знімає перехоплення тапів ОДРАЗУ.
+   ⚠️ `visibility`, а НЕ `display:none`: елемент лишається в дереві, тому перехід
+   `opacity 0 → 1` анімується. З `display:none` першого кадру не було б і меню
+   спалахувало б без плавності. Розмір, колір і сила блюру не змінені. */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -35,9 +49,16 @@
   -webkit-backdrop-filter: blur(3px);
           backdrop-filter: blur(3px);
   opacity: 0;
-  transition: opacity 0.25s ease;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
 }
-.sidebar-overlay--show { opacity: 1; }
+.sidebar-overlay--show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.25s ease, visibility 0s;
+}
 
 /* Панель сайдбару — справа, з боку бургера (Вова 16.07) */
 .sidebar {

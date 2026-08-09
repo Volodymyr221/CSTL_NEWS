@@ -26,7 +26,7 @@ import {
   fetchAllComments,
   fetchAllReactions, getAnonId,
   fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
-  submitAdReport,
+  submitAdReport, fetchPostContact,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 // ⚠️ `core/sheet-motion.js` більше не імпортується ВЗАГАЛІ: у модалки оголошення немає
@@ -427,6 +427,28 @@ function wireAdModalChrome(modal, close) {
     const pid = modal.dataset.postId;
     if (pid) openAdReportSheet(pid);
   });
+  // «Показати номер» — телефон віддає сервер окремим запитом (крок 10 потоку 2).
+  // ⚠️ Кнопка замінюється на справжнє посилання `tel:` ОДИН раз: другий тап уже
+  // має дзвонити, а не питати базу знову — інакше кожен дотик з'їдав би одиницю
+  // з погодинної стелі 30 номерів і людина сама себе заблокувала б.
+  modal.querySelector('[data-show-phone]')?.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    if (btn.dataset.busy) return;                 // подвійний тап поки лунає запит
+    requireAuth('побачити номер', async () => {
+      btn.dataset.busy = '1';
+      const prev = btn.innerHTML;
+      btn.innerHTML = `${PHONE_ICON_SVG}<span>Хвилинку…</span>`;
+      const r = await fetchPostContact(Number(modal.dataset.postId));
+      delete btn.dataset.busy;
+      if (!r.ok) { btn.innerHTML = prev; showToast(r.error, 3000); return; }
+      if (!r.contact) { btn.innerHTML = prev; showToast('Автор не залишив номера', 2500); return; }
+      const a = document.createElement('a');
+      a.className = 'cm-ad-call';
+      a.href = `tel:${r.contact.replace(/[^\d+]/g, '')}`;
+      a.innerHTML = `${PHONE_ICON_SVG}<span>${escapeHtml(r.contact)}</span>`;
+      btn.replaceWith(a);
+    });
+  });
   // Фото автора підтягується прогресивно (літера → фото), як у чатах і обговореннях.
   hydrateAvatars(modal);
   // «Учасник CSTL LIFE з …» + галочка довіри — окремим тихим запитом уже ПІСЛЯ показу.
@@ -449,14 +471,29 @@ function wireAdModalChrome(modal, close) {
         // видимим роздільником « · », тобто за оформленням, а не за даними.
         sinceEl.textContent = `Учасник CSTL LIFE з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
       }
-      // 🔴 02.08 — ГАЛОЧКУ ПРИБРАНО (пряме рішення Вови: «Галочку не треба ставити
-      // всім підряд, тільки офіційним публічним людям, які будуть визначатись вручну»).
-      // Було: галочка малювалась за прапорцем `trusted` — а він означає зовсім інше
-      // («підтверджений житель», його має 1 профіль із 10) і ставиться не вручну.
-      // Позначку «офіційна особа» дасть ОКРЕМЕ поле, яке Вова проставлятиме сам;
-      // поки такого поля немає — не показуємо нічого. Малювати галочку за чужим
-      // прапорцем означало б збрехати про статус людини.
-      // ⚠️ CSS `.cm-ad-verified` лишається — він знадобиться, коли поле зʼявиться.
+      // 🔵 09.08 (потік 3, крок 16) — ГАЛОЧКА ПОВЕРНУЛАСЬ, АЛЕ ЗА СВОЇМ ПОЛЕМ.
+      // 02.08 її прибрали, бо вона малювалась за прапорцем `trusted` — а той
+      // означає зовсім інше («підтверджений житель», дає автопублікацію без
+      // модерації, має його 1 профіль із 10) і ставиться не вручну. Пряме рішення
+      // Вови тоді: «Галочку не треба ставити всім підряд, тільки офіційним
+      // публічним людям, які будуть визначатись вручну».
+      // Тепер таке поле є: `profiles.official`, право запису лише в адміна
+      // (`admin_set_official`, `scripts/supabase_official_badge.sql`).
+      // ⚠️ Малюємо ЛИШЕ при `pr.official === true`. Поки міграцію не накотили,
+      // поле приходить `undefined` → галочки немає, тобто екран поводиться рівно
+      // як зараз. Той самий запобіжник, що в кроці 10.
+      const nameEl = modal.querySelector('.cm-ad-author-name');
+      if (pr.official === true && nameEl && !nameEl.querySelector('.cm-ad-verified')) {
+        const v = document.createElement('span');
+        v.className = 'cm-ad-verified';
+        v.textContent = '✓';
+        // Для читача екрана галочка мусить бути СЛОВОМ: сам знак «✓» він або
+        // промовчить, або прочитає як «галочка», що нічого не пояснює.
+        v.setAttribute('role', 'img');
+        v.setAttribute('aria-label', 'Офіційний акаунт');
+        v.title = 'Офіційний акаунт';
+        nameEl.appendChild(v);
+      }
     }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
   }
 
@@ -1016,12 +1053,28 @@ function renderAdSafety() {
 // 🔴 ЛИПКА НИЖНЯ ПАНЕЛЬ — головне, чого бракувало: раніше кнопки контакту лежали
 // у скролі й при довгому описі (у нас до 1296 символів) їхали за межі екрана.
 // `env(safe-area-inset-bottom)` — щоб на iPhone панель не залазила під home-bar.
+// 🔴 09.08 (потік 2, крок 11) — ТРИ СТАНИ ЗАМІСТЬ ДВОХ.
+// Номер більше не приїжджає в загальній вибірці постів (він качався всім, разом
+// зі списком оголошень — заміряно 4 телефони з 11). Тепер його віддає сервер по
+// запиту, і панель має розрізняти «номер уже в руках», «номер є, але треба
+// попросити» і «номера немає взагалі».
+// 🔑 `has_contact` — булеве поле вітрини `posts_public`: каже, ЧИ Є що просити,
+// не називаючи самого номера. Без нього кнопка «Показати номер» висіла б і на
+// оголошеннях без телефону, і тап по ній закінчувався б порожнечею.
+// ⚠️ Поки вітрину не накотили, `contact` приходить як раніше → `tel` не порожній
+// → гілка `canAsk` просто не вмикається. Тобто код безпечний в обох станах бази.
 function renderAdBottomBar(p) {
   const tel = phoneOf(p);
+  const canAsk = !tel && !!(p && p.has_contact);
+  const solo = !tel && !canAsk;      // «Написати» лишається сама — займає всю ширину
   return `
     <div class="cm-ad-bottom">
-      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>Подзвонити</span></a>` : ''}
-      <button class="cm-ad-write${tel ? '' : ' cm-ad-write--solo'}" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
+      ${tel
+        ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>Подзвонити</span></a>`
+        : canAsk
+          ? `<button class="cm-ad-call" type="button" data-show-phone>${PHONE_ICON_SVG}<span>Показати номер</span></button>`
+          : ''}
+      <button class="cm-ad-write${solo ? ' cm-ad-write--solo' : ''}" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
     </div>`;
 }
 

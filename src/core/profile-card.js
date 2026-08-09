@@ -39,6 +39,13 @@ function cardHtml(p) {
   const av   = avatarCircle({ name, url, cls: 'pcard-av' });   // фото або кольорова літера
 
   // Мета-лінія: 📍громада · N років (кожне опційне; нема обох → рядка нема).
+  // 🛑 09.08 — ВІК СЮДИ НЕ ПРИХОДИТЬ І ЦЕ НАВМИСНО, не недогляд.
+  // `get_public_profile` свідомо не віддає `age` (рішення Вови 09.08). Причини —
+  // у шапці `scripts/supabase_official_badge.sql`; коротко: дату народження люди
+  // вписували у форму, яка не попереджала про публічність, а в застосунку є
+  // приватний чат і можуть бути неповнолітні. Гілка нижче лишена робочою на
+  // випадок, якщо колись зʼявиться явне питання у формі профілю — тоді досить
+  // повернути поле в RPC. **Не «лагодити» це, дописуючи age в SQL.**
   const bits = [];
   if (p && p.settlement) bits.push(`${ICONS.pin}<span>${escapeHtml(p.settlement)}</span>`);
   if (p && Number.isFinite(p.age) && p.age > 0) bits.push(`<span>${p.age} ${pluralYears(p.age)}</span>`);
@@ -56,10 +63,21 @@ function cardHtml(p) {
   const jd = (p && p.created_at) ? joinDate(p.created_at) : '';
   const since = jd ? `<div class="pcard-since">Учасник CSTL LIFE з ${jd}</div>` : '';
 
+  // 🔵 09.08 (потік 3) — СИНЯ ГАЛОЧКА «ОФІЦІЙНИЙ АКАУНТ», поруч з іменем.
+  // 🛑 Це НЕ те саме, що бейдж «Довірений автор» вище: той малюється за `trusted`
+  // («підтверджений житель», дає автопублікацію без модерації) і його ставить не
+  // людина і не адмін вручну. Галочка ж означає «це справді та публічна особа»
+  // і ставиться руками з адмінки (`admin_set_official`). Два різні твердження —
+  // два різні знаки; звести їх в один означало б збрехати про статус людини.
+  // ⚠️ `=== true`: поки міграцію не накотили, поле приходить `undefined` і знака
+  // просто немає — картка виглядає точно як зараз.
+  const official = (p && p.official === true)
+    ? `<span class="cm-ad-verified" role="img" aria-label="Офіційний акаунт" title="Офіційний акаунт">✓</span>` : '';
+
   return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ''}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}</div>
+      <div class="pcard-name">${escapeHtml(name)}${official}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;

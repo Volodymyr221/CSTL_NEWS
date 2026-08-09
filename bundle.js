@@ -690,6 +690,21 @@
     }
     return { ok: false, error: r.error };
   }
+  var CONTACT_ERRORS = {
+    contact_auth: "\u0429\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u043D\u043E\u043C\u0435\u0440, \u0442\u0440\u0435\u0431\u0430 \u0443\u0432\u0456\u0439\u0442\u0438",
+    contact_flood: "\u0417\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u043D\u043E\u043C\u0435\u0440\u0456\u0432 \u0437\u0430 \u0433\u043E\u0434\u0438\u043D\u0443 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0437\u043D\u0456\u0448\u0435",
+    contact_no_post: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0436\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435"
+  };
+  async function fetchPostContact(postId) {
+    if (!supa)
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.rpc("get_post_contact", { p_post_id: postId }));
+    if (r.ok)
+      return { ok: true, contact: r.data ?? null };
+    const hay = `${r.raw || ""} ${r.error || ""}`;
+    const code = Object.keys(CONTACT_ERRORS).find((k) => hay.includes(k));
+    return { ok: false, error: code ? CONTACT_ERRORS[code] : r.error };
+  }
   async function fetchPublishedAnnouncements() {
     if (!supa)
       return null;
@@ -1589,20 +1604,38 @@
   async function fetchPageReactions(userKey) {
     if (!supa)
       return /* @__PURE__ */ new Map();
+    const map = /* @__PURE__ */ new Map();
+    const bump = (postId, mine) => {
+      if (!map.has(postId))
+        map.set(postId, { count: 0, my: false });
+      const e = map.get(postId);
+      e.count++;
+      if (mine)
+        e.my = true;
+    };
+    if (!userKey) {
+      const { data: data2, error: error2 } = await supa.from("page_reaction_counts").select("post_id, cnt");
+      if (!error2) {
+        for (const r of data2 || [])
+          map.set(r.post_id, { count: r.cnt || 0, my: false });
+        return map;
+      }
+      const legacy = await supa.from("page_reactions").select("post_id");
+      if (legacy.error) {
+        console.warn("[supabase] fetchPageReactions (\u0433\u0456\u0441\u0442\u044C):", legacy.error.message);
+        return map;
+      }
+      for (const r of legacy.data || [])
+        bump(r.post_id, false);
+      return map;
+    }
     const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
     if (error) {
       console.warn("[supabase] fetchPageReactions:", error.message);
-      return /* @__PURE__ */ new Map();
+      return map;
     }
-    const map = /* @__PURE__ */ new Map();
-    for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { count: 0, my: false });
-      const e = map.get(r.post_id);
-      e.count++;
-      if (r.user_id === userKey)
-        e.my = true;
-    }
+    for (const r of data || [])
+      bump(r.post_id, r.user_id === userKey);
     return map;
   }
   async function setPageReaction(postId, userKey, on) {
@@ -6665,6 +6698,33 @@
       if (pid)
         openAdReportSheet(pid);
     });
+    modal.querySelector("[data-show-phone]")?.addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      if (btn.dataset.busy)
+        return;
+      requireAuth("\u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u043D\u043E\u043C\u0435\u0440", async () => {
+        btn.dataset.busy = "1";
+        const prev = btn.innerHTML;
+        btn.innerHTML = `${PHONE_ICON_SVG}<span>\u0425\u0432\u0438\u043B\u0438\u043D\u043A\u0443\u2026</span>`;
+        const r = await fetchPostContact(Number(modal.dataset.postId));
+        delete btn.dataset.busy;
+        if (!r.ok) {
+          btn.innerHTML = prev;
+          showToast(r.error, 3e3);
+          return;
+        }
+        if (!r.contact) {
+          btn.innerHTML = prev;
+          showToast("\u0410\u0432\u0442\u043E\u0440 \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u043D\u043E\u043C\u0435\u0440\u0430", 2500);
+          return;
+        }
+        const a = document.createElement("a");
+        a.className = "cm-ad-call";
+        a.href = `tel:${r.contact.replace(/[^\d+]/g, "")}`;
+        a.innerHTML = `${PHONE_ICON_SVG}<span>${escapeHtml(r.contact)}</span>`;
+        btn.replaceWith(a);
+      });
+    });
     hydrateAvatars(modal);
     const sinceEl = modal.querySelector("[data-ad-since]");
     const authorUid = modal.querySelector(".cm-ad-author")?.dataset.avUid;
@@ -6675,6 +6735,16 @@
         const dt = new Date(pr.created_at);
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
           sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+        }
+        const nameEl = modal.querySelector(".cm-ad-author-name");
+        if (pr.official === true && nameEl && !nameEl.querySelector(".cm-ad-verified")) {
+          const v = document.createElement("span");
+          v.className = "cm-ad-verified";
+          v.textContent = "\u2713";
+          v.setAttribute("role", "img");
+          v.setAttribute("aria-label", "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442");
+          v.title = "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442";
+          nameEl.appendChild(v);
         }
       }).catch(() => {
       });
@@ -6955,10 +7025,12 @@
   }
   function renderAdBottomBar(p) {
     const tel = phoneOf(p);
+    const canAsk = !tel && !!(p && p.has_contact);
+    const solo = !tel && !canAsk;
     return `
     <div class="cm-ad-bottom">
-      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : ""}
-      <button class="cm-ad-write${tel ? "" : " cm-ad-write--solo"}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
+      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : canAsk ? `<button class="cm-ad-call" type="button" data-show-phone>${PHONE_ICON_SVG}<span>\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043D\u043E\u043C\u0435\u0440</span></button>` : ""}
+      <button class="cm-ad-write${solo ? " cm-ad-write--solo" : ""}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
     </div>`;
   }
   function openPhotoLightbox2(photos, startIdx) {
@@ -16272,33 +16344,23 @@ END:VEVENT`
       nav: document.getElementById("sidebar-nav")
     };
   }
-  function openSidebar() {
+  function applyOpen(open) {
     const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
+    if (!sidebar || !overlay)
       return;
-    overlay.hidden = false;
-    requestAnimationFrame(() => {
-      sidebar.classList.add("sidebar--open");
-      overlay.classList.add("sidebar-overlay--show");
-    });
-    sidebar.setAttribute("aria-hidden", "false");
-    toggle?.setAttribute("aria-expanded", "true");
-    _open = true;
-    refreshCabinet();
+    _open = open;
+    sidebar.classList.toggle("sidebar--open", open);
+    overlay.classList.toggle("sidebar-overlay--show", open);
+    sidebar.setAttribute("aria-hidden", open ? "false" : "true");
+    toggle?.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open)
+      refreshCabinet();
+  }
+  function openSidebar() {
+    applyOpen(true);
   }
   function closeSidebar() {
-    const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
-      return;
-    sidebar.classList.remove("sidebar--open");
-    overlay.classList.remove("sidebar-overlay--show");
-    sidebar.setAttribute("aria-hidden", "true");
-    toggle?.setAttribute("aria-expanded", "false");
-    _open = false;
-    setTimeout(() => {
-      if (!_open)
-        overlay.hidden = true;
-    }, 260);
+    applyOpen(false);
   }
   function itemHtml(item) {
     if (item.divider)
@@ -16372,11 +16434,23 @@ END:VEVENT`
     if (!toggle)
       return;
     renderNav();
+    if (overlay)
+      overlay.hidden = false;
+    applyOpen(false);
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
     close?.addEventListener("click", closeSidebar);
     overlay?.addEventListener("click", closeSidebar);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && _open)
+        closeSidebar();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible")
+        closeSidebar();
+    });
+    window.addEventListener("pagehide", closeSidebar);
+    window.addEventListener("pageshow", (e) => {
+      if (e.persisted)
         closeSidebar();
     });
     onAuthChange(() => refreshCabinet());
@@ -16913,10 +16987,11 @@ END:VEVENT`
     const bio = bioText ? `<div class="pcard-bio"><span class="pcard-bio-h">\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><p>${escapeHtml(bioText)}</p></div>` : "";
     const jd = p && p.created_at ? joinDate(p.created_at) : "";
     const since = jd ? `<div class="pcard-since">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${jd}</div>` : "";
+    const official = p && p.official === true ? `<span class="cm-ad-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442">\u2713</span>` : "";
     return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}</div>
+      <div class="pcard-name">${escapeHtml(name)}${official}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
