@@ -1,6 +1,7 @@
 # BYYOU_PLAN — живий потік /byyou
 
-**Статус:** `active` — потік **09.08 «Apple-design аудит CSTL LIFE»**.
+**Статус:** `done` — потік **09.08 «Apple-design аудит CSTL LIFE»** ЗАВЕРШЕНО (PR #860).
+**Звіт:** `_ai-tools/AUDIT_APPLE_2026-08.md` · сирі дані `APPLE_AUDIT_RAW.json`.
 **Гілка:** `claude/startuem-a75x6z` _(потік перенесено в новий чат 09.08; попередня
 гілка `claude/startuem-xga93m` лишилась у полі від сесії, де план заводили)_
 **Скіл-еталон:** `.claude/skills/apple-design/SKILL.md` (282 рядки, завантажено з
