@@ -73,9 +73,17 @@ ALTER TABLE reactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can read reactions"
   ON reactions FOR SELECT USING (true);
 
--- Будь-хто може поставити, оновити, або зняти свою реакцію.
--- НЕ перевіряємо user_id строго (анонімно — не можемо) — довіряємо клієнту.
--- Якщо з'являться спамери — додамо rate limit через Cloudflare або Edge Function.
+-- 🛑 УВАГА: ТРИ ПОЛІТИКИ НИЖЧЕ В ПРОДІ ВЖЕ НЕ ІСНУЮТЬ (звірено живим запитом
+--    до pg_policies 09.08.2026). Їх замінили на `Auth insert/update/delete own
+--    reaction` з умовою `user_id = auth.uid()::text` — тобто «довіряємо клієнту»
+--    більше не діє, і `USING (true)` на DELETE (будь-хто стирає ЧУЖІ реакції)
+--    закрито.
+--    ⛔ НЕ НАКОЧУВАТИ цей блок повторно — він поверне діру.
+--
+--    🔑 Урок ширший за файл: під час аудиту 09.08 я спершу вирахував цю діру
+--       САМЕ ЗВІДСИ і доповів її Вові як чинну. Живий запит показав, що її давно
+--       немає. `scripts/*.sql` записують НАМІР на момент написання, а не стан
+--       бази. Перевіряти безпеку треба запитом до прода, не читанням файлів.
 CREATE POLICY "Anyone can insert reaction"
   ON reactions FOR INSERT WITH CHECK (
     emoji IS NOT NULL AND length(emoji) BETWEEN 1 AND 16
