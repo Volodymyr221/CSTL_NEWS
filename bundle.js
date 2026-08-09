@@ -16272,33 +16272,23 @@ END:VEVENT`
       nav: document.getElementById("sidebar-nav")
     };
   }
-  function openSidebar() {
+  function applyOpen(open) {
     const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
+    if (!sidebar || !overlay)
       return;
-    overlay.hidden = false;
-    requestAnimationFrame(() => {
-      sidebar.classList.add("sidebar--open");
-      overlay.classList.add("sidebar-overlay--show");
-    });
-    sidebar.setAttribute("aria-hidden", "false");
-    toggle?.setAttribute("aria-expanded", "true");
-    _open = true;
-    refreshCabinet();
+    _open = open;
+    sidebar.classList.toggle("sidebar--open", open);
+    overlay.classList.toggle("sidebar-overlay--show", open);
+    sidebar.setAttribute("aria-hidden", open ? "false" : "true");
+    toggle?.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open)
+      refreshCabinet();
+  }
+  function openSidebar() {
+    applyOpen(true);
   }
   function closeSidebar() {
-    const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
-      return;
-    sidebar.classList.remove("sidebar--open");
-    overlay.classList.remove("sidebar-overlay--show");
-    sidebar.setAttribute("aria-hidden", "true");
-    toggle?.setAttribute("aria-expanded", "false");
-    _open = false;
-    setTimeout(() => {
-      if (!_open)
-        overlay.hidden = true;
-    }, 260);
+    applyOpen(false);
   }
   function itemHtml(item) {
     if (item.divider)
@@ -16372,11 +16362,23 @@ END:VEVENT`
     if (!toggle)
       return;
     renderNav();
+    if (overlay)
+      overlay.hidden = false;
+    applyOpen(false);
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
     close?.addEventListener("click", closeSidebar);
     overlay?.addEventListener("click", closeSidebar);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && _open)
+        closeSidebar();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible")
+        closeSidebar();
+    });
+    window.addEventListener("pagehide", closeSidebar);
+    window.addEventListener("pageshow", (e) => {
+      if (e.persisted)
         closeSidebar();
     });
     onAuthChange(() => refreshCabinet());

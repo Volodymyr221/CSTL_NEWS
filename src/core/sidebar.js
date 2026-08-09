@@ -73,30 +73,34 @@ function els() {
   };
 }
 
-function openSidebar() {
+// 🔴 ОДИН СИНХРОННИЙ ВИМИКАЧ СТАНУ — і меню, і затемнення міняються в одному
+// кадрі, з одного місця. Ні `requestAnimationFrame`, ні `setTimeout` тут більше
+// немає, і повертати їх не можна — саме вони давали баг «затемнення лишилось,
+// а меню зникло» (Вова, 09.08: тап по Instagram → повернення → блюр висить).
+//
+// 🔑 Чому відкладені виклики були тут пасткою (дві незалежні причини):
+//   • `requestAnimationFrame` у фоні НЕ виконується. Відкрив меню → застосунок
+//     пішов у фон → кадру немає → класи не додались. Повернувся, встиг закрити —
+//     і аж тоді браузер віддає кадр і виконує відкладене «відкрити». Стан у
+//     змінній `_open` каже «закрито», а розмітка малює відкрите. Розійшлись.
+//   • `setTimeout(…, 260)`, що ховав затемнення, на iOS замерзає разом зі
+//     сторінкою. Не спрацював — затемнення лишилось на весь екран.
+// Тепер приховування описане в CSS (`visibility` + `pointer-events`), тож жодна
+// пауза між «зняли клас» і «зникло» більше не потрібна.
+function applyOpen(open) {
   const { sidebar, overlay, toggle } = els();
-  if (!sidebar) return;
-  overlay.hidden = false;
-  requestAnimationFrame(() => {
-    sidebar.classList.add('sidebar--open');
-    overlay.classList.add('sidebar-overlay--show');
-  });
-  sidebar.setAttribute('aria-hidden', 'false');
-  toggle?.setAttribute('aria-expanded', 'true');
-  _open = true;
-  refreshCabinet();   // перевіряємо команду щоразу при відкритті
+  if (!sidebar || !overlay) return;
+  _open = open;
+  sidebar.classList.toggle('sidebar--open', open);
+  overlay.classList.toggle('sidebar-overlay--show', open);
+  sidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
+  toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) refreshCabinet();   // перевіряємо команду щоразу при відкритті
 }
 
-function closeSidebar() {
-  const { sidebar, overlay, toggle } = els();
-  if (!sidebar) return;
-  sidebar.classList.remove('sidebar--open');
-  overlay.classList.remove('sidebar-overlay--show');
-  sidebar.setAttribute('aria-hidden', 'true');
-  toggle?.setAttribute('aria-expanded', 'false');
-  _open = false;
-  setTimeout(() => { if (!_open) overlay.hidden = true; }, 260);
-}
+function openSidebar() { applyOpen(true); }
+
+function closeSidebar() { applyOpen(false); }
 
 function itemHtml(item) {
   if (item.divider) return '<div class="sidebar-divider"></div>';
@@ -172,10 +176,28 @@ export function initSidebar() {
   const { toggle, close, overlay } = els();
   if (!toggle) return;
   renderNav();
+  // Атрибут `hidden` у розмітці — страховка на випадок, коли JS не завантажився
+  // (тоді затемнення не має існувати взагалі). Щойно модуль ожив, видимістю
+  // керує вже CSS, тож атрибут знімаємо один раз і більше ніколи не чіпаємо.
+  if (overlay) overlay.hidden = false;
+  applyOpen(false);   // явний закритий стан, а не «як склалось у розмітці»
   toggle.addEventListener('click', () => (_open ? closeSidebar() : openSidebar()));
   close?.addEventListener('click', closeSidebar);
   overlay?.addEventListener('click', closeSidebar);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && _open) closeSidebar(); });
+  // 🔴 ЗАСТОСУНОК ІДЕ У ФОН — МЕНЮ ЗАКРИВАЄМО. Це лікує сцену Вови в корені, а не
+  // наслідок: пішов у Instagram із відкритого меню → повернувся на чистий екран.
+  // Три різні приводи, бо жоден не покриває всі шляхи виходу:
+  //   • `visibilitychange` — перемикання на інший застосунок (головний шлях у PWA);
+  //   • `pagehide` — перехід за посиланням / закриття вкладки;
+  //   • `pageshow` з `persisted` — повернення з кешу «назад-вперед», який
+  //     відновлює розмітку РІВНО такою, якою вона була в момент відходу, тобто
+  //     може принести відкрите меню назад уже після того, як ми його закрили.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') closeSidebar();
+  });
+  window.addEventListener('pagehide', closeSidebar);
+  window.addEventListener('pageshow', e => { if (e.persisted) closeSidebar(); });
   // Оновлюємо видимість «Кабінет» при вход/вихід.
   onAuthChange(() => refreshCabinet());
   refreshCabinet();
