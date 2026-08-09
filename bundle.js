@@ -896,7 +896,7 @@
     return uid ? _officialCache.get(uid) === true : false;
   }
   function officialMarkHtml() {
-    return '<span class="cstl-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442">\u2713</span>';
+    return '<span class="cstl-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="cstl-verified-bg" d="M12.00 1.00 L14.36 3.21 L17.50 2.47 L18.43 5.57 L21.53 6.50 L20.79 9.64 L23.00 12.00 L20.79 14.36 L21.53 17.50 L18.43 18.43 L17.50 21.53 L14.36 20.79 L12.00 23.00 L9.64 20.79 L6.50 21.53 L5.57 18.43 L2.47 17.50 L3.21 14.36 L1.00 12.00 L3.21 9.64 L2.47 6.50 L5.57 5.57 L6.50 2.47 L9.64 3.21Z"/><path class="cstl-verified-tick" d="M10.6 16.2 L6.8 12.4 L8.4 10.8 L10.6 13.0 L15.6 8.0 L17.2 9.6 Z"/></svg></span>';
   }
   function markOfficial(nameEl, uid) {
     if (!nameEl)
@@ -13185,7 +13185,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return `<div class="fd-circles">${pages.map((p) => `
     <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, "fd-circle-ava")}</span>
-      <span class="fd-circle-label">${escapeHtml(p.name)}${p.official === true ? officialMarkHtml() : ""}</span>
+      <span class="fd-circle-label">${escapeHtml(p.name)}</span>
     </button>`).join("")}</div>`;
   }
   function postImages(post) {
@@ -13543,7 +13543,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       <header class="fd-card-head${hasPhoto ? " fd-card-head--onphoto" : ""}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
-          <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>${page.official === true ? officialMarkHtml() : ""}
+          <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E</span>" : ""}
@@ -14683,6 +14683,19 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
              \u043A\u0430\u0434\u0440 \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u0441\u0430\u043C\u0435 \u0446\u0435 \u0439 \u0434\u0430\u0432\u0430\u043B\u043E \u043C\u0456\u043A\u0440\u043E\u0440\u0438\u0432\u043A\u0438. -->
         <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
+          <!-- \u{1F535} 09.08 \u2014 \u0417\u041D\u0410\u041A \u0421\u041F\u0406\u041B\u042C\u041D\u041E\u0422\u0418 \u041B\u0418\u0428\u0415 \u0422\u0423\u0422, \u0406 \u0426\u0415 \u0420\u0406\u0428\u0415\u041D\u041D\u042F \u0412\u041E\u0412\u0418.
+               \u0421\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u043D \u0441\u0442\u043E\u044F\u0432 \u0449\u0435 \u0439 \u0443 \u043A\u0430\u0440\u0442\u0446\u0456 \u043F\u043E\u0441\u0442\u0430 \u0442\u0430 \u0432 \u043A\u0440\u0443\u0436\u0435\u0447\u043A\u0430\u0445 \u0443\u0433\u043E\u0440\u0456. \u0412\u043E\u0432\u0430:
+               \xAB\u0434\u0430\u0432\u0430\u0439 \u0432 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430\u0445 \u043C\u0438 \u0431\u0443\u0434\u0435\u043C\u043E \u0441\u0438\u043D\u044E \u0433\u0430\u043B\u043E\u0447\u043A\u0443 \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u043D\u0435 \u0432 \u0441\u0442\u0440\u0456\u0447\u0446\u0456
+               \u0441\u0430\u043C\u0456\u0439 \u0456 \u0437\u0432\u0435\u0440\u0445\u0443 \u0432 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430\u0445, \u0430 \u043A\u043E\u043B\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442\u044C \u0456
+               \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438, \u0442\u0456\u043B\u044C\u043A\u0438 \u0442\u0430\u043C\xBB.
+               \u{1F511} \u0427\u043E\u043C\u0443 \u0446\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E, \u0430 \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \xAB\u043C\u0435\u043D\u0448\u0435 \u0437\u043D\u0430\u043A\u0456\u0432\xBB: \u0443\u0441\u0456 4 \u043D\u0430\u0448\u0456
+               \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438 \u043E\u0444\u0456\u0446\u0456\u0439\u043D\u0456, \u0431\u043E \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0443 \u043C\u043E\u0436\u0435 \u041B\u0418\u0428\u0415 \u0430\u0434\u043C\u0456\u043D. \u0417\u043D\u0430\u043A,
+               \u044F\u043A\u0438\u0439 \u0441\u0442\u043E\u0457\u0442\u044C \u0443 \u0432\u0441\u0456\u0445, \u043D\u0435 \u0440\u043E\u0437\u0440\u0456\u0437\u043D\u044F\u0454 \u043D\u0456\u043A\u043E\u0433\u043E \u2014 \u0432\u0456\u043D \u0441\u0442\u0430\u0454 \u0444\u043E\u043D\u043E\u043C \u0456
+               \u0437\u043D\u0435\u0446\u0456\u043D\u044E\u0454 \u0441\u0435\u0431\u0435 \u0442\u0430\u043C, \u0434\u0435 \u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D (\u0443 \u043B\u044E\u0434\u0435\u0439, \u0434\u0435 \u043F\u0456\u0434\u0440\u043E\u0431\u043A\u0430
+               \u043C\u043E\u0436\u043B\u0438\u0432\u0430). \u041D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u0446\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438 \u0432\u0456\u043D \u0434\u043E\u0440\u0435\u0447\u043D\u0438\u0439: \u0446\u0435 \xAB\u043F\u0430\u0441\u043F\u043E\u0440\u0442\xBB \u0441\u0430\u043C\u043E\u0457
+               \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438, \u0430 \u043D\u0435 \u043C\u0456\u0442\u043A\u0430 \u0432 \u0441\u0442\u0440\u0456\u0447\u0446\u0456.
+               \u26A0\uFE0F \u041F\u043E\u0432\u0435\u0440\u0442\u0430\u0442\u0438 \u0437\u043D\u0430\u043A \u0443 \u0441\u0442\u0440\u0456\u0447\u043A\u0443 \u0432\u0430\u0440\u0442\u043E \u043B\u0438\u0448\u0435 \u0442\u043E\u0434\u0456, \u043A\u043E\u043B\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F
+               \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438 \u0412\u0406\u0414 \u0416\u0418\u0422\u0415\u041B\u0406\u0412 \u2014 \u0442\u043E\u0431\u0442\u043E \u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0449\u043E \u0437 \u0447\u0438\u043C \u043F\u043E\u0440\u0456\u0432\u043D\u044E\u0432\u0430\u0442\u0438. -->
           <div class="fd-screen-name">${escapeHtml(page.name)}${page.official === true ? officialMarkHtml() : ""}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
         </div>

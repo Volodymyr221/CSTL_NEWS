@@ -155,7 +155,7 @@ function circlesHtml() {
   return `<div class="fd-circles">${pages.map(p => `
     <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, 'fd-circle-ava')}</span>
-      <span class="fd-circle-label">${escapeHtml(p.name)}${p.official === true ? officialMarkHtml() : ''}</span>
+      <span class="fd-circle-label">${escapeHtml(p.name)}</span>
     </button>`).join('')}</div>`;
 }
 
@@ -642,7 +642,7 @@ function postCardHtml(post, onPage = false) {
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
-          <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>${page.official === true ? officialMarkHtml() : ''}
+          <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
@@ -2167,6 +2167,19 @@ async function openPageScreen(pageId, reopen = false) {
              кадр скролу — саме це й давало мікроривки. -->
         <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
+          <!-- 🔵 09.08 — ЗНАК СПІЛЬНОТИ ЛИШЕ ТУТ, І ЦЕ РІШЕННЯ ВОВИ.
+               Спершу він стояв ще й у картці поста та в кружечках угорі. Вова:
+               «давай в спільнотах ми будемо синю галочку показувати не в стрічці
+               самій і зверху в карточках, а коли користувач переходить і
+               відкриває сторінку спільноти, тільки там».
+               🔑 Чому це правильно, а не просто «менше знаків»: усі 4 наші
+               спільноти офіційні, бо створити спільноту може ЛИШЕ адмін. Знак,
+               який стоїть у всіх, не розрізняє нікого — він стає фоном і
+               знецінює себе там, де справді потрібен (у людей, де підробка
+               можлива). На сторінці спільноти він доречний: це «паспорт» самої
+               сторінки, а не мітка в стрічці.
+               ⚠️ Повертати знак у стрічку варто лише тоді, коли зʼявляться
+               спільноти ВІД ЖИТЕЛІВ — тобто коли буде що з чим порівнювати. -->
           <div class="fd-screen-name">${escapeHtml(page.name)}${page.official === true ? officialMarkHtml() : ''}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
         </div>
