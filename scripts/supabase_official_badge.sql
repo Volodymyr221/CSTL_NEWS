@@ -88,7 +88,21 @@ revoke insert (trusted, approved_count) on public.profiles from anon, authentica
 -- ✅ `bio` показуємо: людина пише його своїми словами й очевидно для показу.
 -- ➡️ Повертати `age` — лише разом із явним питанням у формі профілю
 --    («показувати вік у публічній картці?») і з дефолтом «ні».
-create or replace function public.get_public_profile(p_uid uuid)
+-- 🔴 DROP ПЕРЕД CREATE — ОБОВʼЯЗКОВО, І ЦЕ НЕ ПРИДИРКА.
+-- `create or replace` не вміє міняти НАБІР полів у `returns table`: Postgres
+-- відповідає `42P13: cannot change return type of existing function`. Ми
+-- додаємо `official` і `bio`, тобто набір міняється — отже лише через DROP.
+-- ⚠️ Перша редакція цього файлу мала самий `create or replace` і впала на проді
+-- у Вови. Добра новина: редактор Supabase виконує скрипт ОДНІЄЮ транзакцією,
+-- тож усе відкотилось, база лишилась чистою — але саме тому DROP має стояти
+-- ТУТ, а не окремим запитом «потім».
+-- ⚠️ DROP забирає з функції права. Заміряно, які були: EXECUTE у PUBLIC, `anon`,
+-- `authenticated`, `service_role`. Тому нижче їх повертаємо явно — покладатись
+-- на дефолт Postgres тут не можна: мовчазна втрата прав виглядала б як
+-- «картка профілю раптом порожня в гостей», і шукали б це в клієнті.
+drop function if exists public.get_public_profile(uuid);
+
+create function public.get_public_profile(p_uid uuid)
 returns table(uid uuid, name text, avatar_url text, settlement text,
               trusted boolean, official boolean, bio text,
               created_at timestamptz)
@@ -102,6 +116,9 @@ as $function$
   from public.profiles p
   where p.uid = p_uid
 $function$;
+
+grant execute on function public.get_public_profile(uuid)
+  to anon, authenticated, service_role;
 
 -- ── КРОК 15. RPC ДЛЯ АДМІНКИ ────────────────────────────────────────────────
 -- ⚠️ Адмінка ходить у базу звичайним Google-входом, тобто роллю `authenticated`.
