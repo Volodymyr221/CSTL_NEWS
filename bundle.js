@@ -6736,6 +6736,16 @@
         if (!isNaN(dt.getTime()) && dt.getFullYear() > 2e3) {
           sinceEl.textContent = `\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
         }
+        const nameEl = modal.querySelector(".cm-ad-author-name");
+        if (pr.official === true && nameEl && !nameEl.querySelector(".cm-ad-verified")) {
+          const v = document.createElement("span");
+          v.className = "cm-ad-verified";
+          v.textContent = "\u2713";
+          v.setAttribute("role", "img");
+          v.setAttribute("aria-label", "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442");
+          v.title = "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442";
+          nameEl.appendChild(v);
+        }
       }).catch(() => {
       });
     }
