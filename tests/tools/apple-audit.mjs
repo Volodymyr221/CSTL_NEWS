@@ -84,9 +84,16 @@ const PROFILES = [
 // Один великий рядок функції: її текст передається у браузер, тому вона не має
 // права звертатись до нічого зовні.
 const COLLECTOR = () => {
+  // 🔴 «Видимий» = ПЕРЕТИНАЄ ЕКРАН, а не просто «є в розмітці».
+  // Друга поломка приладу, знайдена на кроці 4: бічне меню лежить у DOM завжди
+  // (закрите воно `transform: translateX(-100%)`), і його 88 вузлів рахувались
+  // на КОЖНОМУ екрані. Через це «Бургер-меню» дав числа один-в-один з Громадою,
+  // і відрізнити відкрите меню від закритого було неможливо. Аудит Apple — про
+  // те, що людина БАЧИТЬ, тож перевірка на перетин із вікном тут не косметика.
   const видимий = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return false;
+    if (r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return false;
     const s = getComputedStyle(el);
     return s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0.02;
   };
@@ -291,11 +298,19 @@ const ЕКРАНИ = {
     'Бургер-меню':      async p => { await наВкладку(p, 'community', 900);
                                      await p.evaluate(() => document.getElementById('sidebar-toggle')?.click());
                                      await пауза(p, 700); },
+    // 🔴 ЗНАХІДКА АУДИТУ, ЯКА ЗМІНИЛА ЦЮ НАВІГАЦІЮ (09.08, доведено наживо):
+    // пункт бургер-меню «Особистий кабінет» **не відкриває нічого**.
+    // `src/core/sidebar.js:180` клікає `document.getElementById('account-btn')`,
+    // а елемента з таким id у застосунку вже немає — кнопку кабінету перенесли
+    // на `[data-account-btn]` біля привітання Громади. `?.click()` на `null`
+    // мовчки нічого не робить, тож пункт меню мертвий, помилки в консолі теж
+    // немає. Прилад спершу «зміряв кабінет» і дав числа один-в-один з Громадою —
+    // саме ця однаковість і виказала поломку.
+    // Міряємо екран через ЖИВУ кнопку, щоб аудит бачив сам кабінет; сам баг
+    // записаний окремо і чекає рішення Вови (потік — тільки аудит).
     'Особистий кабінет': async p => { await наВкладку(p, 'community', 900);
-                                      await p.evaluate(() => document.getElementById('sidebar-toggle')?.click());
-                                      await пауза(p, 500);
-                                      await p.evaluate(() => document.querySelector('[data-nav="account"]')?.click());
-                                      await пауза(p, 1500); },
+                                      await p.evaluate(() => document.querySelector('[data-account-btn]')?.click());
+                                      await пауза(p, 1800); },
     'Картка оголошення': async p => { await наВкладку(p, 'board', 1400);
                                       await p.evaluate(() => document.querySelector('#board-content .cm-board-note')?.click());
                                       await пауза(p, 1400); },
@@ -319,16 +334,19 @@ async function selftest(p) {
       #кт-скло2{width:40px;height:20px;background:rgba(255,255,255,0.4);backdrop-filter:blur(6px)}
       #кт-жива{position:fixed;left:0;top:70px;width:20px;height:20px;cursor:pointer}
       #кт-жива:active{transform:scale(0.9)}
-      #кт-мертва{position:fixed;left:30px;top:70px;width:20px;height:20px;cursor:pointer;letter-spacing:3px;font-size:11px}`;
+      #кт-мертва{position:fixed;left:30px;top:70px;width:20px;height:20px;cursor:pointer;letter-spacing:3px;font-size:11px}
+      /* Вузол ЗА краєм екрана — рівно те, чим є закрите бічне меню. */
+      #кт-заекраном{position:fixed;left:-400px;top:70px;width:300px;height:40px;cursor:pointer}`;
     document.head.appendChild(st);
     const скло = document.createElement('div'); скло.id = 'кт-скло';
     const скло2 = document.createElement('div'); скло2.id = 'кт-скло2'; скло.appendChild(скло2);
     const жива = document.createElement('button'); жива.id = 'кт-жива'; жива.textContent = 'A';
     const мертва = document.createElement('button'); мертва.id = 'кт-мертва'; мертва.textContent = 'Б';
-    document.body.append(скло, жива, мертва);
+    const заекраном = document.createElement('button'); заекраном.id = 'кт-заекраном'; заекраном.textContent = 'За краєм';
+    document.body.append(скло, жива, мертва, заекраном);
     // eslint-disable-next-line no-eval
     const дані = eval('(' + код + ')()');
-    скло.remove(); жива.remove(); мертва.remove(); st.remove();
+    скло.remove(); жива.remove(); мертва.remove(); заекраном.remove(); st.remove();
     return {
       живаActive:   !!дані.цілі.find(c => c.вузол.includes('кт-жива'))?.active,
       мертваActive: !!дані.цілі.find(c => c.вузол.includes('кт-мертва'))?.active,
@@ -341,6 +359,7 @@ async function selftest(p) {
       // жодного з 125 справжніх правил `:active` проєкту.
       правилВсього:  дані.правилActive,
       живихРеальних: дані.цілі.filter(c => !c.вузол.includes('кт-') && c.active).length,
+      заекраном:     !!дані.цілі.find(c => c.вузол.includes('кт-заекраном')),
     };
   }, COLLECTOR.toString());
 
@@ -354,6 +373,8 @@ async function selftest(p) {
       знайдено.правилВсього > 20],
     [`🔴 хоч один СПРАВЖНІЙ вузол застосунку має :active (${знайдено.живихРеальних} шт.)`,
       знайдено.живихРеальних > 0],
+    ['🔴 вузол ЗА краєм екрана у вимір НЕ потрапив (як закрите бічне меню)',
+      знайдено.заекраном === false],
   ];
   let погано = 0;
   for (const [назва, добре] of рядки) { if (!добре) погано++; console.log(`${добре ? '✅' : '❌'} ${назва}`); }
