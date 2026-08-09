@@ -690,6 +690,21 @@
     }
     return { ok: false, error: r.error };
   }
+  var CONTACT_ERRORS = {
+    contact_auth: "\u0429\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u043D\u043E\u043C\u0435\u0440, \u0442\u0440\u0435\u0431\u0430 \u0443\u0432\u0456\u0439\u0442\u0438",
+    contact_flood: "\u0417\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u043D\u043E\u043C\u0435\u0440\u0456\u0432 \u0437\u0430 \u0433\u043E\u0434\u0438\u043D\u0443 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0437\u043D\u0456\u0448\u0435",
+    contact_no_post: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0436\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435"
+  };
+  async function fetchPostContact(postId) {
+    if (!supa)
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.rpc("get_post_contact", { p_post_id: postId }));
+    if (r.ok)
+      return { ok: true, contact: r.data ?? null };
+    const hay = `${r.raw || ""} ${r.error || ""}`;
+    const code = Object.keys(CONTACT_ERRORS).find((k) => hay.includes(k));
+    return { ok: false, error: code ? CONTACT_ERRORS[code] : r.error };
+  }
   async function fetchPublishedAnnouncements() {
     if (!supa)
       return null;
@@ -6683,6 +6698,33 @@
       if (pid)
         openAdReportSheet(pid);
     });
+    modal.querySelector("[data-show-phone]")?.addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      if (btn.dataset.busy)
+        return;
+      requireAuth("\u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u043D\u043E\u043C\u0435\u0440", async () => {
+        btn.dataset.busy = "1";
+        const prev = btn.innerHTML;
+        btn.innerHTML = `${PHONE_ICON_SVG}<span>\u0425\u0432\u0438\u043B\u0438\u043D\u043A\u0443\u2026</span>`;
+        const r = await fetchPostContact(Number(modal.dataset.postId));
+        delete btn.dataset.busy;
+        if (!r.ok) {
+          btn.innerHTML = prev;
+          showToast(r.error, 3e3);
+          return;
+        }
+        if (!r.contact) {
+          btn.innerHTML = prev;
+          showToast("\u0410\u0432\u0442\u043E\u0440 \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u043D\u043E\u043C\u0435\u0440\u0430", 2500);
+          return;
+        }
+        const a = document.createElement("a");
+        a.className = "cm-ad-call";
+        a.href = `tel:${r.contact.replace(/[^\d+]/g, "")}`;
+        a.innerHTML = `${PHONE_ICON_SVG}<span>${escapeHtml(r.contact)}</span>`;
+        btn.replaceWith(a);
+      });
+    });
     hydrateAvatars(modal);
     const sinceEl = modal.querySelector("[data-ad-since]");
     const authorUid = modal.querySelector(".cm-ad-author")?.dataset.avUid;
@@ -6973,10 +7015,12 @@
   }
   function renderAdBottomBar(p) {
     const tel = phoneOf(p);
+    const canAsk = !tel && !!(p && p.has_contact);
+    const solo = !tel && !canAsk;
     return `
     <div class="cm-ad-bottom">
-      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : ""}
-      <button class="cm-ad-write${tel ? "" : " cm-ad-write--solo"}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
+      ${tel ? `<a class="cm-ad-call" href="tel:${escapeHtml(tel)}">${PHONE_ICON_SVG}<span>\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438</span></a>` : canAsk ? `<button class="cm-ad-call" type="button" data-show-phone>${PHONE_ICON_SVG}<span>\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043D\u043E\u043C\u0435\u0440</span></button>` : ""}
+      <button class="cm-ad-write${solo ? " cm-ad-write--solo" : ""}" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
     </div>`;
   }
   function openPhotoLightbox2(photos, startIdx) {

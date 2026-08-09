@@ -157,6 +157,38 @@ export async function submitAdReport(postId, reason, details) {
   return { ok: false, error: r.error };
 }
 
+// ── ТЕЛЕФОН З ОГОЛОШЕННЯ — ПО ЗАПИТУ ────────────────────────────────────
+//
+// 🔴 09.08 (потік 2, крок 10). Дошка читає пости через `select('*')`, тобто
+// колонка `contact` приїжджає в кожній вибірці: заміряно на живій базі —
+// **4 телефони з 11 опублікованих оголошень качались усім**, включно з
+// незалогіненим, одним запитом і не відкриваючи жодного оголошення.
+// Тепер номер віддає RPC `get_post_contact` (`scripts/supabase_post_contact.sql`):
+// лише авторизованому, з журналом і стелею 30 номерів на годину.
+//
+// ⚠️ Порядок розгортання навмисний: спершу RPC (адитивна, нічого не ламає) і цей
+// код, і лише ПОТІМ — закриття самої колонки (частина Б тієї ж міграції). Інакше
+// був би проміжок, коли номер уже не приходить, а попросити його ще нема як.
+const CONTACT_ERRORS = {
+  contact_auth:    'Щоб побачити номер, треба увійти',
+  contact_flood:   'Забагато номерів за годину — спробуй пізніше',
+  contact_no_post: 'Оголошення вже недоступне',
+};
+
+// → { ok: true, contact: '+380…' | null } або { ok: false, error: 'людський текст' }
+// `contact: null` — телефон не вказаний узагалі, це НЕ помилка.
+export async function fetchPostContact(postId) {
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.rpc('get_post_contact', { p_post_id: postId }));
+  if (r.ok) return { ok: true, contact: r.data ?? null };
+  // ⚠️ Машинний код шукаємо і в `raw`, і в `error`: `netCall` пропускає сирий
+  // текст бази в `raw`, а `error` уже перекладений на людську мову — покластись
+  // лише на друге означало б втратити код і показати загальне «щось пішло не так».
+  const hay = `${r.raw || ''} ${r.error || ''}`;
+  const code = Object.keys(CONTACT_ERRORS).find(k => hay.includes(k));
+  return { ok: false, error: code ? CONTACT_ERRORS[code] : r.error };
+}
+
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
 
 export async function fetchPublishedAnnouncements() {
