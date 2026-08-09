@@ -1,6 +1,8 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** `active` — потік **09.08 «Security pass по Supabase»**
+**Статус:** `paused` — потік **09.08 «Security pass по Supabase»**.
+**Потік 1 виконано і задеплоєно** (PR #852, run #3977 success).
+`/byyou` продовжить із **потоку 2** (кроки 9-13, розділ нижче).
 **Гілка:** `claude/startuem-xzx19p`
 **Архів попереднього потоку:** `BYYOU_ARCHIVE_2026-08-08_weather-day.md` (PR #845)
 
