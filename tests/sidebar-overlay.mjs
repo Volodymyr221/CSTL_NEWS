@@ -246,23 +246,29 @@ agr = await stateAgrees();
 ok('🔴 Сцена Вови: розмітка не суперечить сама собі', agr.agrees,
    `панель=${agr.panelOpen} затемнення=${agr.dimOn} aria=${agr.aria}`);
 
-// ── 7. 🔴 Вихід у фон із відкритого меню БЕЗ тапу по соцмережі ─────────────
-// Вова прямо сказав: «можливо, це не тільки коли переходжу на соцмережі».
-// Будь-який відхід у фон (згорнув застосунок, дзвінок, перемикач застосунків)
-// має лишати меню закритим.
+// ── 7. Згорнув застосунок із відкритим меню і повернувся ───────────────────
+// 🔄 09.08 — ВИМОГА ЦЬОГО БЛОКА ПЕРЕПИСАНА, і це важливо не переплутати назад.
+// Спершу тут стояло «меню має бути ЗАКРИТЕ»: перший фікс закривав його на подіях
+// фону. На телефоні Вови це обернулось новим багом — *«натиснув на бургер, меню
+// відкрилось та відразу закрилось»*, бо на iOS ці події приходять із запізненням,
+// уже після тапу.
+// 🔑 Правильна вимога: меню, яке людина не закривала, лишається відкритим, а
+// подія фону тільки звіряє розмітку зі станом. Закриває меню рівно те, що людина
+// натиснула (кнопка, хрестик, затемнення, іконка соцмережі — вона це робить сама).
 await tapBurger();
 await settle();
 await goBackground();
 await page.waitForTimeout(200);
 await goForeground();
 await settle(600);
-st = await overlayState();
-ok('🔴 Згорнув застосунок із відкритим меню → повернувся: затемнення нема', !st.visible,
-   `opacity=${st.opacity}`);
-ok('🔴 Згорнув застосунок → повернувся: меню закрите', !(await panelOnScreen()));
+ok('Згорнув застосунок → повернувся: меню лишилось відкритим',
+   (await overlayState()).visible && await panelOnScreen());
 agr = await stateAgrees();
 ok('🔴 Згорнув застосунок → повернувся: розмітка не суперечить сама собі', agr.agrees,
    `панель=${agr.panelOpen} затемнення=${agr.dimOn} aria=${agr.aria}`);
+// Прибираємо за собою — далі блок 8 перевіряє відкриття з чистого стану.
+await safeClick('#sidebar-close');
+await settle();
 
 // ── 8. Після всього меню лишається робочим ─────────────────────────────────
 // 🔑 Це і є дослівна скарга Вови: «відкриваю знов бургер, і меню відкривається,
@@ -283,6 +289,75 @@ st = await overlayState();
 ok('І закривається начисто',
    closed && !st.visible && !st.eatsTap && !(await panelOnScreen()),
    closed ? `opacity=${st.opacity}` : 'хрестик став недосяжним для тапу');
+
+// ── 9. 🔴 ВІДКЛАДЕНА ПОДІЯ ФОНУ НЕ ЗАКРИВАЄ ЩОЙНО ВІДКРИТЕ МЕНЮ ─────────────
+// Заведено 09.08 після того, як перший фікс НЕ полагодив баг у Вови і додав
+// новий: *«натиснув на бургер, меню відкрилось та відразу закрилось»*.
+// Корінь був у самому фіксі: він закривав меню на `visibilitychange`/`pageshow`,
+// а на iOS ці події приходять із запізненням — уже ПІСЛЯ тапу.
+// 🔑 Правило, яке стереже ця перевірка: подія фону не МІНЯЄ стан меню, вона лише
+// приводить розмітку у відповідність до стану, який уже є.
+await safeClick('#sidebar-toggle');
+await settle();
+await page.evaluate(() => {
+  // Пара подій навздогін — саме так iOS віддає їх після повернення в застосунок.
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  document.dispatchEvent(new Event('visibilitychange'));
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+  document.dispatchEvent(new Event('visibilitychange'));
+  window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+});
+await settle(600);
+ok('🔴 Відкладена подія фону НЕ закриває щойно відкрите меню',
+   (await overlayState()).visible && await panelOnScreen());
+await safeClick('#sidebar-close');
+await settle();
+
+// ── 10. 🔴 ХИМЕРА: НОВИЙ СКРИПТ + СТАРИЙ CSS ───────────────────────────────
+// 🔑 НАЙВАЖЛИВІША перевірка цього файлу — саме вона ловить баг, який перший фікс
+// не закрив, а створив. У PWA код і стилі доїжджають на телефон ОКРЕМО: на
+// пристрої Вови був новий `bundle.js` і ще старий `style/sidebar.css`.
+// Перший фікс переклав приховування на нові властивості CSS і перестав ставити
+// атрибут `hidden` — а старий CSS ховав затемнення ЛИШЕ ним. Результат: прозорий
+// шар лежав поверх екрана, з'їдав усі тапи, і Safari домальовував `backdrop-filter`
+// навіть при нульовій прозорості.
+// ⚠️ Старий CSS відтворюємо СИНТЕТИЧНО (вирізаємо нові властивості), а не з
+// конкретного коміту: прив'язка до ревізії протухне після першого ж рефакторингу,
+// а питання тут не «що було в тому коміті», а «чи виживе фікс без нового CSS».
+const cssNow = projectFile('style/sidebar.css', CSS_REV);
+const cssOld = cssNow
+  .replace(/^\s*visibility:\s*(hidden|visible);\s*$/gm, '')
+  .replace(/^\s*pointer-events:\s*(none|auto);\s*$/gm, '')
+  .replace(/transition:\s*opacity 0\.25s ease, visibility[^;]*;/g, 'transition: opacity 0.25s ease;');
+const page2 = await ctx.newPage();
+await blockExternal(page2);
+if (BUNDLE_REV) {
+  const code = projectFile('bundle.js', BUNDLE_REV);
+  await page2.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body: code }));
+}
+await page2.route('**/style/sidebar.css', r => r.fulfill({ contentType: 'text/css; charset=utf-8', body: cssOld }));
+await page2.goto(srv.url, { waitUntil: 'domcontentloaded' });
+await page2.waitForSelector('#sidebar-toggle', { timeout: 15000 });
+await page2.waitForTimeout(800);
+
+const st2 = async () => page2.evaluate(() => {
+  const el = document.getElementById('sidebar-overlay');
+  const cs = getComputedStyle(el);
+  return {
+    // Зі старим CSS єдиний спосіб «не видно» — це `display:none` від `hidden`.
+    visible: cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.01,
+    eatsTap: document.elementFromPoint(30, innerHeight / 2) === el,
+    display: cs.display,
+  };
+});
+try { await page2.click('#sidebar-toggle', { timeout: 8000 }); } catch {}
+await page2.waitForTimeout(450);
+ok('Старий CSS: меню все одно відкривається', (await st2()).visible);
+try { await page2.click('#sidebar-close', { timeout: 8000 }); } catch {}
+await page2.waitForTimeout(700);
+const s2 = await st2();
+ok('🔴 Старий CSS: затемнення все одно ЗНИКАЄ', !s2.visible, `display=${s2.display}`);
+ok('🔴 Старий CSS: екран не заблокований прозорим шаром', !s2.eatsTap);
 
 await browser.close();
 await srv.stop();

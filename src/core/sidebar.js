@@ -85,17 +85,50 @@ function els() {
 //     змінній `_open` каже «закрито», а розмітка малює відкрите. Розійшлись.
 //   • `setTimeout(…, 260)`, що ховав затемнення, на iOS замерзає разом зі
 //     сторінкою. Не спрацював — затемнення лишилось на весь екран.
-// Тепер приховування описане в CSS (`visibility` + `pointer-events`), тож жодна
-// пауза між «зняли клас» і «зникло» більше не потрібна.
+// Тепер приховування описане в CSS (`visibility` + `pointer-events`), а атрибут
+// `hidden` лишається ДРУГИМ рубежем — див. `syncOverlay()` нижче.
 function applyOpen(open) {
   const { sidebar, overlay, toggle } = els();
   if (!sidebar || !overlay) return;
   _open = open;
+  if (open) overlay.hidden = false;      // показати можна лише знявши атрибут
   sidebar.classList.toggle('sidebar--open', open);
   overlay.classList.toggle('sidebar-overlay--show', open);
   sidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
   toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) refreshCabinet();   // перевіряємо команду щоразу при відкритті
+  else syncOverlay();           // закриття могло вже завершитись — звіримо одразу
+}
+
+// 🔴 ДРУГИЙ РУБІЖ ПРИХОВУВАННЯ. Заведений 09.08 після того, як перший фікс
+// **не полагодив баг у Вови** — і зробив гірше.
+//
+// 🔑 КОРІНЬ, ДОВЕДЕНИЙ ПРОБОЮ (`новий bundle.js` + `старий style/sidebar.css`):
+// у PWA код і стилі доїжджають на телефон ОКРЕМО і не обов'язково разом. Перший
+// фікс переклав приховування затемнення на нові властивості CSS (`visibility`,
+// `pointer-events`) і **перестав ставити атрибут `hidden`**. На телефоні, куди
+// приїхав новий скрипт, але ще старий CSS, вийшла химера: старий CSS ховав
+// затемнення ЛИШЕ атрибутом `hidden`, а ставити його стало нікому.
+// Playwright показав це дослівно:
+//   `<div id="sidebar-overlay" class="sidebar-overlay"> intercepts pointer events`
+// — тобто прозорий шар лежав поверх усього екрана і з'їдав тапи, а Safari
+// домальовував `backdrop-filter` навіть при нульовій прозорості. Рівно те, що
+// Вова бачив на знімку: блюр є, меню немає, застосунок не реагує.
+//
+// 🛑 УРОК, ШИРШИЙ ЗА ЦЕЙ ФАЙЛ: фікс не має покладатись на те, що CSS і JS
+// оновляться одночасно. Вони деплояться разом, а доїжджають нарізно.
+//
+// Тому `hidden` повернувся — але БЕЗ таймера, який і був початковим багом.
+// Замість «через 260мс сховай» тут «щоразу, коли є нагода — звір розмітку зі
+// станом». Нагоди: кінець згасання, повернення в застосунок, будь-яка дія з
+// меню. Жодна з них не обов'язкова: не прийшла одна — спрацює наступна.
+function syncOverlay() {
+  const { overlay } = els();
+  if (!overlay) return;
+  if (_open) { overlay.hidden = false; return; }
+  // Ховаємо, лише коли згасання вже закінчилось (класу немає) — інакше зрізали б
+  // анімацію закриття, перетворивши плавне зникнення на зникнення ривком.
+  if (!overlay.classList.contains('sidebar-overlay--show')) overlay.hidden = true;
 }
 
 function openSidebar() { applyOpen(true); }
@@ -176,28 +209,32 @@ export function initSidebar() {
   const { toggle, close, overlay } = els();
   if (!toggle) return;
   renderNav();
-  // Атрибут `hidden` у розмітці — страховка на випадок, коли JS не завантажився
-  // (тоді затемнення не має існувати взагалі). Щойно модуль ожив, видимістю
-  // керує вже CSS, тож атрибут знімаємо один раз і більше ніколи не чіпаємо.
-  if (overlay) overlay.hidden = false;
   applyOpen(false);   // явний закритий стан, а не «як склалось у розмітці»
   toggle.addEventListener('click', () => (_open ? closeSidebar() : openSidebar()));
   close?.addEventListener('click', closeSidebar);
   overlay?.addEventListener('click', closeSidebar);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && _open) closeSidebar(); });
-  // 🔴 ЗАСТОСУНОК ІДЕ У ФОН — МЕНЮ ЗАКРИВАЄМО. Це лікує сцену Вови в корені, а не
-  // наслідок: пішов у Instagram із відкритого меню → повернувся на чистий екран.
-  // Три різні приводи, бо жоден не покриває всі шляхи виходу:
-  //   • `visibilitychange` — перемикання на інший застосунок (головний шлях у PWA);
-  //   • `pagehide` — перехід за посиланням / закриття вкладки;
-  //   • `pageshow` з `persisted` — повернення з кешу «назад-вперед», який
-  //     відновлює розмітку РІВНО такою, якою вона була в момент відходу, тобто
-  //     може принести відкрите меню назад уже після того, як ми його закрили.
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') closeSidebar();
+  // Кінець згасання — найприродніша нагода сховати затемнення остаточно.
+  // ⚠️ Це не єдиний шлях, а лише найшвидший: у фоні `transitionend` не приходить,
+  // тому нижче стоять запасні нагоди. Жодна з них не обов'язкова.
+  overlay?.addEventListener('transitionend', e => {
+    if (e.propertyName === 'opacity') syncOverlay();
   });
-  window.addEventListener('pagehide', closeSidebar);
-  window.addEventListener('pageshow', e => { if (e.persisted) closeSidebar(); });
+  // 🛑 09.08 — ТУТ БУЛО `closeSidebar()` НА ПОДІЇ ФОНУ, І ЦЕ БУЛА ПОМИЛКА.
+  // Задум був «пішов у Instagram → повернувся на чистий екран». Наслідок, який
+  // Вова побачив на телефоні: *«натиснув на бургер, меню відкрилось та відразу
+  // закрилось»*. Механіка доведена пробою: на iOS відкладені `visibilitychange`
+  // і `pageshow` приходять уже ПІСЛЯ тапу — і закривали щойно відкрите меню.
+  // 🔑 Правило, яке з цього лишається: **подія фону не МІНЯЄ стан меню, вона лише
+  // приводить розмітку у відповідність до стану, який уже є.** Закрити меню має
+  // рівно те, що людина натиснула, — і нічого більше. Тап по іконці соцмережі
+  // закриває його сам (`renderNav`), тобто задум і без цього виконується.
+  // ⚠️ Це ще й HOT_RULES №9 у чистому вигляді: я зробив те, про що не просили,
+  // і зламав дію, яка працювала.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') syncOverlay();
+  });
+  window.addEventListener('pageshow', syncOverlay);
   // Оновлюємо видимість «Кабінет» при вход/вихід.
   onAuthChange(() => refreshCabinet());
   refreshCabinet();

@@ -16349,12 +16349,27 @@ END:VEVENT`
     if (!sidebar || !overlay)
       return;
     _open = open;
+    if (open)
+      overlay.hidden = false;
     sidebar.classList.toggle("sidebar--open", open);
     overlay.classList.toggle("sidebar-overlay--show", open);
     sidebar.setAttribute("aria-hidden", open ? "false" : "true");
     toggle?.setAttribute("aria-expanded", open ? "true" : "false");
     if (open)
       refreshCabinet();
+    else
+      syncOverlay();
+  }
+  function syncOverlay() {
+    const { overlay } = els();
+    if (!overlay)
+      return;
+    if (_open) {
+      overlay.hidden = false;
+      return;
+    }
+    if (!overlay.classList.contains("sidebar-overlay--show"))
+      overlay.hidden = true;
   }
   function openSidebar() {
     applyOpen(true);
@@ -16434,8 +16449,6 @@ END:VEVENT`
     if (!toggle)
       return;
     renderNav();
-    if (overlay)
-      overlay.hidden = false;
     applyOpen(false);
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
     close?.addEventListener("click", closeSidebar);
@@ -16444,15 +16457,15 @@ END:VEVENT`
       if (e.key === "Escape" && _open)
         closeSidebar();
     });
+    overlay?.addEventListener("transitionend", (e) => {
+      if (e.propertyName === "opacity")
+        syncOverlay();
+    });
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState !== "visible")
-        closeSidebar();
+      if (document.visibilityState === "visible")
+        syncOverlay();
     });
-    window.addEventListener("pagehide", closeSidebar);
-    window.addEventListener("pageshow", (e) => {
-      if (e.persisted)
-        closeSidebar();
-    });
+    window.addEventListener("pageshow", syncOverlay);
     onAuthChange(() => refreshCabinet());
     refreshCabinet();
     document.addEventListener("cstl-open-legal", () => openInfoModal("policy"));
