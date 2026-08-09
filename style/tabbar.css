@@ -34,6 +34,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 .tab-item.active { color: var(--red); }
+
+/* ── ВІДГУК НА НАТИСК (09.08, за аудитом `apple-design` §1) ───────────────────
+   Скіл: «Respond on pointer-down, not on release… Waiting for `click` to show
+   feedback feels dead». Заміряно приладом `tests/tools/apple-audit.mjs`: у цьому
+   файлі було РІВНО ОДНЕ правило `:active` — на центральній «Громаді». Тобто
+   4 з 5 кнопок найчастіше вживаного елемента застосунку на палець не реагували.
+
+   🔑 Не вигадуємо новий вигляд — поширюємо ВЛАСНИЙ: `.tab-item--home:active`
+   уже стискає кружечок до 0.93 (нижче в цьому ж файлі). Беремо ту саму мову.
+
+   ⚠️ `:not(.tab-item--home)` обовʼязково: у «Громади» вигляд малюють `::before`
+   і `::after` (виїмка бару + кружечок), і масштабування всієї кнопки деформувало
+   б їх. Її власне правило нижче лишається єдиним джерелом для неї.
+
+   ⚠️ `transform` НЕ впливає на розкладку — сусідні вкладки не зсуваються,
+   висота бару не міняється. Це та сама причина, чому §11 скіла радить саме його.
+
+   100мс ease-out — значення з самого скіла (розділ §1, приклад коду). */
+.tab-item:not(.tab-item--home) { transition: color 0.15s, transform 0.1s ease-out; }
+.tab-item:not(.tab-item--home):active { transform: scale(0.92); }
+
+/* §14: людині, яка попросила менше руху, лишаємо відгук — але без масштабування.
+   Скіл прямо: «Reduced motion doesn't mean *no* feedback» — заміна на зміну
+   кольору, а не порожнеча. */
+@media (prefers-reduced-motion: reduce) {
+  .tab-item:not(.tab-item--home) { transition: color 0.15s; }
+  .tab-item:not(.tab-item--home):active { transform: none; color: var(--red); }
+}
+
 .tab-icon { width: 22px; height: 22px; flex-shrink: 0; }
 
 /* ── КРАПКА «Є НОВЕ» НА ІКОНЦІ ВКЛАДКИ (30.07) ───────────────────────────────
