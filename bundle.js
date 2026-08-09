@@ -896,7 +896,7 @@
     return uid ? _officialCache.get(uid) === true : false;
   }
   function officialMarkHtml() {
-    return '<span class="cstl-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="cstl-verified-bg" d="M12.00 1.00 L14.36 3.21 L17.50 2.47 L18.43 5.57 L21.53 6.50 L20.79 9.64 L23.00 12.00 L20.79 14.36 L21.53 17.50 L18.43 18.43 L17.50 21.53 L14.36 20.79 L12.00 23.00 L9.64 20.79 L6.50 21.53 L5.57 18.43 L2.47 17.50 L3.21 14.36 L1.00 12.00 L3.21 9.64 L2.47 6.50 L5.57 5.57 L6.50 2.47 L9.64 3.21Z"/><path class="cstl-verified-tick" d="M10.6 16.2 L6.8 12.4 L8.4 10.8 L10.6 13.0 L15.6 8.0 L17.2 9.6 Z"/></svg></span>';
+    return '<span class="cstl-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle class="cstl-verified-bg" cx="12" cy="12" r="11"/><path class="cstl-verified-tick" d="M10.35 17.1 L5.5 12.25 L7.6 10.15 L10.35 12.9 L16.4 6.85 L18.5 8.95 Z"/></svg></span>';
   }
   function markOfficial(nameEl, uid) {
     if (!nameEl)
