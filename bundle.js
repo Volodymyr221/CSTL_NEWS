@@ -1589,20 +1589,38 @@
   async function fetchPageReactions(userKey) {
     if (!supa)
       return /* @__PURE__ */ new Map();
+    const map = /* @__PURE__ */ new Map();
+    const bump = (postId, mine) => {
+      if (!map.has(postId))
+        map.set(postId, { count: 0, my: false });
+      const e = map.get(postId);
+      e.count++;
+      if (mine)
+        e.my = true;
+    };
+    if (!userKey) {
+      const { data: data2, error: error2 } = await supa.from("page_reaction_counts").select("post_id, cnt");
+      if (!error2) {
+        for (const r of data2 || [])
+          map.set(r.post_id, { count: r.cnt || 0, my: false });
+        return map;
+      }
+      const legacy = await supa.from("page_reactions").select("post_id");
+      if (legacy.error) {
+        console.warn("[supabase] fetchPageReactions (\u0433\u0456\u0441\u0442\u044C):", legacy.error.message);
+        return map;
+      }
+      for (const r of legacy.data || [])
+        bump(r.post_id, false);
+      return map;
+    }
     const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
     if (error) {
       console.warn("[supabase] fetchPageReactions:", error.message);
-      return /* @__PURE__ */ new Map();
+      return map;
     }
-    const map = /* @__PURE__ */ new Map();
-    for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { count: 0, my: false });
-      const e = map.get(r.post_id);
-      e.count++;
-      if (r.user_id === userKey)
-        e.my = true;
-    }
+    for (const r of data || [])
+      bump(r.post_id, r.user_id === userKey);
     return map;
   }
   async function setPageReaction(postId, userKey, on) {
