@@ -30,3 +30,4 @@ graphify-out/
 # Живі дані Дошки для прототипу — оголошення реальних людей, репо публічне
 tests/tools/_board-live.json
 tests/tools/badge-shot.png
+tests/tools/badge-compare.png
