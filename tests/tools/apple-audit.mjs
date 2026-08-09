@@ -196,11 +196,17 @@ const COLLECTOR = () => {
   }
 
   // ── §12: матеріали. Головне питання — СКЛО ПОВЕРХ СКЛА ────────────────────
+  // 🔴 ПʼЯТА ПОЛОМКА ПРИЛАДУ (крок 8, той самий рід, що четверта). Спершу умовою
+  // було лише `alpha < 0.98` — і «напівпрозорим» вважалось тло `rgba(0,0,0,0)`,
+  // тобто ПОВНА ВІДСУТНІСТЬ тла. Так у список «напівпрозоре на напівпрозорому»
+  // потрапило 363 пари, з яких справжніх — жодної: то були звичайні `div` без
+  // власного фону, вкладені один в одного.
+  // Напівпрозорий = видно крізь нього, але він Є: alpha строго між 0 і 1.
   const прозоре = (bg) => {
     const m = /rgba?\(([^)]+)\)/.exec(bg);
     if (!m) return false;
     const p = m[1].split(',').map(x => parseFloat(x));
-    return p.length > 3 && p[3] < 0.98;
+    return p.length > 3 && p[3] > 0.02 && p[3] < 0.98;
   };
   const матеріали = [];
   for (const el of document.querySelectorAll('body *')) {
@@ -209,17 +215,33 @@ const COLLECTOR = () => {
     if (bf === 'none' && !прозоре(s.backgroundColor)) continue;
     if (!видимий(el)) continue;
     const r = el.getBoundingClientRect();
-    // Чи є скляний предок — «світле скло на світлому» зі скіла.
+    // 🔴 ЧЕТВЕРТА ПОЛОМКА ПРИЛАДУ (крок 8). Спершу «склом поверх скла» вважався
+    // БУДЬ-ЯКИЙ нащадок скляного вузла — і в список падали `span`, `svg`, `path`
+    // із тлом `rgba(0,0,0,0)`, тобто повністю прозорі. 36 «порушень», з яких
+    // справжніх було кілька. Прозорий підпис усередині скляної кнопки — це не
+    // другий шар матеріалу, це просто текст на ньому.
+    // Скіл забороняє інше: КЛАСТИ МАТЕРІАЛ НА МАТЕРІАЛ. Тому рахуємо лише коли
+    // вузол САМ має `backdrop-filter`, а він є і в предка.
     let предокСкло = '';
-    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
-      const as = getComputedStyle(a);
-      const abf = as.backdropFilter || as.webkitBackdropFilter || 'none';
-      if (abf !== 'none') { предокСкло = імʼя(a); break; }
+    if (bf !== 'none') {
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        const as = getComputedStyle(a);
+        const abf = as.backdropFilter || as.webkitBackdropFilter || 'none';
+        if (abf !== 'none') { предокСкло = імʼя(a) + ' [' + abf + ']'; break; }
+      }
+    }
+    // Окремо — «напівпрозоре на напівпрозорому» без блюру: слабший, але теж
+    // названий у скілі випадок (два тонування один на одному з'їдають контраст).
+    let предокПрозорий = '';
+    if (прозоре(s.backgroundColor)) {
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        if (прозоре(getComputedStyle(a).backgroundColor)) { предокПрозорий = імʼя(a); break; }
+      }
     }
     матеріали.push({
       вузол: імʼя(el), blur: bf === 'none' ? '' : bf, тло: s.backgroundColor,
       площа: Math.round(r.width * r.height), тінь: s.boxShadow === 'none' ? '' : s.boxShadow.slice(0, 60),
-      склоПоверхСкла: предокСкло,
+      склоПоверхСкла: предокСкло, прозореНаПрозорому: предокПрозорий,
     });
   }
 
@@ -257,16 +279,54 @@ const COLLECTOR = () => {
 
 // ── Підпис екрана для порівняння `prefers-*` ────────────────────────────────
 // Беремо стабільні властивості, на які скіл прямо вказує в §14.
+// 🔴 ШОСТА ПОЛОМКА ПРИЛАДУ (крок 10). Перша версія віддавала МАСИВ і порівнювала
+// два знімки ЗА ІНДЕКСОМ. Але між знімками розмітка живе: приїжджають дані,
+// перемальовуються списки, зникає скелет. Один доданий вузол зсуває всі наступні
+// індекси — і діф показує десятки «змін» там, де не змінилось нічого. Саме
+// звідси бралось стабільне «Δ15» на екранах, де правил `prefers-*` немає взагалі.
+// Стало: ключ = імʼя вузла + його порядковий номер серед однойменних. Порівнюємо
+// ЛИШЕ ключі, присутні в обох знімках.
 const SIGNATURE = () => {
-  const out = [];
+  // 🔴 СЬОМА ПОЛОМКА (крок 10). Підпис знімався з УСІЄЇ розмітки, а сторінки
+  // вкладок у цьому застосунку не знищуються — просто ховаються. Тому капсули
+  // Громади (єдине місце з `prefers-reduced-motion`) реагували на кожному екрані,
+  // і виходило «підтримка є всюди» при трьох вузьких правилах у CSS.
+  // Рахуємо лише те, що людина зараз БАЧИТЬ.
+  const наЕкрані = (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return false;
+    if (r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return false;
+    const s = getComputedStyle(el);
+    return s.visibility !== 'hidden' && s.display !== 'none';
+  };
+  const мапа = {};
+  const лічильник = {};
   const all = document.querySelectorAll('body *');
-  for (let i = 0; i < all.length && i < 1200; i++) {
-    const s = getComputedStyle(all[i]);
-    out.push([s.backgroundColor, s.backdropFilter || s.webkitBackdropFilter,
-      s.transitionDuration, s.animationDuration, s.opacity, s.borderColor,
-      s.color, s.boxShadow].join('|'));
+  for (let i = 0; i < all.length && i < 1500; i++) {
+    const el = all[i];
+    if (!наЕкрані(el)) continue;
+    const cls = (el.className && typeof el.className === 'string')
+      ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '';
+    const базове = el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + cls;
+    лічильник[базове] = (лічильник[базове] || 0) + 1;
+    const s = getComputedStyle(el);
+    мапа[`${базове}#${лічильник[базове]}`] = [s.backgroundColor,
+      s.backdropFilter || s.webkitBackdropFilter, s.transitionDuration,
+      s.animationDuration, s.animationName, s.opacity, s.borderColor,
+      s.color, s.boxShadow].join('|');
   }
-  return out;
+  return мапа;
+};
+
+// Скільки спільних ключів мають різні підписи. Порівнюємо тільки те, що є в обох.
+const діф = (a, b) => {
+  let n = 0, спільних = 0;
+  for (const k of Object.keys(a)) {
+    if (!(k in b)) continue;
+    спільних++;
+    if (a[k] !== b[k]) n++;
+  }
+  return { змін: n, спільних };
 };
 
 // ── Навігація по екранах ────────────────────────────────────────────────────
@@ -346,6 +406,8 @@ async function selftest(p) {
       #кт-скло{position:fixed;left:0;top:0;width:120px;height:60px;
         background:rgba(255,255,255,0.5);backdrop-filter:blur(10px);z-index:99999}
       #кт-скло2{width:40px;height:20px;background:rgba(255,255,255,0.4);backdrop-filter:blur(6px)}
+      /* Прозорий підпис усередині скла — НЕ порушення, у список падати не має. */
+      #кт-напис{color:#000;background:rgba(0,0,0,0)}
       #кт-жива{position:fixed;left:0;top:70px;width:20px;height:20px;cursor:pointer}
       #кт-жива:active{transform:scale(0.9)}
       #кт-мертва{position:fixed;left:30px;top:70px;width:20px;height:20px;cursor:pointer;letter-spacing:3px;font-size:11px}
@@ -354,6 +416,7 @@ async function selftest(p) {
     document.head.appendChild(st);
     const скло = document.createElement('div'); скло.id = 'кт-скло';
     const скло2 = document.createElement('div'); скло2.id = 'кт-скло2'; скло.appendChild(скло2);
+    const напис = document.createElement('span'); напис.id = 'кт-напис'; напис.textContent = 'Підпис'; скло.appendChild(напис);
     // Кнопка нормального розміру з іконкою всередині — контроль на те, що
     // нутрощі `<svg>` і вкладена підпис-обгортка НЕ рахуються окремими цілями.
     const зІконкою = document.createElement('button');
@@ -380,6 +443,7 @@ async function selftest(p) {
       правилВсього:  дані.правилActive,
       живихРеальних: дані.цілі.filter(c => !c.вузол.includes('кт-') && c.active).length,
       заекраном:     !!дані.цілі.find(c => c.вузол.includes('кт-заекраном')),
+      прозорийНапис: !!дані.матеріали.find(m => m.вузол.includes('кт-напис')),
       кнопкаЗІконкою: !!дані.цілі.find(c => c.вузол.includes('кт-зіконкою')),
       нутрощіІконки: дані.цілі.filter(c => /^(svg|path|circle|rect|line|polyline)/.test(c.вузол)).length,
       вкладенийПідпис: !!дані.цілі.find(c => c.вузол.includes('кт-підпис')),
@@ -391,6 +455,8 @@ async function selftest(p) {
     ['кнопка БЕЗ правила :active — прилад бачить її голою', знайдено.мертваActive === false],
     ['тап-ціль 20px виміряна як менша за 44px', знайдено.мертваМала === true],
     ['скло у склі впіймано як «скло поверх скла»', знайдено.склоПоверхСкла === true],
+    ['🔴 вузол БЕЗ власного тла (rgba …,0) у матеріали НЕ потрапляє взагалі',
+      знайдено.прозорийНапис === false],
     ['tracking 3px прочитано числом', знайдено.трекінг3 === 3],
     [`🔴 правила з файлів, підключених через @import, ВИДНО (${знайдено.правилВсього} шт.)`,
       знайдено.правилВсього > 20],
@@ -466,10 +532,10 @@ for (const g of групи) {
     // шуму, читати як «підтримки немає».
     await пауза(p, 350);
     const контрольний = await p.evaluate(SIGNATURE);
-    let шум = 0;
-    for (let i = 0; i < Math.min(база.length, контрольний.length); i++) if (база[i] !== контрольний[i]) шум++;
+    const шумД = діф(база, контрольний);
+    const шум = шумД.змін;
 
-    const prefers = { шум };
+    const prefers = { шум, спільних: шумД.спільних };
     for (const [ключ, медіа] of [['reduced-motion', { reducedMotion: 'reduce' }],
                                  ['reduced-transparency', { media: [] }],   // ставиться нижче вручну
                                  ['contrast', { contrast: 'more' }]]) {
@@ -484,9 +550,8 @@ for (const g of групи) {
         }
         await пауза(p, 350);
         const після = await p.evaluate(SIGNATURE);
-        let змін = 0;
-        for (let i = 0; i < Math.min(база.length, після.length); i++) if (база[i] !== після[i]) змін++;
-        prefers[ключ] = { змінилось: змін, зі: Math.min(база.length, після.length) };
+        const д = діф(база, після);
+        prefers[ключ] = { змінилось: д.змін, зі: д.спільних };
       } catch (e) {
         prefers[ключ] = { помилка: e.message };
       } finally {
