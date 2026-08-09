@@ -16451,7 +16451,7 @@ END:VEVENT`
         }, 300);
       }
     } else if (item.kind === "account") {
-      document.getElementById("account-btn")?.click();
+      document.querySelector("[data-account-btn]")?.click();
     } else if (item.kind === "cabinet") {
       window.location.href = "./admin.html";
     } else if (item.kind === "info") {

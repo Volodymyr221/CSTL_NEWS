@@ -177,7 +177,16 @@ function handleNav(id) {
       }, 300);
     }
   } else if (item.kind === 'account') {
-    document.getElementById('account-btn')?.click();
+    // 🔴 B-31 (знайдено аудитом 09.08, виправлено 09.08). Тут стояло
+    // `document.getElementById('account-btn')` — кнопки з таким id у застосунку
+    // вже немає: вона переїхала до привітання на Громаді й тепер позначається
+    // атрибутом `[data-account-btn]` (`core/account-ui.js`, там і коментар про
+    // переїзд). `?.click()` на `null` мовчки не робить НІЧОГО, тому пункт меню
+    // був мертвий беззвучно — ні екрана, ні тосту, ні помилки в консолі.
+    // ⚠️ Шукаємо саме за атрибутом, а не за новим id: кнопок може бути кілька
+    // (делегат у `account-ui.js` слухає всі `[data-account-btn]`), і прибивати
+    // цвяхами конкретне місце — це рівно та помилка, яку зараз лагодимо.
+    document.querySelector('[data-account-btn]')?.click();
   } else if (item.kind === 'cabinet') {
     window.location.href = './admin.html';
   } else if (item.kind === 'info') {
