@@ -62,17 +62,36 @@ revoke insert (official) on public.pages    from anon, authenticated;
 -- заблоковано. Довести після накату спробою вставки від імені `authenticated`.
 revoke insert (trusted, approved_count) on public.profiles from anon, authenticated;
 
--- `get_public_profile` віддає офіційність — інакше галочку не було б звідки взяти
--- на чужій картці профілю. Решта полів лишається як була (6 полів → 7).
+-- ── КРОК 12 ЗАОДНО: `get_public_profile` доганяє клієнта ────────────────────
+-- 🔑 Одна редакція функції на обидва кроки НАВМИСНО. Потік 3 і крок 12 обидва
+-- переписують `get_public_profile`; двома окремими файлами другий накат мовчки
+-- стер би поля першого.
+--
+-- Прод віддавав **6 полів**, а `src/core/profile-card.js` уже малює `bio` і
+-- `age` — тобто картка профілю була написана під дані, яких їй ніколи не давали.
+-- Клієнта міняти НЕ треба взагалі, бракувало саме цих полів.
+--
+-- 🔴 ВІК — ЧИСЛО, А НЕ ДАТА (рішення Вови 09.08 «можна» + правило, записане в
+-- шапці `profile-card.js`: «телефон/email/точна дата народження НІКОЛИ сюди не
+-- потрапляють»). Колонки `age` в базі немає — є `birth_date`, тож вік
+-- ОБЧИСЛЮЄМО тут. Так назовні йде «34 роки», а не «14.03.1992»: за датою
+-- народження людину можна шукати в інших базах, за числом років — ні.
+-- ⚠️ `age` виходить `null`, якщо дата не вказана — клієнт це вже вміє
+-- (`Number.isFinite(p.age) && p.age > 0`), рядок просто не малюється.
 create or replace function public.get_public_profile(p_uid uuid)
 returns table(uid uuid, name text, avatar_url text, settlement text,
-              trusted boolean, official boolean, created_at timestamptz)
+              trusted boolean, official boolean, bio text, age integer,
+              created_at timestamptz)
 language sql
 stable
 security definer
 set search_path to 'public'
 as $function$
-  select p.uid, p.name, p.avatar_url, p.settlement, p.trusted, p.official, p.created_at
+  select p.uid, p.name, p.avatar_url, p.settlement, p.trusted, p.official,
+         p.bio,
+         case when p.birth_date is null then null
+              else extract(year from age(p.birth_date))::int end,
+         p.created_at
   from public.profiles p
   where p.uid = p_uid
 $function$;
@@ -118,6 +137,45 @@ $function$;
 
 revoke all on function public.admin_set_official(text, text, boolean) from public, anon;
 grant execute on function public.admin_set_official(text, text, boolean) to authenticated;
+
+-- Список людей для адмінки. 🔑 Без нього перемикач нема куди вішати: політика
+-- «own profile read» пускає людину лише у ВЛАСНИЙ рядок, тобто адмінка чужих
+-- профілів не бачить взагалі — вона ходить у базу звичайним Google-входом.
+-- ⚠️ Віддає рівно те, що потрібно, щоб упізнати людину і поставити позначку.
+-- Телефон і точна дата народження сюди не йдуть: адмінка їх не показує, а
+-- «щоб було» — це саме той шлях, яким контактні колонки й потрапили в публічну
+-- вибірку `ads` (потік 1).
+create or replace function public.admin_list_profiles(p_query text default null)
+returns table(uid uuid, name text, surname text, email text, avatar_url text,
+              settlement text, trusted boolean, official boolean,
+              created_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $function$
+declare
+  q text := nullif(btrim(coalesce(p_query, '')), '');
+begin
+  if not is_admin() then
+    raise exception 'official_not_admin';
+  end if;
+
+  return query
+    select p.uid, p.name, p.surname, p.email, p.avatar_url, p.settlement,
+           p.trusted, p.official, p.created_at
+    from public.profiles p
+    where q is null
+       or p.name     ilike '%' || q || '%'
+       or p.surname  ilike '%' || q || '%'
+       or p.email    ilike '%' || q || '%'
+    order by p.official desc, p.created_at desc
+    limit 200;
+end;
+$function$;
+
+revoke all on function public.admin_list_profiles(text) from public, anon;
+grant execute on function public.admin_list_profiles(text) to authenticated;
 
 -- ── КРОК 17. ЗАБОРОНЕНІ ІМЕНА ───────────────────────────────────────────────
 -- Потік 1 закрив підробку ПІДПИСУ (клієнт більше не диктує, як підписати

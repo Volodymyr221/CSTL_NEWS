@@ -16987,10 +16987,11 @@ END:VEVENT`
     const bio = bioText ? `<div class="pcard-bio"><span class="pcard-bio-h">\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><p>${escapeHtml(bioText)}</p></div>` : "";
     const jd = p && p.created_at ? joinDate(p.created_at) : "";
     const since = jd ? `<div class="pcard-since">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${jd}</div>` : "";
+    const official = p && p.official === true ? `<span class="cm-ad-verified" role="img" aria-label="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442" title="\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0438\u0439 \u0430\u043A\u0430\u0443\u043D\u0442">\u2713</span>` : "";
     return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}</div>
+      <div class="pcard-name">${escapeHtml(name)}${official}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;

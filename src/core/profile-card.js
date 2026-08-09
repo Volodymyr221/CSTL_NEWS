@@ -56,10 +56,21 @@ function cardHtml(p) {
   const jd = (p && p.created_at) ? joinDate(p.created_at) : '';
   const since = jd ? `<div class="pcard-since">Учасник CSTL LIFE з ${jd}</div>` : '';
 
+  // 🔵 09.08 (потік 3) — СИНЯ ГАЛОЧКА «ОФІЦІЙНИЙ АКАУНТ», поруч з іменем.
+  // 🛑 Це НЕ те саме, що бейдж «Довірений автор» вище: той малюється за `trusted`
+  // («підтверджений житель», дає автопублікацію без модерації) і його ставить не
+  // людина і не адмін вручну. Галочка ж означає «це справді та публічна особа»
+  // і ставиться руками з адмінки (`admin_set_official`). Два різні твердження —
+  // два різні знаки; звести їх в один означало б збрехати про статус людини.
+  // ⚠️ `=== true`: поки міграцію не накотили, поле приходить `undefined` і знака
+  // просто немає — картка виглядає точно як зараз.
+  const official = (p && p.official === true)
+    ? `<span class="cm-ad-verified" role="img" aria-label="Офіційний акаунт" title="Офіційний акаунт">✓</span>` : '';
+
   return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ''}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}</div>
+      <div class="pcard-name">${escapeHtml(name)}${official}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
