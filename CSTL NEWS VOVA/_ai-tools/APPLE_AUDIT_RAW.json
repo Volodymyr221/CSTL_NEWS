@@ -1,5 +1,5 @@
 {
- "знято": "2026-08-10T06:39:03.148Z",
+ "знято": "2026-08-10T07:41:46.928Z",
  "екрани": {
   "вкладка: Громада (Home)": {
    "цілі": [
@@ -35,7 +35,7 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси 24 рейси сьогодні",
+     "текст": "Автобуси 2 зараз у дорозі",
      "ш": 322,
      "в": 65,
      "active": true,
@@ -308,7 +308,7 @@
      "видимий": true
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -317,6 +317,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -500,6 +508,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -645,6 +661,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -1612,15 +1636,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -1653,10 +1719,10 @@
      "прозореНаПрозорому": ""
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "blur": "",
-     "тло": "rgba(255, 255, 255, 0.85)",
-     "площа": 40,
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -1666,6 +1732,15 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.3)",
      "площа": 16,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i.on",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.85)",
+     "площа": 40,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -1836,7 +1911,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-     "текст": "24 рейси сьогодні",
+     "текст": "2 зараз у дорозі",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -2044,19 +2119,22 @@
    ],
    "правилActive": 133,
    "prefers": {
-    "шум": 0,
-    "спільних": 100,
+    "шум": 3,
+    "спільних": 102,
     "reduced-motion": {
-     "змінилось": 11,
-     "зі": 101
+     "змінилось": 12,
+     "зі": 102,
+     "емуляція": true
     },
     "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 101
+     "змінилось": 5,
+     "зі": 102,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 3,
-     "зі": 101
+     "змінилось": 6,
+     "зі": 102,
+     "емуляція": true
     }
    }
   },
@@ -2317,7 +2395,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -2326,6 +2404,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -2509,6 +2595,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -2654,6 +2748,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -3621,15 +3723,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -3733,15 +3877,18 @@
     "спільних": 17,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 17
+     "зі": 17,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 17
+     "зі": 17,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 17
+     "змінилось": 1,
+     "зі": 17,
+     "емуляція": true
     }
    }
   },
@@ -4022,7 +4169,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -4031,6 +4178,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -4214,6 +4369,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -4359,6 +4522,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -5246,15 +5417,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -5368,15 +5581,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -5697,7 +5913,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -5706,6 +5922,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -5889,6 +6113,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -6034,6 +6266,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -7001,15 +7241,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -7294,15 +7576,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -7627,6 +7912,16 @@
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "background, transform 0.2s, 0.2s ease, ease",
      "touchAction": "auto"
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
+     "текст": "",
+     "ш": 6,
+     "в": 6,
+     "active": false,
+     "tapHighlight": "rgba(51, 181, 229, 0.4)",
+     "transition": "background, transform 0.2s, 0.2s ease, ease",
+     "touchAction": "auto"
     }
    ],
    "переходи": [
@@ -7783,7 +8078,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -7792,6 +8087,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -7952,6 +8255,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -8143,12 +8454,20 @@
      "видимий": true
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": true
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
      "крива": "ease",
      "затримка": "0s",
-     "видимий": false
+     "видимий": true
     },
     {
      "вузол": "button.bs-track-btn",
@@ -9087,15 +9406,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -9109,6 +9470,15 @@
     }
    ],
    "матеріали": [
+    {
+     "вузол": "span.bhv4-dot-nav",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.35)",
+     "площа": 36,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
     {
      "вузол": "span.bhv4-dot-nav",
      "blur": "",
@@ -9144,105 +9514,6 @@
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
-    },
-    {
-     "вузол": "span.bhv4-dot",
-     "blur": "",
-     "тло": "rgba(255, 255, 255, 0.35)",
-     "площа": 64,
-     "тінь": "",
-     "склоПоверхСкла": "",
-     "прозореНаПрозорому": "div.bhv4-track"
     },
     {
      "вузол": "span.bhv4-dot",
@@ -9437,7 +9708,7 @@
     },
     {
      "вузол": "span.bhv4-status-text",
-     "текст": "очікується",
+     "текст": "в дорозі",
      "кегль": 12,
      "tracking": 0.2,
      "leading": "normal",
@@ -9473,7 +9744,7 @@
     },
     {
      "вузол": "div.bhv4-next-stop.bhv4-dyn",
-     "текст": "ЧЕРЕЗ 12 ХВ",
+     "текст": "НАСТУПНА ЗУПИНКА — ЧЕМЕРИН",
      "кегль": 11,
      "tracking": 0.8,
      "leading": "normal",
@@ -9526,9 +9797,9 @@
      "шрифт": "-apple-system"
     },
     {
-     "вузол": "span.bs-soon-label",
-     "текст": "ЧЕРЕЗ 12 ХВ",
-     "кегль": 12,
+     "вузол": "span.bs-live-label",
+     "текст": "В ДОРОЗІ",
+     "кегль": 10,
      "tracking": 0.4,
      "leading": "normal",
      "вага": "700",
@@ -9616,6 +9887,15 @@
      "шрифт": "-apple-system"
     },
     {
+     "вузол": "span.bs-live-label",
+     "текст": "В ДОРОЗІ",
+     "кегль": 10,
+     "tracking": 0.4,
+     "leading": "normal",
+     "вага": "700",
+     "шрифт": "-apple-system"
+    },
+    {
      "вузол": "span.bus-card-time",
      "текст": "07:05",
      "кегль": 20,
@@ -9694,6 +9974,15 @@
      "tracking": 0,
      "leading": 1,
      "вага": "600",
+     "шрифт": "-apple-system"
+    },
+    {
+     "вузол": "span.bs-soon-label",
+     "текст": "ЧЕРЕЗ 9 ХВ",
+     "кегль": 12,
+     "tracking": 0.4,
+     "leading": "normal",
+     "вага": "700",
      "шрифт": "-apple-system"
     },
     {
@@ -9888,19 +10177,22 @@
    ],
    "правилActive": 133,
    "prefers": {
-    "шум": 2,
-    "спільних": 179,
+    "шум": 5,
+    "спільних": 188,
     "reduced-motion": {
-     "змінилось": 2,
-     "зі": 179
+     "змінилось": 5,
+     "зі": 188,
+     "емуляція": true
     },
     "reduced-transparency": {
-     "змінилось": 2,
-     "зі": 179
+     "змінилось": 5,
+     "зі": 188,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 2,
-     "зі": 179
+     "змінилось": 15,
+     "зі": 188,
+     "емуляція": true
     }
    }
   },
@@ -10261,7 +10553,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -10270,6 +10562,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -10453,6 +10753,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -10598,6 +10906,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -11565,15 +11881,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -11903,15 +12261,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -12099,7 +12460,7 @@
     },
     {
      "вузол": "button.pm-thread",
-     "текст": "П Петро Коваль 06:38 РЕМОНТ ВЗУТТЯ Ще ак",
+     "текст": "П Петро Коваль 07:41 РЕМОНТ ВЗУТТЯ Ще ак",
      "ш": 358,
      "в": 76,
      "active": true,
@@ -12292,7 +12653,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -12301,6 +12662,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -12484,6 +12853,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -12629,6 +13006,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -13636,15 +14021,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -14004,7 +14431,7 @@
     },
     {
      "вузол": "span.pm-thread-time",
-     "текст": "06:38",
+     "текст": "07:41",
      "кегль": 12,
      "tracking": 0,
      "leading": "normal",
@@ -14037,15 +14464,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -14526,7 +14956,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -14535,6 +14965,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -14718,6 +15156,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -14863,6 +15309,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -15870,15 +16324,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -16307,15 +16803,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -16646,7 +17145,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -16655,6 +17154,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -16838,6 +17345,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -16983,6 +17498,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -17966,15 +18489,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -18304,15 +18869,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -18863,7 +19431,7 @@
      "видимий": false
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -18872,6 +19440,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -19055,6 +19631,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -19200,6 +19784,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -20295,15 +20887,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -20819,15 +21453,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -21005,7 +21642,7 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси 24 рейси сьогодні",
+     "текст": "Автобуси 2 зараз у дорозі",
      "ш": 322,
      "в": 65,
      "active": true,
@@ -21278,7 +21915,7 @@
      "видимий": true
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -21287,6 +21924,14 @@
     },
     {
      "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -21470,6 +22115,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -21615,6 +22268,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -22582,15 +23243,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -22677,10 +23380,10 @@
      "прозореНаПрозорому": ""
     },
     {
-     "вузол": "i.on",
+     "вузол": "i",
      "blur": "",
-     "тло": "rgba(255, 255, 255, 0.85)",
-     "площа": 40,
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -22690,6 +23393,15 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.3)",
      "площа": 16,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i.on",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.85)",
+     "площа": 40,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -22986,7 +23698,7 @@
     },
     {
      "вузол": "span.hm-cap2-v.swap",
-     "текст": "24 рейси сьогодні",
+     "текст": "2 зараз у дорозі",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -23195,18 +23907,21 @@
    "правилActive": 133,
    "prefers": {
     "шум": 0,
-    "спільних": 182,
+    "спільних": 183,
     "reduced-motion": {
-     "змінилось": 10,
-     "зі": 182
+     "змінилось": 11,
+     "зі": 183,
+     "емуляція": true
     },
     "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 183
+     "змінилось": 7,
+     "зі": 184,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 182
+     "змінилось": 7,
+     "зі": 183,
+     "емуляція": true
     }
    }
   },
@@ -23244,7 +23959,7 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси 24 рейси сьогодні",
+     "текст": "Автобуси Рівне · через 9 хв",
      "ш": 322,
      "в": 65,
      "active": true,
@@ -23617,6 +24332,14 @@
      "видимий": true
     },
     {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
      "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
@@ -23809,6 +24532,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -23954,6 +24685,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -24961,15 +25700,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -24997,6 +25778,15 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.26)",
      "площа": 1156,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -25266,7 +26056,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-     "текст": "24 рейси сьогодні",
+     "текст": "Рівне · через 9 хв",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -25619,18 +26409,21 @@
    "правилActive": 133,
    "prefers": {
     "шум": 0,
-    "спільних": 101,
+    "спільних": 102,
     "reduced-motion": {
-     "змінилось": 11,
-     "зі": 101
+     "змінилось": 12,
+     "зі": 102,
+     "емуляція": true
     },
     "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 101
+     "змінилось": 5,
+     "зі": 102,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 101
+     "змінилось": 6,
+     "зі": 102,
+     "емуляція": true
     }
    }
   },
@@ -26101,6 +26894,14 @@
      "видимий": false
     },
     {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
@@ -26293,6 +27094,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -26438,6 +27247,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -27469,15 +28286,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -28085,15 +28944,18 @@
     "спільних": 14,
     "reduced-motion": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 14
+     "зі": 14,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 14
+     "змінилось": 1,
+     "зі": 14,
+     "емуляція": true
     }
    }
   },
@@ -28131,7 +28993,7 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси Олика · через 12 хв",
+     "текст": "Автобуси 2 зараз у дорозі",
      "ш": 322,
      "в": 65,
      "active": true,
@@ -28522,6 +29384,14 @@
      "видимий": true
     },
     {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
      "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
@@ -28706,6 +29576,14 @@
      "видимий": false
     },
     {
+     "вузол": "span.bhv4-dot-nav",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -28851,6 +29729,14 @@
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
+     "властивість": "background, transform",
+     "тривалість": "0.2s, 0.2s",
+     "крива": "ease, ease",
+     "затримка": "0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "span.bhv4-dot-nav",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "ease, ease",
@@ -29874,15 +30760,57 @@
      "повтори": "1"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
     },
     {
-     "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
-     "назва": "bs-wait-pulse",
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-state-dot.bhv4-state-dot--enroute",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bhv4-dot.bhv4-dot--current",
+     "назва": "bhv4-dot-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-live-dot",
+     "назва": "bs-live-pulse",
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-stop-icon.bs-stop-icon--current",
+     "назва": "bs-live-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -29910,6 +30838,15 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.26)",
      "площа": 1156,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -30197,7 +31134,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-     "текст": "Олика · через 12 хв",
+     "текст": "2 зараз у дорозі",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -30667,18 +31604,21 @@
    "правилActive": 133,
    "prefers": {
     "шум": 3,
-    "спільних": 100,
+    "спільних": 102,
     "reduced-motion": {
-     "змінилось": 10,
-     "зі": 100
+     "змінилось": 12,
+     "зі": 102,
+     "емуляція": true
     },
     "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 100
+     "змінилось": 5,
+     "зі": 102,
+     "емуляція": true
     },
     "contrast": {
-     "змінилось": 0,
-     "зі": 100
+     "змінилось": 6,
+     "зі": 102,
+     "емуляція": true
     }
    }
   }

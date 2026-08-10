@@ -567,27 +567,39 @@ for (const g of групи) {
     const шум = шумД.змін;
 
     const prefers = { шум, спільних: шумД.спільних };
-    for (const [ключ, медіа] of [['reduced-motion', { reducedMotion: 'reduce' }],
-                                 ['reduced-transparency', { media: [] }],   // ставиться нижче вручну
-                                 ['contrast', { contrast: 'more' }]]) {
+    // 🔴 ВСІ ТРИ НАЛАШТУВАННЯ — ОДНИМ МЕХАНІЗМОМ (CDP), і це не косметика.
+    // Перша версія мішала два: `page.emulateMedia()` для руху й контрасту і CDP
+    // для прозорості (у Playwright для неї немає прапорця). Вони перебивають
+    // одне одного — `setEmulatedMedia` замінює ВЕСЬ набір емульованих фіч, а не
+    // додає до нього. Наслідок: після першого ж CDP-виклику `emulateMedia`
+    // переставав діяти, і прилад показував Δmotion **0** на екранах, де
+    // підтримка руху точно є. Тобто числа падали в бік «підтримки немає» —
+    // найгірший бік, бо це вигадані знахідки. Сімнадцятий випадок.
+    // ⚠️ Сесія CDP створюється ОДНА на екран: `newCDPSession` у циклі плодив
+    // сесії, і скидання в одній не чіпало стан, виставлений іншою.
+    let cdp = null;
+    try { cdp = await ctx.newCDPSession(p); } catch {}
+    const ФІЧІ = [
+      ['reduced-motion',       'prefers-reduced-motion',       'reduce'],
+      ['reduced-transparency', 'prefers-reduced-transparency', 'reduce'],
+      ['contrast',             'prefers-contrast',             'more'],
+    ];
+    for (const [ключ, фіча, значення] of ФІЧІ) {
       try {
-        if (ключ === 'reduced-transparency') {
-          // Playwright не має окремого прапорця — ставимо через CDP-подібний шлях
-          // емуляції медіа-фіч, який приймає довільні пари.
-          await ctx.newCDPSession(p).then(s => s.send('Emulation.setEmulatedMedia',
-            { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] }));
-        } else {
-          await p.emulateMedia(медіа);
-        }
+        if (!cdp) throw new Error('CDP недоступний');
+        await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: фіча, value: значення }] });
         await пауза(p, 350);
+        // Контроль першого порядку: браузер САМ підтверджує, що фіча ввімкнена.
+        // Без цього «Δ = 0» неможливо відрізнити від «емуляція не спрацювала».
+        const увімкнено = await p.evaluate(
+          f => matchMedia(`(${f})`).matches, `${фіча}: ${значення}`);
         const після = await p.evaluate(SIGNATURE);
         const д = діф(база, після);
-        prefers[ключ] = { змінилось: д.змін, зі: д.спільних };
+        prefers[ключ] = { змінилось: д.змін, зі: д.спільних, емуляція: увімкнено };
       } catch (e) {
         prefers[ключ] = { помилка: e.message };
       } finally {
-        try { await p.emulateMedia({ reducedMotion: 'no-preference', contrast: 'no-preference' }); } catch {}
-        try { const s = await ctx.newCDPSession(p); await s.send('Emulation.setEmulatedMedia', { features: [] }); } catch {}
+        try { if (cdp) await cdp.send('Emulation.setEmulatedMedia', { features: [] }); } catch {}
         await пауза(p, 250);
       }
     }
@@ -599,7 +611,8 @@ for (const g of групи) {
                 `переходів ${дані.переходи.length} · матеріалів ${дані.матеріали.length} · ` +
                 `тексту ${дані.типографіка.length} · prefers Δmotion ${prefers['reduced-motion']?.змінилось ?? '?'} ` +
                 `Δtransp ${prefers['reduced-transparency']?.змінилось ?? '?'} Δcontrast ${prefers['contrast']?.змінилось ?? '?'} ` +
-                `(шум ${prefers.шум})`);
+                `(шум ${prefers.шум})` +
+                (Object.values(prefers).some(x => x && x.емуляція === false) ? ' ⚠️ ЕМУЛЯЦІЯ НЕ СПРАЦЮВАЛА' : ''));
   }
 }
 
