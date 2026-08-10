@@ -98,6 +98,62 @@ export function reporter() {
   return { ok, done, res };
 }
 
+// ── ЧИТАННЯ ЖИВИХ ПІКСЕЛІВ ЗІ ЗНІМКА ────────────────────────────────────────
+//
+// 🔴 НАВІЩО. Частину замовлень Вови неможливо перевірити читанням CSS: «щоб воно
+// зливалося», «щоб не було видно стику», «щоб з лівого краю світліше» — це
+// властивості КАРТИНКИ. Правило можна написати бездоганно і все одно отримати
+// шов, бо шарів у градієнті два, а геометрія рахується від розміру екрана.
+// Тому такі речі міряються пікселями знімка.
+//
+// 🔑 ДЕКОДУЄ PNG САМ БРАУЗЕР (`createImageBitmap`), а не саморобний читач.
+// Перша редакція розбирала PNG руками і першим же прогоном видала кислотні
+// `#00ffff` там, де на екрані бордо, — тобто прилад збрехав раніше, ніж встиг
+// щось довести. Це був би черговий випадок у довгому ряду брехливих перевірок
+// цього проєкту.
+//
+// 🔬 САМОПЕРЕВІРКА ВБУДОВАНА: перед читанням помічник знімає квадрат відомого
+// кольору й звіряє його байт-у-байт. Не збіглось — кидає помилку одразу, і
+// жодне число далі не встигне зійти за замір. Правило проєкту №1 про мірку:
+// спершу зміряй, що дає порівняння стану з самим собою.
+export async function pixelsOf(page, selector) {
+  const зняти = async sel => {
+    const buf = await page.locator(sel).screenshot();
+    return page.evaluate(async b64 => {
+      const бін = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const bmp = await createImageBitmap(new Blob([бін], { type: 'image/png' }));
+      const cv = new OffscreenCanvas(bmp.width, bmp.height);
+      const g = cv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(bmp, 0, 0);
+      return { w: bmp.width, h: bmp.height,
+               out: Array.from(g.getImageData(0, 0, bmp.width, bmp.height).data) };
+    }, buf.toString('base64'));
+  };
+
+  const МІТКА = '__px-selftest__', ЕТАЛОН = [0x5E, 0x17, 0x23];
+  await page.evaluate(([id, hex]) => {
+    const d = document.createElement('div');
+    d.id = id;
+    d.style.cssText = `position:fixed;left:0;top:0;z-index:2147483647;width:24px;height:24px;background:${hex};`;
+    document.body.appendChild(d);
+  }, [МІТКА, '#5E1723']);
+  const проба = await зняти(`#${МІТКА}`);
+  await page.evaluate(id => document.getElementById(id)?.remove(), МІТКА);
+  const c = [проба.out[0], проба.out[1], проба.out[2]];
+  if (c[0] !== ЕТАЛОН[0] || c[1] !== ЕТАЛОН[1] || c[2] !== ЕТАЛОН[2]) {
+    throw new Error(`читач пікселів бреше: #5E1723 прочитано як rgb(${c.join(',')})`);
+  }
+
+  const { w, h, out } = await зняти(selector);
+  return {
+    w, h,
+    px: (x, y) => { const o = (y * w + x) * 4; return [out[o], out[o + 1], out[o + 2]]; },
+    // Яскравість за sRGB — та сама формула, якою в проєкті рахують контраст.
+    ярк: ([r, g, b]) => +(0.2126 * r + 0.7152 * g + 0.0722 * b).toFixed(1),
+    hex: ([r, g, b]) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join(''),
+  };
+}
+
 // 🆕 05.08 — СТИЛІ ЗОНИ «ГРОМАДА + ДОШКА» ОДНИМ РЯДКОМ.
 //
 // 🔴 Навіщо окремий хелпер, а не `projectFile('style/community.css')`.
