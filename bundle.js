@@ -16369,34 +16369,46 @@ END:VEVENT`
   }
 
   // src/core/sidebar.js
-  var NAV = [
-    { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: ICONS.settings, kind: "cabinet", team: true },
-    { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: ICONS.user, kind: "account" },
-    { divider: true },
-    { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.community, kind: "tab", tab: "community" },
-    { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: ICONS.newspaper, kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
-    { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
-    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board" },
-    { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions" },
-    { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
-    { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: ICONS.phone, kind: "tab", tab: "community", scrollTo: "#cm-contacts" },
-    { divider: true },
-    { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: ICONS.help, kind: "info" },
-    // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
-    // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
-    // «Політики»: там документ на кілька екранів, і потрібний розділ довелось би шукати.
-    { id: "boardrules", label: "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0414\u043E\u0448\u043A\u0438", icon: ICONS.clipboard, kind: "info" },
-    { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: ICONS.lock, kind: "info" }
+  var SECTIONS = [
+    // Картки. Це не «важливіші пункти меню», це інший ЖАНР: обидві ведуть не в
+    // розділ застосунку, а до людини (профіль) і за його межі (`admin.html`).
+    { id: "cards", cards: true, items: [
+      { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: ICONS.user, kind: "account" },
+      { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: ICONS.shieldCheck, kind: "cabinet", team: true }
+    ] },
+    { id: "tabs", caption: "\u0420\u043E\u0437\u0434\u0456\u043B\u0438", items: [
+      { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.community, kind: "tab", tab: "community" },
+      { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: ICONS.newspaper, kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
+      { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
+      { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board" },
+      { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions" },
+      { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
+      { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: ICONS.phone, kind: "tab", tab: "community", scrollTo: "#cm-contacts" }
+    ] },
+    { id: "info", caption: "\u0406\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F", items: [
+      { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: ICONS.help, kind: "info" },
+      // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
+      // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
+      // «Політики»: там документ на кілька екранів, і потрібний розділ довелось би шукати.
+      // ⚠️ Іконка `shield`, а не `clipboard`: clipboard уже носить «Дошка», і два
+      // однакові значки в одному меню читались як помилка. Щит тут ще й доречний —
+      // це «Правила БЕЗПЕЧНОГО користування».
+      { id: "boardrules", label: "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0414\u043E\u0448\u043A\u0438", icon: ICONS.shield, kind: "info" },
+      { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: ICONS.lock, kind: "info" }
+    ] }
   ];
+  var NAV = SECTIONS.flatMap((s) => s.items);
   var SOCIAL = [
     {
       id: "instagram",
+      short: "Instagram",
       label: "Instagram Olyka Castle",
       icon: ICONS.brandInstagram,
       url: "https://www.instagram.com/olyka_castle?igsh=a2pmOGN3N2cyenBs"
     },
     {
       id: "facebook",
+      short: "Facebook",
       label: "Facebook Olyka Castle",
       icon: ICONS.brandFacebook,
       url: "https://www.facebook.com/share/18mhw13NDu/?mibextid=wwXIfr"
@@ -16441,9 +16453,10 @@ END:VEVENT`
     overlay.classList.toggle("sidebar-overlay--show", open);
     sidebar.setAttribute("aria-hidden", open ? "false" : "true");
     toggle?.setAttribute("aria-expanded", open ? "true" : "false");
-    if (open)
+    if (open) {
+      renderNav();
       refreshCabinet();
-    else
+    } else
       syncOverlay();
   }
   function syncOverlay() {
@@ -16474,24 +16487,69 @@ END:VEVENT`
     sidebar?.classList.remove("sidebar--instant");
     overlay?.classList.remove("sidebar--instant");
   }
-  function itemHtml(item) {
-    if (item.divider)
-      return '<div class="sidebar-divider"></div>';
+  function itemHtml(item, activeTab) {
     const hidden = item.team ? " hidden" : "";
-    return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}>
+    const \u0442\u0443\u0442 = item.kind === "tab" && !item.scrollTo && item.tab === activeTab;
+    return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}${\u0442\u0443\u0442 ? ' aria-current="page"' : ""}>
     <span class="sidebar-item-icon">${item.icon}</span>
     <span class="sidebar-item-label">${item.label}</span>
+    ${\u0442\u0443\u0442 ? '<span class="sidebar-item-dot" aria-hidden="true"></span>' : ""}
+    <span class="sidebar-item-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
+  }
+  function profileCardHtml() {
+    const \u0443\u0432\u0456\u0439\u0448\u043E\u0432 = isLoggedIn();
+    const \u0456\u043C\u02BC\u044F = \u0443\u0432\u0456\u0439\u0448\u043E\u0432 ? currentUserName() || "\u0416\u0438\u0442\u0435\u043B\u044C" : "\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C";
+    const \u043F\u0456\u0434\u043F\u0438\u0441 = \u0443\u0432\u0456\u0439\u0448\u043E\u0432 ? "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442" : "\u0412\u0445\u0456\u0434 \u0447\u0435\u0440\u0435\u0437 Google";
+    const \u0430\u0432\u0430 = \u0443\u0432\u0456\u0439\u0448\u043E\u0432 ? avatarCircle({ name: \u0456\u043C\u02BC\u044F, url: currentAvatarUrl(), cls: "sb-av" }) : `<span class="sb-av sb-av--guest">${ICONS.user}</span>`;
+    return `<button class="sb-card sb-card--me" type="button" data-nav="account">
+    ${\u0430\u0432\u0430}
+    <span class="sb-card-txt">
+      <span class="sb-card-name">${escapeHtml(\u0456\u043C\u02BC\u044F)}</span>
+      <span class="sb-card-sub">${\u043F\u0456\u0434\u043F\u0438\u0441}</span>
+    </span>
+    <span class="sb-card-go" aria-hidden="true">${ICONS.chevronRight}</span>
+  </button>`;
+  }
+  function adminCardHtml(item) {
+    return `<button class="sb-card sb-card--admin" type="button" data-nav="${item.id}"${_team ? "" : " hidden"}>
+    <span class="sb-card-ic">${item.icon}</span>
+    <span class="sb-card-txt">
+      <span class="sb-card-name">${item.label}</span>
+      <span class="sb-card-sub">\u041F\u0430\u043D\u0435\u043B\u044C \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F</span>
+    </span>
+    <span class="sb-card-go" aria-hidden="true">${ICONS.chevronRight}</span>
+  </button>`;
+  }
+  function paintVersion() {
+    const el = document.getElementById("sidebar-ver");
+    if (!el)
+      return;
+    el.textContent = (document.querySelector(".deploy-stamp")?.textContent || "").trim();
   }
   function renderNav() {
     const { nav } = els();
     if (!nav)
       return;
+    const activeTab = document.querySelector(".app-main")?.dataset.tab || "";
+    const \u0441\u0435\u043A\u0446\u0456\u0457 = SECTIONS.map((s) => {
+      if (s.cards) {
+        return `<div class="sb-cards">${s.items.map((i) => i.kind === "account" ? profileCardHtml() : adminCardHtml(i)).join("")}</div>`;
+      }
+      return `<div class="sb-cap">${s.caption}</div>
+      <div class="sb-group">${s.items.map((i) => itemHtml(i, activeTab)).join("")}</div>`;
+    }).join("");
     const socialHtml = `
     <div class="sb-social-foot">
-      ${SOCIAL.map((s) => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">${s.icon}</a>`).join("")}
+      <div class="sb-social-cap">\u0421\u043B\u0456\u0434\u043A\u0443\u0439\u0442\u0435 \u0437\u0430 \u043D\u0430\u043C\u0438</div>
+      <div class="sb-social-row">
+        ${SOCIAL.map((s) => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">
+          <span class="sb-social-ic">${s.icon}</span><span class="sb-social-lb">${s.short}</span>
+        </a>`).join("")}
+      </div>
     </div>`;
-    nav.innerHTML = NAV.map(itemHtml).join("") + socialHtml;
+    nav.innerHTML = \u0441\u0435\u043A\u0446\u0456\u0457 + socialHtml;
+    paintVersion();
     nav.querySelectorAll("[data-nav]").forEach((btn) => {
       btn.addEventListener("click", () => handleNav(btn.dataset.nav));
     });
@@ -16529,6 +16587,7 @@ END:VEVENT`
       className: data.className || (data.doc ? "app-modal--doc" : "")
     });
   }
+  var _team = false;
   async function refreshCabinet() {
     const btn = document.querySelector('[data-nav="cabinet"]');
     if (!btn)
@@ -16539,6 +16598,7 @@ END:VEVENT`
     } catch {
       team = false;
     }
+    _team = team;
     btn.hidden = !team;
   }
   function initSidebar() {
@@ -16563,7 +16623,11 @@ END:VEVENT`
         syncOverlay();
     });
     window.addEventListener("pageshow", syncOverlay);
-    onAuthChange(() => refreshCabinet());
+    onAuthChange(() => {
+      if (_open)
+        renderNav();
+      refreshCabinet();
+    });
     refreshCabinet();
     document.addEventListener("cstl-open-legal", () => openInfoModal("policy"));
   }
