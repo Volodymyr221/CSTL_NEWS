@@ -1518,6 +1518,13 @@ export function paintTabDots() {
   paintTabDot('discussions', disc > 0);
 }
 
+// Скільки непрочитаних — НАЗОВНІ. Віддає рівно те саме `_unreadChats`, яким
+// малюються бейджі FAB; власного підрахунку не робить. Потрібно бургер-меню, щоб
+// намалювати число на пункті «Повідомлення» у момент відкриття.
+// ⚠️ Це getter, а не другий лічильник. Два лічильники того самого вже
+// розходились (B-27) — саме тому тут немає жодної арифметики.
+export function unreadChatsCount() { return isLoggedIn() ? _unreadChats : 0; }
+
 // Намалювати бейдж із уже відомого числа. Без мережі. Безпечно кликати на кожен рендер.
 export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
@@ -1528,6 +1535,11 @@ export function paintUnreadBadge() {
   // ⚠️ Число рахується ОДНЕ (`_unreadChats`) і роздається обом — два лічильники
   // того самого вже розходились у B-27, повторювати не будемо.
   const msgBadge = document.getElementById('board-fab-msg-badge');
+  // 🆕 10.08 — ТРЕТІЙ ПОЛУЧАЧ ТОГО САМОГО ЧИСЛА: пункт «Повідомлення» в бургер-меню.
+  // Меню перемальовується на кожне відкриття і бере число через `unreadChatsCount()`,
+  // але поки воно ВІДКРИТЕ, новий push має оновити бейдж наживо — тому він і тут.
+  // ⚠️ Число лишається ОДНЕ (`_unreadChats`) на всіх трьох.
+  const sbBadge = document.getElementById('sb-msg-badge');
   // 🔴 09.08 — САМА КНОПКА FAB МІНЯЄ ІКОНКУ, а не лише отримує число.
   // Вова: «коли користувач публікує оголошення і йому надходить повідомлення,
   // іконка FAB міняється з плюсика на іконку повідомлення і підсвічується
@@ -1545,6 +1557,7 @@ export function paintUnreadBadge() {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.classList.remove('is-on'); }
     if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
+    if (sbBadge)  { sbBadge.textContent = '';  sbBadge.hidden = true; }
     paintTabDots();   // 30.07: і в гілці «нема непрочитаних» — інакше крапка Дошки застигла б
     return;
   }
@@ -1565,6 +1578,7 @@ export function paintUnreadBadge() {
   // ховати його — там уже показано ✕. Знайдено при перевірці конверта 09.08.
   if (fabBadge) { fabBadge.textContent = label; fabBadge.classList.add('is-on'); }
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'block'; }
+  if (sbBadge)  { sbBadge.textContent = label;  sbBadge.hidden = false; }
   paintTabDots();   // 30.07: крапки в таб-барі йдуть тим самим кроком, що й бейджі
 }
 

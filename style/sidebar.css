@@ -110,8 +110,13 @@
   display: flex;
   flex-direction: column;
   padding-top: env(safe-area-inset-top, 0px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /* 🔴 10.08 (друга редакція, зауваження Вови: «верхня шапка… має стояти статично,
+     все має скролитися під низ»). Прокрутка ПЕРЕЇХАЛА з панелі на `.sidebar-nav`.
+     Була на самій панелі — тобто разом зі списком їхала й назва з хрестиком, і
+     на довгому меню ✕ виїжджав за екран.
+     ⚠️ `overflow: hidden` тут ОБОВʼЯЗКОВЕ: без нього вміст, вищий за панель,
+     вилазив би за її межі, бо скролити її вже нема кому. */
+  overflow: hidden;
   /* Панель не їздить убік (27.07): будь-який скролер із `overflow-y: auto` дістає
      й горизонтальну прокрутку, тож довгий нерозривний рядок зсував би меню.
      Тут це запобіжник (пункти меню короткі), але правило по всьому застосунку одне. */
@@ -151,16 +156,21 @@
    однакові сірі однаково розійшлися б.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Шапка меню — СТАТИЧНА: назва + ✕ і лінія під ними лишаються на місці, а весь
+   список їде під низ. `flex-shrink: 0` тримає її від стискання, коли списку
+   бракує місця (інакше flex зіжмакав би саме шапку).
+   ⚠️ Іконки замку і лічильника версії тут БІЛЬШЕ НЕМАЄ (прибрано 10.08 на
+   прохання Вови): замок дублював центральну кнопку таб-бару, а версія — штамп
+   по центру шапки застосунку. */
 .sidebar-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  flex-shrink: 0;
   padding: 14px 14px 12px;
   border-bottom: 1px solid var(--board-line, #C4C4C1);
 }
-/* Замок — той самий файл, що на центральній кнопці таб-бару. */
-.sidebar-mark { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
-.sidebar-head-txt { flex: 1; min-width: 0; }
 .sidebar-logo {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 20px;
@@ -169,36 +179,61 @@
   color: var(--ink, #2b2b2b);
 }
 .sidebar-logo span { color: var(--red, #722F37); }
-/* Лічильник версії. Текст кладе JS із `.deploy-stamp` — див. `paintVersion()`. */
-.sidebar-ver {
-  margin-top: 1px;
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  color: #5A5E66;
-}
-/* 🔴 34 → 44px. Хрестик був єдиною тап-ціллю меншою за норму Apple HIG, і це
-   після цілого деплою про тап-цілі. Кільце бордове (як на макеті), а не сіре:
-   на сірому тлі меню сіра кнопка ледь читалась. */
+/* 🔴 ХРЕСТИК — ЯК В УСІХ МОДАЛКАХ (10.08, зауваження Вови: «він не
+   стандартизований, кружечок великий, хрестик всередині маленький; зроби його
+   векторним таким, як в інших модулях»).
+   Дзеркалить `.app-modal-close` (`style/modal.css`): видимий кружечок 32px,
+   `--gray-light`, значок `ICONS.close` кольору `--ink-soft`. Сам вектор кладе
+   JS — копії `<svg>` у розмітці немає.
+   📐 ЯК УТРИМАНО І ВИГЛЯД, І НОРМУ 44px: кнопка 44×44, але фон обмежено
+   `background-clip: content-box` при `padding: 6px` — фарбується лише
+   32×32 всередині. Тобто око бачить стандартний кружечок, а палець має повну
+   ціль Apple HIG. Той самий прийом уже стоїть на круглих кнопках поверх фото в
+   картці оголошення.
+   ⚠️ `border-radius` мусить лишатись 50%: при `content-box` браузер сам
+   стискає радіус до області фарбування, тож кружечок не стає квадратним. */
 .sidebar-close {
   width: 44px; height: 44px;
+  padding: 6px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid rgba(114, 47, 55, 0.30);
+  border: 0;
   border-radius: 50%;
-  background: rgba(114, 47, 55, 0.05);
-  color: var(--red, #722F37);
-  font-size: 16px; line-height: 1;
+  background: var(--gray-light, #f5f5f5);
+  background-clip: content-box;
+  color: var(--ink-soft, #5F5448);
+  font-size: 17px; line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.sidebar-close:active { background: rgba(114, 47, 55, 0.14); }
+.sidebar-close:active { background: #E4E4E1; background-clip: content-box; }
 
 .sidebar-nav {
   padding: 0 0 calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   flex: 1;   /* займає вільну висоту → футер соцмереж (margin-top:auto) сідає до низу */
+  /* 🔴 СКРОЛИТЬСЯ САМЕ СПИСОК, а не панель — шапка мусить лишитись на місці.
+     ⚠️ `min-height: 0` — не косметика: flex-дитина за замовчуванням не менша за
+     свій вміст, тож без цього рядка `overflow-y` не спрацював би взагалі, а
+     список просто вилазив би за панель. Класична пастка flexbox. */
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Прокрутка меню не «протікає» на сторінку під ним. */
+  overscroll-behavior: contain;
 }
+/* 🔴 БЕЗ ЦЬОГО РЯДКА ПРОКРУТКИ НЕ БУВАЄ ВЗАГАЛІ — і саме так воно й було.
+   `.sidebar-nav` — колонковий flex, а flex-елементи за замовчуванням мають
+   `flex-shrink: 1`. Тому коли вміст переростав панель, браузер не давав йому
+   вилізти (і породити прокрутку), а СТИСКАВ групи. Наслідок було видно лише
+   заміром: рядки чесно тримали свої 48px, а коробка групи ставала 229px замість
+   288 — тобто останні рядки просто обрізало `overflow: hidden` на `.sb-group`,
+   мовчки й без жодної смуги прокрутки.
+   ⚠️ Симптом оманливий: `scrollHeight === clientHeight`, тобто «прокручувати
+   нема чого» — хоча насправді частина меню була недосяжна. Сторож
+   `tests/sidebar-menu.mjs` міряє саме цю пару. */
+.sidebar-nav > * { flex-shrink: 0; }
 
 /* ── ДВІ КАРТКИ ЗГОРИ: профіль і Адмінка ─────────────────────────────────────
    Окремий жанр, а не «важливіші пункти»: ведуть не в розділ застосунку, а до
@@ -329,6 +364,19 @@
   background: var(--red, #722F37);
   flex-shrink: 0;
 }
+/* Лічильник непрочитаних на «Повідомленнях». Число віддає `unreadChatsCount()` —
+   те саме `_unreadChats`, що на бейджах FAB Дошки; другого лічильника немає. */
+.sidebar-item-badge {
+  flex-shrink: 0;
+  min-width: 20px; height: 20px;
+  padding: 0 6px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--red, #722F37);
+  color: #fff;
+  font-size: 12px; font-weight: 800; line-height: 1;
+}
+.sidebar-item-badge[hidden] { display: none; }
 .sidebar-item-go { display: flex; flex-shrink: 0; font-size: 18px; color: #B9BCC1; }
 
 /* ── Соцмережі Olyka Castle — футер сайдбару ─────────────────────────────────

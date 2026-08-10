@@ -45,19 +45,18 @@
   <!-- Бічне меню (сайдбар). Наповнення й логіка — src/core/sidebar.js -->
   <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
   <aside class="sidebar" id="sidebar" aria-hidden="true">
+    <!-- 🔴 10.08 (друга редакція, зауваження Вови) — У ШАПЦІ ЛИШЕ НАЗВА І ✕.
+         Було: іконка замку + лічильник версії під назвою. Обидва прибрано на
+         пряме прохання: замок дублює центральну кнопку таб-бару, а лічильник —
+         той, що вже стоїть по центру шапки застосунку.
+         ⚠️ Шапка меню СТАТИЧНА (не їде при прокрутці) — це `flex-shrink: 0` у
+         `style/sidebar.css`, а прокрутка живе на `.sidebar-nav`, не на панелі. -->
     <div class="sidebar-head">
-      <!-- Замок — те саме лого, що на центральній кнопці таб-бару; лежить у
-           precache `sw.js`, тож не блимає після кожного деплою. -->
-      <img class="sidebar-mark" src="./icons/castle-icon.png" alt="" width="36" height="36">
-      <div class="sidebar-head-txt">
-        <div class="sidebar-logo">CSTL <span>LIFE</span></div>
-        <!-- Лічильник версії. Порожній у розмітці НАВМИСНО: текст сюди копіює
-             `sidebar.js` з `.deploy-stamp` у шапці. Другий рядок `v… · дата` в
-             `index.html` створив би ДРУГЕ джерело — CI підміняє штамп `sed`-ом
-             по всьому файлу, і одного дня вони розійшлися б. -->
-        <div class="sidebar-ver" id="sidebar-ver"></div>
-      </div>
-      <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Закрити">✕</button>
+      <div class="sidebar-logo">CSTL <span>LIFE</span></div>
+      <!-- Порожня НАВМИСНО: вектор ✕ кладе `initSidebar()` з `ICONS.close` —
+           той самий значок, що в усіх модалках. Копіювати сюди `<svg>` означало б
+           завести другу копію іконки, яка колись розійдеться з першою. -->
+      <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Закрити"></button>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
   </aside>
