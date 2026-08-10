@@ -95,7 +95,20 @@ const COLLECTOR = () => {
     if (r.width < 1 || r.height < 1) return false;
     if (r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return false;
     const s = getComputedStyle(el);
-    return s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0.02;
+    if (s.visibility === 'hidden' || s.display === 'none' || parseFloat(s.opacity) <= 0.02) return false;
+    // 🔴 ТРЕТЯ ПОЛОМКА ЦЬОГО Ж ПРИЛАДУ (знайдена 09.08, під час виправлень).
+    // Прозорість перевірялась лише на САМОМУ вузлі. Але банер відстеження рейсу
+    // (`.bus-track-banner`) ховається так: `opacity: 0` + `scale(0.15)` +
+    // `pointer-events: none` — сам вузол лишається в розмітці й на екрані.
+    // Дзвоник УСЕРЕДИНІ нього має власну `opacity: 1`, тож прилад рахував його
+    // живою кнопкою «6×6» — і давав 14 фальшивих «замалих тап-цілей» (по одній
+    // на кожен екран). Прозорість НЕ успадковується в обчислені стилі дитини,
+    // тому ланцюжок предків треба обходити руками.
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      const as = getComputedStyle(a);
+      if (as.visibility === 'hidden' || parseFloat(as.opacity) <= 0.02) return false;
+    }
+    return true;
   };
   const короткий = (t) => (t || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   const імʼя = (el) => {
@@ -152,6 +165,9 @@ const COLLECTOR = () => {
   const цілі = [];
   for (const el of кандидати) {
     if (!видимий(el)) continue;
+    // Вузол із `pointer-events: none` не тап-ціль за визначенням — палець крізь
+    // нього проходить. Той самий прихований банер рейсу саме так і вимкнено.
+    if (getComputedStyle(el).pointerEvents === 'none') continue;
     // 🔴 ТРЕТЯ ПОЛОМКА ПРИЛАДУ (знайдена на кроці 5). `cursor: pointer`
     // УСПАДКОВУЄТЬСЯ, тож нутрощі іконок — `svg`, `path`, `circle`, `rect` —
     // потрапляли у вимір як самостійні тап-цілі. Разом це давало 599 із 1384
@@ -412,7 +428,11 @@ async function selftest(p) {
       #кт-жива:active{transform:scale(0.9)}
       #кт-мертва{position:fixed;left:30px;top:70px;width:20px;height:20px;cursor:pointer;letter-spacing:3px;font-size:11px}
       /* Вузол ЗА краєм екрана — рівно те, чим є закрите бічне меню. */
-      #кт-заекраном{position:fixed;left:-400px;top:70px;width:300px;height:40px;cursor:pointer}`;
+      #кт-заекраном{position:fixed;left:-400px;top:70px;width:300px;height:40px;cursor:pointer}
+      /* Прихований предок із opacity:0 — рівно так ховається банер рейсу.
+         Дитина має власну opacity:1, і саме на цьому прилад спіймався. */
+      #кт-привид{position:fixed;left:120px;top:70px;width:40px;height:40px;opacity:0;pointer-events:none}
+      #кт-привид-кнопка{width:20px;height:20px;opacity:1;cursor:pointer}`;
     document.head.appendChild(st);
     const скло = document.createElement('div'); скло.id = 'кт-скло';
     const скло2 = document.createElement('div'); скло2.id = 'кт-скло2'; скло.appendChild(скло2);
@@ -424,12 +444,20 @@ async function selftest(p) {
     зІконкою.style.cssText = 'position:fixed;left:80px;top:70px;width:48px;height:48px';
     зІконкою.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 2 L8 8"></path><circle cx="4" cy="4" r="2"></circle></svg><span class="кт-підпис">Ок</span>';
     const жива = document.createElement('button'); жива.id = 'кт-жива'; жива.textContent = 'A';
-    const мертва = document.createElement('button'); мертва.id = 'кт-мертва'; мертва.textContent = 'Б';
+    // ⚠️ Саме `div`, а не `button`. Після пункту 3 виправлень базове правило
+    // `button:active { opacity }` накриває КОЖНУ кнопку застосунку — тобто
+    // «кнопки без :active» більше не існує в природі, і контроль на <button>
+    // почав падати, хоч прилад справний. Голим лишається `div` із курсором:
+    // базове правило його не чіпає, тож перевірка знову міряє прилад.
+    const мертва = document.createElement('div'); мертва.id = 'кт-мертва'; мертва.textContent = 'Б';
     const заекраном = document.createElement('button'); заекраном.id = 'кт-заекраном'; заекраном.textContent = 'За краєм';
-    document.body.append(скло, жива, мертва, заекраном, зІконкою);
+    const привид = document.createElement('div'); привид.id = 'кт-привид';
+    const привидКнопка = document.createElement('button'); привидКнопка.id = 'кт-привид-кнопка'; привидКнопка.textContent = 'П';
+    привид.appendChild(привидКнопка);
+    document.body.append(скло, жива, мертва, заекраном, зІконкою, привид);
     // eslint-disable-next-line no-eval
     const дані = eval('(' + код + ')()');
-    скло.remove(); жива.remove(); мертва.remove(); заекраном.remove(); зІконкою.remove(); st.remove();
+    скло.remove(); жива.remove(); мертва.remove(); заекраном.remove(); зІконкою.remove(); привид.remove(); st.remove();
     return {
       живаActive:   !!дані.цілі.find(c => c.вузол.includes('кт-жива'))?.active,
       мертваActive: !!дані.цілі.find(c => c.вузол.includes('кт-мертва'))?.active,
@@ -443,6 +471,7 @@ async function selftest(p) {
       правилВсього:  дані.правилActive,
       живихРеальних: дані.цілі.filter(c => !c.вузол.includes('кт-') && c.active).length,
       заекраном:     !!дані.цілі.find(c => c.вузол.includes('кт-заекраном')),
+      привид:        !!дані.цілі.find(c => c.вузол.includes('кт-привид')),
       прозорийНапис: !!дані.матеріали.find(m => m.вузол.includes('кт-напис')),
       кнопкаЗІконкою: !!дані.цілі.find(c => c.вузол.includes('кт-зіконкою')),
       нутрощіІконки: дані.цілі.filter(c => /^(svg|path|circle|rect|line|polyline)/.test(c.вузол)).length,
@@ -464,6 +493,8 @@ async function selftest(p) {
       знайдено.живихРеальних > 0],
     ['🔴 вузол ЗА краєм екрана у вимір НЕ потрапив (як закрите бічне меню)',
       знайдено.заекраном === false],
+    ['🔴 кнопка всередині прихованого предка (opacity:0) у вимір НЕ потрапила',
+      знайдено.привид === false],
     ['сама кнопка з іконкою порахована як ціль', знайдено.кнопкаЗІконкою === true],
     [`🔴 нутрощі <svg> НЕ рахуються окремими тап-цілями (знайдено ${знайдено.нутрощіІконки})`,
       знайдено.нутрощіІконки === 0],
