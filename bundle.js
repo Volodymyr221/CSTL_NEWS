@@ -9049,10 +9049,13 @@
     if (!dd || dd.hidden)
       return;
     const vv = window.visualViewport;
-    const \u043D\u0438\u0437\u0412\u0438\u0434\u0438\u043C\u043E\u0433\u043E = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const \u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430 = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const \u0431\u0430\u0440 = document.querySelector(".tab-bar");
+    const \u0432\u0435\u0440\u0445\u0411\u0430\u0440\u0443 = \u0431\u0430\u0440 ? \u0431\u0430\u0440.getBoundingClientRect().top : \u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430;
+    const \u043C\u0435\u0436\u0430 = Math.min(\u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430, \u0432\u0435\u0440\u0445\u0411\u0430\u0440\u0443);
     const \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 = dd.getBoundingClientRect().top;
     const \u0417\u0410\u041F\u0410\u0421 = 12;
-    dd.style.maxHeight = Math.max(180, \u043D\u0438\u0437\u0412\u0438\u0434\u0438\u043C\u043E\u0433\u043E - \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 - \u0417\u0410\u041F\u0410\u0421) + "px";
+    dd.style.maxHeight = Math.max(180, \u043C\u0435\u0436\u0430 - \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 - \u0417\u0410\u041F\u0410\u0421) + "px";
   }
   function openDropdown(field) {
     activeField = field;
@@ -9067,9 +9070,8 @@
     syncDropdownHeight();
     window.visualViewport?.addEventListener("resize", syncDropdownHeight);
     window.visualViewport?.addEventListener("scroll", syncDropdownHeight);
-    const filterEl = document.getElementById("bs-dd-filter");
-    if (filterEl)
-      setTimeout(() => filterEl.focus(), 80);
+    document.querySelector(".app-main")?.classList.add("bs-scroll-lock");
+    document.getElementById("bs-dd-filter")?.focus();
   }
   function buildDropdownListHtml(query) {
     const all = getAllStops();
@@ -9137,6 +9139,7 @@
     }
     window.visualViewport?.removeEventListener("resize", syncDropdownHeight);
     window.visualViewport?.removeEventListener("scroll", syncDropdownHeight);
+    document.querySelector(".app-main")?.classList.remove("bs-scroll-lock");
   }
   function selectStop(stop, field) {
     if (field === "from") {
