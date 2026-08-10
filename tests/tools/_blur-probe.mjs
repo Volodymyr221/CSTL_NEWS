@@ -34,4 +34,22 @@ console.log(`ЗГАСАННЯ: проміжних кадрів ${проміжн�
 const зБлюром = хід.filter(r => r.f !== 'none');
 console.log(`  блюр тримався до ${зБлюром.length ? зБлюром[зБлюром.length-1].ms : 0}мс (останній кадр із blur), opacity там ${зБлюром.length ? зБлюром[зБлюром.length-1].op : '—'}`);
 console.log('ЗАКРИТО (після)   ', await blur());
+
+// 🔴 СПЕРШУ ЗАКРИТИ ПО-СПРАВЖНЬОМУ. Попередня редакція цього не робила: згасання
+// вище зняло лише клас із ЗАТЕМНЕННЯ, а на панелі `.sidebar--open` лишився — тобто
+// для `:has()` меню було відкрите, і запобіжник законно не діяв. Прилад через це
+// показував blur(3px) там, де його не мало бути.
+await page.evaluate(() => document.getElementById('sidebar-close').click());
+await page.waitForTimeout(700);
+console.log('ЗАКРИТО ЧЕСНО      ', await blur());
+// ЗАЛИПЛИЙ СТАН: клас показу є, меню закрите (те, що бачить Вова після Instagram)
+console.log('ЗАЛИПЛО            ', await page.evaluate(() => {
+  const ov = document.getElementById('sidebar-overlay');
+  ov.hidden = false; ov.classList.add('sidebar-overlay--show');
+  const cs = getComputedStyle(ov);
+  const r = { f: cs.backdropFilter || cs.webkitBackdropFilter || 'none', op: cs.opacity, vis: cs.visibility,
+              ловитьТап: document.elementFromPoint(30, innerHeight/2) === ov };
+  ov.classList.remove('sidebar-overlay--show'); ov.hidden = true;
+  return r;
+}));
 await browser.close(); await srv.stop();
