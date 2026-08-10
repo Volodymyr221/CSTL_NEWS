@@ -16,6 +16,7 @@ import { setBoardActiveType, openChatById } from '../tabs/board.js';
 import { getSavedArticleIds, getArticlesByIds, openArticle } from '../tabs/news.js';
 import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
 import { ICONS } from './icons.js';
+import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
 
 let _sheet = null;
 let _backdrop = null;
@@ -171,6 +172,40 @@ export function openSavedHub() {
   });
 
   _backdrop.addEventListener('click', closeHub);
+
+  // 🔴 10.08 — СВАЙП-ВНИЗ ЗАКРИВАЄ (скарга Вови: «модалку збереження не можу
+  // закрити свайпом»). Аркуш МАВ рисочку-грабер, тобто обіцяв жест, а жесту не
+  // існувало взагалі — закрити можна було лише тапом по затемненню. Рисочка, яка
+  // нічого не обіцяє насправді, гірша за її відсутність.
+  //
+  // ⚠️ Механіка НЕ написана тут заново: береться спільна `attachSheetDismiss`
+  // (`core/sheet-motion.js`) — та сама, якою закриваються всі модалки застосунку.
+  // У ній уже враховані замок «жест був прокруткою», граб за шапку і блокування
+  // нативного скролу; копія цих правил у другому файлі колись розійшлася б із
+  // першою (у проєкті таке вже двічі ставалось).
+  //
+  // 🔑 `scroller` — саме `.shub-body`, а не сам аркуш: у модалок панель сама собі
+  // скролер, а тут прокручується ВНУТРІШНІЙ блок. Помилишся тут — перевірка «чи
+  // контент на самому верху» дивитиметься не на той елемент, і свайп або не
+  // працюватиме, або хапатиме жест посеред прокрутки.
+  // 📐 `headerZone: 56` — смуга рисочки й заголовка (8 padding + 4+12 рисочка +
+  // ~32 титул). За неї тягнути можна завжди, навіть коли список прогорнуто.
+  attachSheetDismiss({
+    panel: _sheet,
+    scroller: _sheet.querySelector('#shub-body'),
+    backdrop: createBackdropFade(_backdrop),
+    headerZone: 56,
+    // Аркуш УЖЕ їде донизу (`finishSwipe` поставив transform), затемнення гасить
+    // `createBackdropFade`. Тому власну анімацію закриття НЕ запускаємо — інакше
+    // два зустрічні рухи; прибираємо лише стан і вузли після доїзду.
+    onDismiss: (ms) => {
+      const sh = _sheet, bd = _backdrop;
+      if (!sh) return;
+      _sheet = null; _backdrop = null;
+      document.body.classList.remove('modal-open');
+      setTimeout(() => { sh.remove(); bd?.remove(); }, ms + 20);
+    },
+  });
   // Делегація (не addEventListener одразу — #shub-login вставляється пізніше через render)
   _sheet.addEventListener('click', e => {
     if (e.target.closest('#shub-login')) {
