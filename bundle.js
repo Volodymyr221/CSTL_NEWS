@@ -16561,13 +16561,14 @@ END:VEVENT`
     const { sidebar, overlay, toggle } = els();
     if (!sidebar || !overlay)
       return;
+    const \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u043B\u043E\u0441\u044C = overlay.classList.contains("sidebar-overlay--show");
     if (_open)
       overlay.hidden = false;
     sidebar.classList.toggle("sidebar--open", _open);
     overlay.classList.toggle("sidebar-overlay--show", _open);
     sidebar.setAttribute("aria-hidden", _open ? "false" : "true");
     toggle?.setAttribute("aria-expanded", _open ? "true" : "false");
-    if (!_open)
+    if (!_open && !\u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u043B\u043E\u0441\u044C)
       syncOverlay();
   }
   function syncOverlay() {

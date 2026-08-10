@@ -172,6 +172,38 @@ ok('…і доходить до кінця', !(await overlayState()).visible);
 await page.evaluate(() => document.getElementById('sidebar-overlay').classList.add('sidebar-overlay--show'));
 await settle(300);
 
+// ── 2б. 🔴 ЗГАСАННЯ НА ЖИВОМУ ШЛЯХУ — ЧЕРЕЗ ✕, А НЕ ЧЕРЕЗ КЛАС ─────────────
+//
+// 🔑 НАВІЩО ДРУГА ПЕРЕВІРКА ПРО ТЕ САМЕ. Блок вище знімає клас показу НАПРЯМУ і
+// цим обходить `paintState()` — тобто міряє CSS, а не те, що станеться від тапу
+// людини. Саме через це він РОКАМИ показував «згасання плавне», поки на екрані
+// затемнення зникало РИВКОМ: `paintState()` знімав клас і в тому ж виклику кликав
+// `syncOverlay()`, а той ставив `hidden` (= `display: none`) у тому ж кадрі.
+// Заміряно 10.08: старим шляхом — `display:none` уже на 4-й мілісекунді і **0**
+// проміжних кадрів; після фікса — 12 проміжних кадрів і `none` аж на 288мс.
+// ⚠️ Урок ширший за цей файл: перевірка мусить іти тим самим шляхом, що людина.
+// Обхід «щоб зручніше було міряти» — це тринадцятий випадок брехливої мірки тут.
+await tapBurger();
+await settle();
+const живеЗгасання = await page.evaluate(() => new Promise(res => {
+  const ov = document.getElementById('sidebar-overlay');
+  document.getElementById('sidebar-close').click();      // ЖИВИЙ шлях: тап по ✕
+  const t0 = performance.now(); const кадри = [];
+  const тік = () => {
+    const cs = getComputedStyle(ov);
+    кадри.push({ мс: performance.now() - t0, op: parseFloat(cs.opacity), disp: cs.display });
+    if (performance.now() - t0 < 500) requestAnimationFrame(тік); else res(кадри);
+  };
+  requestAnimationFrame(тік);
+}));
+const живіПроміжні = живеЗгасання.filter(k => k.disp !== 'none' && k.op > 0.01 && k.op < 0.99).length;
+const зникло = живеЗгасання.find(k => k.disp === 'none');
+ok('🔴 тап по ✕: затемнення ЗГАСАЄ, а не зникає ривком', живіПроміжні >= 3,
+   `проміжних кадрів: ${живіПроміжні} з ${живеЗгасання.length}`);
+ok('🔴 …і шар прибирається ПІСЛЯ згасання, а не в тому ж кадрі',
+   !!зникло && зникло.мс > 150, зникло ? `display:none на ${Math.round(зникло.мс)}мс` : 'не прибрався зовсім');
+await settle(400);
+
 // ── 3. Звичайне закриття тапом по затемненню ────────────────────────────────
 await page.mouse.click(30, 500);          // тап по лівому краю = по затемненню
 await settle();
