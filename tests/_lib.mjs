@@ -154,6 +154,47 @@ export async function pixelsOf(page, selector) {
   };
 }
 
+// ── КЛОН ЕЛЕМЕНТА ДЛЯ ЗНІМКА (коли живий елемент зняти неможливо) ───────────
+//
+// 🔴 НАВІЩО. Бордова смуга запасу живе у `border-top` і в спокої лежить ВИЩЕ нуля
+// прокрутки, накрита непрозорою `.app-header` — на екрані її нема чого знімати.
+// Клон несе той самий клас і ту саму ширину, тобто і градієнт, і рамка рахуються
+// з тих самих чисел.
+//
+// 🔑 ДВІ ПАСТКИ, ОБИДВІ СПІЙМАНІ ЖИВИМ ПРОГОНОМ — прилад показував ЧИСТО БІЛИЙ
+// ряд замість бордового, тобто міряв не те, що малюється на екрані.
+//   1. Клон кладеться ДО БАТЬКА оригінала, а не в `body`. Правила Дошки scoped
+//      під `#board-content` (бо ті самі класи `.bd-*` носять Обговорення), тож
+//      поза цим предком вони просто не діють.
+//   2. Хост зсувається ПІД шапку застосунку. `position: fixed` не рятує: батько
+//      (`.bd-controls`, `z-index: 90`) створює контекст накладання, тож хост
+//      замкнений усередині нього і непрозора `.app-header` (z-index 100) лягає
+//      зверху. Пересунути хост дешевше, ніж ламати контекст.
+// Обидві — той самий клас помилки, що `zoneCss()` нижче: трималось за випадкову
+// обставину замість за живу поведінку.
+export async function cloneForShot(page, selector, id = 'seam-probe') {
+  return page.evaluate(([sel, ід]) => {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    const s = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    const hdr = document.querySelector('.app-header');
+    const відступ = hdr ? Math.ceil(hdr.getBoundingClientRect().bottom) + 8 : 8;
+    const хост = document.createElement('div');
+    хост.id = ід;
+    хост.style.cssText = `position:fixed;left:0;top:${відступ}px;z-index:2147483646;width:${r.width}px;`;
+    const c = el.cloneNode(true);
+    c.style.margin = '0';   // відʼємні поля оригінала ні до чого — ширину дає хост
+    хост.appendChild(c);
+    (el.parentElement || document.body).appendChild(хост);
+    return {
+      рамка: parseFloat(s.borderTopWidth) || 0,
+      ширина: Math.round(r.width),
+      висотаБлока: Math.round(r.height - (parseFloat(s.borderTopWidth) || 0)),
+    };
+  }, [selector, id]);
+}
+
 // 🆕 05.08 — СТИЛІ ЗОНИ «ГРОМАДА + ДОШКА» ОДНИМ РЯДКОМ.
 //
 // 🔴 Навіщо окремий хелпер, а не `projectFile('style/community.css')`.
