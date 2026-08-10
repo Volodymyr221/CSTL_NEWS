@@ -30,6 +30,7 @@ import { mockSupabase } from './_board-fixture.mjs';
 
 const { ok, done } = reporter();
 const REV = process.env.BUNDLE_REV || '';
+const CSS_REV = process.env.CSS_REV || '';
 const ME = { id: 'u-me', email: 'me@example.com', user_metadata: { name: 'Вова' } };
 
 const { url, stop } = await serve();
@@ -46,6 +47,10 @@ await p.route('**://api.open-meteo.com/**', r => r.abort());
 if (REV) {
   const body = projectFile('bundle.js', REV);
   await p.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+}
+if (CSS_REV) {
+  const body = projectFile('style/sidebar.css', CSS_REV);
+  await p.route('**/style/sidebar.css', r => r.fulfill({ contentType: 'text/css; charset=utf-8', body }));
 }
 
 await p.goto(url, { waitUntil: 'domcontentloaded' });
@@ -73,11 +78,37 @@ await p.waitForTimeout(600);
 ok('бургер-меню відкрилось і пункт «Особистий кабінет» у ньому є',
    await p.evaluate(() => !!document.querySelector('[data-nav="account"]')));
 
+// 🔴 ЗАКРИТА ПАНЕЛЬ МУСИТЬ ПЕРЕСТАТИ МАЛЮВАТИСЬ (10.08, скарга Вови).
+// «З бургер-меню зайшов у кабінет, звідти свайпом назад — дьоргається і
+// висвічується край бургер-меню». Панель ховалась ЛИШЕ зсувом за екран, тобто
+// далі малювалась; під час системного жесту «назад» iOS показує сторінку в русі
+// і цей шар визирає краєм.
+// ⚠️ Chromium цього жесту не має і артефакт НЕ відтворює — тому міряємо не
+// «чи видно край», а причину: чи лишається шар намальованим. Це чесніше, ніж
+// вдавати, що браузер бачить те, що бачить айфон.
 await p.evaluate(() => document.querySelector('[data-nav="account"]')?.click());
+
+// Спершу — що плавність НЕ зникла: одразу після тапу панель ще малюється,
+// бо йде виїзд. Якби `visibility` знімалась миттєво, меню зникало б ривком.
+await p.waitForTimeout(80);
+ok('🛑 закриття лишилось плавним: панель ще малюється, поки триває виїзд',
+   await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'visible'));
+
 await p.waitForTimeout(1600);
+ok('🔴 після закриття панель меню НЕ малюється (нема чому визирати краєм)',
+   await p.evaluate(() => {
+     const s = document.getElementById('sidebar');
+     return getComputedStyle(s).visibility === 'hidden' && !s.classList.contains('sidebar--open');
+   }));
 const зМеню = await кабінетВідкритий();
 ok('🔴 B-31: тап по пункту меню «Особистий кабінет» ВІДКРИВАЄ кабінет',
    зМеню, зМеню ? '#acc-cab на екрані' : 'нічого не сталось');
+
+// Повернення «назад» — той самий шлях, яким Вова ловив артефакт.
+await p.goBack();
+await p.waitForTimeout(900);
+ok('🔴 після виходу з кабінету назад панель меню так само НЕ малюється',
+   await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'hidden'));
 
 await закритиКабінет();
 
