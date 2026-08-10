@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
- "знято": "2026-08-10T06:21:00.542Z",
-=======
- "знято": "2026-08-09T21:32:02.048Z",
->>>>>>> origin/main
+ "знято": "2026-08-10T06:39:03.148Z",
  "екрани": {
   "вкладка: Громада (Home)": {
    "цілі": [
@@ -39,9 +35,9 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси 25 рейсів сьогодні",
+     "текст": "Автобуси 24 рейси сьогодні",
      "ш": 322,
-     "в": 58,
+     "в": 65,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -125,19 +121,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -325,6 +308,22 @@
      "видимий": true
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -477,7 +476,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -502,8 +500,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -648,7 +644,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -731,10 +726,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -992,22 +983,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -1639,7 +1614,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -1647,8 +1621,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -1659,7 +1638,7 @@
      "вузол": "button.hm-cap2",
      "blur": "blur(16px) saturate(1.6)",
      "тло": "rgba(0, 0, 0, 0)",
-     "площа": 18676,
+     "площа": 20769,
      "тінь": "rgba(0, 0, 0, 0.28) 0px 8px 24px 0px, rgba(255, 255, 255, 0.",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -1669,6 +1648,24 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.26)",
      "площа": 1156,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i.on",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.85)",
+     "площа": 40,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -1839,7 +1836,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-     "текст": "25 рейсів сьогодні",
+     "текст": "24 рейси сьогодні",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -1991,15 +1988,6 @@
      "шрифт": "system-ui"
     },
     {
-     "вузол": "span.hm-fund-go-tx",
-     "текст": "Банка Monobank",
-     "кегль": 13.5,
-     "tracking": 0,
-     "leading": 1.15,
-     "вага": "800",
-     "шрифт": "system-ui"
-    },
-    {
      "вузол": "span.tab-label",
      "текст": "Стрічка",
      "кегль": 9.5,
@@ -2050,11 +2038,10 @@
      "вузол": "main.app-main",
      "overscroll": "auto none",
      "анкер": "none",
-     "вміст": 2557,
+     "вміст": 2532,
      "вікно": 844
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
    "prefers": {
     "шум": 0,
@@ -2070,23 +2057,6 @@
     "contrast": {
      "змінилось": 3,
      "зі": 101
-=======
-   "правилActive": 131,
-   "prefers": {
-    "шум": 0,
-    "спільних": 143,
-    "reduced-motion": {
-     "змінилось": 13,
-     "зі": 144
-    },
-    "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 144
-    },
-    "contrast": {
-     "змінилось": 3,
-     "зі": 144
->>>>>>> origin/main
     }
    }
   },
@@ -2160,19 +2130,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -2360,6 +2317,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -2512,7 +2485,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -2537,8 +2509,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -2683,7 +2653,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -2766,10 +2735,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -3027,22 +2992,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -3674,7 +3623,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -3682,8 +3630,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -3774,22 +3727,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 17,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 17
-=======
-     "змінилось": 4,
-     "зі": 55
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -3827,7 +3771,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 312,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -3891,19 +3835,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -4091,6 +4022,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -4243,7 +4190,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -4268,8 +4214,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -4414,7 +4358,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -4497,10 +4440,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -4758,22 +4697,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -5325,7 +5248,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -5333,8 +5255,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -5435,22 +5362,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 92
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -5498,7 +5416,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -5592,19 +5510,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -5792,6 +5697,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -5944,7 +5865,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -5969,8 +5889,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -6115,7 +6033,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -6198,10 +6115,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -6459,22 +6372,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -7106,7 +7003,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -7114,8 +7010,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -7387,22 +7288,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 168
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -7437,75 +7329,11 @@
      "touchAction": "auto"
     },
     {
-<<<<<<< HEAD
-=======
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Пн 03",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Вт 04",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Ср 05",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Чт 06",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Пт 07",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bus-week-day.bus-week-day--past",
-     "текст": "Сб 08",
-     "ш": 49,
-     "в": 44,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "background 0.15s ease",
-     "touchAction": "auto"
-    },
-    {
->>>>>>> origin/main
      "вузол": "button.bus-week-day.bus-week-day--today.bus-week-day--active",
      "текст": "Пн 10",
      "ш": 49,
      "в": 44,
      "active": true,
-<<<<<<< HEAD
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "background 0.15s ease",
      "touchAction": "auto"
@@ -7566,8 +7394,6 @@
      "ш": 49,
      "в": 44,
      "active": true,
-=======
->>>>>>> origin/main
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "background 0.15s ease",
      "touchAction": "auto"
@@ -7576,7 +7402,7 @@
      "вузол": "input#bs-from-input.bs-search-input.bs-search-input--tap",
      "текст": "",
      "ш": 118,
-     "в": 16,
+     "в": 44,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -7596,14 +7422,13 @@
      "вузол": "input#bs-to-input.bs-search-input.bs-search-input--tap",
      "текст": "",
      "ш": 109,
-     "в": 16,
+     "в": 44,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
      "touchAction": "auto"
     },
     {
-<<<<<<< HEAD
      "вузол": "button.bs-track-btn",
      "текст": "",
      "ш": 42,
@@ -7648,19 +7473,12 @@
      "текст": "",
      "ш": 42,
      "в": 32,
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "текст": "Показати всі 25 рейси ↓",
-     "ш": 390,
-     "в": 41,
->>>>>>> origin/main
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "color 0.15s ease",
      "touchAction": "auto"
     },
     {
-<<<<<<< HEAD
      "вузол": "button.bs-toggle",
      "текст": "ВСІ ЗУПИНКИ ▾",
      "ш": 358,
@@ -7681,8 +7499,6 @@
      "touchAction": "auto"
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "button.tab-item",
      "текст": "Стрічка",
      "ш": 78,
@@ -7730,19 +7546,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -7794,7 +7597,6 @@
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "opacity, background 0.15s, 0.15s ease, ease",
      "touchAction": "auto"
-<<<<<<< HEAD
     },
     {
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
@@ -7825,8 +7627,6 @@
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "background, transform 0.2s, 0.2s ease, ease",
      "touchAction": "auto"
-=======
->>>>>>> origin/main
     }
    ],
    "переходи": [
@@ -7983,6 +7783,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -8135,7 +7951,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -8160,8 +7975,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -8306,7 +8119,6 @@
      "видимий": true
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -8389,10 +8201,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -8650,22 +8458,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -9297,7 +9089,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -9305,8 +9096,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -9314,7 +9110,6 @@
    ],
    "матеріали": [
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav",
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.35)",
@@ -9388,9 +9183,6 @@
     },
     {
      "вузол": "span.bhv4-dot",
-=======
-     "вузол": "div.btb-icon",
->>>>>>> origin/main
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.35)",
      "площа": 64,
@@ -9644,7 +9436,6 @@
      "шрифт": "-apple-system"
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-status-text",
      "текст": "очікується",
      "кегль": 12,
@@ -9682,22 +9473,14 @@
     },
     {
      "вузол": "div.bhv4-next-stop.bhv4-dyn",
-     "текст": "ЧЕРЕЗ 30 ХВ",
+     "текст": "ЧЕРЕЗ 12 ХВ",
      "кегль": 11,
      "tracking": 0.8,
      "leading": "normal",
-=======
-     "вузол": "div.bhv4-empty-msg",
-     "текст": "СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО",
-     "кегль": 13,
-     "tracking": 1,
-     "leading": 1.45,
->>>>>>> origin/main
      "вага": "700",
      "шрифт": "-apple-system"
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-label.bhv4-label--a",
      "текст": "КІВЕРЦІ",
      "кегль": 10,
@@ -9716,8 +9499,6 @@
      "шрифт": "-apple-system"
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bus-list-title",
      "текст": "РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ",
      "кегль": 16.5,
@@ -9737,11 +9518,7 @@
     },
     {
      "вузол": "span.bus-list-updated-sub",
-<<<<<<< HEAD
-     "текст": "Оновлено: 00:35 | 10.08.2026",
-=======
-     "текст": "Оновлено: 23:36 | 09.08.2026",
->>>>>>> origin/main
+     "текст": "Оновлено: 08:55 | 10.08.2026",
      "кегль": 10,
      "tracking": 0.3,
      "leading": "normal",
@@ -9749,7 +9526,15 @@
      "шрифт": "-apple-system"
     },
     {
-<<<<<<< HEAD
+     "вузол": "span.bs-soon-label",
+     "текст": "ЧЕРЕЗ 12 ХВ",
+     "кегль": 12,
+     "tracking": 0.4,
+     "leading": "normal",
+     "вага": "700",
+     "шрифт": "-apple-system"
+    },
+    {
      "вузол": "span.bus-card-time",
      "текст": "06:50",
      "кегль": 20,
@@ -9978,18 +9763,12 @@
      "вузол": "button.bs-toggle",
      "текст": "ВСІ ЗУПИНКИ",
      "кегль": 12,
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "текст": "Показати всі 25 рейси ↓",
-     "кегль": 11,
->>>>>>> origin/main
      "tracking": 0,
      "leading": "normal",
      "вага": "600",
      "шрифт": "-apple-system"
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bs-toggle-arr",
      "текст": "▾",
      "кегль": 20,
@@ -10053,8 +9832,6 @@
      "шрифт": "-apple-system"
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "span.tab-label",
      "текст": "Стрічка",
      "кегль": 9.5,
@@ -10100,49 +9877,30 @@
      "шрифт": "Arial"
     }
    ],
-<<<<<<< HEAD
    "скролери": [
     {
      "вузол": "main.app-main",
      "overscroll": "auto contain",
      "анкер": "none",
-     "вміст": 3348,
+     "вміст": 3347,
      "вікно": 844
     }
    ],
    "правилActive": 133,
    "prefers": {
-    "шум": 1,
-    "спільних": 175,
+    "шум": 2,
+    "спільних": 179,
     "reduced-motion": {
-     "змінилось": 1,
-     "зі": 175
+     "змінилось": 2,
+     "зі": 179
     },
     "reduced-transparency": {
-     "змінилось": 1,
-     "зі": 175
+     "змінилось": 2,
+     "зі": 179
     },
     "contrast": {
-     "змінилось": 1,
-     "зі": 175
-=======
-   "скролери": [],
-   "правилActive": 131,
-   "prefers": {
-    "шум": 0,
-    "спільних": 112,
-    "reduced-motion": {
-     "змінилось": 4,
-     "зі": 112
-    },
-    "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 112
-    },
-    "contrast": {
-     "змінилось": 0,
-     "зі": 112
->>>>>>> origin/main
+     "змінилось": 2,
+     "зі": 179
     }
    }
   },
@@ -10182,7 +9940,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -10316,19 +10074,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -10516,6 +10261,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -10668,7 +10429,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -10693,8 +10453,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -10839,7 +10597,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -10922,10 +10679,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -11183,22 +10936,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -11830,7 +11567,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -11838,8 +11574,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -12156,22 +11897,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 168
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -12219,7 +11951,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -12313,19 +12045,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -12380,11 +12099,7 @@
     },
     {
      "вузол": "button.pm-thread",
-<<<<<<< HEAD
-     "текст": "П Петро Коваль 06:20 РЕМОНТ ВЗУТТЯ Ще ак",
-=======
-     "текст": "П Петро Коваль 21:31 РЕМОНТ ВЗУТТЯ Ще ак",
->>>>>>> origin/main
+     "текст": "П Петро Коваль 06:38 РЕМОНТ ВЗУТТЯ Ще ак",
      "ш": 358,
      "в": 76,
      "active": true,
@@ -12577,6 +12292,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -12729,7 +12460,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -12754,8 +12484,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -12900,7 +12628,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -12983,10 +12710,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -13244,22 +12967,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -13931,7 +13638,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -13939,8 +13645,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -14293,11 +14004,7 @@
     },
     {
      "вузол": "span.pm-thread-time",
-<<<<<<< HEAD
-     "текст": "06:20",
-=======
-     "текст": "21:31",
->>>>>>> origin/main
+     "текст": "06:38",
      "кегль": 12,
      "tracking": 0,
      "leading": "normal",
@@ -14324,22 +14031,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 209
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -14387,7 +14085,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -14481,19 +14179,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -14841,6 +14526,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -14993,7 +14694,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -15018,8 +14718,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -15164,7 +14862,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -15247,10 +14944,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -15508,22 +15201,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -16195,7 +15872,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -16203,8 +15879,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -16620,22 +16301,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 222
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -16683,7 +16355,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -16777,19 +16449,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -16987,6 +16646,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -17139,7 +16814,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -17164,8 +16838,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -17310,7 +16982,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -17393,10 +17064,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -17654,22 +17321,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -18317,7 +17968,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -18325,8 +17975,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -18643,22 +18298,13 @@
     }
    ],
    "скролери": [],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 182
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -18706,7 +18352,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -18800,19 +18446,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -19230,6 +18863,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -19382,7 +19031,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -19407,8 +19055,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -19553,7 +19199,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -19636,10 +19281,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -19897,22 +19538,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -20672,7 +20297,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -20680,8 +20304,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -21184,22 +20813,13 @@
      "вікно": 120
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 258
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -21385,13 +21005,9 @@
     },
     {
      "вузол": "button.hm-cap2",
-<<<<<<< HEAD
-     "текст": "Автобуси 25 рейсів сьогодні",
-=======
-     "текст": "Автобуси 22 рейси сьогодні",
->>>>>>> origin/main
+     "текст": "Автобуси 24 рейси сьогодні",
      "ш": 322,
-     "в": 58,
+     "в": 65,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -21475,19 +21091,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -21675,7 +21278,6 @@
      "видимий": true
     },
     {
-<<<<<<< HEAD
      "вузол": "i.on",
      "властивість": "width, background, border-radius",
      "тривалість": "0.2s, 0.2s, 0.2s",
@@ -21692,8 +21294,6 @@
      "видимий": true
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -21846,7 +21446,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -21871,8 +21470,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -22017,7 +21614,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -22100,10 +21696,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -22361,22 +21953,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -23008,7 +22584,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -23016,8 +22591,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -23082,7 +22662,7 @@
      "вузол": "button.hm-cap2",
      "blur": "blur(16px) saturate(1.6)",
      "тло": "rgba(0, 0, 0, 0)",
-     "площа": 18676,
+     "площа": 20769,
      "тінь": "rgba(0, 0, 0, 0.28) 0px 8px 24px 0px, rgba(255, 255, 255, 0.",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -23097,7 +22677,6 @@
      "прозореНаПрозорому": ""
     },
     {
-<<<<<<< HEAD
      "вузол": "i.on",
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.85)",
@@ -23116,8 +22695,6 @@
      "прозореНаПрозорому": ""
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "button.hm-cap2",
      "blur": "blur(16px) saturate(1.6)",
      "тло": "rgba(0, 0, 0, 0)",
@@ -23408,13 +22985,8 @@
      "шрифт": "system-ui"
     },
     {
-<<<<<<< HEAD
      "вузол": "span.hm-cap2-v.swap",
-     "текст": "25 рейсів сьогодні",
-=======
-     "вузол": "span.hm-cap2-v",
-     "текст": "22 рейси сьогодні",
->>>>>>> origin/main
+     "текст": "24 рейси сьогодні",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -23566,15 +23138,6 @@
      "шрифт": "system-ui"
     },
     {
-     "вузол": "span.hm-fund-go-tx",
-     "текст": "Банка Monobank",
-     "кегль": 13.5,
-     "tracking": 0,
-     "leading": 1.15,
-     "вага": "800",
-     "шрифт": "system-ui"
-    },
-    {
      "вузол": "span.tab-label",
      "текст": "Стрічка",
      "кегль": 9.5,
@@ -23625,43 +23188,25 @@
      "вузол": "main.app-main",
      "overscroll": "auto none",
      "анкер": "none",
-     "вміст": 2557,
+     "вміст": 2532,
      "вікно": 844
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
    "prefers": {
-    "шум": 3,
-    "спільних": 183,
+    "шум": 0,
+    "спільних": 182,
     "reduced-motion": {
-     "змінилось": 11,
-     "зі": 183
-    },
-    "reduced-transparency": {
-     "змінилось": 3,
+     "змінилось": 10,
      "зі": 182
     },
-    "contrast": {
-     "змінилось": 3,
-     "зі": 183
-=======
-   "правилActive": 131,
-   "prefers": {
-    "шум": 0,
-    "спільних": 226,
-    "reduced-motion": {
-     "змінилось": 13,
-     "зі": 226
-    },
     "reduced-transparency": {
      "змінилось": 0,
-     "зі": 225
+     "зі": 183
     },
     "contrast": {
      "змінилось": 0,
-     "зі": 226
->>>>>>> origin/main
+     "зі": 182
     }
    }
   },
@@ -23699,9 +23244,9 @@
     },
     {
      "вузол": "button.hm-cap2",
-     "текст": "Автобуси 25 рейсів сьогодні",
+     "текст": "Автобуси 24 рейси сьогодні",
      "ш": 322,
-     "в": 58,
+     "в": 65,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -23785,19 +23330,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -24085,6 +23617,22 @@
      "видимий": true
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -24237,7 +23785,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -24262,8 +23809,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -24408,7 +23953,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -24491,10 +24035,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -24752,22 +24292,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -25439,7 +24963,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -25447,8 +24970,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -25459,7 +24987,7 @@
      "вузол": "button.hm-cap2",
      "blur": "blur(16px) saturate(1.6)",
      "тло": "rgba(0, 0, 0, 0)",
-     "площа": 18676,
+     "площа": 20769,
      "тінь": "rgba(0, 0, 0, 0.28) 0px 8px 24px 0px, rgba(255, 255, 255, 0.",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -25469,6 +24997,24 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.26)",
      "площа": 1156,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i.on",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.85)",
+     "площа": 40,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -25720,7 +25266,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-     "текст": "25 рейсів сьогодні",
+     "текст": "24 рейси сьогодні",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -25869,15 +25415,6 @@
      "tracking": 0,
      "leading": 1.25,
      "вага": "700",
-     "шрифт": "system-ui"
-    },
-    {
-     "вузол": "span.hm-fund-go-tx",
-     "текст": "Банка Monobank",
-     "кегль": 13.5,
-     "tracking": 0,
-     "leading": 1.15,
-     "вага": "800",
      "шрифт": "system-ui"
     },
     {
@@ -26079,7 +25616,6 @@
      "вікно": 776
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
    "prefers": {
     "шум": 0,
@@ -26095,23 +25631,6 @@
     "contrast": {
      "змінилось": 0,
      "зі": 101
-=======
-   "правилActive": 131,
-   "prefers": {
-    "шум": 0,
-    "спільних": 248,
-    "reduced-motion": {
-     "змінилось": 13,
-     "зі": 248
-    },
-    "reduced-transparency": {
-     "змінилось": 0,
-     "зі": 248
-    },
-    "contrast": {
-     "змінилось": 0,
-     "зі": 248
->>>>>>> origin/main
     }
    }
   },
@@ -26151,7 +25670,7 @@
      "вузол": "input#bd-search-input.bd-search-input",
      "текст": "",
      "ш": 207,
-     "в": 18,
+     "в": 38,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -26162,19 +25681,6 @@
      "текст": "Громада",
      "ш": 119,
      "в": 36,
-<<<<<<< HEAD
-=======
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.bd-icon-btn.bd-bookmark",
-     "текст": "",
-     "ш": 40,
-     "в": 32,
->>>>>>> origin/main
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "all 0s ease",
@@ -26248,19 +25754,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -26608,6 +26101,22 @@
      "видимий": false
     },
     {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": false
+    },
+    {
      "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
@@ -26760,7 +26269,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -26785,8 +26293,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -26931,7 +26437,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -27014,10 +26519,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -27275,22 +26776,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -27986,7 +27471,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -27994,8 +27478,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -28590,22 +28079,13 @@
      "вікно": 776
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
-=======
-   "правилActive": 131,
->>>>>>> origin/main
    "prefers": {
     "шум": 0,
     "спільних": 14,
     "reduced-motion": {
-<<<<<<< HEAD
      "змінилось": 0,
      "зі": 14
-=======
-     "змінилось": 4,
-     "зі": 336
->>>>>>> origin/main
     },
     "reduced-transparency": {
      "змінилось": 0,
@@ -28651,13 +28131,9 @@
     },
     {
      "вузол": "button.hm-cap2",
-<<<<<<< HEAD
-     "текст": "Автобуси Олика · через 30 хв",
-=======
-     "текст": "Автобуси 22 рейси сьогодні",
->>>>>>> origin/main
+     "текст": "Автобуси Олика · через 12 хв",
      "ш": 322,
-     "в": 58,
+     "в": 65,
      "active": true,
      "tapHighlight": "rgba(51, 181, 229, 0.4)",
      "transition": "all 0s ease",
@@ -28741,19 +28217,6 @@
      "active": true,
      "tapHighlight": "rgba(0, 0, 0, 0)",
      "transition": "color, transform 0.15s, 0.1s ease, ease-out",
-<<<<<<< HEAD
-=======
-     "touchAction": "auto"
-    },
-    {
-     "вузол": "button.btb-bell.sr-bell.sr-bell--on",
-     "текст": "",
-     "ш": 6,
-     "в": 6,
-     "active": true,
-     "tapHighlight": "rgba(0, 0, 0, 0)",
-     "transition": "all 0s ease",
->>>>>>> origin/main
      "touchAction": "auto"
     },
     {
@@ -29051,7 +28514,23 @@
      "видимий": true
     },
     {
-     "вузол": "span.hm-cap2-v.swap",
+     "вузол": "i",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "i.on",
+     "властивість": "width, background, border-radius",
+     "тривалість": "0.2s, 0.2s, 0.2s",
+     "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
+     "затримка": "0s, 0s, 0s",
+     "видимий": true
+    },
+    {
+     "вузол": "span.hm-cap2-v",
      "властивість": "opacity, transform",
      "тривалість": "0.2s, 0.2s",
      "крива": "cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1)",
@@ -29203,7 +28682,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -29228,8 +28706,6 @@
      "видимий": false
     },
     {
-=======
->>>>>>> origin/main
      "вузол": "div.bhv4-fill",
      "властивість": "width",
      "тривалість": "0.6s",
@@ -29374,7 +28850,6 @@
      "видимий": false
     },
     {
-<<<<<<< HEAD
      "вузол": "span.bhv4-dot-nav.bhv4-dot-nav--active",
      "властивість": "background, transform",
      "тривалість": "0.2s, 0.2s",
@@ -29457,10 +28932,6 @@
     {
      "вузол": "button.bs-track-btn",
      "властивість": "color",
-=======
-     "вузол": "button#bus-show-all-btn.bus-show-all",
-     "властивість": "background",
->>>>>>> origin/main
      "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
@@ -29718,22 +29189,6 @@
      "вузол": "button.bs-toggle",
      "властивість": "background",
      "тривалість": "0.12s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "button.bs-track-btn",
-     "властивість": "color",
-     "тривалість": "0.15s",
-     "крива": "ease",
-     "затримка": "0s",
-     "видимий": false
-    },
-    {
-     "вузол": "svg",
-     "властивість": "fill",
-     "тривалість": "0.15s",
      "крива": "ease",
      "затримка": "0s",
      "видимий": false
@@ -30421,7 +29876,6 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-<<<<<<< HEAD
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -30429,8 +29883,13 @@
     {
      "вузол": "span.bhv4-state-dot.bhv4-state-dot--waiting",
      "назва": "bs-wait-pulse",
-=======
->>>>>>> origin/main
+     "тривалість": "1.4s",
+     "крива": "ease-in-out",
+     "повтори": "infinite"
+    },
+    {
+     "вузол": "span.bs-soon-dot",
+     "назва": "bs-soon-pulse",
      "тривалість": "1.4s",
      "крива": "ease-in-out",
      "повтори": "infinite"
@@ -30441,7 +29900,7 @@
      "вузол": "button.hm-cap2",
      "blur": "blur(16px) saturate(1.6)",
      "тло": "rgba(0, 0, 0, 0)",
-     "площа": 18676,
+     "площа": 20769,
      "тінь": "rgba(0, 0, 0, 0.28) 0px 8px 24px 0px, rgba(255, 255, 255, 0.",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -30451,6 +29910,24 @@
      "blur": "",
      "тло": "rgba(255, 255, 255, 0.26)",
      "площа": 1156,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.3)",
+     "площа": 16,
+     "тінь": "",
+     "склоПоверхСкла": "",
+     "прозореНаПрозорому": ""
+    },
+    {
+     "вузол": "i.on",
+     "blur": "",
+     "тло": "rgba(255, 255, 255, 0.85)",
+     "площа": 40,
      "тінь": "",
      "склоПоверхСкла": "",
      "прозореНаПрозорому": ""
@@ -30720,11 +30197,7 @@
     },
     {
      "вузол": "span.hm-cap2-v",
-<<<<<<< HEAD
-     "текст": "Олика · через 30 хв",
-=======
-     "текст": "22 рейси сьогодні",
->>>>>>> origin/main
+     "текст": "Олика · через 12 хв",
      "кегль": 15,
      "tracking": -0.15,
      "leading": 1.2,
@@ -30741,7 +30214,7 @@
      "шрифт": "system-ui"
     },
     {
-     "вузол": "span.hm-cap2-v.swap",
+     "вузол": "span.hm-cap2-v",
      "текст": "2 оголошення",
      "кегль": 15,
      "tracking": -0.15,
@@ -30873,15 +30346,6 @@
      "tracking": 0,
      "leading": 1.25,
      "вага": "700",
-     "шрифт": "system-ui"
-    },
-    {
-     "вузол": "span.hm-fund-go-tx",
-     "текст": "Банка Monobank",
-     "кегль": 13.5,
-     "tracking": 0,
-     "leading": 1.15,
-     "вага": "800",
      "шрифт": "system-ui"
     },
     {
@@ -31200,39 +30664,21 @@
      "вікно": 776
     }
    ],
-<<<<<<< HEAD
    "правилActive": 133,
    "prefers": {
-    "шум": 0,
+    "шум": 3,
     "спільних": 100,
     "reduced-motion": {
      "змінилось": 10,
      "зі": 100
     },
     "reduced-transparency": {
-     "змінилось": 1,
-     "зі": 101
+     "змінилось": 0,
+     "зі": 100
     },
     "contrast": {
      "змінилось": 0,
      "зі": 100
-=======
-   "правилActive": 131,
-   "prefers": {
-    "шум": 0,
-    "спільних": 270,
-    "reduced-motion": {
-     "змінилось": 12,
-     "зі": 270
-    },
-    "reduced-transparency": {
-     "змінилось": 1,
-     "зі": 271
-    },
-    "contrast": {
-     "змінилось": 0,
-     "зі": 270
->>>>>>> origin/main
     }
    }
   }
