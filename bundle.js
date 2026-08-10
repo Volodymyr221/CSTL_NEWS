@@ -16545,7 +16545,8 @@ END:VEVENT`
       overlay: document.getElementById("sidebar-overlay"),
       toggle: document.getElementById("sidebar-toggle"),
       close: document.getElementById("sidebar-close"),
-      nav: document.getElementById("sidebar-nav")
+      nav: document.getElementById("sidebar-nav"),
+      foot: document.getElementById("sidebar-foot")
     };
   }
   function applyOpen(open) {
@@ -16581,10 +16582,36 @@ END:VEVENT`
       overlay.hidden = true;
   }
   function openSidebar() {
+    _openedAt = performance.now();
     applyOpen(true);
   }
   function closeSidebar() {
     applyOpen(false);
+  }
+  var CEILING_MS = 600;
+  var _openedAt = 0;
+  function openAnimMs(sidebar) {
+    const d = getComputedStyle(sidebar).transitionDuration || "";
+    return Math.max(0, ...d.split(",").map((v) => (parseFloat(v) || 0) * 1e3));
+  }
+  function panelArriving() {
+    if (!_open)
+      return false;
+    const { sidebar } = els();
+    if (!sidebar)
+      return false;
+    const \u043C\u0438\u043D\u0443\u043B\u043E = performance.now() - _openedAt;
+    if (\u043C\u0438\u043D\u0443\u043B\u043E > CEILING_MS)
+      return false;
+    if (\u043C\u0438\u043D\u0443\u043B\u043E < openAnimMs(sidebar))
+      return true;
+    const r = sidebar.getBoundingClientRect();
+    return Math.abs(r.right - window.innerWidth) > 1;
+  }
+  function closeByUser() {
+    if (panelArriving())
+      return;
+    closeSidebar();
   }
   function closeSidebarInstant() {
     const { sidebar, overlay } = els();
@@ -16644,7 +16671,7 @@ END:VEVENT`
   </button>`;
   }
   function renderNav() {
-    const { nav } = els();
+    const { nav, foot } = els();
     if (!nav)
       return;
     const activeTab = document.querySelector(".app-main")?.dataset.tab || "";
@@ -16664,11 +16691,16 @@ END:VEVENT`
         </a>`).join("")}
       </div>
     </div>`;
-    nav.innerHTML = \u0441\u0435\u043A\u0446\u0456\u0457 + socialHtml;
+    nav.innerHTML = \u0441\u0435\u043A\u0446\u0456\u0457;
+    const \u0446\u0456\u043B\u044C = foot || nav;
+    if (foot)
+      foot.innerHTML = socialHtml;
+    else
+      nav.insertAdjacentHTML("beforeend", socialHtml);
     nav.querySelectorAll("[data-nav]").forEach((btn) => {
       btn.addEventListener("click", () => handleNav(btn.dataset.nav));
     });
-    nav.querySelectorAll(".sb-social-btn").forEach((a) => {
+    \u0446\u0456\u043B\u044C.querySelectorAll(".sb-social-btn").forEach((a) => {
       a.addEventListener("click", () => closeSidebar());
     });
   }
@@ -16727,8 +16759,8 @@ END:VEVENT`
     renderNav();
     applyOpen(false);
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
-    close?.addEventListener("click", closeSidebar);
-    overlay?.addEventListener("click", closeSidebar);
+    close?.addEventListener("click", closeByUser);
+    overlay?.addEventListener("click", closeByUser);
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && _open)
         closeSidebar();
