@@ -534,7 +534,6 @@ function renderNav() {
   // власному вузлі притискати вже нема чого, а лишений — додав би зайвий відступ.
   const socialHtml = `
     <div class="sb-social-foot">
-      <div class="sb-social-cap">Слідкуйте за нами</div>
       <div class="sb-social-row">
         ${SOCIAL.map(s => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">
           <span class="sb-social-ic">${s.icon}</span><span class="sb-social-lb">${s.short}</span>

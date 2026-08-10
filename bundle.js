@@ -16685,7 +16685,6 @@ END:VEVENT`
     }).join("");
     const socialHtml = `
     <div class="sb-social-foot">
-      <div class="sb-social-cap">\u0421\u043B\u0456\u0434\u043A\u0443\u0439\u0442\u0435 \u0437\u0430 \u043D\u0430\u043C\u0438</div>
       <div class="sb-social-row">
         ${SOCIAL.map((s) => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">
           <span class="sb-social-ic">${s.icon}</span><span class="sb-social-lb">${s.short}</span>
