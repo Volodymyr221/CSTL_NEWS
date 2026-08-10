@@ -90,15 +90,30 @@ const flush = await p.evaluate(() => {
   const t = document.querySelector('.hm-top');
   if (!h || !t) return null;
   const hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect();
+  // ⚠️ 10.08 — МІРЯЄМО ВНУТРІШНІЙ край, а не зовнішній. `.hm-top` дістав
+  // `border-top: 260px` суцільного бордо (запас під рідну гумку — див.
+  // `style/home.css`), тож зовнішній край блока тепер на 260px ВИЩЕ шапки.
+  // Візуально це не зазор, а навпаки: бордо заходить під шапку. Стара мірка
+  // (`tr.top - hr.bottom`) читала це як «−260px» і червоніла на здоровому коді.
+  // Правильний критерій той самий, що й був: між шапкою і бордовим НІЧОГО
+  // стороннього — тобто внутрішній край збігається з низом шапки, а перекриття
+  // (від'ємне значення) допустиме.
   return {
-    gap: Math.round(tr.top - hr.bottom),
+    gap: Math.round(tr.top + parseFloat(getComputedStyle(t).borderTopWidth) - hr.bottom),
+    перекриття: Math.round(hr.bottom - tr.top),
     left: Math.round(tr.left),
     full: Math.round(tr.width) >= window.innerWidth,
     // Тінь має віддавати САМЕ шапка — вона лежить вище блока.
     hdrShadow: getComputedStyle(h).boxShadow !== 'none',
   };
 });
-ok('🔴 верхній блок Громади настик до шапки', flush && flush.gap === 0, flush ? `зазор ${flush.gap}px` : '—');
+ok('🔴 верхній блок Громади настик до шапки (жодного зазору)',
+   flush && flush.gap === 0, flush ? `зазор ${flush.gap}px` : '—');
+// 🔴 І окремо: бордо мусить ЗАХОДИТИ під шапку із запасом. Саме цей запас
+// закриває фото-тло, коли рідна гумка тягне вміст униз (10.08). Прибереш його —
+// повернеться сірий провал, який Вова прислав на знімку.
+ok('🔴 бордо заходить під шапку із запасом на гумку (≥200px)',
+   flush && flush.перекриття >= 200, flush ? `перекриття ${flush.перекриття}px` : '—');
 ok('🔴 верхній блок на всю ширину', flush && flush.left === 0 && flush.full, flush ? `ліворуч ${flush.left}px` : '—');
 ok('шапка має власну тінь (лягає на блок)', flush && flush.hdrShadow);
 
