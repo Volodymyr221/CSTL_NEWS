@@ -2568,6 +2568,79 @@
       window.scrollTo(0, scrollY);
     };
   }
+  function attachSheetDismiss({
+    panel,
+    // сам аркуш (той, що їде)
+    scroller = panel,
+    // що всередині прокручується (у modal.js = сам panel)
+    backdrop,
+    // об'єкт із createBackdropFade(), або null
+    onDismiss,
+    // (ms) => прибрати вузли; аркуш УЖЕ їде — своєї анімації не запускати
+    headerZone = 64
+    // верхня смуга (рисочка/заголовок), за яку можна тягнути завжди
+  }) {
+    if (!panel)
+      return;
+    let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
+    const drag = createDragTracker();
+    panel.addEventListener("touchstart", (e) => {
+      const y = e.touches[0].clientY;
+      const inHeader = y - panel.getBoundingClientRect().top < headerZone;
+      if (!inHeader && scroller.scrollTop > 0)
+        return;
+      startY = y;
+      dragging = true;
+      dy = 0;
+      wasScrolling = false;
+      travel = Math.max(panel.offsetHeight || 1, 1);
+      drag.start(y);
+    }, { passive: true });
+    panel.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      dy = e.touches[0].clientY - startY;
+      if (dy <= 0) {
+        panel.style.transform = "";
+        backdrop?.track(0);
+        return;
+      }
+      if (scroller.scrollTop > 0) {
+        wasScrolling = true;
+        panel.style.transform = "";
+        backdrop?.track(0);
+        startY = e.touches[0].clientY;
+        drag.start(startY);
+        dy = 0;
+        return;
+      }
+      if (wasScrolling) {
+        panel.style.transform = "";
+        backdrop?.track(0);
+        return;
+      }
+      e.preventDefault();
+      panel.style.transition = "none";
+      panel.style.transform = `translateY(${dy}px)`;
+      backdrop?.track(dy / travel);
+      drag.move(e.touches[0].clientY);
+    }, { passive: false });
+    panel.addEventListener("touchend", () => {
+      if (!dragging)
+        return;
+      dragging = false;
+      finishSwipe({
+        panel,
+        dy,
+        velocity: drag.velocity,
+        remaining: sheetRemaining(panel, dy),
+        dismissTransform: "translateY(100%)",
+        onDismiss,
+        backdrop
+      });
+      dy = 0;
+    });
+  }
 
   // src/core/modal.js
   var _active = null;
@@ -2645,76 +2718,25 @@
       backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
-      const drag = createDragTracker();
       const fade = createBackdropFade(backdrop);
-      panel.addEventListener("touchstart", (e) => {
-        const y = e.touches[0].clientY;
-        const inHeader = y - panel.getBoundingClientRect().top < 64;
-        if (!inHeader && panel.scrollTop > 0)
-          return;
-        startY = y;
-        dragging = true;
-        dy = 0;
-        wasScrolling = false;
-        travel = Math.max(panel.offsetHeight || 1, 1);
-        drag.start(y);
-      }, { passive: true });
-      panel.addEventListener("touchmove", (e) => {
-        if (!dragging)
-          return;
-        dy = e.touches[0].clientY - startY;
-        if (dy <= 0) {
-          panel.style.transform = "";
-          fade?.track(0);
-          return;
+      attachSheetDismiss({
+        panel,
+        // у цієї модалки панель сама собі скролер
+        backdrop: fade,
+        // Аркуш УЖЕ поїхав донизу (`finishSwipe` щойно поставив transform), а
+        // затемнення гасить `fade`. Тому тут НЕ кличемо close() — він запустив би
+        // другу, зустрічну анімацію. Робимо рівно два діла: фіксуємо висоту
+        // (нерухома ціль для translateY) і прибираємо вузол після доїзду. Клас
+        // `open` НЕ знімаємо — інакше контейнер загасив би аркуш раніше, ніж той
+        // доїде («просто зникло»).
+        onDismiss: (ms) => {
+          if (closing)
+            return;
+          closing = true;
+          teardown();
+          panel.style.height = panel.offsetHeight + "px";
+          setTimeout(() => wrap.remove(), ms + 20);
         }
-        if (panel.scrollTop > 0) {
-          wasScrolling = true;
-          panel.style.transform = "";
-          fade?.track(0);
-          startY = e.touches[0].clientY;
-          drag.start(startY);
-          dy = 0;
-          return;
-        }
-        if (wasScrolling) {
-          panel.style.transform = "";
-          fade?.track(0);
-          return;
-        }
-        e.preventDefault();
-        panel.style.transition = "none";
-        panel.style.transform = `translateY(${dy}px)`;
-        fade?.track(dy / travel);
-        drag.move(e.touches[0].clientY);
-      }, { passive: false });
-      panel.addEventListener("touchend", () => {
-        if (!dragging)
-          return;
-        dragging = false;
-        finishSwipe({
-          panel,
-          dy,
-          velocity: drag.velocity,
-          remaining: sheetRemaining(panel, dy),
-          dismissTransform: "translateY(100%)",
-          // Аркуш УЖЕ поїхав донизу (`finishSwipe` щойно поставив transform), а затемнення
-          // гасить `fade`. Тому тут НЕ кличемо close() — він запустив би другу, зустрічну
-          // анімацію. Робимо рівно два діла: фіксуємо висоту (нерухома ціль для
-          // translateY) і прибираємо вузол після доїзду. Клас `open` НЕ знімаємо —
-          // інакше контейнер загасив би аркуш раніше, ніж той доїде («просто зникло»).
-          onDismiss: (ms) => {
-            if (closing)
-              return;
-            closing = true;
-            teardown();
-            panel.style.height = panel.offsetHeight + "px";
-            setTimeout(() => wrap.remove(), ms + 20);
-          },
-          backdrop: fade
-        });
-        dy = 0;
       });
     }
     onMount?.(wrap);
@@ -10375,6 +10397,27 @@
       _sheet.classList.add("visible");
     });
     _backdrop.addEventListener("click", closeHub);
+    attachSheetDismiss({
+      panel: _sheet,
+      scroller: _sheet.querySelector("#shub-body"),
+      backdrop: createBackdropFade(_backdrop),
+      headerZone: 56,
+      // Аркуш УЖЕ їде донизу (`finishSwipe` поставив transform), затемнення гасить
+      // `createBackdropFade`. Тому власну анімацію закриття НЕ запускаємо — інакше
+      // два зустрічні рухи; прибираємо лише стан і вузли після доїзду.
+      onDismiss: (ms) => {
+        const sh = _sheet, bd = _backdrop;
+        if (!sh)
+          return;
+        _sheet = null;
+        _backdrop = null;
+        document.body.classList.remove("modal-open");
+        setTimeout(() => {
+          sh.remove();
+          bd?.remove();
+        }, ms + 20);
+      }
+    });
     _sheet.addEventListener("click", (e) => {
       if (e.target.closest("#shub-login")) {
         closeHub();

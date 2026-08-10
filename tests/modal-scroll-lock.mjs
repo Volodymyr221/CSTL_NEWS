@@ -140,15 +140,24 @@ ok('чистий свайп з верху аркуша ЗАКРИВАЄ (transfo
    cleanSwipe.length ? cleanSwipe.slice(0, 2).join(' · ') : '🔴 transform не застосовано — закриття зламано');
 
 // ── 3) СТОРОЖ ПРИСУТНОСТІ: замок на місці і знімається на новому жесті ──────
-const src = await pg.evaluate(async (base) => (await fetch(base + '/src/core/modal.js')).text(), url);
+// 🔴 10.08 — ЖЕСТ ПЕРЕЇХАВ У `core/sheet-motion.js` (`attachSheetDismiss`), і цей
+// стенд разом із ним. Причина переїзду: хаб «Збережені» будує власний аркуш із
+// рисочкою-грабером, тобто з обіцянкою свайпу, але жесту не мав; копія ~50 рядків
+// у другому файлі була б тією самою помилкою, від якої застерігає весь проєкт.
+// ⚠️ Перевірки 1-2 вище (живі жести) переїзд НЕ помітили — і це правильно, вони
+// міряють поведінку. Впали рівно ті, що трималися за ІМʼЯ ФАЙЛУ; той самий клас,
+// що `zoneCss()` у стилях Дошки.
+const ЖЕСТ = '/src/core/sheet-motion.js';
+const src = await pg.evaluate(async ([base, f]) => (await fetch(base + f)).text(), [url, ЖЕСТ]);
 const has = (re, label) => ok(label, re.test(src), re.test(src) ? 'на місці' : '🔴 ВІДСУТНЄ');
 has(/wasScrolling/, 'замок `wasScrolling` існує');
-// ⚠️ Вікно 900, а не 400: між `touchstart` і скиданням лежить пояснювальний комент, і
-// заміряна відстань — 488 символів. Перша версія стенда впала саме на цьому — тобто
-// хибним був МІЙ критерій, а не код. Тому вікно взяте з ЗАМІРУ, а не «на око».
+// ⚠️ Вікна взяті з ЗАМІРУ, а не «на око»: між `touchstart` і скиданням лежить
+// пояснювальний комент (385 символів після переїзду), а між `scrollTop > 0` і
+// встановленням замка — 822. Перша версія стенда впала саме на завузькому вікні,
+// тобто хибним був критерій, а не код.
 has(/touchstart[\s\S]{0,900}wasScrolling\s*=\s*false/,
     'замок скидається на touchstart (інакше аркуш перестав би закриватись назавжди)');
-has(/panel\.scrollTop\s*>\s*0\s*\)\s*\{[\s\S]{0,200}wasScrolling\s*=\s*true/,
+has(/scroller\.scrollTop\s*>\s*0\s*\)\s*\{[\s\S]{0,1000}wasScrolling\s*=\s*true/,
     'замок ставиться саме при scrollTop > 0');
 
 // ── 4) КОНТРОЛЬ: без замка transform МУСИТЬ застосуватись ───────────────────
@@ -156,19 +165,26 @@ has(/panel\.scrollTop\s*>\s*0\s*\)\s*\{[\s\S]{0,200}wasScrolling\s*=\s*true/,
 // зеленою і в разі, якби жести взагалі не доходили до коду. Тому синтезуємо СТАРУ версію
 // модуля (прибираємо рядок замка), імпортуємо її і проганяємо той самий жест.
 // Відносні імпорти переписуємо на абсолютні — інакше blob-модуль їх не розрішить.
-const ctl = await pg.evaluate(async (base) => {
-  const raw = await (await fetch(base + '/src/core/modal.js')).text();
-  const old = raw
-    .replace(/\n\s*if \(wasScrolling\) \{[^\n]*\n/, '\n')     // ← прибираємо ЗАМОК
+// ⚠️ Тепер синтез двоступеневий: замок живе в `sheet-motion.js`, а `openModal`
+// — у `modal.js`. Тому спершу робимо ЗЛАМАНУ копію модуля жесту, а тоді
+// підсовуємо її `modal.js`, переписавши в ньому саме цей імпорт на blob.
+const ctl = await pg.evaluate(async ([base, f]) => {
+  const rawMotion = await (await fetch(base + f)).text();
+  const brokenMotion = rawMotion.replace(/\n\s*if \(wasScrolling\) \{[^\n]*\n/, '\n');
+  if (/if \(wasScrolling\)/.test(brokenMotion)) return 'не вдалось прибрати замок — регулярка не збіглась';
+  const motionUrl = URL.createObjectURL(new Blob([brokenMotion], { type: 'text/javascript' }));
+  const rawModal = await (await fetch(base + '/src/core/modal.js')).text();
+  const old = rawModal
+    .replace(/from '\.\/sheet-motion\.js'/, `from '${motionUrl}'`)
     .replace(/from '\.\/([\w.-]+)'/g, `from '${base}/src/core/$1'`);
-  if (/if \(wasScrolling\)/.test(old)) return 'не вдалось прибрати замок — регулярка не збіглась';
+  if (!old.includes(motionUrl)) return 'не вдалось підмінити імпорт sheet-motion';
   const u = URL.createObjectURL(new Blob([old], { type: 'text/javascript' }));
   try {
     const m = await import(u);
     window.__openOld = m.openModal;
     return true;
   } catch (e) { return String(e).slice(0, 200); }
-}, url);
+}, [url, ЖЕСТ]);
 
 if (ctl === true) {
   await pg.evaluate(() => {
