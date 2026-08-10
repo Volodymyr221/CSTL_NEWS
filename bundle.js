@@ -16528,20 +16528,24 @@ END:VEVENT`
     };
   }
   function applyOpen(open) {
-    const { sidebar, overlay, toggle } = els();
-    if (!sidebar || !overlay)
-      return;
     _open = open;
-    if (open)
-      overlay.hidden = false;
-    sidebar.classList.toggle("sidebar--open", open);
-    overlay.classList.toggle("sidebar-overlay--show", open);
-    sidebar.setAttribute("aria-hidden", open ? "false" : "true");
-    toggle?.setAttribute("aria-expanded", open ? "true" : "false");
+    paintState();
     if (open) {
       renderNav();
       refreshCabinet();
-    } else
+    }
+  }
+  function paintState() {
+    const { sidebar, overlay, toggle } = els();
+    if (!sidebar || !overlay)
+      return;
+    if (_open)
+      overlay.hidden = false;
+    sidebar.classList.toggle("sidebar--open", _open);
+    overlay.classList.toggle("sidebar-overlay--show", _open);
+    sidebar.setAttribute("aria-hidden", _open ? "false" : "true");
+    toggle?.setAttribute("aria-expanded", _open ? "true" : "false");
+    if (!_open)
       syncOverlay();
   }
   function syncOverlay() {
@@ -16704,9 +16708,9 @@ END:VEVENT`
     });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible")
-        syncOverlay();
+        paintState();
     });
-    window.addEventListener("pageshow", syncOverlay);
+    window.addEventListener("pageshow", () => paintState());
     onAuthChange(() => {
       if (_open)
         renderNav();
