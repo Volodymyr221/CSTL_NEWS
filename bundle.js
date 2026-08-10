@@ -9050,12 +9050,39 @@
       return;
     const vv = window.visualViewport;
     const \u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430 = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const \u043A\u0440\u0443\u0433 = document.querySelector(".tab-home-circle");
     const \u0431\u0430\u0440 = document.querySelector(".tab-bar");
-    const \u0432\u0435\u0440\u0445\u0411\u0430\u0440\u0443 = \u0431\u0430\u0440 ? \u0431\u0430\u0440.getBoundingClientRect().top : \u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430;
-    const \u043C\u0435\u0436\u0430 = Math.min(\u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430, \u0432\u0435\u0440\u0445\u0411\u0430\u0440\u0443);
+    const \u0432\u0435\u0440\u0445\u041D\u0438\u0437\u0443 = \u043A\u0440\u0443\u0433 ? \u043A\u0440\u0443\u0433.getBoundingClientRect().top : \u0431\u0430\u0440 ? \u0431\u0430\u0440.getBoundingClientRect().top : \u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430;
+    const \u043C\u0435\u0436\u0430 = Math.min(\u043D\u0438\u0437\u0412\u0456\u043A\u043D\u0430, \u0432\u0435\u0440\u0445\u041D\u0438\u0437\u0443);
     const \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 = dd.getBoundingClientRect().top;
     const \u0417\u0410\u041F\u0410\u0421 = 12;
     dd.style.maxHeight = Math.max(180, \u043C\u0435\u0436\u0430 - \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 - \u0417\u0410\u041F\u0410\u0421) + "px";
+  }
+  var _\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438 = null;
+  function \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443() {
+    if (!_\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438)
+      return;
+    const { main, top } = _\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438;
+    if (window.scrollY !== 0 || window.scrollX !== 0)
+      window.scrollTo(0, 0);
+    if (main && main.scrollTop !== top)
+      main.scrollTop = top;
+  }
+  function \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438\u0417\u0430\u043C\u043E\u043A() {
+    const main = document.querySelector(".app-main");
+    _\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438 = { main, top: main ? main.scrollTop : 0 };
+    main?.classList.add("bs-scroll-lock");
+    window.addEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443, { passive: true });
+    main?.addEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443, { passive: true });
+    window.visualViewport?.addEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443);
+  }
+  function \u0432\u0438\u043C\u043A\u043D\u0443\u0442\u0438\u0417\u0430\u043C\u043E\u043A() {
+    const main = _\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438?.main || document.querySelector(".app-main");
+    window.removeEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443);
+    main?.removeEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443);
+    window.visualViewport?.removeEventListener("scroll", \u043F\u0440\u0438\u0448\u043F\u0438\u043B\u0438\u0442\u0438\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0443);
+    main?.classList.remove("bs-scroll-lock");
+    _\u0437\u0430\u043C\u043E\u043A\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0438 = null;
   }
   function openDropdown(field) {
     activeField = field;
@@ -9070,7 +9097,7 @@
     syncDropdownHeight();
     window.visualViewport?.addEventListener("resize", syncDropdownHeight);
     window.visualViewport?.addEventListener("scroll", syncDropdownHeight);
-    document.querySelector(".app-main")?.classList.add("bs-scroll-lock");
+    \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438\u0417\u0430\u043C\u043E\u043A();
     document.getElementById("bs-dd-filter")?.focus();
   }
   function buildDropdownListHtml(query) {
@@ -9139,7 +9166,7 @@
     }
     window.visualViewport?.removeEventListener("resize", syncDropdownHeight);
     window.visualViewport?.removeEventListener("scroll", syncDropdownHeight);
-    document.querySelector(".app-main")?.classList.remove("bs-scroll-lock");
+    \u0432\u0438\u043C\u043A\u043D\u0443\u0442\u0438\u0417\u0430\u043C\u043E\u043A();
   }
   function selectStop(stop, field) {
     if (field === "from") {
