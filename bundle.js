@@ -12525,8 +12525,15 @@
       };
     let startY = 0;
     let \u0442\u044F\u0433\u043D\u0435\u043C\u043E = false;
-    let \u0441\u0442\u0435\u0436\u0438\u043C\u043E = false;
+    let \u043A\u0440\u0430\u0439 = 0;
     const \u0436\u0438\u0432\u0438\u0439\u0417\u0441\u0443\u0432 = () => \u0436\u0438\u0432\u0438\u0439\u0417\u0441\u0443\u0432\u0417(zone);
+    const \u043D\u0430\u041C\u0435\u0436\u0456 = () => {
+      if (scroller.scrollTop <= 0)
+        return 1;
+      if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1)
+        return -1;
+      return 0;
+    };
     const \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 = (y) => {
       zone.style.transform = y ? `translate3d(0, ${y.toFixed(1)}px, 0)` : "";
     };
@@ -12534,7 +12541,7 @@
       zone.style.transition = "transform 0.34s cubic-bezier(0.22, 1, 0.36, 1)";
       \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438(0);
       \u0442\u044F\u0433\u043D\u0435\u043C\u043E = false;
-      \u0441\u0442\u0435\u0436\u0438\u043C\u043E = false;
+      \u043A\u0440\u0430\u0439 = 0;
     };
     const onStart = (e) => {
       const \u0436\u0438\u0432\u0438\u0439 = \u0436\u0438\u0432\u0438\u0439\u0417\u0441\u0443\u0432();
@@ -12542,25 +12549,23 @@
       if (\u0436\u0438\u0432\u0438\u0439)
         \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438(\u0436\u0438\u0432\u0438\u0439);
       startY = e.touches ? e.touches[0].clientY : e.clientY;
-      \u0441\u0442\u0435\u0436\u0438\u043C\u043E = scroller.scrollTop <= 0;
+      \u043A\u0440\u0430\u0439 = \u043D\u0430\u041C\u0435\u0436\u0456();
       \u0442\u044F\u0433\u043D\u0435\u043C\u043E = !!\u0436\u0438\u0432\u0438\u0439;
     };
     const onMove = (e) => {
-      if (!\u0441\u0442\u0435\u0436\u0438\u043C\u043E && !\u0442\u044F\u0433\u043D\u0435\u043C\u043E)
-        return;
       const y = e.touches ? e.touches[0].clientY : e.clientY;
       const dy = y - startY;
-      if (dy <= 0) {
-        if (\u0442\u044F\u0433\u043D\u0435\u043C\u043E) {
+      const \u043A\u0440\u0430\u0439_ = \u043D\u0430\u041C\u0435\u0436\u0456();
+      const \u0441\u0432\u0456\u0439 = \u043A\u0440\u0430\u0439_ === 1 && dy > 0 || \u043A\u0440\u0430\u0439_ === -1 && dy < 0;
+      if (!\u0441\u0432\u0456\u0439) {
+        if (\u0442\u044F\u0433\u043D\u0435\u043C\u043E)
           \u0432\u0456\u0434\u043F\u0443\u0441\u0442\u0438\u0442\u0438();
-        }
         return;
       }
-      if (scroller.scrollTop > 0)
-        return;
-      if (!\u0442\u044F\u0433\u043D\u0435\u043C\u043E && dy < \u041F\u041E\u0420\u0406\u0413)
+      if (!\u0442\u044F\u0433\u043D\u0435\u043C\u043E && Math.abs(dy) < \u041F\u041E\u0420\u0406\u0413)
         return;
       \u0442\u044F\u0433\u043D\u0435\u043C\u043E = true;
+      \u043A\u0440\u0430\u0439 = \u043A\u0440\u0430\u0439_;
       \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438(\u043E\u043F\u0456\u0440(dy, \u041C\u0410\u041A\u0421 * 2.4));
     };
     scroller.addEventListener("touchstart", onStart, { passive: true });
