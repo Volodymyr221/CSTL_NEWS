@@ -28,9 +28,10 @@
 // ⚠️ `serviceWorkers: 'block'` — восьмий випадок брехливої перевірки в проєкті.
 //
 // 🔴 КОНТРОЛЬ (обовʼязковий):
-//     BUNDLE_REV=origin/main CSS_REV=origin/main node tests/sidebar-menu.mjs
-// на коді ДО редизайну мусять упасти перевірки бежу, карток, груп, шевронів,
-// підписів соцмереж і хрестика 44px.
+//     BUNDLE_REV=origin/main CSS_REV=origin/main HTML_REV=origin/main \
+//       node tests/sidebar-menu.mjs
+// ⚠️ Три змінні, а не дві: розмітка теж мусить бути стара, інакше перевірки про
+// шапку меню (немає замку, немає версії) зеленітимуть на будь-якому коді.
 import { chromium } from 'playwright';
 import { launch, serve, reporter, projectFile } from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
@@ -38,6 +39,7 @@ import { mockSupabase } from './_board-fixture.mjs';
 const { ok, done } = reporter();
 const REV = process.env.BUNDLE_REV || '';
 const CSS_REV = process.env.CSS_REV || '';
+const HTML_REV = process.env.HTML_REV || '';
 const ME = { id: 'u-me', email: 'me@example.com', user_metadata: { name: 'Володимир' } };
 
 const { url, stop } = await serve();
@@ -49,6 +51,22 @@ async function сторінка(user) {
     serviceWorkers: 'block',
   });
   const p = await ctx.newPage();
+  // 🔴 КОНТРОЛЬ МУСИТЬ ПІДМІНЯТИ Й РОЗМІТКУ. Іконка замку та рядок версії живуть
+  // в `index.html`, а не в скрипті чи стилях — і поки контроль підміняв лише
+  // `bundle.js` + `sidebar.css`, дві перевірки про шапку «зеленіли» і на старому
+  // коді, тобто не доводили нічого. Той самий недогляд уже був із `home.css`.
+  // ⚠️ Реєструється ДО `mockSupabase`: у Playwright виграє маршрут, доданий
+  // ОСТАННІМ, тож цей загальний лишається запасним і віддає лише документ.
+  if (HTML_REV) {
+    const html = projectFile('index.html', HTML_REV);
+    await p.route('**/*', route => {
+      if (route.request().resourceType() === 'document') {
+        route.fulfill({ contentType: 'text/html; charset=utf-8', body: html });
+      } else {
+        route.continue();
+      }
+    });
+  }
   await mockSupabase(p,
     { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] },
     { user, profiles: user ? [{ uid: 'u-me', name: 'Володимир', avatar_url: '' }] : [] });
@@ -161,14 +179,108 @@ const тут = await p.evaluate(() => {
 ok('🔴 позначка «ти зараз тут» рівно одна і саме на активній вкладці',
    тут.кількість === 1 && тут.на[0] === 'buses', `${тут.кількість} шт · ${тут.на.join(',')}`);
 
-// 7. ЛІЧИЛЬНИК ВЕРСІЇ — одне джерело, не другий рядок у розмітці.
-const версія = await p.evaluate(() => ({
-  вМеню: document.getElementById('sidebar-ver')?.textContent.trim() || '',
-  вШапці: document.querySelector('.deploy-stamp')?.textContent.trim() || '',
-}));
-ok('лічильник версії в меню дорівнює лічильнику в шапці (одне джерело)',
-   !!версія.вМеню && версія.вМеню === версія.вШапці,
-   `меню «${версія.вМеню}» · шапка «${версія.вШапці}»`);
+// 7. ШАПКА МЕНЮ — ЛИШЕ НАЗВА І ✕ (10.08, зауваження Вови).
+// Іконка замку дублювала центральну кнопку таб-бару, лічильник версії — штамп у
+// шапці застосунку. Обидва прибрано; сторож стежить, щоб не повернулись.
+const шапка = await p.evaluate(() => {
+  const h = document.querySelector('.sidebar-head');
+  if (!h) return null;
+  return {
+    є: true,
+    замок: !!h.querySelector('img'),
+    версія: /v\d+\s*·/.test(h.textContent || ''),
+    назва: h.querySelector('.sidebar-logo')?.textContent.replace(/\s+/g, ' ').trim() || '',
+  };
+});
+ok('🔴 у шапці меню лише назва — без іконки замку',
+   !!шапка && !шапка.замок && шапка.назва === 'CSTL LIFE', шапка ? шапка.назва : 'шапки немає');
+ok('🔴 лічильника версії в меню НЕМАЄ (він уже стоїть у шапці застосунку)',
+   !!шапка && !шапка.версія);
+
+// 7b. 🔴 ШАПКА СТОЇТЬ, СПИСОК ЇДЕ (Вова: «верхня шапка… має стояти статично,
+// все має скролитися під низ»). Міряємо ПОВЕДІНКУ, а не правило: прокручуємо
+// список і дивимось, чи зрушив низ шапки. Це та сама різниця, що між «написано
+// overflow» і «воно справді так поводиться».
+const скрол = await p.evaluate(async () => {
+  const nav = document.getElementById('sidebar-nav');
+  const head = document.querySelector('.sidebar-head');
+  if (!nav || !head) return null;
+  const доШапки = head.getBoundingClientRect().bottom;
+  const запас = nav.scrollHeight - nav.clientHeight;
+  nav.scrollTop = 400;
+  await new Promise(r => requestAnimationFrame(r));
+  return {
+    запас,                                   // чи є що прокручувати взагалі
+    проїхав: Math.round(nav.scrollTop),      // список справді зрушив
+    шапкаДо: Math.round(доШапки),
+    шапкаПісля: Math.round(head.getBoundingClientRect().bottom),
+    панельНеЇде: Math.round(document.getElementById('sidebar').scrollTop),
+  };
+});
+ok('🔴 список меню справді прокручується (це він скролер, а не панель)',
+   !!скрол && скрол.запас > 0 && скрол.проїхав > 0,
+   скрол ? `запас ${скрол.запас}px · проїхав ${скрол.проїхав}px` : 'нема');
+
+// 🔴 КОРІНЬ, А НЕ СИМПТОМ. Перша редакція «не скролилась» не тому, що забули
+// `overflow`, а тому що `.sidebar-nav` — колонковий flex, і він СТИСКАВ групи
+// замість того, щоб дати їм вилізти. Рядки при цьому чесно тримали 48px, а
+// коробка групи ставала 229px замість 288 — останні рядки просто обрізало
+// `overflow: hidden`, мовчки. Тому міряємо не «чи є прокрутка», а чи група
+// заввишки рівно як її рядки: це та сама поломка, ще до того, як вона з'їсть
+// весь запас прокрутки.
+const стиснуті = await p.evaluate(() =>
+  [...document.querySelectorAll('.sb-group')].map(g => {
+    const рядки = [...g.querySelectorAll('.sidebar-item')]
+      .reduce((s, r) => s + r.getBoundingClientRect().height, 0);
+    return { треба: Math.round(рядки), є: Math.round(g.getBoundingClientRect().height) };
+  }).filter(x => x.є < x.треба - 2));
+ok('🔴 жодну групу НЕ стиснуто flex-ом (рядки не обрізані знизу)',
+   стиснуті.length === 0,
+   стиснуті.length ? стиснуті.map(x => `${x.є} замість ${x.треба}`).join(' · ') : 'усі повні');
+ok('🔴 шапка меню СТОЇТЬ на місці, поки список їде',
+   !!скрол && скрол.шапкаДо === скрол.шапкаПісля && скрол.панельНеЇде === 0,
+   скрол ? `низ шапки ${скрол.шапкаДо} → ${скрол.шапкаПісля}` : 'нема');
+await p.evaluate(() => { document.getElementById('sidebar-nav').scrollTop = 0; });
+
+// 7c. 🔴 РОЗДІЛИ ЗБІГАЮТЬСЯ З ЖИВИМ ЗАСТОСУНКОМ (Вова: «деяких розділів немає»).
+// Порівнюємо не зі списком у голові, а з таб-баром: кожна вкладка меню мусить
+// існувати в нижньому ряду І називатись там так само. Саме це й проґавили —
+// пункт «Шо в селі» вів у вкладку, підписану «Стрічка».
+const звірка = await p.evaluate(() => {
+  const бар = new Map([...document.querySelectorAll('.tab-bar .tab-item')]
+    .map(b => [b.dataset.tab, b.querySelector('.tab-label')?.textContent.trim()]));
+  const пункти = [...document.querySelectorAll('.sidebar-item')]
+    .map(e => ({ nav: e.dataset.nav, label: e.querySelector('.sidebar-item-label')?.textContent.trim() }));
+  const розділи = [...document.querySelectorAll('.sb-group')][0];
+  const порядок = розділи ? [...розділи.querySelectorAll('.sidebar-item-label')].map(e => e.textContent.trim()) : [];
+  return { бар: [...бар.entries()], пункти, порядок };
+});
+const мертві = звірка.пункти.filter(i => ['shotam', 'discussions', 'board', 'buses', 'community'].includes(i.nav))
+  .filter(i => { const t = звірка.бар.find(([k]) => k === i.nav); return !t || t[1] !== i.label; });
+ok('🔴 назви вкладок у меню збігаються з таб-баром (ловить мертве «Шо в селі»)',
+   мертві.length === 0,
+   мертві.length ? мертві.map(m => `${m.nav}: меню «${m.label}»`).join(' · ') : 'усі збігаються');
+ok('«Стрічка» в меню є, «Шо в селі» немає',
+   звірка.пункти.some(i => i.label === 'Стрічка') && !звірка.пункти.some(i => i.label === 'Шо в селі'));
+ok('перша група — рівно пʼять вкладок таб-бару + Новини, Громада першою',
+   звірка.порядок.join(' · ') === 'Громада · Стрічка · Обговорення · Дошка · Автобуси · Новини',
+   звірка.порядок.join(' · '));
+
+// 7d. Група «МОЄ» — Повідомлення з лічильником (замовлення Вови).
+const моє = await p.evaluate(() => {
+  const cap = [...document.querySelectorAll('.sb-cap')].find(e => /моє/i.test(e.textContent));
+  const grp = cap?.nextElementSibling;
+  const msg = document.querySelector('[data-nav="messages"]');
+  return {
+    група: !!grp,
+    пункти: grp ? [...grp.querySelectorAll('.sidebar-item-label')].map(e => e.textContent.trim()) : [],
+    бейдж: !!msg?.querySelector('#sb-msg-badge'),
+  };
+});
+ok('🔴 група «Моє»: Повідомлення · Мої оголошення · Збережені',
+   моє.група && моє.пункти.join(' · ') === 'Повідомлення · Мої оголошення · Збережені',
+   моє.пункти.join(' · ') || 'групи немає');
+ok('на «Повідомленнях» є місце під лічильник непрочитаних', моє.бейдж);
 
 // 8. ТАП-ЦІЛІ хрестика і соцмереж.
 const цілі = await p.evaluate(() => {
@@ -182,6 +294,27 @@ const цілі = await p.evaluate(() => {
 });
 ok('🔴 хрестик ≥ 44px (був 34 — єдина ціль нижче норми після деплою про тап-цілі)',
    цілі.хрестик >= 44, `${цілі.хрестик}px`);
+// 🔴 «Зроби його векторним таким, як в інших модулях». Міряємо ДВІ речі: що
+// всередині справді вектор (а не текстовий символ ✕), і що видимий кружечок
+// такого ж розміру, як у модалок (32px) — тобто 44px тап-цілі досягнуто
+// відступом, а не роздутою кнопкою.
+const хрест = await p.evaluate(() => {
+  const b = document.getElementById('sidebar-close');
+  if (!b) return null;
+  const s = getComputedStyle(b);
+  const p = parseFloat(s.paddingTop) || 0;
+  return {
+    вектор: !!b.querySelector('svg'),
+    текст: (b.textContent || '').trim(),
+    видимий: Math.round(b.getBoundingClientRect().width - p * 2),
+    clip: s.backgroundClip || s.webkitBackgroundClip,
+  };
+});
+ok('🔴 всередині хрестика ВЕКТОР (ICONS.close), а не символ «✕»',
+   !!хрест && хрест.вектор && хрест.текст === '', хрест ? `svg:${хрест.вектор} текст:«${хрест.текст}»` : '—');
+ok('видимий кружечок 32px, як у модалок — 44px дає відступ, а не роздута кнопка',
+   !!хрест && хрест.видимий === 32 && /content-box/.test(хрест.clip || ''),
+   хрест ? `${хрест.видимий}px · clip ${хрест.clip}` : '—');
 ok('кнопки соцмереж ≥ 44px', цілі.соцМін >= 44, `${цілі.соцМін}px`);
 ok('🔴 соцмережі ПІДПИСАНІ, а не два голі кружечки',
    цілі.соцПідписи.length === 2, цілі.соцПідписи.join(' · ') || 'підписів немає');
@@ -217,6 +350,24 @@ const слабкі = контраст.filter(c => c.k < 4.5);
 ok('♿ увесь тихий текст меню тримає 4.5:1 на СВОЇЙ підкладці',
    контраст.length >= 3 && слабкі.length === 0,
    контраст.map(c => `${c.sel} ${c.k}`).join(' · '));
+
+// ── 🔴 НОВІ ПУНКТИ НЕ МУСЯТЬ БУТИ МЕРТВИМИ ─────────────────────────────────
+// Рівно так і жив B-31: пункт «Особистий кабінет» був у меню, виглядав нормально,
+// а `?.click()` на `null` мовчки не робив нічого — ні екрана, ні помилки. Тому
+// кожен НОВИЙ пункт перевіряється не наявністю, а тим, що після тапу зʼявляється
+// його екран.
+const відкриває = async (nav, sel, назва) => {
+  await відкрити(p);
+  await p.evaluate(n => document.querySelector(`[data-nav="${n}"]`)?.click(), nav);
+  await p.waitForTimeout(1400);
+  const є = await p.evaluate(s => !!document.querySelector(s), sel);
+  ok(`🔴 тап по «${назва}» справді відкриває екран (пункт не мертвий)`, є, є ? sel : 'нічого не сталось');
+  // Прибираємо шар, щоб наступна перевірка починалась з чистого екрана.
+  await p.evaluate(s => document.querySelector(s)?.closest('.pm-screen, .nh-screen, body > div')?.remove(), sel);
+  await p.waitForTimeout(300);
+};
+await відкриває('messages', '.pm-list--threads', 'Повідомлення');
+await відкриває('news', '.nh-screen', 'Новини');
 
 await ctx.close();
 

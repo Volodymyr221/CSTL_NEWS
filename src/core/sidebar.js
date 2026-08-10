@@ -34,6 +34,12 @@ import { LEGAL_DOC_HTML, BOARD_RULES_HTML } from './legal.js';
 import { openModal } from './modal.js';
 import { ICONS } from './icons.js';
 import { avatarCircle, escapeHtml } from './utils.js';
+// ⚠️ Меню — єдиний модуль `core/`, який імпортує екрани із `tabs/`, і це не
+// недогляд: навігаційний хаб за визначенням мусить дотягнутись до кожного
+// призначення. Циклу немає — `sidebar.js` імпортує лише `app.js`.
+import { openThreadsList, openMyAds, unreadChatsCount } from '../tabs/board-chat.js';
+import { openNewsHub } from '../tabs/news-hub.js';
+import { openSavedHub } from './saved-hub.js';
 
 // Пункти меню. kind: 'tab' → switchTab; 'account'/'cabinet' → своя дія; 'info' → модалка.
 // Іконки — тонкі Tabler-вектори (Потік 7, варіант 5) замість емодзі: однаковий вигляд на всіх ОС.
@@ -42,23 +48,66 @@ import { avatarCircle, escapeHtml } from './utils.js';
 // самого списку — тобто джерело одне. Дві копії (одна для показу, друга для
 // `handleNav`) розійшлися б, і це вже двічі траплялось у проєкті (списки
 // антиспаму, стилі картки новини).
+// 🔴 10.08, ДРУГА РЕДАКЦІЯ — ПЕРЕБРАНО ПО ЖИВОМУ ЗАСТОСУНКУ (зауваження Вови:
+// «деяких розділів немає… розташуй їх правильно»). Що знайшлось при звірці:
+//   • пункт «Шо в селі» називав вкладку, якої вже немає. У таб-барі той самий
+//     `data-tab="shotam"` давно підписаний **«Стрічка»** — тобто меню вело в
+//     правильне місце під неправильною назвою;
+//   • «Новини» і «Корисні контакти» — це НЕ вкладки, а прокрутка до блоків на
+//     Громаді, і стояли вони впереміш зі справжніми вкладками;
+//   • у «Новин» узагалі є повноекранний хаб (`openNewsHub`), тобто пункт вів у
+//     віджет замість самого розділу.
+//
+// 📐 ПОРЯДОК ТЕПЕР НЕ ВИПАДКОВИЙ, а по ЖАНРУ призначення:
+//   РОЗДІЛИ    — куди можна піти. Спершу Громада (головний екран), далі рівно
+//                порядок таб-бару (Стрічка · Обговорення · Дошка · Автобуси),
+//                щоб меню й нижній ряд не суперечили одне одному. Замикає
+//                «Новини» — теж повний екран, але в таб-барі його немає.
+//   МОЄ        — те, що належить тобі. Усі троє живуть за кнопкою FAB на Дошці,
+//                тобто були на глибині двох тапів і лише з однієї вкладки.
+//   ІНФОРМАЦІЯ — довідка. Сюди ж «Корисні контакти»: це телефони громади, тобто
+//                за жанром довідка, а не розділ.
 const SECTIONS = [
   // Картки. Це не «важливіші пункти меню», це інший ЖАНР: обидві ведуть не в
   // розділ застосунку, а до людини (профіль) і за його межі (`admin.html`).
   { id: 'cards', cards: true, items: [
     { id: 'account', label: 'Особистий кабінет', icon: ICONS.user, kind: 'account' },
-    { id: 'cabinet', label: 'Адмінка',           icon: ICONS.shieldCheck, kind: 'cabinet', team: true },
+    // ⚠️ `settings`, а не `shieldCheck`: підпис картки — «Панель керування», і
+    // шестерня каже це прямо. Заразом зникає майже-двійник щита в «Правилах Дошки».
+    { id: 'cabinet', label: 'Адмінка',           icon: ICONS.settings, kind: 'cabinet', team: true },
   ] },
   { id: 'tabs', caption: 'Розділи', items: [
     { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
-    { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
-    { id: 'shotam',      label: 'Шо в селі',    icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
-    { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board' },
+    // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
+    { id: 'shotam',      label: 'Стрічка',      icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
     { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions' },
+    { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board' },
     { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
-    { id: 'contacts',    label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
+    // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
+    { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'screen', open: () => openNewsHub() },
+  ] },
+  // ── МОЄ ─────────────────────────────────────────────────────────────────────
+  // Замовлення Вови: «можеш додати сюди розділ Повідомлення з дошки… якусь
+  // підкатегорію». Додано трійцю, бо в неї спільний власник — сам житель, і всі
+  // троє однаково закопані: Дошка → кнопка FAB → пункт меню.
+  // ⚠️ Гейт входу тут НЕ потрібен: `openThreadsList` і `openMyAds` самі загорнуті
+  // в `requireAuth`, а `openSavedHub` має власну перевірку. Ховати групу від
+  // гостя означало б приховати від нього ще й привід зайти.
+  { id: 'mine', caption: 'Моє', items: [
+    // ⚠️ Іконка `mail`, а не `message`: `message` носить «Обговорення» — і саме
+    // ту саму мовну бульбашку показує таб-бар. Два однакові значки в одному
+    // списку читаються як помилка, а відповідність меню з таб-баром важливіша.
+    { id: 'messages', label: 'Повідомлення', icon: ICONS.mail, kind: 'screen',
+      badge: 'unread', open: () => openThreadsList() },
+    // `megaphone` (оголошення), бо `clipboard` уже носить «Дошка».
+    { id: 'myads',    label: 'Мої оголошення', icon: ICONS.megaphone, kind: 'screen', open: () => openMyAds() },
+    { id: 'saved',    label: 'Збережені',      icon: ICONS.bookmark, kind: 'screen', open: () => openSavedHub() },
   ] },
   { id: 'info', caption: 'Інформація', items: [
+    // Телефони громади — довідка, тому тут. Це прокрутка до блоку на Громаді,
+    // а не окремий екран; сусідство з рештою довідки робить обіцянку чеснішою,
+    // ніж коли пункт стояв між справжніми вкладками.
+    { id: 'contacts', label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
     { id: 'support', label: 'Підтримка',            icon: ICONS.help, kind: 'info' },
     // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
     // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
@@ -225,9 +274,16 @@ function itemHtml(item, activeTab) {
   // це прокрутка ВСЕРЕДИНІ Громади (`scrollTo`), і позначати їх активними разом
   // із самою Громадою означало б світити три крапки одночасно.
   const тут = item.kind === 'tab' && !item.scrollTo && item.tab === activeTab;
+  // Лічильник непрочитаних. Число БЕРЕТЬСЯ, а не рахується заново: `unreadChatsCount()`
+  // віддає те саме `_unreadChats`, яким малюються бейджі FAB Дошки. Два лічильники
+  // того самого вже розходились (B-27), тому другого місця правди тут немає.
+  const n = item.badge === 'unread' ? unreadChatsCount() : 0;
   return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}${тут ? ' aria-current="page"' : ''}>
     <span class="sidebar-item-icon">${item.icon}</span>
     <span class="sidebar-item-label">${item.label}</span>
+    ${item.badge === 'unread'
+      ? `<span class="sidebar-item-badge" id="sb-msg-badge"${n ? '' : ' hidden'}>${n > 99 ? '99+' : n}</span>`
+      : ''}
     ${тут ? '<span class="sidebar-item-dot" aria-hidden="true"></span>' : ''}
     <span class="sidebar-item-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
@@ -279,14 +335,6 @@ function adminCardHtml(item) {
   </button>`;
 }
 
-// Лічильник версії — ОДНЕ джерело: штамп у шапці, який підміняє CI (`deploy.yml`,
-// `sed` по `index.html`). Другий рядок у розмітці був би другим джерелом.
-function paintVersion() {
-  const el = document.getElementById('sidebar-ver');
-  if (!el) return;
-  el.textContent = (document.querySelector('.deploy-stamp')?.textContent || '').trim();
-}
-
 function renderNav() {
   const { nav } = els();
   if (!nav) return;
@@ -314,7 +362,6 @@ function renderNav() {
     </div>`;
 
   nav.innerHTML = секції + socialHtml;
-  paintVersion();
   nav.querySelectorAll('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => handleNav(btn.dataset.nav));
   });
@@ -351,6 +398,11 @@ function handleNav(id) {
     // (делегат у `account-ui.js` слухає всі `[data-account-btn]`), і прибивати
     // цвяхами конкретне місце — це рівно та помилка, яку зараз лагодимо.
     document.querySelector('[data-account-btn]')?.click();
+  } else if (item.kind === 'screen') {
+    // Повноекранні шари й аркуші (Повідомлення · Мої оголошення · Збережені ·
+    // Новини). Кожен сам вирішує, чи потрібен вхід: `openThreadsList` і
+    // `openMyAds` загорнуті в `requireAuth`, `openSavedHub` має власну перевірку.
+    item.open?.();
   } else if (item.kind === 'cabinet') {
     window.location.href = './admin.html';
   } else if (item.kind === 'info') {
@@ -388,6 +440,11 @@ async function refreshCabinet() {
 export function initSidebar() {
   const { toggle, close, overlay } = els();
   if (!toggle) return;
+  // ✕ малюємо ТИМ САМИМ значком, що в модалках (`core/modal.js`, `closeBtnHtml`).
+  // Замовлення Вови: «хрестик не стандартизований… зроби його векторним таким,
+  // як в інших модулях». Копію `<svg>` у `index.html` не кладемо — це була б
+  // друга копія іконки, яка колись розійдеться з першою.
+  if (close) close.innerHTML = ICONS.close;
   renderNav();
   applyOpen(false);   // явний закритий стан, а не «як склалось у розмітці»
   toggle.addEventListener('click', () => (_open ? closeSidebar() : openSidebar()));

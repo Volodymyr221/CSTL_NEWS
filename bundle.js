@@ -6230,10 +6230,14 @@
     }
     paintTabDot("discussions", disc > 0);
   }
+  function unreadChatsCount() {
+    return isLoggedIn() ? _unreadChats : 0;
+  }
   function paintUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
     const msgBadge = document.getElementById("board-fab-msg-badge");
+    const sbBadge = document.getElementById("sb-msg-badge");
     const fabBtn = document.getElementById("board-trigger");
     const chats = isLoggedIn() ? _unreadChats : 0;
     fabBtn?.classList.toggle("has-unread", chats > 0);
@@ -6246,6 +6250,10 @@
       if (msgBadge) {
         msgBadge.textContent = "";
         msgBadge.style.display = "none";
+      }
+      if (sbBadge) {
+        sbBadge.textContent = "";
+        sbBadge.hidden = true;
       }
       paintTabDots();
       return;
@@ -6267,6 +6275,10 @@
     if (msgBadge) {
       msgBadge.textContent = label;
       msgBadge.style.display = "block";
+    }
+    if (sbBadge) {
+      sbBadge.textContent = label;
+      sbBadge.hidden = false;
     }
     paintTabDots();
   }
@@ -16374,18 +16386,48 @@ END:VEVENT`
     // розділ застосунку, а до людини (профіль) і за його межі (`admin.html`).
     { id: "cards", cards: true, items: [
       { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: ICONS.user, kind: "account" },
-      { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: ICONS.shieldCheck, kind: "cabinet", team: true }
+      // ⚠️ `settings`, а не `shieldCheck`: підпис картки — «Панель керування», і
+      // шестерня каже це прямо. Заразом зникає майже-двійник щита в «Правилах Дошки».
+      { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: ICONS.settings, kind: "cabinet", team: true }
     ] },
     { id: "tabs", caption: "\u0420\u043E\u0437\u0434\u0456\u043B\u0438", items: [
       { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.community, kind: "tab", tab: "community" },
-      { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: ICONS.newspaper, kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
-      { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
-      { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board" },
+      // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
+      { id: "shotam", label: "\u0421\u0442\u0440\u0456\u0447\u043A\u0430", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
       { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions" },
+      { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board" },
       { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
-      { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: ICONS.phone, kind: "tab", tab: "community", scrollTo: "#cm-contacts" }
+      // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
+      { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: ICONS.newspaper, kind: "screen", open: () => openNewsHub() }
+    ] },
+    // ── МОЄ ─────────────────────────────────────────────────────────────────────
+    // Замовлення Вови: «можеш додати сюди розділ Повідомлення з дошки… якусь
+    // підкатегорію». Додано трійцю, бо в неї спільний власник — сам житель, і всі
+    // троє однаково закопані: Дошка → кнопка FAB → пункт меню.
+    // ⚠️ Гейт входу тут НЕ потрібен: `openThreadsList` і `openMyAds` самі загорнуті
+    // в `requireAuth`, а `openSavedHub` має власну перевірку. Ховати групу від
+    // гостя означало б приховати від нього ще й привід зайти.
+    { id: "mine", caption: "\u041C\u043E\u0454", items: [
+      // ⚠️ Іконка `mail`, а не `message`: `message` носить «Обговорення» — і саме
+      // ту саму мовну бульбашку показує таб-бар. Два однакові значки в одному
+      // списку читаються як помилка, а відповідність меню з таб-баром важливіша.
+      {
+        id: "messages",
+        label: "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F",
+        icon: ICONS.mail,
+        kind: "screen",
+        badge: "unread",
+        open: () => openThreadsList()
+      },
+      // `megaphone` (оголошення), бо `clipboard` уже носить «Дошка».
+      { id: "myads", label: "\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", icon: ICONS.megaphone, kind: "screen", open: () => openMyAds() },
+      { id: "saved", label: "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", icon: ICONS.bookmark, kind: "screen", open: () => openSavedHub() }
     ] },
     { id: "info", caption: "\u0406\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F", items: [
+      // Телефони громади — довідка, тому тут. Це прокрутка до блоку на Громаді,
+      // а не окремий екран; сусідство з рештою довідки робить обіцянку чеснішою,
+      // ніж коли пункт стояв між справжніми вкладками.
+      { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: ICONS.phone, kind: "tab", tab: "community", scrollTo: "#cm-contacts" },
       { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: ICONS.help, kind: "info" },
       // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
       // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
@@ -16490,9 +16532,11 @@ END:VEVENT`
   function itemHtml(item, activeTab) {
     const hidden = item.team ? " hidden" : "";
     const \u0442\u0443\u0442 = item.kind === "tab" && !item.scrollTo && item.tab === activeTab;
+    const n = item.badge === "unread" ? unreadChatsCount() : 0;
     return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}${\u0442\u0443\u0442 ? ' aria-current="page"' : ""}>
     <span class="sidebar-item-icon">${item.icon}</span>
     <span class="sidebar-item-label">${item.label}</span>
+    ${item.badge === "unread" ? `<span class="sidebar-item-badge" id="sb-msg-badge"${n ? "" : " hidden"}>${n > 99 ? "99+" : n}</span>` : ""}
     ${\u0442\u0443\u0442 ? '<span class="sidebar-item-dot" aria-hidden="true"></span>' : ""}
     <span class="sidebar-item-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
@@ -16521,12 +16565,6 @@ END:VEVENT`
     <span class="sb-card-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
   }
-  function paintVersion() {
-    const el = document.getElementById("sidebar-ver");
-    if (!el)
-      return;
-    el.textContent = (document.querySelector(".deploy-stamp")?.textContent || "").trim();
-  }
   function renderNav() {
     const { nav } = els();
     if (!nav)
@@ -16549,7 +16587,6 @@ END:VEVENT`
       </div>
     </div>`;
     nav.innerHTML = \u0441\u0435\u043A\u0446\u0456\u0457 + socialHtml;
-    paintVersion();
     nav.querySelectorAll("[data-nav]").forEach((btn) => {
       btn.addEventListener("click", () => handleNav(btn.dataset.nav));
     });
@@ -16571,6 +16608,8 @@ END:VEVENT`
       }
     } else if (item.kind === "account") {
       document.querySelector("[data-account-btn]")?.click();
+    } else if (item.kind === "screen") {
+      item.open?.();
     } else if (item.kind === "cabinet") {
       window.location.href = "./admin.html";
     } else if (item.kind === "info") {
@@ -16605,6 +16644,8 @@ END:VEVENT`
     const { toggle, close, overlay } = els();
     if (!toggle)
       return;
+    if (close)
+      close.innerHTML = ICONS.close;
     renderNav();
     applyOpen(false);
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
