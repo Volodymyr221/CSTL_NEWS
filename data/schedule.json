@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "10.08.2026",
-  "updatedTime": "08:55",
+  "updatedTime": "10:50",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -262,7 +262,7 @@
           "bus": "Баз  А 091",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:10",
           "arrival_time": "10:50",
           "duration_min": 100,
@@ -304,7 +304,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:20",
           "arrival_time": "10:15",
           "duration_min": 55,
@@ -391,7 +391,7 @@
           "bus": "БАЗ-А079.19",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:05",
           "arrival_time": "12:05",
           "duration_min": 120,
@@ -488,7 +488,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -1233,7 +1233,7 @@
           "carrier": "під_яцишин_м_м",
           "bus": "Баз  А 091",
           "days": "щодня",
-          "status": "scheduled",
+          "status": "cancelled",
           "sale_active": false,
           "departure_time": "17:15",
           "arrival_time": "18:55",
@@ -1630,7 +1630,7 @@
         }
       ],
       "fetchedAt": "10.08.2026",
-      "fetchedTime": "08:55"
+      "fetchedTime": "10:50"
     },
     "2026-08-11": {
       "routes": [
@@ -3236,7 +3236,7 @@
         }
       ],
       "fetchedAt": "10.08.2026",
-      "fetchedTime": "08:55"
+      "fetchedTime": "10:50"
     },
     "2026-08-12": {
       "routes": [
