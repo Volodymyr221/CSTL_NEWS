@@ -115,11 +115,15 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
   /* 🔴 10.08 — КРЕМОВОГО ТЛА БІЛЬШЕ НЕМАЄ (замовлення Вови: «навіть колір
      бежевий там, а ми його з проєкту прибрали»). Меню було останнім великим
      островом `--paper #F4F1E6`.
-     📐 Чому саме `--board-bg`, а не `--app-bg`: вміст тут лежить ОКРЕМИМИ
-     картками-групами, а це рівно той випадок, під який родину й заводили —
-     біла картка на `--board-bg` дає 1.264:1, на `--app-bg` лише 1.162 (проєкт
-     цей контраст уже забракував для Дошки). Нових сірих не вигадуємо. */
-  background: var(--board-bg, #E6E6E3);
+     🔄 10.08, ДРУГА РЕДАКЦІЯ — `--app-bg`, ЯК В АВТОБУСАХ (вибір Вови: «цей
+     фоновий колір сюди не підходить, треба такий як у вкладці Автобуси»).
+     ⚠️ Ціна вибору заміряна, а не проігнорована: біла картка на `--app-bg` дає
+     лише **1.162:1** проти 1.251 на `--board-bg` — тобто край картки сам по собі
+     майже не читається. Тому обідки нижче переведено з `--board-line` на
+     **`--news-line`**: саме ця пара і заведена під `--app-bg` (1.399 проти
+     еталонних 1.40 у родині). Межа картки відчувається так само, як була.
+     🔑 Нових сірих не вигадуємо — обидва токени вже є в `:root`. */
+  background: var(--app-bg, #ECEEF1);
   box-shadow: -6px 0 26px rgba(0, 0, 0, 0.24);   /* тінь на лівому краю панелі */
   border-radius: 18px 0 0 18px;                   /* заокруглені ліві (внутрішні) кути — де панель межує з блюром (Вова 16.07); правий край до екрана прямий */
   transform: translateX(102%);                    /* виїжджає з правого краю */
@@ -204,7 +208,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
   gap: 10px;
   flex-shrink: 0;
   padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--board-line, #C4C4C1);
+  border-bottom: 1px solid var(--news-line, #C9CBCE);
 }
 .sidebar-logo {
   font-family: Georgia, 'Times New Roman', serif;
@@ -286,7 +290,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
   width: 100%;
   min-height: 64px;
   padding: 10px 12px;
-  border: 1px solid var(--board-line, #C4C4C1);
+  border: 1px solid var(--news-line, #C9CBCE);
   border-radius: 14px;
   background: var(--board-card, #fff);
   font: inherit;
@@ -359,7 +363,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
 }
 .sb-group {
   margin: 0 12px;
-  border: 1px solid var(--board-line, #C4C4C1);
+  border: 1px solid var(--news-line, #C9CBCE);
   border-radius: 14px;
   background: var(--board-card, #fff);
   overflow: hidden;   /* нижні кути обрізають фон натиску останнього рядка */
@@ -383,7 +387,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
   -webkit-tap-highlight-color: transparent;
 }
 /* Волосяна лінія МІЖ рядками, а не рамка навколо кожного: групу малює `.sb-group`. */
-.sidebar-item + .sidebar-item { border-top: 1px solid var(--board-line, #C4C4C1); }
+.sidebar-item + .sidebar-item { border-top: 1px solid var(--news-line, #C9CBCE); }
 .sidebar-item:active { background: var(--board-press, #E4E4E1); }
 /* Атрибут hidden мусить перемагати display:flex. */
 .sidebar-item[hidden] { display: none; }
@@ -392,13 +396,29 @@ body:not(:has(.sidebar--open)) .sidebar-overlay {
   display: flex; align-items: center; justify-content: center;
   color: var(--red, #722F37);
 }
+/* 🔑 НОРМАЛІЗАЦІЯ РОЗМІРУ. Значки приходять із ДВОХ джерел: вкладки беруть свій
+   із таб-бару (там `.tab-icon` — жорсткі 22px), решта — з `ICONS` (1em). Без
+   цього рядка рядки меню стрибали б по висоті залежно від походження значка. */
+.sidebar-item-icon svg { width: 20px; height: 20px; }
 .sidebar-item-label { flex: 1; min-width: 0; }
-/* «Ти зараз тут» — меню перелічувало вкладки, але не казало, на якій ти стоїш. */
+/* 🔴 «ТИ ЗАРАЗ ТУТ» — ПІДСВІЧЕНИЙ РЯДОК, А НЕ КРАПКА.
+   Перша редакція ставила тут крапку, і Вова одразу спитав: «ця крапочка біля
+   Дошки за що відповідає?». Питання законне: крапка в цьому застосунку ВЖЕ
+   зайнята — саме нею таб-бар показує непрочитане (`.tab-dot`). Два значення
+   одного знака поруч читаються як помилка, тому «тут» тепер каже підсвітка. */
+.sidebar-item--here { background: rgba(114, 47, 55, 0.07); }
+.sidebar-item--here .sidebar-item-label { color: var(--red, #722F37); font-weight: 800; }
+
+/* 🔴 КРАПКА = «Є НОВЕ», і нічого іншого. Той самий знак і той самий колір, що в
+   таб-барі (`.tab-dot`), бо це та сама подія — просто показана в іншому місці.
+   Стан їй ставить `paintTabDot()` у `tabs/board-chat.js`: меню не веде власного
+   підрахунку, воно малює вже пораховане число. */
 .sidebar-item-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--red, #722F37);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--brand-grad-sm);
   flex-shrink: 0;
 }
+.sidebar-item-dot[hidden] { display: none; }
 /* Лічильник непрочитаних на «Повідомленнях». Число віддає `unreadChatsCount()` —
    те саме `_unreadChats`, що на бейджах FAB Дошки; другого лічильника немає. */
 .sidebar-item-badge {

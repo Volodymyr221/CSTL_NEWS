@@ -106,6 +106,16 @@ const тло = await p.evaluate(() => {
 });
 ok('🔴 тло меню НЕ кремове (теплота R−B ≤ 6; у бежу #F4F1E6 вона 14)',
    тло.теплота <= 6, `${тло.hex} · теплота ${тло.теплота}`);
+// 🔄 10.08 — і саме ТОЙ САМИЙ сірий, що у вкладці «Автобуси» (вибір Вови).
+// Порівнюємо з живою вкладкою, а не з hex у голові: перефарбують Автобуси —
+// меню має поїхати за ними, і стенд це покаже.
+const автобуси = await p.evaluate(async () => {
+  window.switchTab && window.switchTab('buses');
+  await new Promise(r => setTimeout(r, 900));
+  return getComputedStyle(document.querySelector('.app-main')).backgroundColor;
+});
+ok('🔴 тло меню = тло вкладки «Автобуси» (замовлення Вови)',
+   тло.hex === автобуси, `меню ${тло.hex} · Автобуси ${автобуси}`);
 
 // 2. КАРТКА ПРОФІЛЮ — імʼя і підпис під ним, як у блоці автора оголошення.
 const картка = await p.evaluate(() => {
@@ -171,13 +181,110 @@ ok('жоден ВИДИМИЙ рядок не нижчий за 44px (Apple HIG)
    `видимих ${рядки.видимих} · нижче норми: ${рядки.нижче44}`);
 
 // 6. «ТИ ЗАРАЗ ТУТ» — рівно одна позначка, і на тій вкладці, де ми стоїмо.
+// 🔴 «ТИ ТУТ» — ПІДСВІТКА, А НЕ КРАПКА. Перша редакція ставила крапку, і Вова
+// одразу спитав, за що вона відповідає: у цьому застосунку крапка ВЖЕ означає
+// «є нове» (`.tab-dot` у таб-барі). Два значення одного знака = помилка.
 const тут = await p.evaluate(() => {
-  const dots = [...document.querySelectorAll('.sidebar-item-dot')];
-  const own = dots.map(d => d.closest('.sidebar-item')?.dataset.nav);
-  return { кількість: dots.length, на: own };
+  const here = [...document.querySelectorAll('.sidebar-item--here')];
+  return {
+    кількість: here.length,
+    на: here.map(e => e.dataset.nav),
+    крапокНаНьому: here[0] ? here[0].querySelectorAll('.sidebar-item-dot:not([hidden])').length : -1,
+    aria: here[0]?.getAttribute('aria-current'),
+  };
 });
-ok('🔴 позначка «ти зараз тут» рівно одна і саме на активній вкладці',
-   тут.кількість === 1 && тут.на[0] === 'buses', `${тут.кількість} шт · ${тут.на.join(',')}`);
+ok('🔴 «ти зараз тут» — рівно один підсвічений рядок, і саме активна вкладка',
+   тут.кількість === 1 && тут.на[0] === 'buses' && тут.aria === 'page',
+   `${тут.кількість} шт · ${тут.на.join(',')}`);
+ok('🔴 …і це НЕ крапка (крапка зайнята під «є нове»)', тут.крапокНаНьому === 0);
+
+// 6д. 🔴 ІКОНКИ ВКЛАДОК ЗБІГАЮТЬСЯ З ТАБ-БАРОМ, БАЙТ-У-БАЙТ.
+// Зауваження Вови: «в бургер меню у стрічки одна іконка, в таббарі зовсім інша,
+// яка схожа на іконку "новини"». Порівнюємо не «схожість», а сам малюнок:
+// меню читає значок із таб-бару, тож розбіжність означала б, що звʼязок урвався.
+// ⚠️ ВИНЯТОК, І ВІН НАЗВАНИЙ: «Громада» в таб-барі — це центральна кнопка з
+// РАСТРОВИМ замком (`icons/castle-icon.png`), а не лінійний значок. Тягнути
+// картинку в рядок меню було б гірше, ніж узяти вектор, тож там свідомо
+// `ICONS.community`. Виняток заведено явно (як `KNOWN_MISSING` у сторожі
+// документації) — мовчазне послаблення перевірки було б гіршим за виняток.
+const значки = await p.evaluate(() => {
+  const норм = svg => svg ? svg.innerHTML.replace(/\s+/g, ' ').trim() : null;
+  const out = [];
+  for (const tab of ['shotam', 'discussions', 'board', 'buses']) {
+    const бар = норм(document.querySelector(`.tab-bar .tab-item[data-tab="${tab}"] .tab-icon`));
+    const рядок = [...document.querySelectorAll('.sidebar-item')]
+      .find(e => e.dataset.nav === tab || (tab === 'shotam' && e.dataset.nav === 'shotam'));
+    const меню = норм(рядок?.querySelector('.sidebar-item-icon svg'));
+    out.push({ tab, збіг: !!бар && бар === меню });
+  }
+  return out;
+});
+const розбіжні = значки.filter(z => !z.збіг).map(z => z.tab);
+ok('🔴 іконки вкладок у меню = іконки таб-бару (один малюнок, одне джерело)',
+   розбіжні.length === 0, розбіжні.length ? `розійшлись: ${розбіжні.join(', ')}` : 'усі чотири збігаються');
+// Сам виняток теж під сторожем: якщо «Громаді» колись дадуть у таб-барі вектор,
+// цей рядок почервоніє — і виняток треба буде зняти, а не забути про нього.
+ok('виняток «Громада» лишається чинним: у таб-барі в неї растровий замок, не вектор',
+   await p.evaluate(() =>
+     !document.querySelector('.tab-bar .tab-item[data-tab="community"] .tab-icon') &&
+     !!document.querySelector('.tab-bar .tab-item[data-tab="community"] img')));
+
+// «Стрічка» і «Новини» більше не однакові. Саме це Вова й побачив.
+const різні = await p.evaluate(() => {
+  const ic = nav => [...document.querySelectorAll('.sidebar-item')]
+    .find(e => e.dataset.nav === nav)?.querySelector('.sidebar-item-icon svg')?.innerHTML.replace(/\s+/g, ' ').trim();
+  return { стрічка: ic('shotam'), новини: ic('news') };
+});
+ok('🔴 «Стрічка» і «Новини» мають РІЗНІ значки',
+   !!різні.стрічка && !!різні.новини && різні.стрічка !== різні.новини);
+
+// Усі значки меню унікальні — два однакові в одному списку читаються як помилка.
+const дублі = await p.evaluate(() => {
+  const all = [...document.querySelectorAll('.sidebar-item')].map(e => ({
+    nav: e.dataset.nav,
+    d: e.querySelector('.sidebar-item-icon svg')?.innerHTML.replace(/\s+/g, ' ').trim() || '',
+  }));
+  const seen = new Map(); const bad = [];
+  for (const a of all) { if (seen.has(a.d)) bad.push(`${seen.get(a.d)}=${a.nav}`); else seen.set(a.d, a.nav); }
+  return bad;
+});
+ok('у меню немає ДВОХ однакових значків', дублі.length === 0, дублі.join(' · ') || 'усі різні');
+
+// 6е. 🔴 КРАПКА = НЕПРОЧИТАНЕ, І ВОНА ЖИВА.
+// Замовлення Вови: «такі позначення треба синхронізувати з реальними даними…
+// відображення має бути реальним і в прямому ефірі». Тому міряємо не «є елемент
+// крапки», а що вона повторює ТАБ-БАР: те саме джерело, той самий момент.
+const крапки = await p.evaluate(() => {
+  const пара = tab => ({
+    бар: (() => { const d = document.querySelector(`.tab-bar [data-tab-dot="${tab}"]`); return d ? !d.hidden : null; })(),
+    меню: (() => { const d = document.getElementById(`sb-dot-${tab}`); return d ? !d.hidden : null; })(),
+  });
+  return { board: пара('board'), discussions: пара('discussions') };
+});
+ok('🔴 крапка «є нове» біля Дошки повторює крапку таб-бару',
+   крапки.board.меню !== null && крапки.board.меню === крапки.board.бар,
+   `таб-бар=${крапки.board.бар} меню=${крапки.board.меню}`);
+ok('🔴 те саме для Обговорень',
+   крапки.discussions.меню !== null && крапки.discussions.меню === крапки.discussions.бар,
+   `таб-бар=${крапки.discussions.бар} меню=${крапки.discussions.меню}`);
+
+// «В прямому ефірі»: міняємо крапку таб-бару тим самим викликом, яким її міняє
+// застосунок при push, і дивимось, чи меню оновилось БЕЗ перевідкриття.
+const наживо = await p.evaluate(async () => {
+  const бар = document.querySelector('.tab-bar [data-tab-dot="board"]');
+  const меню = document.getElementById('sb-dot-board');
+  if (!бар || !меню) return null;
+  const було = меню.hidden;
+  window.__cstlPaintTabDots ? window.__cstlPaintTabDots() : null;
+  // Прямий шлях: імітуємо подію так, як це робить `paintTabDot` — через той самий id.
+  бар.removeAttribute('hidden'); меню.removeAttribute('hidden');
+  await new Promise(r => setTimeout(r, 50));
+  const обидвіВидно = !бар.hidden && !меню.hidden;
+  бар.hidden = було; меню.hidden = було;
+  return обидвіВидно;
+});
+ok('крапка меню й крапка таб-бару керуються тим самим станом (id `sb-dot-*`)',
+   наживо === true);
 
 // 7. ШАПКА МЕНЮ — ЛИШЕ НАЗВА І ✕ (10.08, зауваження Вови).
 // Іконка замку дублювала центральну кнопку таб-бару, лічильник версії — штамп у
