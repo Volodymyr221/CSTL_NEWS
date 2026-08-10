@@ -9044,6 +9044,16 @@
     (getDayData().routes || []).forEach((r) => r.stops.forEach((s) => seen.add(normalizeStopName(s.name))));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
+  function syncDropdownHeight() {
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd || dd.hidden)
+      return;
+    const vv = window.visualViewport;
+    const \u043D\u0438\u0437\u0412\u0438\u0434\u0438\u043C\u043E\u0433\u043E = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 = dd.getBoundingClientRect().top;
+    const \u0417\u0410\u041F\u0410\u0421 = 12;
+    dd.style.maxHeight = Math.max(180, \u043D\u0438\u0437\u0412\u0438\u0434\u0438\u043C\u043E\u0433\u043E - \u0432\u0435\u0440\u0445\u0421\u043F\u0438\u0441\u043A\u0443 - \u0417\u0410\u041F\u0410\u0421) + "px";
+  }
   function openDropdown(field) {
     activeField = field;
     const panel = document.getElementById("bus-search-panel");
@@ -9054,6 +9064,9 @@
     dd.style.top = rect.bottom + "px";
     renderDropdownItems("");
     dd.hidden = false;
+    syncDropdownHeight();
+    window.visualViewport?.addEventListener("resize", syncDropdownHeight);
+    window.visualViewport?.addEventListener("scroll", syncDropdownHeight);
     const filterEl = document.getElementById("bs-dd-filter");
     if (filterEl)
       setTimeout(() => filterEl.focus(), 80);
@@ -9118,8 +9131,12 @@
   function closeDropdown() {
     activeField = null;
     const dd = document.getElementById("bs-dropdown");
-    if (dd)
+    if (dd) {
       dd.hidden = true;
+      dd.style.maxHeight = "";
+    }
+    window.visualViewport?.removeEventListener("resize", syncDropdownHeight);
+    window.visualViewport?.removeEventListener("scroll", syncDropdownHeight);
   }
   function selectStop(stop, field) {
     if (field === "from") {
@@ -9872,6 +9889,9 @@
     </div>
     ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">${ICONS.close} \u0421\u041A\u0418\u041D\u0423\u0422\u0418 \u0424\u0406\u041B\u042C\u0422\u0420</button></div>` : ""}
   `;
+    ["bs-from-input", "bs-to-input"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("pointerdown", (e) => e.preventDefault());
+    });
     document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
     document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
     document.getElementById("bs-reset-btn")?.addEventListener("click", () => {

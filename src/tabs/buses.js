@@ -695,6 +695,32 @@ function getAllStops() {
 // ── Dropdown (кастомний список вибору зупинки) ────────────────────────
 
 // Відкриває дропдаун для поля 'from' або 'to'
+// 🔴 ВИСОТА СПИСКУ ЗУПИНОК = СКІЛЬКИ МІСЦЯ Є НАСПРАВДІ (10.08, за знімками Вови).
+//
+// Було: `max-height: 56vh` у CSS — стала частка ВСЬОГО екрана, тоді як список
+// починається аж під панеллю пошуку (≈470px від верху). 470 + 56vh(473) = 943
+// при екрані 844 — тобто низ списку виїжджав за екран НАВІТЬ без клавіатури.
+// А з клавіатурою (iPhone забирає ≈336px) ховалась ще третина: на знімку Вови
+// список обрізаний на «Жорнище», а «Звірів» видно лише крізь щілину над
+// клавіатурою.
+//
+// 🔑 Чому не лікується самим CSS: `vh` на iOS НЕ враховує клавіатуру, і `dvh`
+// теж — вони реагують на панель браузера, а не на клавіатуру. Єдине джерело
+// правди про видиму зону — `visualViewport`. Тому висоту рахуємо в JS і
+// перераховуємо на кожну появу/зникнення клавіатури.
+function syncDropdownHeight() {
+  const dd = document.getElementById('bs-dropdown');
+  if (!dd || dd.hidden) return;
+  const vv = window.visualViewport;
+  // Низ ВИДИМОЇ зони: без клавіатури = висота вікна, з клавіатурою — менше.
+  const низВидимого = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const верхСписку  = dd.getBoundingClientRect().top;
+  const ЗАПАС = 12;   // щоб список не впирався в саму клавіатуру впритул
+  // Підлога 180px: якщо місця зовсім мало, краще хай список трохи заходить під
+  // клавіатуру, ніж перетвориться на смужку в один рядок.
+  dd.style.maxHeight = Math.max(180, низВидимого - верхСписку - ЗАПАС) + 'px';
+}
+
 function openDropdown(field) {
   activeField = field;
   const panel = document.getElementById('bus-search-panel');
@@ -707,6 +733,13 @@ function openDropdown(field) {
 
   renderDropdownItems('');
   dd.hidden = false;
+  syncDropdownHeight();
+
+  // Клавіатура міняє видиму зону вже ПІСЛЯ фокуса — тому слухаємо, а не міряємо
+  // один раз. `scroll` теж потрібен: iOS зсуває visualViewport при появі
+  // клавіатури, і без цього список лишився б порахованим по старому низу.
+  window.visualViewport?.addEventListener('resize', syncDropdownHeight);
+  window.visualViewport?.addEventListener('scroll', syncDropdownHeight);
 
   // Фокус на поле фільтру
   const filterEl = document.getElementById('bs-dd-filter');
@@ -796,7 +829,11 @@ function renderDropdownItems(query) {
 function closeDropdown() {
   activeField = null;
   const dd = document.getElementById('bs-dropdown');
-  if (dd) dd.hidden = true;
+  if (dd) { dd.hidden = true; dd.style.maxHeight = ''; }
+  // Знімаємо слухачів — інакше вони лишались би висіти на кожне відкриття
+  // списку і рахували б висоту схованого вузла до кінця життя вкладки.
+  window.visualViewport?.removeEventListener('resize', syncDropdownHeight);
+  window.visualViewport?.removeEventListener('scroll', syncDropdownHeight);
 }
 
 // Вибирає зупинку і закриває дропдаун
@@ -1730,6 +1767,18 @@ function renderSearchPanel() {
     ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">${ICONS.close} СКИНУТИ ФІЛЬТР</button></div>` : ''}
   `;
 
+  // 🔴 «Звідки»/«Куди» — це КНОПКИ, а не поля для набору (обидві `readonly`,
+  // тап відкриває список зупинок). Але `<input>` однаково ловить фокус, і iOS
+  // на це реагує: прокручує webview, «щоб показати поле вводу» — саме тому на
+  // знімку Вови 10.08 шапка «CSTL LIFE» поїхала вгору і обрізалась, хоча
+  // сторінку ніхто не гортав.
+  // `preventDefault` на `pointerdown` знімає фокус, але НЕ заважає `click` —
+  // список відкривається як раніше.
+  // ⚠️ Свідомо не чіпаю нічого в розкладці між `pointerdown` і `click`
+  // (HOT_RULES №10): тут не рухається жоден піксель, лише не ставиться фокус.
+  ['bs-from-input', 'bs-to-input'].forEach(id => {
+    document.getElementById(id)?.addEventListener('pointerdown', e => e.preventDefault());
+  });
   document.getElementById('bs-from-input').addEventListener('click', () => openDropdown('from'));
   document.getElementById('bs-to-input').addEventListener('click',   () => openDropdown('to'));
 
