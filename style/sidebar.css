@@ -43,23 +43,56 @@
    ⚠️ `visibility`, а НЕ `display:none`: елемент лишається в дереві, тому перехід
    `opacity 0 → 1` анімується. З `display:none` першого кадру не було б і меню
    спалахувало б без плавності. Розмір, колір і сила блюру не змінені. */
+/* 🔴 10.08 — РОЗМИТТЯ ІСНУЄ ЛИШЕ У ВІДКРИТОМУ СТАНІ (друга половина бага Вови:
+   «меню зникло, а фон лишився заблюрений»).
+
+   Було: `backdrop-filter: blur(3px)` стояв у БАЗОВОМУ правилі, тобто фільтр
+   існував завжди — і поки меню закрите теж. Прозорість ховала його від ока, але
+   не від композитора: шар із `backdrop-filter` семплить фон щокадру незалежно
+   від `opacity`. У проєкті вже записаний урок про Safari — `will-change` разом із
+   `backdrop-filter` дає **застиглий blur** (`style/board.css`), і саме
+   `.sidebar-overlay` — ЄДИНИЙ повноекранний шар застосунку, який має
+   `backdrop-filter` І вмикається/вимикається. Унікальна комбінація = унікальний баг.
+
+   ➡️ Тому фікс прибирає не наслідок, а УМОВУ: у закритому стані фільтра не
+   існує взагалі (`none`), і застигати нема чому. Це не спирається на
+   правильність пояснення про Safari — довести його в Chromium однаково
+   неможливо, а умови вже немає.
+
+   🔑 ЧОМУ ПЕРЕМИКАЄТЬСЯ З ЗАТРИМКОЮ, А НЕ ОДРАЗУ. Просто перенести `blur(3px)`
+   у `--show` означало б: при закритті клас знімається в ту ж мить, розмиття
+   зникає РИВКОМ, а затемнення ще 0.25с згасає. Тобто фон «клацнув» би різкістю
+   посеред плавного згасання. Тому тут той самий прийом, яким у цьому ж файлі
+   вже вимикається `visibility`: `0s linear 0.25s` = «дочекайся кінця згасання і
+   зникни миттєво». Розмиття живе рівно доти, доки його видно.
+   ⚠️ Пряма вимога Вови до цього потоку: «не поламай ту логіку плавності». */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
   background: rgba(0, 0, 0, 0.32);
-  -webkit-backdrop-filter: blur(3px);
-          backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: none;
+          backdrop-filter: none;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+  transition: opacity 0.25s ease,
+              visibility 0s linear 0.25s,
+              -webkit-backdrop-filter 0s linear 0.25s,
+              backdrop-filter 0s linear 0.25s;
 }
 .sidebar-overlay--show {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transition: opacity 0.25s ease, visibility 0s;
+  -webkit-backdrop-filter: blur(3px);
+          backdrop-filter: blur(3px);
+  /* При ВІДКРИТТІ — без затримки: розмиття має бути на першому ж кадрі, разом
+     із появою затемнення. Затримка потрібна лише на зникнення. */
+  transition: opacity 0.25s ease,
+              visibility 0s,
+              -webkit-backdrop-filter 0s,
+              backdrop-filter 0s;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
