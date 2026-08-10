@@ -1504,8 +1504,15 @@ export function hasThreadsCached() { return _hasThreads; }
 // привчала б себе ігнорувати. Спершу екран «Відповіді», потім позначка.
 function paintTabDot(tab, on) {
   const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
-  if (!dot) return;
-  if (on) dot.removeAttribute('hidden'); else dot.setAttribute('hidden', '');
+  if (dot) { if (on) dot.removeAttribute('hidden'); else dot.setAttribute('hidden', ''); }
+  // 🆕 10.08 — ТА САМА КРАПКА В БУРГЕР-МЕНЮ, з того самого числа.
+  // Замовлення Вови: «такі позначення треба синхронізувати з реальними даними…
+  // відображення має бути реальним і в прямому ефірі». Меню НЕ веде власного
+  // підрахунку: воно малює те, що вже порахував цей модуль, тим самим викликом.
+  // ⚠️ Саме тому це тут, а не в `sidebar.js`: інакше зʼявився б другий лічильник
+  // того самого, а вони в проєкті вже розходились (B-27).
+  const sb = document.getElementById(`sb-dot-${tab}`);
+  if (sb) { if (on) sb.removeAttribute('hidden'); else sb.setAttribute('hidden', ''); }
 }
 
 // Перемалювати крапки обох вкладок. Без мережі: Дошка — з кешу `_unreadChats`,

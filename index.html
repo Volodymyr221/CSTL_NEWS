@@ -174,11 +174,16 @@
        Стрічка · Обговорення · [Громада] · Дошка · Автобуси. -->
   <nav class="tab-bar">
     <button class="tab-item" data-tab="shotam" onclick="switchTab('shotam')">
+      <!-- 🔴 10.08 — ІКОНКА ЗМІНЕНА (зауваження Вови: «в таббарі іконка стрічки
+           схожа на іконку "новини" з бургер меню»). Претензія точна: тут стояв
+           Tabler `news` — той самий малюнок, що `ICONS.newspaper`, яким підписані
+           НОВИНИ. Два розділи мали фактично один знак.
+           Стало: стос карток — «Стрічка» це саме лента дописів спільнот.
+           ⚠️ Бургер-меню бере іконки вкладок ЗВІДСИ (`tabIcon()` у sidebar.js),
+           тож правити треба рівно тут — меню підхопить саме. -->
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-14a1 1 0 0 1 1 -1h11a1 1 0 0 1 1 1v13"/>
-        <path d="M8 8l4 0"/>
-        <path d="M8 12l4 0"/>
-        <path d="M8 16l4 0"/>
+        <path d="M4 5a1 1 0 0 1 1 -1h14a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1z"/>
+        <path d="M4 15a1 1 0 0 1 1 -1h14a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1z"/>
       </svg>
       <span class="tab-label">Стрічка</span>
     </button>

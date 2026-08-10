@@ -80,8 +80,8 @@ const SECTIONS = [
     { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
     // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
     { id: 'shotam',      label: 'Стрічка',      icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
-    { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions' },
-    { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board' },
+    { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions', dot: 'discussions' },
+    { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board', dot: 'board' },
     { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
     // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
     { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'screen', open: () => openNewsHub() },
@@ -293,23 +293,58 @@ function closeSidebarInstant() {
 // Рядок розділу. Клас `.sidebar-item` навмисно ЛИШИВСЯ той самий: це та сама
 // сутність (пункт меню), і за нього тримаються три чинні стенди. Перейменування
 // заради «свіжості» зламало б їх, не змінивши нічого для людини.
+// 🔴 10.08 — ІКОНКА ВКЛАДКИ БЕРЕТЬСЯ З САМОГО ТАБ-БАРУ, а не пишеться тут удруге.
+//
+// Зауваження Вови: «в бургер меню у стрічки одна іконка, в таббарі зовсім інша,
+// яка схожа на іконку "новини" з бургер меню». Обидві половини претензії справдились:
+//   • меню малювало «Стрічку» значком `fileText` (документ), а таб-бар — зовсім
+//     іншим; тобто ДВА списки іконок для тих самих пʼяти вкладок жили нарізно;
+//   • у таб-барі «Стрічка» була Tabler `news` — той самий малюнок, що
+//     `ICONS.newspaper`, яким підписані НОВИНИ. Два розділи мали один знак.
+//
+// ➡️ Другий список прибрано як явище: меню ЧИТАЄ значок із таб-бару. Тепер вони не
+// можуть розійтись — джерело фізично одне, а не «домовились однакові». Іконку
+// вкладки міняють в `index.html`, і меню підхоплює саму зміну.
+// ⚠️ Розмір нормалізує CSS (`.sidebar-item-icon svg`): у таб-барі значок 22px, у
+// значків `ICONS` — 1em. Без цього рядки стрибали б по висоті залежно від джерела.
+function tabIcon(tab, fallback) {
+  const svg = document.querySelector(`.tab-bar .tab-item[data-tab="${tab}"] .tab-icon`);
+  return svg ? svg.outerHTML : fallback;   // немає таб-бару (тест/збій) — свій значок
+}
+
+// 🔴 КРАПКА В ЦЬОМУ ЗАСТОСУНКУ ОЗНАЧАЄ «Є НОВЕ» — І НІЧОГО ІНШОГО.
+// Перша редакція меню ставила крапку на АКТИВНУ вкладку («ти зараз тут»), і Вова
+// одразу спитав: «ця крапочка біля Дошки за що відповідає?». Питання законне:
+// крапка вже зайнята — саме нею таб-бар показує непрочитане (`.tab-dot`). Два
+// значення одного знака в одному застосунку читаються як помилка.
+// ➡️ Тому «ти тут» тепер показує ПІДСВІЧЕНИЙ РЯДОК, а крапка лишилась рівно за
+// непрочитаним. Стан крапки береться з таб-бару — тобто з того самого джерела,
+// що бачить людина внизу екрана; свого підрахунку меню не веде.
+function навеНове(tab) {
+  const dot = document.querySelector(`.tab-bar [data-tab-dot="${tab}"]`);
+  return !!dot && !dot.hidden;
+}
+
 function itemHtml(item, activeTab) {
   const hidden = item.team ? ' hidden' : '';
-  // «Ти зараз тут». Лише для справжніх вкладок: «Новини» і «Корисні контакти» —
-  // це прокрутка ВСЕРЕДИНІ Громади (`scrollTo`), і позначати їх активними разом
-  // із самою Громадою означало б світити три крапки одночасно.
+  // «Ти зараз тут». Лише для справжніх вкладок: «Корисні контакти» — це прокрутка
+  // ВСЕРЕДИНІ Громади (`scrollTo`), і позначати їх активними разом із самою
+  // Громадою означало б світити дві позначки одночасно.
   const тут = item.kind === 'tab' && !item.scrollTo && item.tab === activeTab;
-  // Лічильник непрочитаних. Число БЕРЕТЬСЯ, а не рахується заново: `unreadChatsCount()`
-  // віддає те саме `_unreadChats`, яким малюються бейджі FAB Дошки. Два лічильники
-  // того самого вже розходились (B-27), тому другого місця правди тут немає.
+  const icon = item.kind === 'tab' && !item.scrollTo ? tabIcon(item.tab, item.icon) : item.icon;
+  // Позначки «є нове». Числом — лише там, де воно вміщується і щось додає
+  // («Повідомлення»); на вкладках — крапка, точно як у таб-барі.
   const n = item.badge === 'unread' ? unreadChatsCount() : 0;
-  return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}${тут ? ' aria-current="page"' : ''}>
-    <span class="sidebar-item-icon">${item.icon}</span>
+  const крапка = item.dot ? навеНове(item.dot) : false;
+  return `<button class="sidebar-item${тут ? ' sidebar-item--here' : ''}" type="button" data-nav="${item.id}"${hidden}${тут ? ' aria-current="page"' : ''}>
+    <span class="sidebar-item-icon">${icon}</span>
     <span class="sidebar-item-label">${item.label}</span>
     ${item.badge === 'unread'
       ? `<span class="sidebar-item-badge" id="sb-msg-badge"${n ? '' : ' hidden'}>${n > 99 ? '99+' : n}</span>`
       : ''}
-    ${тут ? '<span class="sidebar-item-dot" aria-hidden="true"></span>' : ''}
+    ${item.dot
+      ? `<span class="sidebar-item-dot" id="sb-dot-${item.dot}" aria-label="є нове"${крапка ? '' : ' hidden'}></span>`
+      : ''}
     <span class="sidebar-item-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
 }
