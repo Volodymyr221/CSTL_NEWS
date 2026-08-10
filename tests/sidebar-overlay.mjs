@@ -79,7 +79,12 @@ const overlayState = () => page.evaluate(() => {
     // ВОНА, і перевірка «затемнення ловить тап» показувала б ✅ на будь-якому
     // коді — контрольний прогін це і викрив.
     eatsTap: document.elementFromPoint(30, innerHeight / 2) === el,
-    blur: cs.backdropFilter || cs.webkitBackdropFilter || '',
+    // ⚠️ 11.08 — фільтр переїхав на `::before` (щоб повноекранний шар САМ не був
+    // шаром із `backdrop-filter` — див. `style/sidebar.css`). Міряємо там, де він
+    // тепер живе: читати його з самого затемнення означало б завжди бачити `none`
+    // і зеленіти на будь-якому коді.
+    blur: (() => { const b = getComputedStyle(el, '::before');
+                   return b.backdropFilter || b.webkitBackdropFilter || ''; })(),
     area: Math.round(r.width * r.height),
   };
 });

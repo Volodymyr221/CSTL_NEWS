@@ -90,8 +90,10 @@ const менюВідкрите = () => page.evaluate(() =>
 const станЗатемнення = () => page.evaluate(() => {
   const el = document.getElementById('sidebar-overlay');
   const cs = getComputedStyle(el);
+  // ⚠️ 11.08 — фільтр живе на `::before`, а не на самому шарі (див. `style/sidebar.css`).
+  const b = getComputedStyle(el, '::before');
   return {
-    фільтр: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
+    фільтр: b.backdropFilter || b.webkitBackdropFilter || 'none',
     прозорість: parseFloat(cs.opacity),
     видно: cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.01,
     ловитьТап: document.elementFromPoint(30, innerHeight / 2) === el,
@@ -216,9 +218,9 @@ const хід = await page.evaluate(() => new Promise(res => {
   el.classList.remove('sidebar-overlay--show');
   const t0 = performance.now(); const кадри = [];
   const тік = () => {
-    const cs = getComputedStyle(el);
+    const cs = getComputedStyle(el), b = getComputedStyle(el, '::before');
     кадри.push({ мс: Math.round(performance.now() - t0), op: parseFloat(cs.opacity),
-                 ф: cs.backdropFilter || cs.webkitBackdropFilter || 'none' });
+                 ф: b.backdropFilter || b.webkitBackdropFilter || 'none' });
     if (performance.now() - t0 < 500) requestAnimationFrame(тік); else res(кадри);
   };
   requestAnimationFrame(тік);
@@ -239,9 +241,9 @@ const залипле = await page.evaluate(() => {
   const ov = document.getElementById('sidebar-overlay');
   ov.hidden = false;
   ov.classList.add('sidebar-overlay--show');
-  const cs = getComputedStyle(ov);
+  const cs = getComputedStyle(ov), b = getComputedStyle(ov, '::before');
   const r = {
-    фільтр: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
+    фільтр: b.backdropFilter || b.webkitBackdropFilter || 'none',
     видно: cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.01,
     ловитьТап: document.elementFromPoint(30, innerHeight / 2) === ov,
   };
