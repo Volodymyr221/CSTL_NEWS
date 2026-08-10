@@ -16561,13 +16561,14 @@ END:VEVENT`
     const { sidebar, overlay, toggle } = els();
     if (!sidebar || !overlay)
       return;
+    const \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u043B\u043E\u0441\u044C = overlay.classList.contains("sidebar-overlay--show");
     if (_open)
       overlay.hidden = false;
     sidebar.classList.toggle("sidebar--open", _open);
     overlay.classList.toggle("sidebar-overlay--show", _open);
     sidebar.setAttribute("aria-hidden", _open ? "false" : "true");
     toggle?.setAttribute("aria-expanded", _open ? "true" : "false");
-    if (!_open)
+    if (!_open && !\u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u043B\u043E\u0441\u044C)
       syncOverlay();
   }
   function syncOverlay() {
@@ -16684,7 +16685,6 @@ END:VEVENT`
     }).join("");
     const socialHtml = `
     <div class="sb-social-foot">
-      <div class="sb-social-cap">\u0421\u043B\u0456\u0434\u043A\u0443\u0439\u0442\u0435 \u0437\u0430 \u043D\u0430\u043C\u0438</div>
       <div class="sb-social-row">
         ${SOCIAL.map((s) => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">
           <span class="sb-social-ic">${s.icon}</span><span class="sb-social-lb">${s.short}</span>
