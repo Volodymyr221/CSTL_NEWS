@@ -54,7 +54,7 @@ await page.evaluate(() => document.getElementById('sidebar-close')?.click());
 await page.waitForTimeout(600);
 
 // 2. САМА СЦЕНА: тап по бургеру + продубльований тап через N мс
-for (const delay of [0, 30, 80, 150, 250, 400]) {
+for (const delay of [0, 30, 80, 150, 200, 250, 280, 330, 400, 700]) {
   await page.evaluate(() => { const o = document.getElementById('sidebar-overlay'); o.hidden = true; });
   await page.waitForTimeout(300);
   const res = await page.evaluate(async ([b, d]) => {
