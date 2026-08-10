@@ -1,43 +1,87 @@
 // src/core/sidebar.js
-// Бічне меню (сайдбар) — відкривається бургером зліва в шапці.
-// Повний список навігації + пункт «Кабінет», який видно ЛИШЕ команді
+// Бічне меню (сайдбар) — відкривається бургером у ПРАВОМУ куті шапки, і саме
+// тому виїжджає справа: панель приходить з-під кнопки, яку натиснули.
+// ⚠️ До 10.08 у цьому рядку стояло «бургер зліва в шапці» — неправда з якогось
+// давнього переїзду (`index.html`, `.header-right`). Дрібниця, але саме на неї
+// спирається вибір боку, тож хибний коментар тут коштував би зайвої суперечки.
+//
+// Повний список навігації + «Адмінка», яку видно ЛИШЕ команді
 // (сторож is_team_member() — server-authoritative, не обдуриш з клієнта).
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 10.08 — РЕДИЗАЙН (замовлення Вови з макета). Що змінилось і чому.
+//
+// БУЛО: рівний список із 13 однакових рядків на кремовому тлі, розділений
+// анонімними лініями. Три проблеми, кожна названа Вовою або аудитом:
+//   • «Особистий кабінет» — головний вхід — виглядав так само, як «Автобуси»;
+//   • кремовий `--paper #F4F1E6` лишався останнім великим островом бежу після
+//     того, як його прибрали з усього застосунку;
+//   • розділові лінії групували пункти, але не називали груп.
+//
+// СТАЛО: дві картки згори (профіль · Адмінка) + дві НАЗВАНІ групи рядків
+// («РОЗДІЛИ», «ІНФОРМАЦІЯ») + соцмережі з підписами.
+//
+// 🛑 МЕХАНІКУ ВІДКРИТТЯ НЕ ЧІПАНО НАВМИСНО. За нею стоять три полагоджені баги
+// (мертвий пункт кабінету B-31 · зависле затемнення · меню, впіймане знімком
+// системного свайпу напіввідкритим) і 38 перевірок у двох стендах. Редизайн —
+// це розмітка й стилі; `applyOpen`/`syncOverlay`/`closeSidebarInstant` лишились
+// байт-у-байт. Саме тому його можна було зробити одним заходом.
+// ═══════════════════════════════════════════════════════════════════════════
 
 import { isTeamMember } from './supabase.js';
-import { onAuthChange } from './auth.js';
+import { onAuthChange, isLoggedIn, currentUserName, currentAvatarUrl } from './auth.js';
 import { LEGAL_DOC_HTML, BOARD_RULES_HTML } from './legal.js';
 import { openModal } from './modal.js';
 import { ICONS } from './icons.js';
+import { avatarCircle, escapeHtml } from './utils.js';
 
-// Пункти меню. kind: 'tab' → switchTab; 'action' → своя дія; 'info' → модалка.
+// Пункти меню. kind: 'tab' → switchTab; 'account'/'cabinet' → своя дія; 'info' → модалка.
 // Іконки — тонкі Tabler-вектори (Потік 7, варіант 5) замість емодзі: однаковий вигляд на всіх ОС.
-const NAV = [
-  { id: 'cabinet',  label: 'Адмінка',            icon: ICONS.settings, kind: 'cabinet', team: true },
-  { id: 'account',  label: 'Особистий кабінет',   icon: ICONS.user, kind: 'account' },
-  { divider: true },
-  { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
-  { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
-  { id: 'shotam',      label: 'Шо в селі',    icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
-  { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board' },
-  { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions' },
-  { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
-  { id: 'contacts',    label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
-  { divider: true },
-  { id: 'support', label: 'Підтримка',            icon: ICONS.help, kind: 'info' },
-  // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
-  // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
-  // «Політики»: там документ на кілька екранів, і потрібний розділ довелось би шукати.
-  { id: 'boardrules', label: 'Правила Дошки',     icon: ICONS.clipboard, kind: 'info' },
-  { id: 'policy',  label: 'Політика і приватність', icon: ICONS.lock, kind: 'info' },
+//
+// 🔑 РОЗДІЛИ ОПИСАНІ ТУТ, А НЕ В РОЗМІТЦІ. Плаский `NAV` нижче будується з цього
+// самого списку — тобто джерело одне. Дві копії (одна для показу, друга для
+// `handleNav`) розійшлися б, і це вже двічі траплялось у проєкті (списки
+// антиспаму, стилі картки новини).
+const SECTIONS = [
+  // Картки. Це не «важливіші пункти меню», це інший ЖАНР: обидві ведуть не в
+  // розділ застосунку, а до людини (профіль) і за його межі (`admin.html`).
+  { id: 'cards', cards: true, items: [
+    { id: 'account', label: 'Особистий кабінет', icon: ICONS.user, kind: 'account' },
+    { id: 'cabinet', label: 'Адмінка',           icon: ICONS.shieldCheck, kind: 'cabinet', team: true },
+  ] },
+  { id: 'tabs', caption: 'Розділи', items: [
+    { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
+    { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
+    { id: 'shotam',      label: 'Шо в селі',    icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
+    { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board' },
+    { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions' },
+    { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
+    { id: 'contacts',    label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
+  ] },
+  { id: 'info', caption: 'Інформація', items: [
+    { id: 'support', label: 'Підтримка',            icon: ICONS.help, kind: 'info' },
+    // Правила Дошки — щоб їх можна було перечитати ПІСЛЯ того, як людина вже прийняла
+    // гейт при першому вході (вимога Вови 03.08). Окремим пунктом, а не всередині
+    // «Політики»: там документ на кілька екранів, і потрібний розділ довелось би шукати.
+    // ⚠️ Іконка `shield`, а не `clipboard`: clipboard уже носить «Дошка», і два
+    // однакові значки в одному меню читались як помилка. Щит тут ще й доречний —
+    // це «Правила БЕЗПЕЧНОГО користування».
+    { id: 'boardrules', label: 'Правила Дошки',     icon: ICONS.shield, kind: 'info' },
+    { id: 'policy',  label: 'Політика і приватність', icon: ICONS.lock, kind: 'info' },
+  ] },
 ];
 
+// Плаский список для `handleNav` — виводиться з `SECTIONS`, окремо не ведеться.
+const NAV = SECTIONS.flatMap(s => s.items);
+
 // Соцмережі проєкту Olyka Castle (головний бренд, не сам застосунок) — футер
-// сайдбару, лише іконки без підпису (рішення Вови 13.07). target=_blank +
-// rel=noopener: відкриється застосунок Instagram/Facebook (universal links iOS).
+// сайдбару. 🔄 10.08 підписи ПОВЕРНУТО: рішення 13.07 «лише іконки» лишало два
+// голі кружечки, які нічого не обіцяли. target=_blank + rel=noopener:
+// відкриється застосунок Instagram/Facebook (universal links iOS).
 const SOCIAL = [
-  { id: 'instagram', label: 'Instagram Olyka Castle', icon: ICONS.brandInstagram,
+  { id: 'instagram', short: 'Instagram', label: 'Instagram Olyka Castle', icon: ICONS.brandInstagram,
     url: 'https://www.instagram.com/olyka_castle?igsh=a2pmOGN3N2cyenBs' },
-  { id: 'facebook', label: 'Facebook Olyka Castle', icon: ICONS.brandFacebook,
+  { id: 'facebook', short: 'Facebook', label: 'Facebook Olyka Castle', icon: ICONS.brandFacebook,
     url: 'https://www.facebook.com/share/18mhw13NDu/?mibextid=wwXIfr' },
 ];
 
@@ -96,7 +140,10 @@ function applyOpen(open) {
   overlay.classList.toggle('sidebar-overlay--show', open);
   sidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
   toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) refreshCabinet();   // перевіряємо команду щоразу при відкритті
+  // Перемальовуємо ЩОРАЗУ при відкритті: імʼя і фото могли змінитись у кабінеті,
+  // вкладка — з минулого разу, штамп версії — після деплою. Дешевше за підписки
+  // на кожне з цих джерел, і не буває «меню показує вчорашнє».
+  if (open) { renderNav(); refreshCabinet(); }
   else syncOverlay();           // закриття могло вже завершитись — звіримо одразу
 }
 
@@ -169,25 +216,105 @@ function closeSidebarInstant() {
   overlay?.classList.remove('sidebar--instant');
 }
 
-function itemHtml(item) {
-  if (item.divider) return '<div class="sidebar-divider"></div>';
+// Рядок розділу. Клас `.sidebar-item` навмисно ЛИШИВСЯ той самий: це та сама
+// сутність (пункт меню), і за нього тримаються три чинні стенди. Перейменування
+// заради «свіжості» зламало б їх, не змінивши нічого для людини.
+function itemHtml(item, activeTab) {
   const hidden = item.team ? ' hidden' : '';
-  return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}>
+  // «Ти зараз тут». Лише для справжніх вкладок: «Новини» і «Корисні контакти» —
+  // це прокрутка ВСЕРЕДИНІ Громади (`scrollTo`), і позначати їх активними разом
+  // із самою Громадою означало б світити три крапки одночасно.
+  const тут = item.kind === 'tab' && !item.scrollTo && item.tab === activeTab;
+  return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}${тут ? ' aria-current="page"' : ''}>
     <span class="sidebar-item-icon">${item.icon}</span>
     <span class="sidebar-item-label">${item.label}</span>
+    ${тут ? '<span class="sidebar-item-dot" aria-hidden="true"></span>' : ''}
+    <span class="sidebar-item-go" aria-hidden="true">${ICONS.chevronRight}</span>
   </button>`;
+}
+
+// ── КАРТКА ПРОФІЛЮ ──────────────────────────────────────────────────────────
+// Побудована як блок автора в оголошенні (`renderAdAuthor`, `tabs/board.js`):
+// аватар · імʼя · тихий підпис · шеврон. Замовлення Вови дослівно: «типу імʼя і
+// знизу особистий кабінет». Спільний хелпер `avatarCircle` — той самий, що в
+// чаті й кабінеті, тож фото/літера/анонім поводяться однаково скрізь.
+//
+// 🔴 СТАН ГОСТЯ — окремий, і без нього не можна було запускатись. У макета його
+// немає, але це НАЙЧАСТІШИЙ стан для нової людини: незалогінений не має ні
+// імені, ні фото, і картка була б порожньою рамкою.
+//
+// ⚠️ АТРИБУТ `data-account-btn` СЮДИ НЕ СТАВИТИ, хоч і проситься. Два наслідки,
+// обидва ламають екран: (1) `refreshAccountButtons()` переписує `innerHTML`
+// таких кнопок на самий аватар — від картки лишився б кружечок; (2) `handleNav`
+// шукає `[data-account-btn]` через `querySelector`, і картка (сайдбар лежить у
+// розмітці ВИЩЕ за `.app-main`) знайшлась би першою — тап сам по собі.
+function profileCardHtml() {
+  const увійшов = isLoggedIn();
+  const імʼя  = увійшов ? (currentUserName() || 'Житель') : 'Приєднатись';
+  const підпис = увійшов ? 'Особистий кабінет' : 'Вхід через Google';
+  const ава = увійшов
+    ? avatarCircle({ name: імʼя, url: currentAvatarUrl(), cls: 'sb-av' })
+    : `<span class="sb-av sb-av--guest">${ICONS.user}</span>`;
+  return `<button class="sb-card sb-card--me" type="button" data-nav="account">
+    ${ава}
+    <span class="sb-card-txt">
+      <span class="sb-card-name">${escapeHtml(імʼя)}</span>
+      <span class="sb-card-sub">${підпис}</span>
+    </span>
+    <span class="sb-card-go" aria-hidden="true">${ICONS.chevronRight}</span>
+  </button>`;
+}
+
+// Картка «Адмінка». `hidden` за замовчуванням — знімає його `refreshCabinet()`
+// після відповіді сервера. Саме так, а не навпаки: показати й сховати означало б
+// блимнути адмінкою перед кожним звичайним жителем.
+function adminCardHtml(item) {
+  return `<button class="sb-card sb-card--admin" type="button" data-nav="${item.id}"${_team ? '' : ' hidden'}>
+    <span class="sb-card-ic">${item.icon}</span>
+    <span class="sb-card-txt">
+      <span class="sb-card-name">${item.label}</span>
+      <span class="sb-card-sub">Панель керування</span>
+    </span>
+    <span class="sb-card-go" aria-hidden="true">${ICONS.chevronRight}</span>
+  </button>`;
+}
+
+// Лічильник версії — ОДНЕ джерело: штамп у шапці, який підміняє CI (`deploy.yml`,
+// `sed` по `index.html`). Другий рядок у розмітці був би другим джерелом.
+function paintVersion() {
+  const el = document.getElementById('sidebar-ver');
+  if (!el) return;
+  el.textContent = (document.querySelector('.deploy-stamp')?.textContent || '').trim();
 }
 
 function renderNav() {
   const { nav } = els();
   if (!nav) return;
+  const activeTab = document.querySelector('.app-main')?.dataset.tab || '';
+
+  const секції = SECTIONS.map(s => {
+    if (s.cards) {
+      return `<div class="sb-cards">${s.items.map(i =>
+        i.kind === 'account' ? profileCardHtml() : adminCardHtml(i)).join('')}</div>`;
+    }
+    return `<div class="sb-cap">${s.caption}</div>
+      <div class="sb-group">${s.items.map(i => itemHtml(i, activeTab)).join('')}</div>`;
+  }).join('');
+
   // Футер соцмереж — притиснутий до низу меню (margin-top:auto у CSS),
   // <a> зі справжнім href: iOS відкриє застосунок Instagram/Facebook.
   const socialHtml = `
     <div class="sb-social-foot">
-      ${SOCIAL.map(s => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">${s.icon}</a>`).join('')}
+      <div class="sb-social-cap">Слідкуйте за нами</div>
+      <div class="sb-social-row">
+        ${SOCIAL.map(s => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">
+          <span class="sb-social-ic">${s.icon}</span><span class="sb-social-lb">${s.short}</span>
+        </a>`).join('')}
+      </div>
     </div>`;
-  nav.innerHTML = NAV.map(itemHtml).join('') + socialHtml;
+
+  nav.innerHTML = секції + socialHtml;
+  paintVersion();
   nav.querySelectorAll('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => handleNav(btn.dataset.nav));
   });
@@ -242,12 +369,19 @@ function openInfoModal(key) {
   });
 }
 
-// Показати/сховати «Кабінет» за server-сторожем.
+// Показати/сховати «Адмінку» за server-сторожем.
+// ⚠️ `_team` — памʼять минулої відповіді, а НЕ заміна перевірці. Потрібна тому,
+// що тепер меню перемальовується на кожне відкриття: без памʼяті картка щоразу
+// малювалась би схованою і виринала за мить, коли прийде відповідь сервера, —
+// тобто блимала б у Вови при кожному тапі по бургеру. Право доступу вирішує
+// однаково `is_team_member()`; кеш лише прибирає блимання.
+let _team = false;
 async function refreshCabinet() {
   const btn = document.querySelector('[data-nav="cabinet"]');
   if (!btn) return;
   let team = false;
   try { team = await isTeamMember(); } catch { team = false; }
+  _team = team;
   btn.hidden = !team;
 }
 
@@ -281,8 +415,10 @@ export function initSidebar() {
     if (document.visibilityState === 'visible') syncOverlay();
   });
   window.addEventListener('pageshow', syncOverlay);
-  // Оновлюємо видимість «Кабінет» при вход/вихід.
-  onAuthChange(() => refreshCabinet());
+  // Вхід/вихід міняє і право на «Адмінку», і саму картку профілю (імʼя, фото,
+  // стан гостя). Перемальовуємо лише коли меню відкрите — інакше це зробить
+  // найближче відкриття, і зайвої роботи у фоні немає.
+  onAuthChange(() => { if (_open) renderNav(); refreshCabinet(); });
   refreshCabinet();
   // Банер згоди / інші місця можуть відкрити правовий документ подією.
   document.addEventListener('cstl-open-legal', () => openInfoModal('policy'));

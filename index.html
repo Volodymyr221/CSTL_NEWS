@@ -46,7 +46,17 @@
   <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
   <aside class="sidebar" id="sidebar" aria-hidden="true">
     <div class="sidebar-head">
-      <div class="sidebar-logo">CSTL <span>LIFE</span></div>
+      <!-- Замок — те саме лого, що на центральній кнопці таб-бару; лежить у
+           precache `sw.js`, тож не блимає після кожного деплою. -->
+      <img class="sidebar-mark" src="./icons/castle-icon.png" alt="" width="36" height="36">
+      <div class="sidebar-head-txt">
+        <div class="sidebar-logo">CSTL <span>LIFE</span></div>
+        <!-- Лічильник версії. Порожній у розмітці НАВМИСНО: текст сюди копіює
+             `sidebar.js` з `.deploy-stamp` у шапці. Другий рядок `v… · дата` в
+             `index.html` створив би ДРУГЕ джерело — CI підміняє штамп `sed`-ом
+             по всьому файлу, і одного дня вони розійшлися б. -->
+        <div class="sidebar-ver" id="sidebar-ver"></div>
+      </div>
       <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Закрити">✕</button>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
