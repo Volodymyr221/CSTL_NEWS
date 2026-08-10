@@ -723,15 +723,67 @@ function syncDropdownHeight() {
   // острівцем». Тому межу беремо по ВЕРХУ таб-бару, а не по краю екрана.
   // ⚠️ `min` із низом вікна обовʼязковий: коли клавіатура відкрита, вона вища за
   // таб-бар (і сам бар уже під нею) — тоді головна межа саме клавіатура.
-  const бар = document.querySelector('.tab-bar');
-  const верхБару = бар ? бар.getBoundingClientRect().top : низВікна;
-  const межа = Math.min(низВікна, верхБару);
+  // 🔴 ТРЕТЯ ПОПРАВКА (10.08, знімок Вови): межа — верх КРУГА, а не смужки бару.
+  // Друга редакція брала `.tab-bar`, і список усе одно заходив під випуклий
+  // острівець: круг «Громади» — `position: absolute; bottom: 28px; height: 52px`
+  // усередині бару 56px, тобто його верх на ~24px ВИЩЕ за верх смужки. Вова
+  // саме про нього: «нижній край має розташовуватись над тим випуклим
+  // острівцем, там де іконка логотипу».
+  const круг = document.querySelector('.tab-home-circle');
+  const бар  = document.querySelector('.tab-bar');
+  const верхНизу = круг ? круг.getBoundingClientRect().top
+                        : (бар ? бар.getBoundingClientRect().top : низВікна);
+  const межа = Math.min(низВікна, верхНизу);
 
   const верхСписку = dd.getBoundingClientRect().top;
   const ЗАПАС = 12;   // щоб список не впирався в межу впритул
   // Підлога 180px: якщо місця зовсім мало, краще хай список трохи заходить під
   // клавіатуру, ніж перетвориться на смужку в один рядок.
   dd.style.maxHeight = Math.max(180, межа - верхСписку - ЗАПАС) + 'px';
+}
+
+// 🔴 ПРИБИВАЄМО СТОРІНКУ, ПОКИ СПИСОК ВІДКРИТИЙ (10.08, третій знімок Вови).
+//
+// Скарга після другого заходу: «при натиску на поле "пошук зупинки" сторінка
+// включаючи шапку все одно підскакує за екран». Тобто `overflow: hidden` на
+// `.app-main` НЕ допоміг — і це логічно, хоч я на це й розраховував:
+// `overflow: hidden` спиняє прокрутку ПАЛЬЦЕМ, але не програмну. А iOS саме
+// програмно везе сторінку, «щоб показати сфокусоване поле» — робить це навіть
+// коли поле й так на видноті, бо воно лежить у `position: fixed` контейнері
+// (давня особливість Safari: фіксовані шари він у цьому розрахунку не розуміє).
+//
+// Тому мало ЗАБОРОНИТИ прокрутку — треба ПОВЕРТАТИ її назад. Запамʼятовуємо
+// положення в момент відкриття і відновлюємо на кожну спробу зсуву.
+// ⚠️ Три джерела зсуву, і всі три треба слухати:
+//   `window.scroll`         — прокрутка документа;
+//   `.app-main` `scroll`    — прокрутка контейнера вкладки;
+//   `visualViewport.scroll` — зсув САМОЇ видимої зони (iOS робить і так теж,
+//                             причому `window.scrollY` при цьому лишається 0).
+let _замокСторінки = null;
+
+function пришпилитиСторінку() {
+  if (!_замокСторінки) return;
+  const { main, top } = _замокСторінки;
+  if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+  if (main && main.scrollTop !== top) main.scrollTop = top;
+}
+
+function увімкнутиЗамок() {
+  const main = document.querySelector('.app-main');
+  _замокСторінки = { main, top: main ? main.scrollTop : 0 };
+  main?.classList.add('bs-scroll-lock');
+  window.addEventListener('scroll', пришпилитиСторінку, { passive: true });
+  main?.addEventListener('scroll', пришпилитиСторінку, { passive: true });
+  window.visualViewport?.addEventListener('scroll', пришпилитиСторінку);
+}
+
+function вимкнутиЗамок() {
+  const main = _замокСторінки?.main || document.querySelector('.app-main');
+  window.removeEventListener('scroll', пришпилитиСторінку);
+  main?.removeEventListener('scroll', пришпилитиСторінку);
+  window.visualViewport?.removeEventListener('scroll', пришпилитиСторінку);
+  main?.classList.remove('bs-scroll-lock');
+  _замокСторінки = null;
 }
 
 function openDropdown(field) {
@@ -762,7 +814,7 @@ function openDropdown(field) {
   // ⚠️ Це заразом правильна поведінка модалки: фон під відкритим списком і не
   // мав би гортатись. Знімається у `closeDropdown`, стан не губиться —
   // `overflow: hidden` не скидає `scrollTop`.
-  document.querySelector('.app-main')?.classList.add('bs-scroll-lock');
+  увімкнутиЗамок();
 
   // 🔴 ФОКУС — СИНХРОННО, І ЦЕ НЕ ПРИДИРКА ДО СТИЛЮ.
   // Тут стояв `setTimeout(…, 80)`. Разом із забороною фокуса на полі-кнопці
@@ -868,7 +920,7 @@ function closeDropdown() {
   window.visualViewport?.removeEventListener('scroll', syncDropdownHeight);
   // Повертаємо сторінці прокрутку. 🔴 Якщо цього не зробити, вкладка лишиться
   // замороженою назавжди — найгірший з можливих наслідків цієї фічі.
-  document.querySelector('.app-main')?.classList.remove('bs-scroll-lock');
+  вимкнутиЗамок();
 }
 
 // Вибирає зупинку і закриває дропдаун
