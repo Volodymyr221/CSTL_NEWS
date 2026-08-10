@@ -118,6 +118,47 @@ ok('🛑 обгортка `#hm-rubber` на місці й нічого не зс
    Math.abs(після.капсули - спокій.капсули) < 0.5,
    `${спокій.капсули} → ${після.капсули}`);
 
+// ── 🔴 НИЖНІЙ КРАЙ (питання Вови: «а знизу віджетів громади чому не працює?») ─
+// Перша редакція вела лише верхню межу — тобто половину обіцянки. Рідний
+// відскок вимкнено на всю вкладку, тож низ лишався мертвим.
+await p.evaluate(() => {
+  const m = document.querySelector('.app-main');
+  m.scrollTop = m.scrollHeight;          // до самого низу
+});
+await p.waitForTimeout(300);
+const низСпокій = await позиції();
+
+await p.evaluate(async () => {
+  const cast = (тип, y) => {
+    const t = new Touch({ identifier: 2, target: document.body, clientX: 195, clientY: y });
+    document.querySelector('.app-main').dispatchEvent(
+      new TouchEvent(тип, { touches: тип === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true }));
+  };
+  cast('touchstart', 500);
+  for (let y = 490; y >= 380; y -= 10) { cast('touchmove', y); await new Promise(r => setTimeout(r, 12)); }
+});
+await p.waitForTimeout(80);
+const низПідЖестом = await позиції();
+const зсувНизу = низПідЖестом.контакти - низСпокій.контакти;
+
+ok('🔴 знизу зона теж відтягується (тягнемо вгору на нижній межі)',
+   зсувНизу < -8, `контакти поїхали на ${зсувНизу.toFixed(1)}px`);
+
+ok('🔴 і знизу бордова шапка не бере участі в русі',
+   Math.abs(низПідЖестом.шапка - низСпокій.шапка) < 0.5,
+   `${низСпокій.шапка} → ${низПідЖестом.шапка}`);
+
+await p.evaluate(() => {
+  const t = new Touch({ identifier: 2, target: document.body, clientX: 195, clientY: 380 });
+  document.querySelector('.app-main').dispatchEvent(
+    new TouchEvent('touchend', { touches: [], changedTouches: [t], bubbles: true }));
+});
+await p.waitForTimeout(700);
+const низПісля = await позиції();
+ok('🔴 знизу теж повертається рівно на місце (без стрибка)',
+   Math.abs(низПісля.контакти - низСпокій.контакти) < 0.5,
+   `${низСпокій.контакти} → ${низПісля.контакти}`);
+
 // ── 🛑 Конструкція: у зоні немає `position: fixed` ──────────────────────────
 const фіксовані = await p.evaluate(() => {
   const z = document.getElementById('hm-rubber');
