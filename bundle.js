@@ -16463,6 +16463,17 @@ END:VEVENT`
   function closeSidebar() {
     applyOpen(false);
   }
+  function closeSidebarInstant() {
+    const { sidebar, overlay } = els();
+    sidebar?.classList.add("sidebar--instant");
+    overlay?.classList.add("sidebar--instant");
+    applyOpen(false);
+    void sidebar?.offsetWidth;
+    if (overlay)
+      overlay.hidden = true;
+    sidebar?.classList.remove("sidebar--instant");
+    overlay?.classList.remove("sidebar--instant");
+  }
   function itemHtml(item) {
     if (item.divider)
       return '<div class="sidebar-divider"></div>';
@@ -16492,7 +16503,7 @@ END:VEVENT`
     const item = NAV.find((n) => n.id === id);
     if (!item)
       return;
-    closeSidebar();
+    closeSidebarInstant();
     if (item.kind === "tab") {
       window.switchTab?.(item.tab);
       if (item.scrollTo) {

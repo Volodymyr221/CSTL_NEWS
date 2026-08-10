@@ -88,11 +88,25 @@ ok('бургер-меню відкрилось і пункт «Особисти�
 // вдавати, що браузер бачить те, що бачить айфон.
 await p.evaluate(() => document.querySelector('[data-nav="account"]')?.click());
 
-// Спершу — що плавність НЕ зникла: одразу після тапу панель ще малюється,
-// бо йде виїзд. Якби `visibility` знімалась миттєво, меню зникало б ривком.
-await p.waitForTimeout(80);
-ok('🛑 закриття лишилось плавним: панель ще малюється, поки триває виїзд',
-   await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'visible'));
+// 🔴 ПЕРЕХІД ІЗ МЕНЮ ЗАКРИВАЄ ЙОГО МИТТЄВО (10.08, третій знімок Вови).
+// Уточнення, яке дало розгадку: «стрілочкою "<" — нічого не вилазить, а СВАЙПОМ
+// — досі визирає». Свайп програється **знімком** сторінки, зробленим у момент
+// переходу; плавне згортання потрапляє в цей знімок НАПІВВІДКРИТИМ. Тому меню
+// має зникнути ДО того, як відкриється екран, а не паралельно з ним.
+// ⚠️ Chromium знімків для жесту не робить і артефакт не покаже — міряємо
+// причину: чи стан «закрито» застосований УЖЕ, без очікування анімації.
+await p.waitForTimeout(30);
+const одразуПісляТапу = await p.evaluate(() => {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebar-overlay');
+  return { панель: getComputedStyle(s).visibility, відкрита: s.classList.contains('sidebar--open'),
+           затемненняHidden: o.hidden };
+});
+ok('🔴 меню зникло ОДРАЗУ при переході (знімок для свайпу не впіймає його напіввідкритим)',
+   одразуПісляТапу.панель === 'hidden' && !одразуПісляТапу.відкрита,
+   `visibility ${одразуПісляТапу.панель}`);
+ok('🔴 затемнення прибрано тим самим кадром',
+   одразуПісляТапу.затемненняHidden === true);
 
 await p.waitForTimeout(1600);
 ok('🔴 після закриття панель меню НЕ малюється (нема чому визирати краєм)',
@@ -111,6 +125,20 @@ ok('🔴 після виходу з кабінету назад панель м�
    await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'hidden'));
 
 await закритиКабінет();
+
+// ── 🛑 А ось ЗАКРИТТЯ САМОГО МЕНЮ мусить лишитись ПЛАВНИМ ───────────────────
+// Миттєве зникнення доречне лише при переході кудись. Коли людина закриває саме
+// меню (✕, тап по затемненню), воно має плавно виїжджати. Якби я вимкнув
+// анімацію скрізь, це був би обмін одного дефекту на інший.
+await p.evaluate(() => document.getElementById('sidebar-toggle')?.click());
+await p.waitForTimeout(600);
+await p.evaluate(() => document.getElementById('sidebar-close')?.click());
+await p.waitForTimeout(60);
+ok('🛑 закриття хрестиком лишилось ПЛАВНИМ (панель ще малюється під час виїзду)',
+   await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'visible'));
+await p.waitForTimeout(500);
+ok('після плавного закриття панель теж перестає малюватись',
+   await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).visibility === 'hidden'));
 
 // ── Другий шлях мусить лишитись цілим (не зламали, поки лагодили перший) ────
 await p.evaluate(() => document.querySelector('[data-account-btn]')?.click());
