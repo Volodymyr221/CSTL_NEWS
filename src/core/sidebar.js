@@ -169,6 +169,7 @@ function els() {
     toggle: document.getElementById('sidebar-toggle'),
     close: document.getElementById('sidebar-close'),
     nav: document.getElementById('sidebar-nav'),
+    foot: document.getElementById('sidebar-foot'),
   };
 }
 
@@ -479,7 +480,7 @@ function adminCardHtml(item) {
 }
 
 function renderNav() {
-  const { nav } = els();
+  const { nav, foot } = els();
   if (!nav) return;
   const activeTab = document.querySelector('.app-main')?.dataset.tab || '';
 
@@ -492,8 +493,22 @@ function renderNav() {
       <div class="sb-group">${s.items.map(i => itemHtml(i, activeTab)).join('')}</div>`;
   }).join('');
 
-  // Футер соцмереж — притиснутий до низу меню (margin-top:auto у CSS),
-  // <a> зі справжнім href: iOS відкриє застосунок Instagram/Facebook.
+  // 🔴 10.08 — ПІДВАЛ СОЦМЕРЕЖ ПИШЕТЬСЯ В ОКРЕМИЙ ВУЗОЛ, А НЕ В КІНЕЦЬ СПИСКУ.
+  //
+  // Замовлення Вови зі знімка: «низ… треба відділити так само як шапку зверху.
+  // Тобто воно має бути статично, а скролитись тільки ця частина».
+  //
+  // Було: цей блок дописувався в кінець `.sidebar-nav`, тобто ВСЕРЕДИНУ скролера,
+  // і притискався донизу через `margin-top: auto`. Поки пунктів мало, це
+  // виглядало як підвал; щойно список переростав панель, `margin-top: auto`
+  // перетворювався на нуль, підвал ставав звичайним останнім блоком і їхав разом
+  // зі списком — а «Політика і приватність» ховалась за ним. Саме це на знімку.
+  //
+  // 🔑 Тепер підвал — БРАТ шапки і списку в колонці панелі, тож прокручується
+  // рівно середина. Прийом дослівно той самий, яким 10.08 зробили статичною
+  // шапку: `flex-shrink: 0` на краях і `min-height: 0` + `overflow-y` на середині.
+  // ⚠️ `margin-top: auto` разом із переїздом ПРИБРАНО з `.sb-social-foot`: у
+  // власному вузлі притискати вже нема чого, а лишений — додав би зайвий відступ.
   const socialHtml = `
     <div class="sb-social-foot">
       <div class="sb-social-cap">Слідкуйте за нами</div>
@@ -504,13 +519,19 @@ function renderNav() {
       </div>
     </div>`;
 
-  nav.innerHTML = секції + socialHtml;
+  nav.innerHTML = секції;
+  // ⚠️ Запасний шлях: якщо вузла підвалу немає (стара розмітка в кеші PWA —
+  // `index.html` і `bundle.js` доїжджають на телефон НАРІЗНО, урок 09.08), кладемо
+  // підвал у кінець списку, як було. Гірший вигляд краще за зниклі соцмережі.
+  const ціль = foot || nav;
+  if (foot) foot.innerHTML = socialHtml; else nav.insertAdjacentHTML('beforeend', socialHtml);
+
   nav.querySelectorAll('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => handleNav(btn.dataset.nav));
   });
   // Тап по соцмережі → закрити сайдбар (посилання відкривається у новій вкладці,
   // меню не має лишатись висіти під ним після повернення).
-  nav.querySelectorAll('.sb-social-btn').forEach(a => {
+  ціль.querySelectorAll('.sb-social-btn').forEach(a => {
     a.addEventListener('click', () => closeSidebar());
   });
 }
