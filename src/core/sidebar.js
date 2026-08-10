@@ -77,7 +77,13 @@ const SECTIONS = [
     { id: 'cabinet', label: 'Адмінка',           icon: ICONS.settings, kind: 'cabinet', team: true },
   ] },
   { id: 'tabs', caption: 'Розділи', items: [
-    { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
+    // 🔴 10.08 — значок замінено (вибір Вови: «для громади Б6»). Було
+    // `community` (будівлі) — Вова сказав, що не подобається. Стало гурт людей.
+    // ⚠️ Це ЄДИНИЙ рядок, який бере значок не з таб-бару: центральна кнопка
+    // «Громада» внизу — растровий замок (`icons/castle-icon.png`), вектора там
+    // немає, тож `tabIcon()` падає на цей запасний. Виняток названий і в
+    // сторожі (`tests/sidebar-menu.mjs`, п.6д).
+    { id: 'community',   label: 'Громада',      icon: ICONS.usersGroup, kind: 'tab', tab: 'community' },
     // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
     { id: 'shotam',      label: 'Стрічка',      icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
     { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions', dot: 'discussions' },
