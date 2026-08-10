@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-10T02:34:28.317198+03:00",
+  "fetched_at": "2026-08-10T05:04:19.395066+03:00",
   "date": "10.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -102,8 +102,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -132,8 +132,8 @@
       "carrier": "Стамбульський О.Й.- м. Луцьк",
       "bus": "ПАЗ 32054",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -147,8 +147,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
