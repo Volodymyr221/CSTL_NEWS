@@ -1046,8 +1046,7 @@ textarea.cm-board-input.bm-invalid {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* Картки-обговорення у стрічці «Збережені» — ті самі відступи, що й оголошення */
-.bd-stream .bd-card--chat { padding: 13px 13px 12px; }
+/* Картки-обговорення у стрічці «Збережені» — ті самі відступи, що й оголошення *
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
@@ -2292,275 +2291,26 @@ textarea.cm-board-input.bm-invalid {
 }
 
 /* ── INLINE-КОМЕНТАРІ ДЛЯ CHAT-КАРТОК ───────────────────────────────────── */
-/* ── Прев'ю картки обговорення (тап → модалка-чат) ──────────────────────── */
-.bd-card--chat { cursor: pointer; }
-.bd-chat-topic {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-/* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
-.bd-chat-topline {
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.bd-chat-msgcount, .bd-chat-participants {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--gray);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.bd-chat-last {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;   /* два останніх повідомлення — окремими рядками */
-  align-items: stretch;
-  gap: 5px;
-  background: rgba(0,0,0,0.03);
-  border-radius: 10px;
-  padding: 7px 12px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #555;
-}
-.bd-chat-last-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bd-chat-last-msg {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bd-chat-last-time {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--gray);
-  white-space: nowrap;
-}
-.bd-chat-last-author { font-weight: 600; color: var(--red); }
-.bd-chat-last--empty { color: var(--gray); font-style: italic; }
-.bd-chat-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;          /* штрих-пунктирна лінія зміщена нижче (більший відступ над підвалом) */
-  padding-top: 10px;
-  border-top: 1px dashed rgba(0,0,0,0.10);
-  font-size: 12px;
-  color: var(--gray);
-}
-.bd-chat-like {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-right: auto;
-  padding: 4px 6px;
-  margin-left: -6px;
-  border: 0;
-  background: transparent;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 13px;   /* лічильник трохи більший разом із сердечком (Вова 14.07) */
-  font-weight: 600;
-  color: var(--gray);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-like:active { background: rgba(0,0,0,0.05); }
-.bd-chat-like--active { color: var(--red); }
-.bd-chat-like svg { flex-shrink: 0; }
-/* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
-.bd-chat-by {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  line-height: 1.25;
-  font-size: 11px;
-  color: #1C1C1E;
-}
-.bd-chat-by-author { text-transform: uppercase; }
-.bd-chat-by-label { font-weight: 700; color: var(--red); }
-.bd-chat-by-date { font-size: 10.5px; color: var(--gray); }
-/* Кнопка «зберегти» в підвалі картки — трохи компактніша */
-.bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
+/* ── Прев'ю картки обговорення (тап → модалка-чат) ──────────────────────── *
+/* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) *
+/* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч *
+/* Кнопка «зберегти» в підвалі картки — трохи компактніша *
 
-/* Гість у чаті обговорення — замість поля вводу кнопка входу (читати можна, писати — ні) */
-.bd-chat-login-cta {
-  display: block;
-  width: calc(100% - 24px);
-  margin: 8px 12px calc(10px + env(safe-area-inset-bottom));
-  padding: 13px;
-  border: none;
-  border-radius: 12px;
-  background: var(--brand-grad-sm);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
+/* Гість у чаті обговорення — замість поля вводу кнопка входу (читати можна, писати — ні) *
 
-/* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
-.bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
-
-.bd-chat-modal {
-  position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 6px);
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
-  left: 50%;
-  width: min(94vw, 460px);
-  z-index: 1100;                        /* вище таб-бару — меню не перекриває */
-  display: flex;
-  flex-direction: column;
-  background: #F3EFE3;                  /* Вова 20.07: контейнер = колір верх/низ блоків → зона рисочки і заокруглені кути суцільні з шапкою (тіло має власний колір нижче) */
-  border-radius: 22px;
-  overflow: hidden;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.40), 0 6px 18px rgba(0,0,0,0.22);
-  transform: translateX(-50%) scale(0.96);
-  opacity: 0;
-  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease,
-              top 0.28s ease, height 0.28s ease, bottom 0.28s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-modal.visible {
-  transform: translateX(-50%) scale(1);
-  opacity: 1;
-}
-/* Клавіатура відкрита: верх піднімається до самого верху (низ — inline-стилем у JS) */
-.bd-chat-modal--kb {
-  top: calc(env(safe-area-inset-top, 0px) + 6px);
-}
+/* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── *   /* вище таб-бару (1000) — затемнює і меню *
+/* Клавіатура відкрита: верх піднімається до самого верху (низ — inline-стилем у JS) *
 /* Прибрати нижній safe-area відступ поля при відкритій клавіатурі (інакше кремова
-   смуга між полем і клавіатурою). Та сама логіка, що в приватному чаті (.pm-kb-open). */
-.bd-chat-modal--kb .bd-chat-modal-form { padding-bottom: 10px; }
-
-.bd-chat-modal-handle {
-  width: 38px; height: 4px; border-radius: 2px;
-  background: rgba(0,0,0,0.12);
-  margin: 8px auto 2px; flex-shrink: 0;
-}
-.bd-chat-modal-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 8px 10px;
-  flex-shrink: 0;
-  background: #F3EFE3;                  /* Вова 20.07: верхній блок = колір нижнього (форми #F3EFE3); тіло чату лишається в колір картки #FCFAF4 */
-  /* Тінь ТІЛЬКИ донизу (відділяє шапку від повідомлень — Вова: «знизу добре»).
-     Було 0 4px 12px — blur 12 бив ~8px і ВГОРУ, даючи темну смугу над заголовком
-     (виглядало накладеним). Тепер відʼємний spread -4 прибирає верхнє розпливання:
-     верх модалки суцільний до заокруглених кутів (Вова 14.07). */
-  box-shadow: 0 6px 8px -4px rgba(0,0,0,0.12);
-  z-index: 1;
-}
-.bd-chat-modal-back,
-.bd-chat-modal-close {
-  width: 34px; height: 34px; border: none; background: transparent;
-  font-size: 20px; color: var(--black); border-radius: 50%; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-modal-back:active,
-.bd-chat-modal-close:active { background: rgba(0,0,0,0.07); }
-.bd-chat-modal-titles { flex: 1; min-width: 0; }
-.bd-chat-modal-title {
-  font-size: 16px; font-weight: 700; color: var(--black);
-  text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.bd-chat-modal-meta {
-  font-size: 12px; color: var(--gray); margin-top: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.bd-chat-modal-meta svg { vertical-align: -2px; margin-right: 2px; }
-.bd-chat-modal-body {
-  flex: 1; overflow-y: auto; padding: 14px 12px;
-  display: flex; flex-direction: column;
-  -webkit-overflow-scrolling: touch;
-  background: #FCFAF4;                  /* Вова 20.07: тіло (де повідомлення) — колір картки; верх/низ модалки #F3EFE3 */
-}
-.bd-chat-stream {
-  display: flex; flex-direction: column; gap: 12px;
-  margin-top: auto;                     /* мало повідомлень → притиснуті донизу */
-}
-.bd-chat-empty {
-  margin: auto; text-align: center; color: var(--gray);
-  font-size: 13px; line-height: 1.5; padding: 24px 12px;
-}
-.bd-chat-empty-icon { display: block; margin-bottom: 8px; opacity: 0.5; }
-.bd-chat-empty-icon svg { width: 32px; height: 32px; }
+   смуга між полем і клавіатурою). Та сама логіка, що в приватному чаті (.pm-kb-open). *
 .bd-msg-group .bd-avatar { flex-shrink: 0; }
 
-/* ── Роздільник «Нові повідомлення» ── */
-.bd-chat-divider {
-  display: flex; align-items: center; gap: 10px;
-  align-self: stretch; margin: 4px 0;
-  color: var(--red); font-size: 12px; font-weight: 700;
-}
-.bd-chat-divider::before, .bd-chat-divider::after {
-  content: ''; flex: 1; height: 1px; background: rgba(114,47,55,0.25);
-}
-.bd-chat-divider span { white-space: nowrap; }
+/* ── Роздільник «Нові повідомлення» ── *
 
-/* ── Floating-пігулка «N нових повідомлень» ── */
-.bd-chat-newpill {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: 74px; z-index: 5;
-  background: var(--brand-grad-sm); color: #fff; border: none;
-  padding: 7px 16px; border-radius: 18px;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  box-shadow: 0 3px 12px rgba(114,47,55,0.40);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  animation: bd-newpill-in 0.2s ease;
-}
-.bd-chat-newpill[hidden] { display: none; }
+/* ── Floating-пігулка «N нових повідомлень» ── *
 
-/* ── Поле вводу ── */
-.bd-chat-modal-form {
-  display: flex; gap: 8px; align-items: center;
-  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
-  background: #F3EFE3;
-  box-shadow: 0 -5px 14px -2px rgba(0,0,0,0.20);  /* Вова 20.07: помітна тінь вгору (на світлому тілі слабку не видно — посилено) */
-  flex-shrink: 0;
-}
-.bd-chat-modal-input {
-  flex: 1; background: #fff; border: 1px solid rgba(0,0,0,0.10);
-  border-radius: 20px; padding: 10px 16px;
-  font-size: 16px;   /* iOS Safari zoom-fix — нижче 16px iOS auto-zoom-ить input */
-  font-family: inherit; color: var(--black);
-  outline: none; min-width: 0;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-  transition: border-color 0.15s;
-}
-.bd-chat-modal-input:focus { border-color: var(--red); }
-.bd-chat-modal-input::placeholder { color: var(--gray); }
-.bd-chat-modal-send {
-  width: 38px; height: 38px; border: none; border-radius: 50%;
-  background: var(--brand-grad-sm); color: #fff; font-size: 18px; font-weight: 700;
-  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(114,47,55,0.35);
-  -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
-}
-.bd-chat-modal-send:active { transform: scale(0.9); }
+/* ── Поле вводу ── *
 
-/* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
-.bd-card--chat {
-  /* Вова 20.07: картки на глибшому беж-фоні (#E7E1D2) — контраст «аркуш на столі».
-     Не чисто білі, а трохи теплі (#FCFAF4) — Вова: «трохи насиченіші, але не такі
-     кремові як були раніше (#FAF8EF), трішки». */
-  background: #FCFAF4;
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 3px rgba(60,45,20,0.10), 0 8px 22px rgba(60,45,20,0.12);
-}
+/* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── *
 .bd-avatar {
   width: 36px;
   height: 36px;
@@ -2571,19 +2321,8 @@ textarea.cm-board-input.bm-invalid {
   font-size: 15px;
   flex-shrink: 0;
 }
-.bd-chat-text {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--black);
-  margin-bottom: 6px;
-}
 /* Заголовок теми у картці обговорення — великі літери, чорний, жирний.
-   Лише в межах .bd-card--chat, щоб не зачепити лайв-прев'ю у модалці «Новий пост». */
-.bd-card--chat .bd-chat-text {
-  text-transform: uppercase;
-  color: #1C1C1E;
-  font-weight: 700;
-}
+   Лише в межах .bd-card--chat, щоб не зачепити лайв-прев'ю у модалці «Новий пост». *
 
 /* Затемнений верхній край — поверх карток (z:8), нижче контролів (z:90).
    ⚠️ 28.07: лишився ТІЛЬКИ для Обговорень (їхній теплий беж `#E7E1D2` не чіпали).
