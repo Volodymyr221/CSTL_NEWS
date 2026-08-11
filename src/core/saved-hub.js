@@ -4,9 +4,9 @@
 // категорії з лічильником, тап відкриває список саме цієї категорії.
 //   📰 СТАТТІ       (localStorage cstl_saved_articles) → тап: модалка статті. Доступно й гостю.
 //   🚌 АВТОБУСИ    (trackedRoutes, buses.js)           → тап: вкладка Автобуси + скрол на рейс
-//   💬 ОБГОВОРЕННЯ (пости type='chat')  → тап по картці: вкладка Обговорення + модалка чату
+//   💬 ПИТАННЯ     (пости type='chat')  → тап по картці: вкладка Питання + екран питання
 //   📌 ОГОЛОШЕННЯ  (пости type='board') → тап по картці: Дошка, таб «Збережені»
-// Обговорення/Оголошення/Автобуси — вимагають акаунт (кожен по-своєму). Статті — локальне
+// Питання/Оголошення/Автобуси — вимагають акаунт (кожен по-своєму). Статті — локальне
 // сховище пристрою (Б5.4), без акаунта. Порожньо всюди → підказка.
 
 import { escapeHtml } from './utils.js';
@@ -26,7 +26,7 @@ let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
 const CATS = [
   { key: 'articles', icon: ICONS.newspaper, label: 'Статті',       needsAuth: false },
   { key: 'buses',    icon: ICONS.bus,       label: 'Автобуси',     needsAuth: false },
-  { key: 'chats',    icon: ICONS.message,   label: 'Обговорення',  needsAuth: true },
+  { key: 'chats',    icon: ICONS.message,   label: 'Питання',      needsAuth: true },
   { key: 'boards',   icon: ICONS.pin,       label: 'Оголошення',   needsAuth: true },
 ];
 

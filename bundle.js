@@ -7029,11 +7029,11 @@
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
         <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
-          <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-label">\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
-          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043F\u0438\u0442\u0430\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
@@ -7041,7 +7041,7 @@
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       </button>
@@ -7390,15 +7390,15 @@
         const act = item.dataset.fab;
         closeFab();
         if (act === "disc-create") {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
+          requireAuth("\u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openDiscussionCompose);
           return;
         }
         if (act === "disc-mine") {
-          requireAuth("\u043C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openMyDiscussions);
+          requireAuth("\u043C\u043E\u0457 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openMyDiscussions);
           return;
         }
         if (act === "disc-saved") {
-          requireAuth("\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openSavedDiscussions);
+          requireAuth("\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openSavedDiscussions);
           return;
         }
         if (act === "post") {
@@ -10157,7 +10157,7 @@
   var CATS = [
     { key: "articles", icon: ICONS.newspaper, label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
     { key: "buses", icon: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
-    { key: "chats", icon: ICONS.message, label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
+    { key: "chats", icon: ICONS.message, label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F", needsAuth: true },
     { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
   ];
   function closeHub() {
@@ -10971,13 +10971,13 @@
     const disc = posts2.filter((p) => p.type === "discussion");
     if (disc.length) {
       const today = countToday(disc);
-      const msgs = [`${disc.length} ${plural2(disc.length, "\u0442\u0435\u043C\u0430", "\u0442\u0435\u043C\u0438", "\u0442\u0435\u043C")}`];
+      const msgs = [`${disc.length} ${plural2(disc.length, "\u043F\u0438\u0442\u0430\u043D\u043D\u044F", "\u043F\u0438\u0442\u0430\u043D\u043D\u044F", "\u043F\u0438\u0442\u0430\u043D\u044C")}`];
       if (today)
-        msgs.push(`${today} ${plural2(today, "\u043D\u043E\u0432\u0430", "\u043D\u043E\u0432\u0456", "\u043D\u043E\u0432\u0438\u0445")} \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`);
+        msgs.push(`${today} ${plural2(today, "\u043D\u043E\u0432\u0435", "\u043D\u043E\u0432\u0456", "\u043D\u043E\u0432\u0438\u0445")} \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`);
       out.push({
         key: "disc",
         icon: ICONS.message,
-        label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
+        label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F",
         msgs,
         tap: () => window.switchTab && window.switchTab("discussions")
       });
@@ -16342,7 +16342,11 @@ END:VEVENT`
       { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.usersGroup, kind: "tab", tab: "community" },
       // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
       { id: "shotam", label: "\u0421\u0442\u0440\u0456\u0447\u043A\u0430", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
-      { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions", dot: "discussions" },
+      // 11.08: підпис зведено з таб-баром — «Питання» (було «Обговорення»).
+      // ⚠️ `id` лишається `discussions`: це технічний ключ вкладки (`switchTab`,
+      // `data-tab-dot`, крапка «є нове»), і перейменувати його означало б чіпати
+      // маршрутизацію заради слова, якого людина не бачить.
+      { id: "discussions", label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions", dot: "discussions" },
       { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board", dot: "board" },
       { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
       // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
@@ -16356,7 +16360,7 @@ END:VEVENT`
     // в `requireAuth`, а `openSavedHub` має власну перевірку. Ховати групу від
     // гостя означало б приховати від нього ще й привід зайти.
     { id: "mine", caption: "\u041C\u043E\u0454", items: [
-      // ⚠️ Іконка `mail`, а не `message`: `message` носить «Обговорення» — і саме
+      // ⚠️ Іконка `mail`, а не `message`: `message` носить «Питання» — і саме
       // ту саму мовну бульбашку показує таб-бар. Два однакові значки в одному
       // списку читаються як помилка, а відповідність меню з таб-баром важливіша.
       {

@@ -106,7 +106,7 @@
     <!-- Вкладка: Чати (хаб спілкування) -->
     <div id="page-chats" class="page" style="display:none">
       <div class="chats-hub">
-        <h1 class="chats-hub-title">Обговорення</h1>
+        <h1 class="chats-hub-title">Питання</h1>
 
         <!-- V2: «Повідомлення» (приватний чат) і «Групи» приховані до версії 2.
              Код і хендлери (data-chats у app.js, messages-ui.js) лишаються робочими —
@@ -138,15 +138,15 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l16-5v12L3 14z"/><path d="M11.5 16.5a2.5 2.5 0 0 1-4.7-.9"/></svg>
           </span>
           <span class="chats-entry-body">
-            <span class="chats-entry-name">Обговорення</span>
-            <span class="chats-entry-sub">Публічні теми громади</span>
+            <span class="chats-entry-name">Питання</span>
+            <span class="chats-entry-sub">Питання і відповіді громади</span>
           </span>
           <span class="chats-entry-arrow">›</span>
         </button>
       </div>
     </div>
 
-    <!-- Вкладка: Обговорення — СПРАВЖНЯ сторінка (не overlay), тому таб-бар завжди
+    <!-- Вкладка: Питання (Q&A) — СПРАВЖНЯ сторінка (не overlay), тому таб-бар завжди
          видимий і навігація нативна. Рендериться board.js у #disc-content (той самий
          рушій карток/реакцій/коментарів/realtime). Хаб #page-chats вище — осиротілий,
          лишений схованим під V2 (Повідомлення/Групи). -->
@@ -178,7 +178,7 @@
   </div>
 
   <!-- Нижня навігація (tab bar) — порядок (Вова 22.07): зліва інформація, справа сервіси.
-       Стрічка · Обговорення · [Громада] · Дошка · Автобуси. -->
+       Стрічка · Питання · [Громада] · Дошка · Автобуси. -->
   <nav class="tab-bar">
     <button class="tab-item" data-tab="shotam" onclick="switchTab('shotam')">
       <!-- 🔴 10.08 — ІКОНКА ЗМІНЕНА (зауваження Вови: «в таббарі іконка стрічки
@@ -205,14 +205,17 @@
            Чому обгортка, а не absolute від `.tab-item`: там flex-колонка з міткою,
            і позиція «на око від центру» поїхала б від будь-якої зміни розкладки. -->
       <span class="tab-ico-wrap">
+        <!-- 11.08: бульбашка зі ЗНАКОМ ПИТАННЯ (було — бульбашка з рядками тексту,
+             тобто іконка чату). Один погляд на таб-бар має казати «тут питають», а
+             не «тут листуються»: іконку людина зчитує раніше за підпис. -->
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 9h8"/>
-          <path d="M8 13h6"/>
           <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/>
+          <path d="M10 9.2a2 2 0 1 1 2 2v1.3"/>
+          <path d="M12 14.8v.01"/>
         </svg>
         <span class="tab-dot" data-tab-dot="discussions" hidden></span>
       </span>
-      <span class="tab-label">Обговорення</span>
+      <span class="tab-label">Питання</span>
     </button>
     <button class="tab-item tab-item--home active" data-tab="community" onclick="switchTab('community')">
       <div class="tab-home-circle">

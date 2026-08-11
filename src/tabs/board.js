@@ -1229,17 +1229,17 @@ function syncMsgFab() {
 
 function renderFab() {
   if (discOpen) {
-    // Обговорення: червоний круг з білим плюсом + своє меню.
+    // Питання: червоний круг з білим плюсом + своє меню.
     return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
         <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
-          <span class="board-fab-label">Створити обговорення</span>
+          <span class="board-fab-label">Запитати громаду</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
-          <span class="board-fab-label">Мої обговорення</span>
+          <span class="board-fab-label">Мої питання</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
@@ -1247,7 +1247,7 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Обговорення" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Запитати громаду" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       </button>
@@ -1953,9 +1953,9 @@ function renderAll() {
       const act = item.dataset.fab;
       closeFab();
       // ── Дії ОБГОВОРЕНЬ (окремий FAB, лише коли discOpen) ──
-      if (act === 'disc-create') { requireAuth('створити обговорення', openDiscussionCompose); return; }
-      if (act === 'disc-mine')   { requireAuth('мої обговорення', openMyDiscussions); return; }
-      if (act === 'disc-saved')  { requireAuth('збережені обговорення', openSavedDiscussions); return; }
+      if (act === 'disc-create') { requireAuth('поставити питання', openDiscussionCompose); return; }
+      if (act === 'disc-mine')   { requireAuth('мої питання', openMyDiscussions); return; }
+      if (act === 'disc-saved')  { requireAuth('збережені питання', openSavedDiscussions); return; }
       // ── Дії ДОШКИ ──
       // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).

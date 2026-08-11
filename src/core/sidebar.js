@@ -86,7 +86,11 @@ const SECTIONS = [
     { id: 'community',   label: 'Громада',      icon: ICONS.usersGroup, kind: 'tab', tab: 'community' },
     // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
     { id: 'shotam',      label: 'Стрічка',      icon: ICONS.fileText, kind: 'tab', tab: 'shotam' },
-    { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions', dot: 'discussions' },
+    // 11.08: підпис зведено з таб-баром — «Питання» (було «Обговорення»).
+    // ⚠️ `id` лишається `discussions`: це технічний ключ вкладки (`switchTab`,
+    // `data-tab-dot`, крапка «є нове»), і перейменувати його означало б чіпати
+    // маршрутизацію заради слова, якого людина не бачить.
+    { id: 'discussions', label: 'Питання',      icon: ICONS.message, kind: 'tab', tab: 'discussions', dot: 'discussions' },
     { id: 'board',       label: 'Дошка',        icon: ICONS.clipboard, kind: 'tab', tab: 'board', dot: 'board' },
     { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
     // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
@@ -100,7 +104,7 @@ const SECTIONS = [
   // в `requireAuth`, а `openSavedHub` має власну перевірку. Ховати групу від
   // гостя означало б приховати від нього ще й привід зайти.
   { id: 'mine', caption: 'Моє', items: [
-    // ⚠️ Іконка `mail`, а не `message`: `message` носить «Обговорення» — і саме
+    // ⚠️ Іконка `mail`, а не `message`: `message` носить «Питання» — і саме
     // ту саму мовну бульбашку показує таб-бар. Два однакові значки в одному
     // списку читаються як помилка, а відповідність меню з таб-баром важливіша.
     { id: 'messages', label: 'Повідомлення', icon: ICONS.mail, kind: 'screen',
