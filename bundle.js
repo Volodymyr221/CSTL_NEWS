@@ -7377,6 +7377,7 @@
     const toggleFab = () => {
       if (!fab)
         return;
+      stopAskHint();
       const open = fab.classList.toggle("open");
       fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
     };
@@ -7756,6 +7757,39 @@
   function getBoardRoot() {
     return discOpen ? document.getElementById("disc-content") : document.getElementById("board-content");
   }
+  var askHintPlayed = false;
+  var askHintTimers = [];
+  function stopAskHint() {
+    askHintTimers.forEach(clearTimeout);
+    askHintTimers = [];
+    document.getElementById("board-trigger")?.classList.remove("qa-fab-wide");
+  }
+  function playAskHint() {
+    if (askHintPlayed)
+      return;
+    const btn = document.getElementById("board-trigger");
+    if (!btn || !btn.classList.contains("board-trigger--labeled"))
+      return;
+    const label = btn.querySelector(".qa-fab-label");
+    const icon = btn.querySelector(".cm-board-trigger-icon svg");
+    if (!label)
+      return;
+    askHintPlayed = true;
+    const need = Math.ceil(label.scrollWidth) + 46 + 20;
+    btn.style.setProperty("--qa-fab-w", need + "px");
+    askHintTimers.push(setTimeout(() => {
+      requestAnimationFrame(() => {
+        btn.classList.add("qa-fab-wide");
+        if (icon)
+          icon.style.transform = "rotate(180deg)";
+      });
+    }, 420));
+    askHintTimers.push(setTimeout(() => {
+      btn.classList.remove("qa-fab-wide");
+      if (icon)
+        icon.style.transform = "rotate(360deg)";
+    }, 420 + 440 + 2600));
+  }
   function openDiscussions() {
     const boardEl = document.getElementById("board-content");
     if (boardEl)
@@ -7764,12 +7798,15 @@
     activeType = "chat";
     activeCategory = "all";
     searchQuery = "";
-    if (allPosts && allPosts.length)
+    if (allPosts && allPosts.length) {
       renderAll();
-    else
-      renderBoard();
+      setTimeout(playAskHint, 0);
+    } else
+      Promise.resolve(renderBoard()).then(() => setTimeout(playAskHint, 0)).catch(() => {
+      });
   }
   function closeDiscussions() {
+    stopAskHint();
     discOpen = false;
     activeType = "board";
     activeCategory = "all";
