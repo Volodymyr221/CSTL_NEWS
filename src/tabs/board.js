@@ -2013,6 +2013,10 @@ function renderAll() {
   // тільки `toggleFab`: він потрібен рівно одному вузлу — кнопці цього рендера.
   const toggleFab = () => {
     if (!fab) return;
+    // Людина вже торкнулась кнопки — пояснювати їй, що це, більше не треба.
+    // Гасимо ДО перемикання: інакше клас `.qa-fab-wide` і клас `.open` боролись
+    // би за ширину рівно в кадр, коли кнопка стає хрестиком.
+    stopAskHint();
     const open = fab.classList.toggle('open');
     fabBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
@@ -2512,6 +2516,73 @@ function getBoardRoot() {
 // window.switchTab('discussions'). Ці дві функції лише РЕНДЕРЯТЬ контент у потрібний
 // корінь; викликаються слухачем cstl-tab-changed при вході/виході на вкладку.
 // (Повне розчеплення стану/id від Дошки — Потік 2.)
+// ── ПІДКАЗКА FAB «Запитати» — рівно один раз за запуск застосунку ────────────
+//
+// Замовлення Вови (11.08, зі знімка): «вся велика кнопка плюсик запитати — це
+// трошки завелика вона… перший раз при відкритті додатку вона у вигляді круглої
+// іконки, розгортається горизонтально, плюсик крутиться, пише «Запитати»,
+// тримається так декілька секунд і згортається назад. Коли він вже в додатку і
+// знов заходить туди — це вже не потрібно».
+//
+// 🔑 ЧОМУ ПРАПОРЕЦЬ У ПАМʼЯТІ МОДУЛЯ, А НЕ В `sessionStorage`/`localStorage`.
+// Умова Вови дослівно — «при відкритті ДОДАТКУ». Змінна модуля обнуляється рівно
+// тоді, коли застосунок завантажується заново, тобто збігається з умовою один в
+// один і без жодного сховища. `localStorage` показав би підказку ОДИН раз за все
+// життя пристрою (не те замовляли), а `sessionStorage` на iOS у PWA переживає
+// згортання застосунку — тобто після повернення з фону підказки б не було, хоча
+// для людини це «знову відкрив додаток».
+//
+// 🛑 Підказка НЕ показується всередині вкладки повторно: `openDiscussions()`
+// кличеться на КОЖЕН вхід у вкладку, тож без прапорця кнопка розгорталась би
+// щоразу, як людина перемикається між «Стрічкою» і «Питаннями» — це вже не
+// пояснення, а смикання в кутку екрана.
+let askHintPlayed = false;
+let askHintTimers = [];
+
+// Зняти підказку негайно (тап по кнопці, вихід із вкладки, розкриття меню).
+function stopAskHint() {
+  askHintTimers.forEach(clearTimeout);
+  askHintTimers = [];
+  document.getElementById('board-trigger')?.classList.remove('qa-fab-wide');
+}
+
+function playAskHint() {
+  if (askHintPlayed) return;
+  const btn = document.getElementById('board-trigger');
+  if (!btn || !btn.classList.contains('board-trigger--labeled')) return;
+  const label = btn.querySelector('.qa-fab-label');
+  const icon  = btn.querySelector('.cm-board-trigger-icon svg');
+  if (!label) return;
+  askHintPlayed = true;
+
+  // Ширину РАХУЄМО, а не вписуємо: `scrollWidth` підпису вже враховує системний
+  // кегль iOS (Dynamic Type). 46px — ліва зона під іконку, 20px — правий відступ
+  // (обидва числа стоять у CSS `.qa-fab-wide`, тут лише повторені як складові).
+  const need = Math.ceil(label.scrollWidth) + 46 + 20;
+  btn.style.setProperty('--qa-fab-w', need + 'px');
+
+  // Крок 1 — розгортання. `requestAnimationFrame` обовʼязковий: кнопку щойно
+  // створив `renderAll()`, і без окремого кадру браузер порахував би початковий
+  // і кінцевий стан разом — переходу не було б узагалі, кнопка просто зʼявилась
+  // би широкою (та сама пастка, що з класом плавності у `feed.js`, 26.07).
+  askHintTimers.push(setTimeout(() => {
+    requestAnimationFrame(() => {
+      btn.classList.add('qa-fab-wide');
+      if (icon) icon.style.transform = 'rotate(180deg)';
+    });
+  }, 420));   // невелика пауза після входу — щоб рух не злився з появою сторінки
+
+  // Крок 2 — тримаємо розгорнутою. 2.6с: менше не встигає прочитати людина 60+
+  // (норма читання ~200 слів/хв дає на одне слово ~0.3с, решта — на помітити рух
+  // і перевести погляд), більше — вже не підказка, а плашка, від якої йшли.
+  askHintTimers.push(setTimeout(() => {
+    btn.classList.remove('qa-fab-wide');
+    // Плюс докручується ВПЕРЕД до 360°, а не відкручується назад: зворотний рух
+    // читався б як «кнопка передумала».
+    if (icon) icon.style.transform = 'rotate(360deg)';
+  }, 420 + 440 + 2600));
+}
+
 export function openDiscussions() {
   // Прибрати контент Дошки, поки активні Обговорення (спільні id #board-* — Потік 2).
   const boardEl = document.getElementById('board-content');
@@ -2521,11 +2592,18 @@ export function openDiscussions() {
   activeCategory = 'all';
   searchQuery = '';
   // Дані вже в пам'яті (initBoard→renderBoard при старті) — рендеримо миттєво.
-  if (allPosts && allPosts.length) renderAll();
-  else renderBoard();
+  // ⚠️ Підказку чіпляємо до ЗАВЕРШЕННЯ рендера, а не просто «через 0мс»: у другій
+  // гілці `renderBoard()` ходить у мережу, і кнопки в документі ще немає. Без
+  // цього підказка мовчки не спрацювала б рівно у людини з повільним інтернетом —
+  // тобто саме там, де перший запуск і буває.
+  if (allPosts && allPosts.length) { renderAll(); setTimeout(playAskHint, 0); }
+  else Promise.resolve(renderBoard()).then(() => setTimeout(playAskHint, 0)).catch(() => {});
 }
 
 export function closeDiscussions() {
+  // Вийшли з вкладки посеред підказки — таймери мають померти разом із екраном,
+  // інакше відкладене згортання прилетить у вже інший рендер (кнопку Дошки).
+  stopAskHint();
   discOpen = false;
   activeType = 'board';
   activeCategory = 'all';
