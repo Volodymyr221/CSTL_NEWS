@@ -69,18 +69,19 @@ await p.waitForTimeout(300);
 await p.evaluate(() => window.switchTab && window.switchTab('discussions'));
 await p.waitForTimeout(2200);   // гідрація фото приходить окремим запитом
 
-// 🔑 Спершу відкриваємо і закриваємо питання. Це не «щоб спрацювало», а РЕАЛЬНИЙ
-// шлях людини: кеш чужих фото (`_avatarCache` у core/supabase.js) наповнюється
-// при першому запиті, а список перемальовується при поверненні
-// (`core/refresh-on-return.js`). Перша редакція стенда міряла список ДО цього і
-// бачила «фото немає» — тобто мірка йшла не тим шляхом, що людина.
+// ⚠️ 11.08, РЕДАКЦІЯ 3 — МІРЯЄМО НА ЕКРАНІ ПИТАННЯ, А НЕ В КАРТЦІ СПИСКУ.
+// У списку аватара більше НЕМА: щільний рядок обходиться імʼям, бо кружечок на
+// кожному рядку додавав ваги і повертав «плитковість», від якої відходили.
+// Захист від бага це не послаблює: правило `.bd-avatar img` спільне для всієї
+// зони, і фото на екрані питання лізе з того самого `avatarCircle()`.
+// 🔑 Стенд тримається за ПОВЕДІНКУ («фото не більше за свій кружечок»), а не за
+// місце, де кружечок намальовано — саме тому переїзд його не вбив, а лише
+// перенацілив. Порівняй із `tab-dots.mjs`, який тримався за рядок коду й помер.
 await p.evaluate(() => document.querySelector('[data-question-open="801"]')?.click());
-await p.waitForTimeout(1400);
-await p.goBack();
 await p.waitForTimeout(1600);
 
 const карткаAvatar = await p.evaluate(() => {
-  const av = document.querySelector('#disc-content .qa-card-meta .bd-avatar');
+  const av = document.querySelector('.qa-screen .qa-question-by .bd-avatar');
   if (!av) return null;
   const img = av.querySelector('img');
   const rk = av.getBoundingClientRect();
@@ -95,7 +96,7 @@ const карткаAvatar = await p.evaluate(() => {
   };
 });
 
-ok('1. фото профілю справді підтягнулось у картку (інакше нема чого міряти)',
+ok('1. фото профілю справді підтягнулось (інакше нема чого міряти)',
    !!карткаAvatar && карткаAvatar.фотоЄ,
    карткаAvatar ? `кружечок ${карткаAvatar.кружечок.w}×${карткаAvatar.кружечок.h}` : 'аватара немає');
 
@@ -117,9 +118,7 @@ ok('4. фото кадрується, а не сплющується (object-fit
 ok('5. кружечок лишився круглим', /50%|9999px|999px/.test(карткаAvatar?.радіус || ''),
    карткаAvatar?.радіус || '—');
 
-// ── Те саме всередині відкритого питання: там аватар інший за розміром ──────
-await p.evaluate(() => document.querySelector('[data-question-open="801"]')?.click());
-await p.waitForTimeout(1400);
+// ── Усі аватари відкритого питання: у них різні розміри (28px автор, 26px відповідь) ──
 const екранAvatars = await p.evaluate(() => {
   const out = [];
   for (const av of document.querySelectorAll('.qa-screen .bd-avatar')) {
