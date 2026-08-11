@@ -415,28 +415,55 @@ await p.evaluate(() => { localStorage.removeItem('wx_place_v1'); });
 await p.$eval('#cm-news-board', el => el.scrollIntoView({ block: 'center' }));
 await p.$eval('#hm-ntrack', el => { el.scrollLeft = 0; });
 await p.waitForTimeout(400);
+//
+// ⚠️ 11.08 — ПЕРЕЦІЛЕНО НА НОВУ КОНСТРУКЦІЮ, І РІЗНИЦЮ ТРЕБА НАЗВАТИ.
+// Плитки `.nc--tile` у віджеті більше немає: сторінка тепер це велика картка
+// `.nc--hero` (фото 2:1, текст поверх) і тихі рядки `.nc--line`. Шість перевірок
+// тут упали, але НЕ всі шість були про поломку:
+//   • радіус · обрізка фото · фото без власного радіуса · гео-мітка — правило
+//     живе, просто переїхало на інший вузол (перевірки збережено);
+//   • обідок і тінь у великої картки ЗНЯТО СВІДОМО — вона сама є фотографією,
+//     обідок навколо неї читався б як рамка картини, а тінь під об'єктом на всю
+//     ширину секції нема від чого відривати.
+// 🔑 Початковий намір 04.08 був не «у плитки є обідок», а «елемент має ВЛАСНУ
+// поверхню й не зливається з тлом». Цей намір перенесено на вузол, який його
+// тепер несе, — на тихий рядок. А відсутність обідка й тіні у великої картки
+// перевіряється ЯВНО, щоб наступна сесія не «полагодила» рішення назад.
 const tile = await p.evaluate(()=>{
-  const c = document.querySelector('#hm-ntrack > .nc');
+  const c = document.querySelector('#hm-ntrack .nc--hero');
+  const line = document.querySelector('#hm-ntrack .nc--line');
   if (!c) return null;
   const s = getComputedStyle(c);
   const img = c.querySelector('.nc-img');
+  const ls = line ? getComputedStyle(line) : null;
   return {
     radius: parseFloat(s.borderTopLeftRadius) || 0,
     border: parseFloat(s.borderTopWidth) || 0,
     shadow: s.boxShadow && s.boxShadow !== 'none',
     clips:  s.overflow === 'hidden',
-    // Гео-мітка дублювала підпис `.hm-ncat` рівно над стрічкою.
+    // Гео-мітка дублювала підпис категорії, який тепер стоїть у шапці секції.
     geo:    !!c.querySelector('.nc-badge--geo:not([hidden])') &&
             getComputedStyle(c.querySelector('.nc-badge--geo')).display !== 'none',
     imgR:   img ? parseFloat(getComputedStyle(img).borderTopLeftRadius) || 0 : -1,
+    lineRadius: ls ? parseFloat(ls.borderTopLeftRadius) || 0 : -1,
+    lineBorder: ls ? parseFloat(ls.borderTopWidth) || 0 : -1,
+    // Фон рядка мусить ВІДРІЗНЯТИСЬ від прозорого: рядок на темному фото без
+    // власної поверхні зливався б із тлом вкладки.
+    lineBg: ls ? ls.backgroundColor : '',
   };
 });
-ok('🔴 плитка новини НЕ квадратна (радіус > 0)', tile && tile.radius > 0, tile ? `${tile.radius}px` : 'плитки нема');
-ok('🔴 у плитки є обідок (не лише його колір)', tile && tile.border > 0, tile ? `${tile.border}px` : '—');
-ok('плитка має тінь головної', tile && tile.shadow);
+ok('🔴 велика картка новини НЕ квадратна (радіус > 0)', tile && tile.radius > 0, tile ? `${tile.radius}px` : 'картки нема');
 ok('🔴 картка обрізає фото (інакше з-під кута визирне прямий ріг)', tile && tile.clips);
 ok('фото власного радіуса не має — його дає картка', tile && tile.imgR === 0, tile ? `${tile.imgR}px` : '—');
-ok('🔴 гео-мітка на плитці не дублює підпис стрічки', tile && !tile.geo);
+ok('🔴 гео-мітка на великій картці не дублює підпис розділу', tile && !tile.geo);
+// Намір 04.08 «власна поверхня» — тепер його несе тихий рядок.
+ok('🔴 у тихого рядка є власна поверхня (обідок)', tile && tile.lineBorder > 0, tile ? `${tile.lineBorder}px` : '—');
+ok('🔴 тихий рядок не прозорий (не зливається з фото-тлом)',
+   tile && !/rgba\(0, 0, 0, 0\)|transparent/.test(tile.lineBg), tile ? tile.lineBg : '—');
+ok('рядок теж не квадратний', tile && tile.lineRadius > 0, tile ? `${tile.lineRadius}px` : '—');
+// 🛑 РІШЕННЯ, ЯКЕ ЛЕГКО «ПОЛАГОДИТИ» НАЗАД — тому воно закріплене перевіркою.
+ok('🛑 велика картка БЕЗ обідка і тіні (вона сама є фотографією)',
+   tile && tile.border === 0 && !tile.shadow, tile ? `обідок ${tile.border}px, тінь ${tile.shadow}` : '—');
 
 // 5.16 🔴 ВХІД У РОЗДІЛ — КАПСОМ У КОЖНІЙ СЕКЦІЇ (замовлення Вови 04.08:
 // «назву усі новини треба зробити великими буквами, і так в кожному блоці»).
