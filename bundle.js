@@ -3904,6 +3904,7 @@
       _getPosts = getPosts;
   }
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  var CHEVRON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
   var HEART_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var HEART_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var commentsByPost = /* @__PURE__ */ new Map();
@@ -4499,20 +4500,22 @@
     const \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 = activeComments(p.id);
     const n = \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456.length;
     const \u043F\u0435\u0440\u0448\u0430 = \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456[0];
-    const \u0446\u0438\u0442\u0430\u0442\u0430 = \u043F\u0435\u0440\u0448\u0430 ? `<div class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(\u043F\u0435\u0440\u0448\u0430.sender_uid)}>${liveName(\u043F\u0435\u0440\u0448\u0430.author || "\u0416\u0438\u0442\u0435\u043B\u044C", \u043F\u0435\u0440\u0448\u0430.sender_uid)}:</span> ${escapeHtml(\u043F\u0435\u0440\u0448\u0430.text)}</div>` : "";
-    const \u043C\u0456\u0442\u043A\u0430 = n ? `<span class="qa-row-n">${n} ${answerWord(n)}</span>` : '<span class="qa-row-n qa-row-n--none">\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C</span>';
+    const \u0446\u0438\u0442\u0430\u0442\u0430 = \u043F\u0435\u0440\u0448\u0430 ? `<p class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(\u043F\u0435\u0440\u0448\u0430.sender_uid)}>${liveName(\u043F\u0435\u0440\u0448\u0430.author || "\u0416\u0438\u0442\u0435\u043B\u044C", \u043F\u0435\u0440\u0448\u0430.sender_uid)}:</span> ${escapeHtml(\u043F\u0435\u0440\u0448\u0430.text)}</p>` : "";
+    const \u043C\u0456\u0442\u043A\u0430 = n ? `<p class="qa-row-n">${n} ${answerWord(n)}</p>` : '<p class="qa-row-n qa-row-n--none">\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C</p>';
     return `
     <article class="qa-row${n ? "" : " qa-row--unanswered"}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-      <div class="qa-card-meta">
-        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
-        <span class="qa-card-dot" aria-hidden="true">\xB7</span>
-        <span class="qa-card-when">${formatTime(postTime(p))}</span>
-        <span class="qa-card-dot" aria-hidden="true">\xB7</span>
+      <div class="qa-row-body">
+        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+        <p class="qa-card-meta">
+          <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+          <span class="qa-card-dot" aria-hidden="true">\xB7</span>
+          <span class="qa-card-when">${formatTime(postTime(p))}</span>
+        </p>
         ${\u043C\u0456\u0442\u043A\u0430}
+        ${\u0446\u0438\u0442\u0430\u0442\u0430}
       </div>
-      ${\u0446\u0438\u0442\u0430\u0442\u0430}
+      <span class="qa-row-go" aria-hidden="true">${CHEVRON_SVG}</span>
     </article>
   `;
   }
@@ -7145,6 +7148,14 @@
   function unansweredCount() {
     return getFilteredPosts({ ignoreQaChip: true }).filter((p) => answersCount(p.id) === 0).length;
   }
+  function word\u041F\u0438\u0442\u0430\u043D\u044C(n) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11)
+      return "\u043F\u0438\u0442\u0430\u043D\u043D\u044F";
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
+      return "\u043F\u0438\u0442\u0430\u043D\u043D\u044F";
+    return "\u043F\u0438\u0442\u0430\u043D\u044C";
+  }
   function getBoardDisplayCount() {
     if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
       return getFilteredPosts().length;
@@ -7156,10 +7167,13 @@
     const unanswered = activeType === "chat" ? unansweredCount() : 0;
     const \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C = activeType === "chat" ? getFilteredPosts({ ignoreQaChip: true }).length : 0;
     const \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 = unanswered > 0 && \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C >= QA_CHIPS_FROM;
+    const \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F = `<p class="qa-hero-note">\u041F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432 \u043F\u0440\u043E \u043C\u0456\u0441\u0446\u0435\u0432\u0435 \u2014 \u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u0434\u043E\u0432\u0456\u0434\u043A\u0438, \u043F\u043E\u0434\u0456\u0457. \u0417\u043D\u0430\u0454\u0442\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2014 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0456\u0442\u044C.</p>`;
+    const \u043B\u0456\u0447\u0438\u043B\u044C\u043D\u0438\u043A = \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C ? `
+    <p class="qa-hero-count">${\u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C} ${word\u041F\u0438\u0442\u0430\u043D\u044C(\u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C)}${unanswered ? ` \xB7 <span class="qa-hero-need">${unanswered} \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</span>` : ""}</p>` : "";
     const discHead = activeType !== "chat" ? "" : `
     <div class="qa-hero">
       <h1 class="qa-hero-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</h1>
-      <p class="qa-hero-sub">\u041D\u0435 \u0437\u043D\u0430\u0454\u0442\u0435 \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432</p>
+      ${\u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F}
       ${\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 ? `
       <div class="qa-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u043F\u0438\u0442\u0430\u043D\u044C">
         <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456</button>
@@ -7207,7 +7221,7 @@
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
         </div>
         ${showCategories ? locFilterHtml : ""}
-      </div>`;
+      </div>${activeType === "chat" ? \u043B\u0456\u0447\u0438\u043B\u044C\u043D\u0438\u043A : ""}`;
     const count = showCategories ? getBoardDisplayCount() : 0;
     const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
