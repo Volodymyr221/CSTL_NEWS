@@ -25,11 +25,11 @@ import {
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
   submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName,
 } from '../core/supabase.js';
-import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
+import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
-import { ICONS } from '../core/icons.js';
 import { getSavedIds, saveBtnHtml } from '../core/board-shared.js';
-import { createDragTracker, finishSwipe, centeredRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
+import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
 let _getPosts = () => [];
@@ -39,8 +39,9 @@ export function initDiscussionsEngine({ getPosts }) {
 
 // ── Іконки (лише обговорення) ────────────────────────────────────────────────
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-// Векторні іконки Обговорень (заміна емодзі 💬/👥/📢) — той самий лінійний стиль.
-const USERS_ICON_SVG = ICONS.users; // дедуп — раніше локальна копія (розійшлась товщиною лінії з messages-ui.js/admin.html)
+// ⚠️ 11.08 — `USERS_ICON_SVG` (👥 учасники) прибрано разом із лічильником учасників
+// на картці: «скільки людей у розмові» — метрика чату, у Q&A вона нічого не вирішує.
+// Разом із ним пішов і імпорт `ICONS` — другого споживача в цьому файлі не було.
 const HEART_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 const HEART_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 
@@ -71,9 +72,15 @@ function getLikeCount(postId) {
 function isLikedByMe(postId) {
   return reactionsByPost.get(postId)?.my === LIKE_EMOJI;
 }
+// Вміст кнопки «Мене теж цікавить» (той самий рядок реакції в базі — див.
+// `qaInterestHtml`). Окремою функцією, бо `handleLikeClick` перемальовує лише
+// нутрощі кнопки, не саму кнопку — інакше делегований обробник втратив би вузол.
 function likeBtnInner(postId) {
-  const liked = isLikedByMe(postId);
-  return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
+  const on = isLikedByMe(postId);
+  const n  = getLikeCount(postId);
+  return `${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
+          <span class="qa-interest-label">Мене теж цікавить</span>
+          ${n ? `<span class="qa-interest-n">${n}</span>` : ''}`;
 }
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
@@ -99,26 +106,10 @@ function isMyComment(c) {
   return !!uid && c.sender_uid === uid;
 }
 
-// Конкретний час HH:MM (як у приватному чаті — замість «2 год тому»).
-function clockTime(ts) {
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return '';
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-// Роздільник дня: Сьогодні / Вчора / «20 червня» (як у приватному чаті).
-const CHAT_MONTHS_GEN = ['січня','лютого','березня','квітня','травня','червня',
-                         'липня','серпня','вересня','жовтня','листопада','грудня'];
-function chatDayLabel(ts) {
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return '';
-  const now = new Date();
-  const sToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const day = 86400000;
-  if (d.getTime() >= sToday) return 'Сьогодні';
-  if (d.getTime() >= sToday - day) return 'Вчора';
-  if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
-  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
-}
+// ⚠️ 11.08 — ТУТ ЖИЛИ `clockTime` (час `HH:MM`) І `chatDayLabel` («Сьогодні/Вчора»).
+// Обидві прибрані разом із бульбашками: це годинникова вісь розмови. Q&A стоїть на
+// вісі «давно / нещодавно», і її дає спільний `formatTime` з `core/utils.js`
+// («2 год тому» / «9 серпня») — власного форматувальника дати тут більше немає.
 
 // 🔴 ЧАС У МІЛІСЕКУНДАХ — обовʼязково перед будь-яким порівнянням.
 // Коментарі приходять із `created_at` як ISO-РЯДОК (`fetchAllComments` у supabase.js),
@@ -132,7 +123,9 @@ function tsMs(v) {
   return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
 }
 
-// Час останнього перегляду теми (per-device) — для роздільника «Нові повідомлення».
+// Час останнього перегляду питання (per-device). ⚠️ Роздільника «Нові повідомлення»
+// в екрані більше немає (чат-механіка), але сама межа ПОТРІБНА далі: на ній
+// тримається крапка «є нове» біля іконки вкладки (`unseenDiscussionsCount`).
 function getChatSeen(postId) {
   const m = lsGet(LS_CHAT_SEEN, {});
   return m[String(postId)] || 0;
@@ -143,14 +136,6 @@ function setChatSeen(postId, ts) {
   lsSet(LS_CHAT_SEEN, m);
 }
 
-// Повна підпис для пігулки «нові повідомлення» (середній рід)
-function newMsgLabel(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'нове повідомлення';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'нові повідомлення';
-  return 'нових повідомлень';
-}
-
 // ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────
 // Механізм переїхав у core/utils.js (спільний зі «Стрічкою»). Тут лишається
 // лише scope: для Обговорень він ОДИН на всі теми — рівно як було раніше і як
@@ -158,15 +143,9 @@ function newMsgLabel(n) {
 // без прив'язки до теми). Розійтись цим двом не можна.
 const RATE_SCOPE = 'disc';
 
-// Відмінювання слова «повідомлення» за числом (1 / 2-4 / 5+, з урахуванням 11-14)
-function msgWord(n) {
-  const mod10 = n % 10, mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'повідомлення';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'повідомлення';
-  return 'повідомлень';
-}
-
-// Те саме для «відповідь / відповіді / відповідей» — мова Q&A замість мови чату.
+// Відмінювання «відповідь / відповіді / відповідей» за числом (1 / 2-4 / 5+, з
+// урахуванням 11-14). ⚠️ Заступило `msgWord` («повідомлення») — слова «повідомлення»
+// в цій зоні більше немає ніде, і це навмисно: воно й тягло за собою месенджер.
 function answerWord(n) {
   const mod10 = n % 10, mod100 = n % 100;
   if (mod10 === 1 && mod100 !== 11) return 'відповідь';
@@ -200,126 +179,129 @@ function authorAvatar(author, uid) {
   return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || '', cls: 'bd-avatar' });
 }
 
-// Стрічка повідомлень чату (бульбашки) — рендериться у повноекранній модалці-чаті.
-// Контейнер має data-comments-for щоб realtime/optimistic оновлення його перемальовували.
-// Поле вводу — окремо у модалці (поза стрічкою), тому переживає перемальовування.
-function chatMessagesHtml(post) {
+// ── ВІДПОВІДІ НА ПИТАННЯ ─────────────────────────────────────────────────────
+//
+// 🔴 11.08 — ПЕРЕПИСАНО З «БУЛЬБАШОК ЧАТУ» НА «СПИСОК ВІДПОВІДЕЙ».
+//
+// Що саме знято і чому — це не косметика, а зняття чотирьох НЕЗАЛЕЖНИХ сигналів,
+// кожен з яких сам по собі каже людині «ти в месенджері»:
+//   1. `.pm-bubble` з вирівнюванням «мої справа / чужі зліва» — найсильніший
+//      візуальний маркер месенджера у світі; жоден Q&A ним не користується;
+//   2. час `HH:MM` (`clockTime`) — годинникова вісь. Q&A живе на вісі
+//      «давно / нещодавно», тому тут `formatTime` («2 год тому» / «9 серпня»);
+//   3. роздільники днів «Сьогодні / Вчора» (`pm-daysep`) — розмітка розмови;
+//   4. роздільник «Нові повідомлення» і пігулка «↓ N нових» — механіка догортання
+//      чату. У Q&A людина читає ЗВЕРХУ (спершу питання), а не «з місця, де спинилась».
+//
+// 🔑 Вкладеність замість цитати. Наявний `reply_to_id` не змінює свого значення в
+// базі — змінюється лише те, як він МАЛЮЄТЬСЯ: був цитатою всередині бульбашки,
+// став відступом під батьківською відповіддю. Глибина ДВА рівні, як у «Стрічці»:
+// відповідь на відповідь — це ще Q&A, третій рівень — це вже розмова.
+// ⚠️ Заміряно 11.08: `reply_to_id` заповнений у 1 коментарі з 54, тобто механізм
+// існував, але не мав видимої ролі. Тепер вона в нього є.
+//
+// Контейнер зберігає `data-comments-for` — на нього спираються realtime і
+// оптимістична вставка (`rerenderCommentsBlock`), і ЦЕ НЕ ЧІПАЄМО.
+function answersHtml(post) {
   const all = getComments(post.id);
-  // Видалені повідомлення прибираємо повністю (як Telegram) — без плашки-сліду.
-  // byId будуємо з УСІХ (разом із видаленими), щоб цитата-відповідь на видалене
-  // могла показати «Видалене повідомлення».
   const items = all.filter(c => !c.deleted_at);
   if (!items.length) {
-    return `<div class="bd-chat-stream" data-comments-for="${post.id}">
-      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>Поки порожньо.<br>Напишіть перше повідомлення</div>
+    return `<div class="qa-answers" data-comments-for="${post.id}">
+      <div class="qa-empty">
+        <span class="qa-empty-icon">${COMMENT_ICON_SVG}</span>
+        <span class="qa-empty-title">Ще ніхто не відповів</span>
+        <span class="qa-empty-sub">Знаєте відповідь? Напишіть — сусіди чекають.</span>
+      </div>
     </div>`;
   }
-  const byId = new Map(all.map(c => [c.id, c]));
-  const dividerTs = _chatDividerTs;
-  let hadOld = false, dividerPlaced = false, lastDay = null;
 
-  // Бульбашка у форматі приватного чату: цитата-відповідь + текст + конкретний час;
-  // плейсхолдери видаленого/редагованого. data-msg/data-tag — для жестів/меню (UI-B).
-  const renderDiscBubble = (c) => {
-    const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
-    const replyHtml = reply
-      ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '')).slice(0, 90))}</span>`
-      : '';
-    const edited = c.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
-    return `<div class="pm-bubble" data-msg="${c.id}" data-tag="${c.client_tag || ''}">${replyHtml}<span class="pm-bubble-text">${escapeHtml(c.text)}</span><span class="pm-bubble-time">${edited}${clockTime(postTime(c))}</span></div>`;
-  };
-
-  // Збираємо: роздільники днів (Сьогодні/Вчора) + роздільник «Нові» + групи за автором.
-  let html = '';
-  let group = null;   // { key, mine, author, bubbles:[] }
-  const flush = () => {
-    if (!group) return;
-    if (group.mine) {
-      html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join('')}</div>`;
-    } else {
-      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name"${nameUid(group.uid)}>${liveName(group.author, group.uid)}</span>${group.bubbles.join('')}</div></div>`;
-    }
-    group = null;
-  };
-  items.forEach(c => {
-    const t = postTime(c);
-    const day = chatDayLabel(t);
-    if (day && day !== lastDay) { flush(); html += `<div class="pm-daysep"><span>${day}</span></div>`; lastDay = day; }
-    const isNew = dividerTs > 0 && tsMs(t) > dividerTs;   // 30.07: без tsMs це рядок vs число → NaN → завжди false
-    if (!isNew) hadOld = true;
-    if (isNew && hadOld && !dividerPlaced) {
-      flush();
-      html += '<div class="bd-chat-divider" data-chat-divider><span>Нові повідомлення</span></div>';
-      dividerPlaced = true;
-    }
-    const mine = isMyComment(c);
-    const author = c.author || 'Житель';
-    // Групуємо за uid (не за іменем) — той самий акаунт зі зміненим іменем не
-    // розривається на дві групи; анонім (без uid) — за іменем як раніше.
-    const key = mine ? '__me' : (c.sender_uid || author);
-    if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
-    else { flush(); group = { key, mine, author, uid: c.sender_uid || '', bubbles: [renderDiscBubble(c)] }; }
-  });
-  flush();
-  return `<div class="bd-chat-stream" data-comments-for="${post.id}">${html}</div>`;
-}
-
-// Прокрутити стрічку модалки донизу (до найновіших)
-function scrollChatToBottom() {
-  const body = document.getElementById('bd-chat-modal-body');
-  if (body) body.scrollTop = body.scrollHeight;
-}
-
-// Чи користувач зараз біля низу стрічки (для розумного автоскролу)
-function chatBodyNearBottom() {
-  const body = document.getElementById('bd-chat-modal-body');
-  if (!body) return true;
-  return (body.scrollHeight - body.scrollTop - body.clientHeight) < 80;
-}
-
-// При відкритті: якщо є роздільник нових — скролимо до нього, інакше донизу
-function scrollChatToNewOrBottom() {
-  const body = document.getElementById('bd-chat-modal-body');
-  if (!body) return;
-  const div = body.querySelector('[data-chat-divider]');
-  if (div) {
-    body.scrollTop += div.getBoundingClientRect().top - body.getBoundingClientRect().top - 60;
-  } else {
-    body.scrollTop = body.scrollHeight;
+  // Корені та вкладені. Відповідь вважаємо вкладеною, лише якщо її батько ЖИВИЙ і
+  // сам є коренем — інакше вона осиротіла б і зникла з екрана назовсім (у
+  // «Стрічці» саме сироти колись давали розбіжність лічильника, баг B-27).
+  const liveIds = new Set(items.map(c => c.id));
+  const isRoot = (c) => !c.reply_to_id || !liveIds.has(c.reply_to_id);
+  const roots = items.filter(isRoot);
+  const subsOf = new Map();
+  for (const c of items) {
+    if (isRoot(c)) continue;
+    let parent = c.reply_to_id;
+    // Батько сам вкладений → піднімаємо відповідь до його кореня (стеля — 2 рівні).
+    const pNode = all.find(x => x.id === parent);
+    if (pNode && pNode.reply_to_id && liveIds.has(pNode.reply_to_id)) parent = pNode.reply_to_id;
+    if (!subsOf.has(parent)) subsOf.set(parent, []);
+    subsOf.get(parent).push(c);
   }
+
+  const answer = (c, sub) => {
+    const author = c.author || 'Житель';
+    const edited = c.edited_at ? '<span class="qa-answer-edited">змінено</span>' : '';
+    // «Відповісти» лише на КОРЕНЕВІЙ — інакше з другого рівня росло б дерево,
+    // і Q&A перетворилось би на ту саму розмову, від якої ми відходимо.
+    const replyBtn = sub ? '' :
+      `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">${ACT_ICONS.reply}Відповісти</button>`;
+    return `
+      <article class="qa-answer${sub ? ' qa-answer--sub' : ''}" data-msg="${c.id}" data-tag="${c.client_tag || ''}">
+        <div class="qa-answer-head">
+          ${authorAvatar(author, c.sender_uid)}
+          <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+          <span class="qa-answer-when">${formatTime(postTime(c))}</span>
+          ${edited}
+          <button class="qa-answer-more" type="button" data-answer-menu="${c.id}" aria-label="Дії">⋯</button>
+        </div>
+        <p class="qa-answer-text">${escapeHtml(c.text)}</p>
+        ${replyBtn}
+      </article>`;
+  };
+
+  const html = roots.map(r => {
+    const subs = (subsOf.get(r.id) || []).map(s => answer(s, true)).join('');
+    return answer(r, false) + (subs ? `<div class="qa-answer-subs">${subs}</div>` : '');
+  }).join('');
+
+  return `<div class="qa-answers" data-comments-for="${post.id}">${html}</div>`;
 }
 
-// Floating-пігулка «N нових повідомлень»
-function showChatPill(n) {
-  const pill = _chatModalEl?.querySelector('.bd-chat-newpill');
-  if (!pill) return;
-  pill.querySelector('.bd-chat-newpill-n').textContent = `${n} ${newMsgLabel(n)}`;
-  pill.hidden = false;
-}
-function hideChatPill() {
-  const pill = _chatModalEl?.querySelector('.bd-chat-newpill');
-  if (pill) pill.hidden = true;
+// Показати щойно надіслану відповідь. 🔑 Кличемо ЛИШЕ після ВЛАСНОЇ дії (надіслав,
+// змінив), а не на кожне перемальовування: у чаті автоскрол донизу правильний, бо
+// низ = «зараз», а в Q&A низ = «найдавніша прочитана відповідь», і смикати туди
+// людину, яка читає згори, означало б забрати в неї місце в тексті.
+function scrollToMyAnswer() {
+  const body = document.querySelector('.qa-body');
+  if (!body) return;
+  const answers = body.querySelectorAll('.qa-answer');
+  const last = answers[answers.length - 1];
+  if (last) last.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  else body.scrollTop = body.scrollHeight;
 }
 
-// Оновити лічильник відповідей у шапці відкритої модалки
+// Оновити лічильник відповідей у заголовку секції відкритого питання
 function updateChatHeaderCount(postId) {
   if (postId !== _chatOpenPostId) return;
-  const el = document.getElementById('bd-chat-reply-count');
+  const el = document.getElementById('qa-answers-count');
   if (el) {
     const n = activeComments(postId).length;
-    el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
+    el.textContent = n ? `${n} ${answerWord(n).toUpperCase()}` : 'ВІДПОВІДІ';
   }
 }
 
-// ── Повноекранна модалка-чат «Обговорення» ───────────────────────────────────
-// Розгортається з картки (scale-морф) поверх затемненого нерухомого фону.
-// Закриття: ← назад / ✕ / тап по фону / свайп вниз.
+// ── ПОВНОЕКРАННИЙ ЕКРАН ПИТАННЯ ──────────────────────────────────────────────
+//
+// 🔴 11.08 — БУЛА МОДАЛКА, СТАВ ШАР (`core/layers.js`).
+//
+// Чому не «просто перефарбувати модалку»: модальне вікно поверх сторінки — це
+// патерн «щось вискочило, зараз закрию». Питання з відповідями — це МІСЦЕ, куди
+// людина приходить читати; місце має бути екраном.
+//
+// 🔑 Закриття віддано СИСТЕМНОМУ жесту iPhone через `openLayer`. Власного
+// свайпу-закриття тут більше немає — з ним пішли ~50 рядків (`createDragTracker`,
+// `finishSwipe`, `centeredRemaining`, `createBackdropFade` і три слухачі `touch*`).
+// Це не спрощення заради спрощення: у `core/layers.js` і в `CLAUDE.md` стоїть пряма
+// заборона писати власний свайп для повноекранного шару — 02.08 два рухи (наш і
+// системний) накладались, і Вова описав це як «дьоргається». Готове рішення вже є.
 let _chatModalEl = null;
 let _chatViewportHandler = null;
-let _chatScrollHandler = null;   // слухач скролу стрічки (ховає пігулку біля низу)
-let _chatOpenPostId = null;      // id теми відкритої модалки
-let _chatDividerTs = 0;          // час останнього перегляду (межа для роздільника «Нові»)
-let _chatUnseen = 0;             // лічильник нових поки користувач не біля низу
+let _chatOpenPostId = null;      // id відкритого питання
+let _qaLayer = null;             // запис у core/layers.js (системний жест «назад»)
 function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 // ── ОБГОВОРЕННЯ: створення + кімнати «Мої» / «Збережені» (окремий FAB) ─────────
@@ -404,19 +386,31 @@ export function openSavedDiscussions() {
   openDiscussionList('Збережені питання', list);
 }
 
-// Модалка створення обговорення → submitDiscussion → одразу published.
+// Аркуш створення ПИТАННЯ → submitDiscussion → одразу published (без модерації).
+//
+// 🔴 11.08 — БУЛО «Створити обговорення» / «Тема обговорення» / «Про що поговоримо?».
+// Кожен із цих написів вимагав від людини вигадати ТЕМУ — тобто спершу проявити
+// креативність, і тільки потім скористатись функцією. Питання вигадувати не треба:
+// воно вже є в голові, з ним людина і прийшла. Це не зміна тону, а зняття бар'єра
+// на вході в єдину дію вкладки.
+//
+// 🛑 Полів свідомо ОДНЕ. Категорія, локація, фото — кожне з них ще один бар'єр, а
+// в аудиторії 40-70+ форма на три поля відсіює більше людей, ніж додає користі.
+// Подати питання має бути ШВИДШЕ, ніж подати оголошення на Дошці (там полів багато
+// — і там це виправдано, бо йдеться про річ і гроші).
 export function openDiscussionCompose() {
   const form = `
     <form class="disc-compose" id="disc-compose-form">
-      <label class="disc-compose-label" for="disc-compose-topic">Тема обговорення</label>
+      <label class="disc-compose-label" for="disc-compose-topic">Що ви хочете дізнатись?</label>
       <textarea id="disc-compose-topic" class="disc-compose-input" rows="3"
-                placeholder="Про що поговоримо? Напр.: Чи потрібен новий майданчик у центрі?" maxlength="300"></textarea>
-      <button type="submit" class="disc-compose-submit">Створити</button>
-      <p class="disc-compose-note">Зʼявиться одразу. Матюки/образи блокуються автоматично.</p>
+                placeholder="Напишіть питання…" maxlength="300"></textarea>
+      <p class="disc-compose-hint">Наприклад: «Коли ремонтуватимуть дорогу в Митильному?»</p>
+      <button type="submit" class="disc-compose-submit">Запитати громаду</button>
+      <p class="disc-compose-note">Питання побачать жителі громади одразу. Матюки та образи блокуються автоматично.</p>
     </form>`;
   let detachKb = null;
   openDiscSheet({
-    title: 'Створити обговорення',
+    title: 'Запитати громаду',
     bodyHtml: form,
     // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
     // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
@@ -428,8 +422,8 @@ export function openDiscussionCompose() {
       sheet.querySelector('#disc-compose-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = (ta?.value || '').trim();
-        if (!text) { showToast('Напишіть тему обговорення', 2500); ta?.focus(); return; }
-        if (containsProfanity(text)) { showToast('🚫 Тема містить заборонені слова', 4000, 'error'); return; }
+        if (!text) { showToast('Напишіть своє питання', 2500); ta?.focus(); return; }
+        if (containsProfanity(text)) { showToast('🚫 Питання містить заборонені слова', 4000, 'error'); return; }
         const btn = sheet.querySelector('.disc-compose-submit');
         if (btn) { btn.disabled = true; btn.textContent = 'Надсилаємо…'; }
         const payload = {
@@ -441,13 +435,13 @@ export function openDiscussionCompose() {
         if (isSupabaseReady()) {
           const res = await submitDiscussion(payload);   // одразу published (без модерації)
           if (!res.ok) {
-            if (btn) { btn.disabled = false; btn.textContent = 'Створити'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Запитати громаду'; }
             showToast('Помилка: ' + (res.error || 'не вдалось'), 4000, 'error');
             return;
           }
         }
         close();
-        showToast('Обговорення створено!', 3000);
+        showToast('Питання опубліковано — чекайте на відповіді', 3500);
         // Перезавантажити стрічку (нове обговорення одразу видно) — через подію,
         // initBoard (board.js) її вже слухає → renderBoard(). Прямий виклик
         // renderBoard() звідси створив би циклічний імпорт board.js↔цей файл.
@@ -458,36 +452,60 @@ export function openDiscussionCompose() {
   });
 }
 
+// Кнопка «Мене теж цікавить» — та сама реакція, що раніше була ❤️ на картці.
+// 🔑 У БАЗІ ЗНАЧЕННЯ ЛИШАЄТЬСЯ `❤️` (`LIKE_EMOJI`) — міняється лише підпис та іконка.
+// Якби ми завели новий код емоції, наявні реакції (заміряно 11.08: 9 рядків на
+// темах) перестали б рахуватись і для людини це виглядало б як «лайки пропали».
+function qaInterestHtml(postId) {
+  const on = isLikedByMe(postId);
+  const n  = getLikeCount(postId);
+  return `
+    <button class="qa-interest${on ? ' qa-interest--on' : ''}" type="button"
+            data-like-id="${postId}"
+            aria-pressed="${on ? 'true' : 'false'}"
+            aria-label="${on ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить'}">
+      ${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
+      <span class="qa-interest-label">Мене теж цікавить</span>
+      ${n ? `<span class="qa-interest-n">${n}</span>` : ''}
+    </button>`;
+}
+
+// ⚠️ Імена `openChatModal` / `closeChatModal` збережені навмисно: на них зав'язані
+// ЧОТИРИ зовнішні точки (`board.js` делегація і deep-link, `core/saved-hub.js`
+// `openChatById`, `handleDiscussionsAuthChange`). Перейменування дало б широкий diff
+// без жодної користі для людини — а користь має бути в тому, що вона бачить.
 export function openChatModal(post) {
   if (_chatModalEl) return;
-  // Стан модалки — ВАЖЛИВО виставити до chatMessagesHtml (воно читає _chatDividerTs)
   _chatOpenPostId = post.id;
-  _chatDividerTs = getChatSeen(post.id);
-  _chatUnseen = 0;
-  const replyCount = activeComments(post.id).length;
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'board-backdrop bd-chat-backdrop';
-
-  const modal = document.createElement('div');
-  modal.className = 'bd-chat-modal';
-  modal.innerHTML = `
-    <div class="bd-chat-modal-handle"></div>
-    <header class="bd-chat-modal-head">
-      <button class="bd-chat-modal-back" type="button" aria-label="Назад">←</button>
-      <div class="bd-chat-modal-titles">
-        <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">${COMMENT_ICON_SVG} ${replyCount} ${msgWord(replyCount)}</div>
-      </div>
+  const screen = document.createElement('div');
+  screen.className = 'qa-screen';
+  const n = activeComments(post.id).length;
+  screen.innerHTML = `
+    <header class="qa-head">
+      <button class="qa-back" type="button" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <span class="qa-head-title">Питання</span>
+      ${saveBtnHtml(post)}
     </header>
-    <div class="bd-chat-modal-body" id="bd-chat-modal-body">
-      ${chatMessagesHtml(post)}
+
+    <div class="qa-body">
+      <section class="qa-question">
+        <h1 class="qa-question-text">${escapeHtml(post.text)}</h1>
+        <div class="qa-question-by">
+          ${authorAvatar(post.author, post.owner_uid)}
+          <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-question-when">${formatTime(postTime(post))}</span>
+        </div>
+        ${qaInterestHtml(post.id)}
+      </section>
+
+      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n).toUpperCase()}` : 'ВІДПОВІДІ'}</h2>
+      ${answersHtml(post)}
     </div>
-    <button class="bd-chat-newpill" type="button" hidden>↓ <span class="bd-chat-newpill-n"></span></button>
-    <button class="pm-scrolldown" id="bd-scrolldown" type="button" aria-label="До останнього повідомлення">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div class="pm-composebar" id="bd-compose" hidden>
+
+    <div class="pm-composebar qa-composebar" id="bd-compose" hidden>
       <span class="pm-composebar-ic" id="bd-compose-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
         <span class="pm-composebar-title" id="bd-compose-title"></span>
@@ -495,94 +513,80 @@ export function openChatModal(post) {
       </div>
       <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="Скасувати">✕</button>
     </div>
+
     ${isLoggedIn() ? `
-    <form class="bd-chat-modal-form" data-comment-form="${post.id}">
-      <input class="bd-chat-modal-input" type="text" placeholder="Написати повідомлення…"
-             aria-label="Повідомлення" data-comment-input="${post.id}">
-      <button class="bd-chat-modal-send" type="submit" aria-label="Надіслати">↑</button>
+    <form class="qa-form" data-comment-form="${post.id}">
+      <input class="qa-input" type="text" placeholder="Ваша відповідь…"
+             aria-label="Ваша відповідь" data-comment-input="${post.id}">
+      <button class="qa-send" type="submit">Надіслати</button>
     </form>` : `
-    <button class="bd-chat-login-cta" type="button" id="bd-chat-login">Увійдіть, щоб писати</button>`}
+    <button class="qa-login-cta" type="button" id="bd-chat-login">Увійдіть, щоб відповісти</button>`}
   `;
 
-  document.body.appendChild(backdrop);
-  document.body.appendChild(modal);
+  document.body.appendChild(screen);
   document.body.classList.add('modal-open');
-  _chatModalEl = modal;
-  hydrateAvatars(modal.querySelector('[data-comments-for]'));   // Потік 12 Б: підтягнути чужі фото
-  hydrateNames(modal.querySelector('[data-comments-for]'));     // синк живих імен профілю за uid
+  _chatModalEl = screen;
+  hydrateAvatars(screen);   // чужі фото профілю
+  hydrateNames(screen);     // живі імена за uid
 
-  requestAnimationFrame(() => {
-    backdrop.classList.add('visible');
-    modal.classList.add('visible');
+  requestAnimationFrame(() => screen.classList.add('visible'));
+
+  // 🔴 Закриття — через core/layers.js. Запис в історії робить системний жест
+  // «назад від лівого краю» рідним способом закрити екран; кнопка ← іде ТИМ САМИМ
+  // шляхом (`closeLayer`), інакше в історії лишився б порожній запис і наступний
+  // жест зʼїв би його вхолосту.
+  _qaLayer = openLayer(() => finishCloseQuestion(), {
+    animateOut: (done) => { screen.classList.remove('visible'); setTimeout(done, 220); },
   });
-  setTimeout(scrollChatToNewOrBottom, 80);
-
-  backdrop.addEventListener('click', closeChatModal);
-  modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
-  // Гість бачить лише кнопку входу замість поля (читати можна, писати — після входу).
-  modal.querySelector('#bd-chat-login')?.addEventListener('click',
-    () => requireAuth('писати в обговоренні', () => {}));
+  screen.querySelector('.qa-back')?.addEventListener('click', () => closeLayer(_qaLayer, { animate: true }));
+  screen.querySelector('#bd-chat-login')?.addEventListener('click',
+    () => requireAuth('відповідати на питання', () => {}));
   document.addEventListener('keydown', onChatEsc);
 
-  // Скрол стрічки → коли користувач сам долистав до низу, ховаємо пігулку «нові»
-  const bodyEl = modal.querySelector('#bd-chat-modal-body');
-  const scrollBtn = modal.querySelector('#bd-scrolldown');
-  _chatScrollHandler = () => {
-    const near = chatBodyNearBottom();
-    if (near) { _chatUnseen = 0; hideChatPill(); }
-    scrollBtn?.classList.toggle('visible', !near);   // кнопка-скло «вниз» коли прокрутив угору
-  };
-  bodyEl?.addEventListener('scroll', _chatScrollHandler, { passive: true });
-  // Тап по пігулці / кнопці-скло → стрибок донизу
-  modal.querySelector('.bd-chat-newpill')?.addEventListener('click', () => {
-    scrollChatToBottom(); _chatUnseen = 0; hideChatPill();
-  });
-  scrollBtn?.addEventListener('click', () => {
-    scrollChatToBottom(); _chatUnseen = 0; hideChatPill(); scrollBtn.classList.remove('visible');
-  });
   // Кнопка надсилання не має забирати фокус з поля (інакше iOS ховає клавіатуру)
-  modal.querySelector('.bd-chat-modal-send')?.addEventListener('pointerdown', e => e.preventDefault());
+  screen.querySelector('.qa-send')?.addEventListener('pointerdown', e => e.preventDefault());
 
-  // П7: жести над бульбашкою (свайп-вліво → відповідь, довге натискання → меню) +
-  // скасування compose-бару + стрибок по цитаті. Делеговано на тіло модалки (переживає
-  // перемальовування стрічки).
+  // Дії над відповіддю — ЯВНІ КНОПКИ, а не жести. Було: свайп-вліво = відповісти,
+  // довге натискання = меню (`setupBubbleGestures`). Приховані жести — мова
+  // месенджера, і для аудиторії 60+ вони означають «функції немає»: про них ніде
+  // не написано. Тепер «Відповісти» видно текстом, решта — під «⋯».
   _discReplyTo = null; _discEditing = null;
-  setupBubbleGestures(bodyEl, onDiscBubbleAction);
-  modal.querySelector('#bd-compose-x')?.addEventListener('click', () => {
-    const input = modal.querySelector('[data-comment-input]');
+  const bodyEl = screen.querySelector('.qa-body');
+  bodyEl?.addEventListener('click', (e) => {
+    const r = e.target.closest('[data-answer-reply]');
+    if (r) { const c = findDiscComment(r.dataset.answerReply); if (c) startDiscReply(c); return; }
+    const m = e.target.closest('[data-answer-menu]');
+    if (m) { const c = findDiscComment(m.dataset.answerMenu); if (c) openDiscActions(c); }
+  });
+  screen.querySelector('#bd-compose-x')?.addEventListener('click', () => {
+    const input = screen.querySelector('[data-comment-input]');
     if (_discEditing && input) input.value = '';   // скасування редагування — чистимо поле
     clearDiscCompose();
   });
-  bodyEl?.addEventListener('click', (e) => {
-    const jump = e.target.closest('[data-jump]');
-    if (!jump) return;
-    const b = bodyEl.querySelector(`.pm-bubble[data-msg="${jump.dataset.jump}"]`);
-    if (b) { b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.add('pm-bubble--flash'); setTimeout(() => b.classList.remove('pm-bubble--flash'), 1000); }
-  });
 
-  // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб модалка НЕ
-  // смикалась, збираємо їх через debounce (один виклик після паузи) → одна
-  // плавна анімація у фінальний стан. Слухаємо і window.resize, і visualViewport.
+  // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб екран НЕ смикався,
+  // збираємо їх через debounce (один виклик після паузи). Патерн ПЕРЕНЕСЕНО без
+  // змін із модалки: він відпрацьований, і переписувати його «заодно» означало б
+  // тягнути ризик у крок, який про інше.
+  // 🛑 `core/keyboard.js` тут НЕ задіяний і не змінюється — це зона підвищеної
+  // обережності (HOT_RULES №9), у ній два фікси вже провалились поспіль.
   const vv = window.visualViewport;
-  const input = modal.querySelector('.bd-chat-modal-input');
-  const fullH = window.innerHeight;   // повна висота ДО клавіатури
+  const input = screen.querySelector('.qa-input');
+  const fullH = window.innerHeight;
   const applyKb = () => {
     const visH = vv ? vv.height : window.innerHeight;
-    const open = visH < fullH - 80;   // клавіатура відкрита (видима область помітно менша)
+    const open = visH < fullH - 80;
     if (open) {
-      // Модалка займає РІВНО видиму область: верх під статус-баром і фіксується,
-      // висота динамічно стискається, низ (поле вводу) — над клавіатурою.
-      modal.classList.add('bd-chat-modal--kb');
-      modal.style.top = (vv ? vv.offsetTop : 0) + 'px';
-      modal.style.height = ((vv ? vv.height : window.innerHeight) - 4) + 'px';
-      modal.style.bottom = 'auto';
+      screen.classList.add('qa-screen--kb');
+      screen.style.top = (vv ? vv.offsetTop : 0) + 'px';
+      screen.style.height = ((vv ? vv.height : window.innerHeight) - 4) + 'px';
+      screen.style.bottom = 'auto';
     } else {
-      modal.classList.remove('bd-chat-modal--kb');
-      modal.style.top = '';
-      modal.style.height = '';
-      modal.style.bottom = '';
+      screen.classList.remove('qa-screen--kb');
+      screen.style.top = '';
+      screen.style.height = '';
+      screen.style.bottom = '';
     }
-    scrollChatToBottom();
   };
   let kbTimer = null;
   _chatViewportHandler = () => { clearTimeout(kbTimer); kbTimer = setTimeout(applyKb, 80); };
@@ -591,82 +595,32 @@ export function openChatModal(post) {
   vv?.addEventListener('scroll', _chatViewportHandler);
   input?.addEventListener('focus', _chatViewportHandler);
   input?.addEventListener('blur',  _chatViewportHandler);
-
-  // Свайп вниз по шапці/ручці → закрити. Модалка МУСИТЬ їхати рівно за пальцем.
-  // Дьоргання (Вова 14.07): у .bd-chat-modal є transition:transform 0.26s, тому
-  // кожен touchmove анімувався із затримкою → модалка «наздоганяла» палець ривками.
-  // Фікс: на час drag transition:none + оновлення transform у requestAnimationFrame
-  // (translate3d = GPU, без layout-thrash); на відпусканні transition повертаємо,
-  // тож пружний повернення/закриття лишаються плавними.
-  let startY = 0, curY = 0, dragging = false, rafId = 0, travel = 1;
-  const dragZone = modal.querySelector('.bd-chat-modal-head');
-  const drag = createDragTracker();       // швидкість пальця → нативне завершення жесту
-  const fade = createBackdropFade(document.querySelector('.bd-chat-backdrop'));
-  const applyDrag = () => {
-    rafId = 0;
-    modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
-    fade?.track(curY / travel);           // фон світлішає разом з рухом, у тому ж кадрі
-  };
-  dragZone.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY; curY = 0; dragging = true;
-    travel = centeredRemaining(modal);    // шлях до нижнього краю — міряємо раз за жест
-    drag.start(startY);
-    modal.style.transition = 'none';      // рух — миттєвий за пальцем, без анімації
-    modal.style.willChange = 'transform';
-  }, { passive: true });
-  dragZone.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    curY = Math.max(0, e.touches[0].clientY - startY);   // лише вниз
-    drag.move(e.touches[0].clientY);
-    if (!rafId) rafId = requestAnimationFrame(applyDrag);
-  }, { passive: true });
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-    modal.style.willChange = '';
-    // Доїзд рахує sheet-motion: кидок закриває навіть коротким рухом; при закритті
-    // модалка ЛЕТИТЬ униз за пальцем (keepTransform — щоб closeChatModal не стер
-    // інлайн transform і вона не стрибнула назад у центр перед зникненням).
-    const remaining = centeredRemaining(modal);
-    finishSwipe({
-      panel: modal, dy: curY, velocity: drag.velocity, remaining,
-      dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
-      onDismiss: () => closeChatModal({ keepTransform: true }),
-      backdrop: fade,
-    });
-    curY = 0;
-  };
-  dragZone.addEventListener('touchend', endDrag);
-  dragZone.addEventListener('touchcancel', endDrag);
 }
 
-// keepTransform:true — закриття прийшло від свайпу, і модалка вже летить донизу
-// власним інлайн transform. Стирати його тут не можна: вона стрибнула б назад
-// у центр і вже звідти зникала (саме це і виглядало як ривок).
-export function closeChatModal(opts = {}) {
+// Закриття «з інтерфейсу» — завжди через шар, щоб історія і екран не розʼїхались.
+export function closeChatModal() {
   if (!_chatModalEl) return;
-  const modal = _chatModalEl;
-  const backdrop = document.querySelector('.bd-chat-backdrop');
-  // Запам'ятати час перегляду теми → наступного разу роздільник «Нові» стане на цій межі
+  if (_qaLayer) closeLayer(_qaLayer, { animate: true });
+  else finishCloseQuestion();
+}
+
+// Власне прибирання екрана. Кличе ЛИШЕ core/layers.js (або closeChatModal, коли
+// шару чомусь немає) — тому весь демонтаж зібраний в одному місці.
+function finishCloseQuestion() {
+  const screen = _chatModalEl;
+  if (!screen) return;
   if (_chatOpenPostId != null) {
+    // Межа «прочитано» лишається — на ній тримається крапка «є нове» в таб-барі
+    // (`unseenDiscussionsCount`). Роздільник «Нові повідомлення» в самому екрані
+    // знято як чат-механіку, але сам факт «я тут був» потрібен далі.
     setChatSeen(_chatOpenPostId, Date.now());
-    // 30.07: сказати таб-бару перемалювати крапку — тему прочитано, «нове» зникло.
-    // ПОДІЯ, а не прямий виклик: board-chat.js імпортує цей модуль, тож зворотний
-    // імпорт дав би коло. Той самий патерн, що вже вживають `cstl-posts-changed`
-    // і `cstl-chat-refresh`.
     window.dispatchEvent(new CustomEvent('cstl-disc-seen'));
   }
-  const bodyEl = modal.querySelector('#bd-chat-modal-body');
-  if (bodyEl && _chatScrollHandler) bodyEl.removeEventListener('scroll', _chatScrollHandler);
-  _chatScrollHandler = null;
   _chatOpenPostId = null;
-  _chatDividerTs = 0;
-  _chatUnseen = 0;
   _chatModalEl = null;
-  modal.classList.remove('visible');
-  if (!opts.keepTransform) modal.style.transform = '';
-  backdrop?.classList.remove('visible');
+  _qaLayer = null;
+  clearDiscCompose();
+  screen.classList.remove('visible');
   document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onChatEsc);
   if (_chatViewportHandler) {
@@ -677,7 +631,7 @@ export function closeChatModal(opts = {}) {
     }
     _chatViewportHandler = null;
   }
-  setTimeout(() => { modal.remove(); backdrop?.remove(); }, 240);
+  setTimeout(() => screen.remove(), 240);
 }
 
 // Оновити картку питання у списку (кількість відповідей + час останньої).
@@ -691,19 +645,21 @@ function refreshChatCardPreview(postId) {
   if (post) card.outerHTML = renderQuestionCard(post);
 }
 
-// ── Багатий чат «Обговорень» (П7): перемальовування + reply/edit/delete/меню ──────
-function rerenderCommentsBlock(postId) {
+// ── Перемальовування списку відповідей + reply/edit/delete ───────────────────
+// `scroll` — прокрутити до щойно доданої відповіді. Ставимо ЛИШЕ на власну дію:
+// при чужій (realtime) смикати екран не можна, людина в цей момент читає.
+function rerenderCommentsBlock(postId, { scroll = false } = {}) {
   const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
   if (!wrap) return;
   const post = _getPosts().find(p => p.id === postId);
   if (!post) return;
-  wrap.outerHTML = chatMessagesHtml(post);
-  hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
-  hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));     // синк живих імен
-  scrollChatToBottom();
-  _chatUnseen = 0; hideChatPill();
+  wrap.outerHTML = answersHtml(post);
+  const fresh = document.querySelector(`[data-comments-for="${postId}"]`);
+  hydrateAvatars(fresh);   // Потік 12 Б
+  hydrateNames(fresh);     // синк живих імен
   updateChatHeaderCount(postId);
   refreshChatCardPreview(postId);
+  if (scroll) scrollToMyAnswer();
 }
 
 let _discReplyTo = null;   // коментар на який відповідаємо
@@ -733,12 +689,6 @@ function startDiscEdit(c) {
   showDiscCompose('РЕДАГУВАННЯ:', c.text || '', 'edit');
   const input = _chatModalEl?.querySelector('[data-comment-input]');
   if (input) { input.value = c.text || ''; input.focus(); }
-}
-function onDiscBubbleAction(id, kind) {
-  const c = findDiscComment(id);
-  if (!c) return;
-  if (kind === 'reply') startDiscReply(c);
-  else if (kind === 'menu') openDiscActions(c);
 }
 function openDiscActions(c) {
   if (c.deleted_at) return;
@@ -860,11 +810,15 @@ export function renderQuestionCard(p) {
   `;
 }
 
-// ── Лайк теми (клік з document-делегації board.js) ───────────────────────────
-// Тогл через наявний data-шар reactions (одна емоція ❤️), optimistic + відкат.
+// ── «Мене теж цікавить» (клік з document-делегації board.js) ─────────────────
+// Тогл через наявний дата-шар reactions, optimistic + відкат.
+// 🔑 У БАЗІ ЛИШАЄТЬСЯ ТА САМА ЕМОЦІЯ `❤️` — змінився лише СЕНС у поводженні з нею:
+// лайк теми («мені подобається») перетворився на сигнал попиту («я теж хочу знати»),
+// що для питання єдине осмислене: лайкати чуже незнання нема чого. Новий код емоції
+// знецінив би 9 наявних реакцій, і для людини це виглядало б як «усе пропало».
 export function handleLikeClick(likeBtn) {
   const id = Number(likeBtn.dataset.likeId);
-  requireAuth('лайкати обговорення', async () => {
+  requireAuth('позначити питання', async () => {
     const uid = currentUserId();
     const wasLiked = isLikedByMe(id);
     const entry = reactionsByPost.get(id) || { counts: {}, my: null };
@@ -872,8 +826,9 @@ export function handleLikeClick(likeBtn) {
     entry.my = wasLiked ? null : LIKE_EMOJI;
     reactionsByPost.set(id, entry);
     likeBtn.innerHTML = likeBtnInner(id);
-    likeBtn.classList.toggle('bd-chat-like--active', !wasLiked);
-    likeBtn.setAttribute('aria-label', wasLiked ? 'Лайк' : 'Прибрати лайк');
+    likeBtn.classList.toggle('qa-interest--on', !wasLiked);
+    likeBtn.setAttribute('aria-pressed', wasLiked ? 'false' : 'true');
+    likeBtn.setAttribute('aria-label', wasLiked ? 'Мене теж цікавить' : 'Прибрати позначку «мене теж цікавить»');
     const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
     if (!res.ok) {
       // Відкат при помилці мережі/RLS
@@ -881,9 +836,10 @@ export function handleLikeClick(likeBtn) {
       entry.my = wasLiked ? LIKE_EMOJI : null;
       reactionsByPost.set(id, entry);
       likeBtn.innerHTML = likeBtnInner(id);
-      likeBtn.classList.toggle('bd-chat-like--active', wasLiked);
-      likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати лайк' : 'Лайк');
-      showToast('Не вдалося зберегти лайк', 2500, 'error');
+      likeBtn.classList.toggle('qa-interest--on', wasLiked);
+      likeBtn.setAttribute('aria-pressed', wasLiked ? 'true' : 'false');
+      likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить');
+      showToast('Не вдалося зберегти позначку', 2500, 'error');
     }
   });
 }
@@ -962,7 +918,9 @@ export function attachDiscussionsDelegation() {
     commentsByPost.set(postId, list);
     if (input) input.value = '';
     clearDiscCompose();
-    rerenderCommentsBlock(postId);
+    // `scroll: true` — це ВЛАСНА дія: людина щойно відповіла і має побачити свою
+    // відповідь. На чужі (realtime) прокрутка не ставиться, див. onCommentRealtimeEvent.
+    rerenderCommentsBlock(postId, { scroll: true });
     input?.focus();   // лишаємо фокус → клавіатура не ховається після надсилання
 
     // POST у Supabase
@@ -993,38 +951,21 @@ export function attachDiscussionsDelegation() {
 // ── Realtime — підписки чіпляємо ОДИН раз при initBoard (board.js викликає). ──
 // При подіях БД перерахуємо in-memory map і точково перерендеримо DOM-елементи.
 
+// Чужа відповідь прийшла наживо. 🔑 У Q&A вона просто зʼявляється на своєму місці —
+// БЕЗ автоскролу і без пігулки «↓ N нових». Обидві механіки були правильні для чату
+// (там низ = «зараз») і шкідливі тут: людина читає згори, і смикати її вниз означало б
+// забрати місце в тексті. Позицію тримає якір прокрутки.
 function onCommentRealtimeEvent(payload) {
   const postId = (payload.new || payload.old || {}).post_id;
   if (!postId) return;
-  const prevCount = getComments(postId).length;
-  // Просто refetch усіх коментарів і перерендеримо блок
   fetchAllComments().then(fresh => {
     commentsByPost = fresh;
-    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-    if (wrap) {
-      const post = _getPosts().find(p => p.id === postId);
-      if (post) {
-        // Розумний автоскрол: фіксуємо позицію ДО перемальовування
-        const body = document.getElementById('bd-chat-modal-body');
-        const near = chatBodyNearBottom();
-        const prevTop = body ? body.scrollTop : 0;
-        wrap.outerHTML = chatMessagesHtml(post);
-        hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
-        hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));     // синк живих імен
-        if (near) {
-          scrollChatToBottom();   // користувач унизу — лишаємо його внизу
-        } else {
-          if (body) body.scrollTop = prevTop;   // читає старі — НЕ збиваємо позицію
-          const delta = Math.max(0, getComments(postId).length - prevCount);
-          if (delta > 0 && postId === _chatOpenPostId) {
-            _chatUnseen += delta;
-            showChatPill(_chatUnseen);
-          }
-        }
-        updateChatHeaderCount(postId);
-      }
+    const body = document.querySelector('.qa-body');
+    if (body && document.querySelector(`[data-comments-for="${postId}"]`)) {
+      keepScroll(body, () => rerenderCommentsBlock(postId), null, 'data-msg');
+    } else {
+      refreshChatCardPreview(postId);
     }
-    refreshChatCardPreview(postId);
   });
 }
 
