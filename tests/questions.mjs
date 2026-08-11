@@ -109,23 +109,50 @@ ok('1а. таб-бар підписаний «Питання»', tab.підпи�
 ok('1б. іконка вкладки перемальована (3 шляхи: бульбашка + гачок + крапка)',
    tab.шляхів === 3, `шляхів=${tab.шляхів}`);
 
-// ── 2. ГОЛОВНА ДІЯ ВИДИМА НА ЕКРАНІ, А НЕ СХОВАНА У FAB ─────────────────────
+// ── 2. ГОЛОВНА ДІЯ ВИДИМА І ПІДПИСАНА ───────────────────────────────────────
 // 🔑 Міряємо ВИДИМІСТЬ (`offsetParent` + розмір), а не наявність у DOM: саме на
 // цьому вже спіткнувся `dev-lock.mjs` — `!!querySelector` казав «ок» там, де
 // людина не бачила нічого.
+//
+// ⚠️ 11.08, РЕДАКЦІЯ 2 — ПЕРЕВІРКУ ПЕРЕНАЦІЛЕНО З МІСЦЯ НА ДІЮ.
+// Була прив'язана до `[data-qa-ask]` — кнопки в бордовому банері згори. Банер
+// прибрано (Вова: «фейсбук 2006»; прилад `qa-audit` показав 220px шапки і першу
+// інформацію на 36% екрана), а дія переїхала у FAB, який ТЕПЕР ПІДПИСАНИЙ.
+// Вимога лишилась та сама і не послабилась: головна дія мусить бути ВИДИМОЮ і
+// названою ДІЄСЛОВОМ, а не ховатись за голим «+». Змінилось лише, де вона живе.
 const ask = await p.evaluate(() => {
-  const el = document.querySelector('#disc-content [data-qa-ask]');
+  const el = document.querySelector('#board-trigger');
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  return { текст: el.textContent.trim(), видно: !!el.offsetParent && r.height > 0,
-           висота: Math.round(r.height), верх: Math.round(r.top) };
+  const підпис = el.querySelector('.qa-fab-label');
+  // 🔴 НЕ `offsetParent`. У елемента з `position: fixed` він ЗАВЖДИ `null` — тобто
+  // перевірка «видно» завалила б будь-який FAB, хоч би як добре той виглядав.
+  // Саме це й сталось із першою редакцією цієї перевірки: «висота=56px», а
+  // висновок «кнопки немає». Міряємо те, що справді робить елемент невидимим.
+  const реальноВидно = (n) => {
+    while (n && n.nodeType === 1) {
+      const s = getComputedStyle(n);
+      if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false;
+      n = n.parentElement;
+    }
+    return true;
+  };
+  return {
+    текст: (підпис?.textContent || el.getAttribute('aria-label') || '').trim(),
+    підписВидно: !!підпис && реальноВидно(підпис) && підпис.getBoundingClientRect().width > 0,
+    видно: реальноВидно(el) && r.height > 0 && r.top < window.innerHeight,
+    висота: Math.round(r.height),
+    уНижнійПоловині: r.top > window.innerHeight / 2,   // зона великого пальця
+  };
 });
-ok('2а. на екрані є видима головна кнопка дії', !!ask && ask.видно,
-   ask ? `висота=${ask.висота}px верх=${ask.верх}px` : 'кнопки немає');
-ok('2б. вона підписана дієсловом «Запитати»', !!ask && /Запитати/.test(ask.текст),
+ok('2а. головна дія видима на екрані', !!ask && ask.видно,
+   ask ? `висота=${ask.висота}px` : 'кнопки немає');
+ok('2б. вона підписана ДІЄСЛОВОМ, а не голим «+»',
+   !!ask && ask.підписВидно && /Запитати/.test(ask.текст),
    ask ? `«${ask.текст}»` : '—');
 ok('2в. тап-ціль ≥ 44px (Apple HIG, аудиторія 40-70+)', !!ask && ask.висота >= 44,
    ask ? `${ask.висота}px` : '—');
+ok('2г. стоїть у нижній половині — зоні великого пальця', !!ask && ask.уНижнійПоловині);
 
 // ── 3. КАРТКА — ПРО ПИТАННЯ, А НЕ ПРО ЧАТ ────────────────────────────────────
 const card = await p.evaluate(() => {
@@ -244,7 +271,10 @@ ok('6б. і НЕ виносить людину з вкладки', afterClose.в
    `вкладка=${afterClose.вкладка}`);
 
 // ── 7. ФОРМА СТВОРЕННЯ ПИТАЄ ПРО ПИТАННЯ, А НЕ ПРО «ТЕМУ» ───────────────────
-await p.evaluate(() => document.querySelector('#disc-content [data-qa-ask]')?.click());
+// Шлях той самий, що в людини: тап по FAB → пункт «Запитати громаду» в меню.
+await p.evaluate(() => document.querySelector('#board-trigger')?.click());
+await p.waitForTimeout(400);
+await p.evaluate(() => document.querySelector('[data-fab="disc-create"]')?.click());
 await p.waitForTimeout(900);
 const compose = await p.evaluate(() => {
   const w = document.querySelector('.app-modal--disc');
@@ -269,6 +299,77 @@ ok('7г. є живий приклад питання (для тих, хто не
    !!compose && compose.підказка.length > 10, compose ? `«${compose.підказка}»` : '—');
 ok('7д. 🔑 поле РІВНО ОДНЕ — подати питання швидше, ніж оголошення',
    !!compose && compose.полів === 1, compose ? `полів=${compose.полів}` : '—');
+
+// ── 8. 🔴 МЕЖІ ВІЗУАЛЬНОЇ ВАГИ (заведено 11.08 після відмови Вови) ───────────
+//
+// Першу редакцію вкладки Вова відхилив словами «це не схоже на стиль Apple, це
+// схоже на щось на фейсбук 2006 року». Прилад `tests/tools/qa-audit.mjs` показав,
+// що саме за цим стояло — і ці ж числа стають межами, щоб воно не повернулось:
+//
+//   ліній і рамок у першому екрані ... 43 → 4
+//   різних кольорів тексту .......... 7  → 4
+//   перша інформація ................ 36% екрана → 25%
+//   тап-цілі < 44px ................. 6  → 0
+//
+// 🔑 Чому саме ці три числа, а не «схоже на Apple». «Схожість» перевірити
+// неможливо, а ці величини — прямі наслідки того способу верстки, який дав
+// відмову: ієрархія лініями і кольоровими плитами замість простору й тону.
+// Межі поставлені з запасом до чинних значень, щоб дрібне доопрацювання їх не
+// валило, але повернення банера чи рамок на картках — валило одразу.
+// ⚠️ Рахуємо ЛИШЕ ВИДИМЕ: перша редакція приладу цього не робила і нарахувала
+// 28 ліній, з яких усі лежали в ЗАКРИТОМУ меню FAB.
+await p.evaluate(() => document.querySelector('.pm-actions-cancel, .app-modal-close')?.click());
+await p.waitForTimeout(400);
+await p.evaluate(() => { const l = document.querySelector('.qa-screen'); if (l) history.back(); });
+await p.waitForTimeout(500);
+
+const вага = await p.evaluate(() => {
+  const H = window.innerHeight;
+  const видно = (el) => {
+    let n = el;
+    while (n && n.nodeType === 1) {
+      const s = getComputedStyle(n);
+      if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false;
+      if (n.hasAttribute && n.hasAttribute('hidden')) return false;
+      n = n.parentElement;
+    }
+    return true;
+  };
+  let ліній = 0;
+  const кольори = new Set();
+  const дрібні = [];
+  for (const el of document.querySelectorAll('#disc-content *')) {
+    const r = el.getBoundingClientRect();
+    if (r.top > H || r.bottom < 0 || !видно(el)) continue;
+    const s = getComputedStyle(el);
+    if (r.width >= 2) {
+      for (const side of ['Top','Right','Bottom','Left']) {
+        if (parseFloat(s['border' + side + 'Width']) > 0
+            && s['border' + side + 'Color'] !== 'rgba(0, 0, 0, 0)'
+            && s.borderStyle !== 'none') ліній++;
+      }
+    }
+    if ([...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) кольори.add(s.color);
+  }
+  for (const el of document.querySelectorAll('#disc-content button, #disc-content input')) {
+    const r = el.getBoundingClientRect();
+    if (r.top > H || r.bottom < 0 || !r.width || !видно(el)) continue;
+    if (r.height < 44) дрібні.push(`${el.className.split(' ')[0]} ${Math.round(r.height)}px`);
+  }
+  const перша = document.querySelector('#disc-content [data-question-open]');
+  return {
+    ліній, кольорів: кольори.size, дрібні,
+    доІнформації: перша ? Math.round(перша.getBoundingClientRect().top / H * 100) : 100,
+  };
+});
+ok('8а. 🔴 видимих ліній і рамок ≤ 8 (у відхиленій редакції було 43)',
+   вага.ліній <= 8, `${вага.ліній}`);
+ok('8б. 🔴 різних кольорів тексту ≤ 5 (було 7 — розкид читається як «наосліп»)',
+   вага.кольорів <= 5, `${вага.кольорів}`);
+ok('8в. 🔴 перша картка вище 30% екрана (було 36% — шапка зʼїдала третину)',
+   вага.доІнформації <= 30, `${вага.доІнформації}%`);
+ok('8г. 🔴 жодної тап-цілі < 44px (було 6)',
+   вага.дрібні.length === 0, вага.дрібні.join(' · ') || 'усі ≥ 44px');
 
 await stop();
 await b.close();
