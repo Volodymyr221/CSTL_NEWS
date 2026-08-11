@@ -3841,6 +3841,19 @@ textarea.cm-board-input.bm-invalid {
 .board-trigger--labeled.qa-fab-wide .qa-fab-label {
   max-width: var(--qa-fab-w, 200px); opacity: 1; transition-delay: 0.14s;
 }
+/* Число непрочитаних усередині підпису («Повідомлення 2») — той самий вигляд, що
+   в чіпів «Без відповіді 4», щоб мова застосунку лишалась однією. */
+.board-trigger--labeled .qa-fab-n {
+  margin-left: 6px; padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-weight: 700;
+}
+/* 🛑 Поки кнопка розгорнута — кутовий бейдж ховаємо. Інакше те саме число
+   стоїть двічі за 40px одне від одного: у підписі й на кружечку. Рівно цю
+   помилку щойно виправляли в шапці «Питань» («без відповіді 4» у чіпі й у
+   рядку під ним) — не заводимо її вдруге в кнопці. */
+.board-trigger--labeled.qa-fab-wide .board-trigger-badge { display: none; }
 .board-trigger--labeled.qa-fab-wide .cm-board-trigger-icon,
 .board-trigger--labeled.qa-fab-wide .cm-board-trigger-msg,
 .board-trigger--labeled.qa-fab-wide .cm-board-trigger-close { right: auto; width: 46px; }
