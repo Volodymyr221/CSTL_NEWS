@@ -553,6 +553,115 @@ const стан = await p.evaluate(() => {
 ok('10. під пошуком видно, скільки питань і скільки без відповіді',
    !!стан && /\d+ питанн/.test(стан) && /без відповіді/.test(стан), стан || '—');
 
+// ── 11. ПОВНИЙ СПИСОК: скільки екрана шапка займає НАЗАВЖДИ ─────────────────
+//
+// 🔴 ЧОМУ ЦЕ ОКРЕМИЙ СЦЕНАРІЙ, А НЕ ЩЕ ОДНА ПЕРЕВІРКА ВГОРІ.
+// Усе вище міряється на фікстурі з ДВОХ питань. А біда, яку Вова побачив на
+// проді, починається з ВОСЬМИ: саме там вмикаються чіпи (`QA_CHIPS_FROM`), і
+// шапка доростає до 242px = **38% екрана**. Тобто стенд був зелений 53/53 рівно
+// тому, що ЙОГО СЦЕНАРІЙ не збігався з життям — а перевірка «перша картка вище
+// 33%» (8в) навіть існувала і показувала 31%.
+// 🔑 Це вже **шістнадцятий** випадок брехливої мірки в проєкті, і найтихіший з
+// усіх: прилад не помилявся в обчисленні — він міряв не ту сцену.
+// ⚠️ Тому тут піднімається ОКРЕМИЙ браузер із 12 питаннями: підмінити дані на
+// вже відкритій сторінці не можна, заглушка вшита в маршрут при старті.
+const БАГАТО = Array.from({ length: 12 }, (_, i) => ({
+  id: 800 + i, type: 'chat', text: `Питання номер ${i + 1} про життя громади?`,
+  title: null, author: 'Іван', owner_uid: null, status: 'published', location: null, tags: [],
+  ts: t0 + i * 6e4, created_at: new Date(t0 + i * 6e4).toISOString(),
+  published_at: new Date(t0 + i * 6e4).toISOString(),
+}));
+// Відповіді лише на частину — інакше «без відповіді» = 0 і чіпи не вмикаються.
+const ВІДПОВІДІ = БАГАТО.slice(0, 8).map((q, i) => ({
+  id: 8100 + i, post_id: q.id, author: 'Галина', text: 'Бачила оголошення на дошці біля магазину.',
+  sender_uid: 'u-g', reply_to_id: null, created_at: new Date(t0 + 36e5).toISOString(),
+  edited_at: null, deleted_at: null, client_tag: null,
+}));
+
+const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
+                                  hasTouch: true, serviceWorkers: 'block' });
+const p2 = await ctx2.newPage();
+if (BUNDLE_REV) {
+  const old = projectFile('bundle.js', BUNDLE_REV);
+  await p2.route('**/bundle.js', r => r.fulfill({ contentType: 'application/javascript', body: old }));
+}
+if (CSS_REV) {
+  const old = projectFile('style/board.css', CSS_REV);
+  await p2.route('**/style/board.css', r => r.fulfill({ contentType: 'text/css', body: old }));
+}
+await mockSupabase(p2, { posts: БАГАТО, comments: ВІДПОВІДІ, announcements: [] },
+                  { user: { id: 'u-me', name: 'Я' } });
+await p2.route('**://api.open-meteo.com/**', r => r.abort());
+await p2.goto(url, { waitUntil: 'domcontentloaded' });
+await p2.waitForTimeout(2500);
+await p2.evaluate(() => document.querySelector('.consent-accept')?.click());
+await p2.waitForTimeout(300);
+await p2.evaluate(() => window.switchTab && window.switchTab('discussions'));
+await p2.waitForTimeout(4600);   // перечекати підказку FAB, щоб вона не заважала мірці
+
+const повний = await p2.evaluate(() => {
+  const шапка = document.querySelector('#disc-content .bd-controls');
+  const тіло  = document.querySelector('#disc-content .bd-body') || document.querySelector('.bd-body');
+  const карта = document.querySelector('[data-question-open]');
+  const чіпи  = document.querySelector('#disc-content .qa-chips');
+  const лічильник = document.querySelector('#disc-content .qa-hero-count');
+  return {
+    екран: window.innerHeight,
+    шапка: шапка ? Math.round(шапка.getBoundingClientRect().height) : null,
+    картка: карта ? Math.round(карта.getBoundingClientRect().top) : null,
+    чіпиЄ: !!чіпи,
+    чіпиТекст: чіпи ? чіпи.textContent.replace(/\s+/g, ' ').trim() : '',
+    лічильникТекст: лічильник ? лічильник.textContent.replace(/\s+/g, ' ').trim() : '',
+    скролер: !!тіло,
+  };
+});
+ok('11а. перша картка вище 33% екрана і при ПОВНОМУ списку',
+   !!повний.картка && повний.картка < повний.екран * 0.33,
+   `${повний.картка}px = ${Math.round(100 * повний.картка / повний.екран)}%`);
+// Дублювання числа — окрема претензія Вови: «без відповіді 4» стояло і в чіпі,
+// і в рядку під пошуком, за 60px одне від одного.
+ok('11б. 🛑 число «без відповіді» НЕ друкується двічі',
+   повний.чіпиЄ && !/без відповіді/i.test(повний.лічильникТекст),
+   `чіпи: «${повний.чіпиТекст}» · лічильник: «${повний.лічильникТекст || '—'}»`);
+
+// 🔴 ГОЛОВНА ПЕРЕВІРКА ЦЬОГО БЛОКА: скільки екрана шапка займає ПІД ЧАС ПРОКРУТКИ.
+//
+// Саме це, а не її висота, було скаргою Вови: «дуже багато місця займає оце все
+// зверху, а знизу там десь скроляться карточки». Шапка може бути якою завгодно
+// заввишки на першому кадрі — важливо, щоб вона не з'їдала екран у КОЖНОМУ
+// наступному. Тому міряємо не `height`, а скільки її ЛИШИЛОСЬ у видимій зоні
+// після прокрутки. Було: 242px назавжди (шапка `fixed`). Стало: 0.
+// ⚠️ Перша редакція цієї перевірки міряла саме висоту («≤130px») — і завалила б
+// правильне рішення: шапка з заголовком усередині вища за 130, але при цьому
+// їде геть цілком. Мірка мусить описувати НАСЛІДОК, а не спосіб його досягти.
+const післяПрокрутки = await p2.evaluate(async () => {
+  const скролер = (() => {
+    let n = document.querySelector('#disc-content .bd-body') || document.querySelector('.bd-body');
+    while (n && n !== document.body) { if (n.scrollHeight > n.clientHeight + 10) return n; n = n.parentElement; }
+    return document.scrollingElement || document.documentElement;
+  })();
+  const назва = () => document.querySelector('#disc-content .qa-hero-title')?.getBoundingClientRect().top ?? null;
+  const до = назва();
+  скролер.scrollTop = 600;
+  await new Promise(r => setTimeout(r, 450));
+  const шапка = document.querySelector('#disc-content .bd-controls');
+  const r = шапка ? шапка.getBoundingClientRect() : null;
+  const верхЗони = (document.querySelector('.app-header')?.getBoundingClientRect().bottom) ?? 0;
+  return {
+    до: до === null ? null : Math.round(до),
+    після: назва() === null ? null : Math.round(назва()),
+    // Скільки шапки видно нижче шапки застосунку — тобто скільки вона реально їсть.
+    видноШапки: r ? Math.max(0, Math.round(r.bottom - верхЗони)) : null,
+  };
+});
+ok('11в. 🔴 при прокрутці шапка НЕ їсть екран (було 242px назавжди)',
+   післяПрокрутки.видноШапки !== null && післяПрокрутки.видноШапки <= 8,
+   `видно ${післяПрокрутки.видноШапки}px`);
+ok('11г. заголовок і пояснення їдуть геть разом із нею',
+   післяПрокрутки.до !== null && післяПрокрутки.після !== null &&
+   післяПрокрутки.після < післяПрокрутки.до - 100,
+   `було ${післяПрокрутки.до}px → стало ${післяПрокрутки.після}px`);
+
 await stop();
 await b.close();
 done();

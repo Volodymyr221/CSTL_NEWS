@@ -7143,18 +7143,15 @@
     const \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C = activeType === "chat" ? getFilteredPosts({ ignoreQaChip: true }).length : 0;
     const \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 = unanswered > 0 && \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C >= QA_CHIPS_FROM;
     const \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F = `<p class="qa-hero-note">\u041F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432 \u043F\u0440\u043E \u043C\u0456\u0441\u0446\u0435\u0432\u0435 \u2014 \u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u0434\u043E\u0432\u0456\u0434\u043A\u0438, \u043F\u043E\u0434\u0456\u0457. \u0417\u043D\u0430\u0454\u0442\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2014 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0456\u0442\u044C.</p>`;
-    const \u043B\u0456\u0447\u0438\u043B\u044C\u043D\u0438\u043A = \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C ? `
+    const \u043B\u0456\u0447\u0438\u043B\u044C\u043D\u0438\u043A = \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C && !\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 ? `
     <p class="qa-hero-count">${\u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C} ${word\u041F\u0438\u0442\u0430\u043D\u044C(\u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C)}${unanswered ? ` \xB7 <span class="qa-hero-need">${unanswered} \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</span>` : ""}</p>` : "";
     const discHead = activeType !== "chat" ? "" : `
-    <div class="qa-hero">
-      <h1 class="qa-hero-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</h1>
-      ${\u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F}
-      ${\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 ? `
-      <div class="qa-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u043F\u0438\u0442\u0430\u043D\u044C">
-        <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456</button>
-        <button class="qa-chip${qaUnansweredOnly ? " qa-chip--on" : ""}" type="button" data-qa-chip="unanswered">\u0411\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 <span class="qa-chip-n">${unanswered}</span></button>
-      </div>` : ""}
-    </div>`;
+    ${qaHeroHtml()}
+    ${\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 ? `
+    <div class="qa-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u043F\u0438\u0442\u0430\u043D\u044C">
+      <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456 <span class="qa-chip-n">${\u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C}</span></button>
+      <button class="qa-chip${qaUnansweredOnly ? " qa-chip--on" : ""}" type="button" data-qa-chip="unanswered">\u0411\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 <span class="qa-chip-n">${unanswered}</span></button>
+    </div>` : ""}`;
     const showCategories = activeType === "board";
     const heroHtml = showCategories ? `
     <div class="bd-hero">
@@ -7265,6 +7262,15 @@
     const \u0442\u0435\u043A\u0441\u0442 = `\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043B\u043E\u0441\u044C ${\u043F\u0440\u0438\u0447\u0438\u043D\u0438.join(" ")}`;
     return `${\u0442\u0435\u043A\u0441\u0442}
     <button class="bd-empty-reset" type="button" data-bd-reset>\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0444\u0456\u043B\u044C\u0442\u0440\u0438</button>`;
+  }
+  function qaHeroHtml() {
+    if (activeType !== "chat")
+      return "";
+    return `
+    <div class="qa-hero">
+      <h1 class="qa-hero-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</h1>
+      <p class="qa-hero-note">\u041F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432 \u043F\u0440\u043E \u043C\u0456\u0441\u0446\u0435\u0432\u0435 \u2014 \u0433\u0440\u0430\u0444\u0456\u043A\u0438, \u0434\u043E\u0432\u0456\u0434\u043A\u0438, \u043F\u043E\u0434\u0456\u0457. \u0417\u043D\u0430\u0454\u0442\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u2014 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0456\u0442\u044C.</p>
+    </div>`;
   }
   function renderBody() {
     const filtered = getFilteredPosts();
@@ -7775,7 +7781,7 @@
     if (!label)
       return;
     askHintPlayed = true;
-    const need = Math.ceil(label.scrollWidth) + 46 + 20;
+    const need = Math.ceil(label.scrollWidth) + 6;
     btn.style.setProperty("--qa-fab-w", need + "px");
     askHintTimers.push(setTimeout(() => {
       requestAnimationFrame(() => {
@@ -7857,7 +7863,6 @@
       openAdModalStandalone(post);
     }
   }
-  var BOARD_BODY_GAP = 12;
   function syncBoardBodyOffset() {
     const root = getBoardRoot();
     if (!root)
@@ -7869,11 +7874,9 @@
     const h = controls.offsetHeight;
     if (h <= 0)
       return;
-    if (root.id === "board-content") {
-      root.style.setProperty("--bd-h", h + "px");
-    } else {
-      body.style.paddingTop = h + BOARD_BODY_GAP + "px";
-    }
+    root.style.setProperty("--bd-h", h + "px");
+    if (root.id !== "board-content")
+      body.style.paddingTop = "";
   }
   function fitBoardAuthors() {
     const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
