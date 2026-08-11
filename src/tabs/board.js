@@ -44,7 +44,7 @@ import {
   cardTitleText,
 } from '../core/board-shared.js';
 import {
-  initDiscussionsEngine, setDiscussionsData, renderChatCard, openChatModal,
+  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs,
   openDiscussionCompose, openMyDiscussions, openSavedDiscussions,
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange,
@@ -1121,7 +1121,7 @@ function renderOfficialCard(a) {
 }
 
 function renderCard(post) {
-  if (post.type === 'chat') return renderChatCard(post);
+  if (post.type === 'chat') return renderQuestionCard(post);
   return renderBoardCard(post);
 }
 
@@ -1675,9 +1675,21 @@ function renderBody() {
   }
 
   // Порядок: спершу bumped_at (підняте власником угору), далі ts/published_at.
-  const rankTs = (x) =>
-    (x.bumped_at && new Date(x.bumped_at).getTime()) ||
-    x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
+  //
+  // 🆕 11.08 — ПИТАННЯ СОРТУЮТЬСЯ ЗА ЖИВІСТЮ, А НЕ ЗА ДАТОЮ СТВОРЕННЯ.
+  // У Q&A нагорі має стояти те, де щойно відповіли: питання місячної давнини, на
+  // яке сьогодні прийшла відповідь, знову цікаве, а свіже без відповідей — ні.
+  // Беремо ПІЗНІШУ з двох дат (питання / остання відповідь), тому нове питання без
+  // відповідей однаково стоїть угорі за своєю датою і не тоне.
+  // 🔑 Чому клієнтом, а не `bumped_at`: політика бази `posts UPDATE` дозволена лише
+  // `is_admin()` (заміряно `pg_policies` 11.08), тож підняти запис нікому — поле
+  // лишалося б порожнім. Коментарі й так усі в памʼяті, мережі це не коштує нічого.
+  const rankTs = (x) => {
+    const base =
+      (x.bumped_at && new Date(x.bumped_at).getTime()) ||
+      x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
+    return x.type === 'chat' ? Math.max(base, lastAnswerTs(x.id)) : base;
+  };
   const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
 
   if (activeType === 'board') {
@@ -2244,12 +2256,12 @@ function attachBoardDelegation() {
   _delegationAttached = true;
 
   document.addEventListener('click', e => {
-    // Тап по картці обговорення → повноекранна модалка-чат
-    const chatCard = e.target.closest('[data-chat-open]');
-    if (chatCard && !e.target.closest('.bd-chat-modal')
+    // Тап по картці питання → повноекранний екран питання (core/layers.js)
+    const chatCard = e.target.closest('[data-question-open]');
+    if (chatCard && !e.target.closest('.qa-screen')
         && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')
         && !e.target.closest('[data-like-id]')) {
-      const id = Number(chatCard.dataset.chatOpen);
+      const id = Number(chatCard.dataset.questionOpen);
       const post = allPosts.find(p => p.id === id);
       if (post) openChatModal(post);
       return;

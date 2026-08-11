@@ -166,6 +166,31 @@ function msgWord(n) {
   return 'повідомлень';
 }
 
+// Те саме для «відповідь / відповіді / відповідей» — мова Q&A замість мови чату.
+function answerWord(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'відповідь';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'відповіді';
+  return 'відповідей';
+}
+
+// 🔑 ЧАС ОСТАННЬОЇ ВІДПОВІДІ — сортування списку питань рахує КЛІЄНТ, і на це є
+// причина, а не лінощі. У Q&A список має стояти за живістю («де щойно відповіли»),
+// а не за датою створення. Природним місцем для цього був би `posts.bumped_at`,
+// АЛЕ політика бази `posts UPDATE` дозволена лише `is_admin()` (заміряно
+// `pg_policies` 11.08) — тобто ні автор, ні той, хто відповідає, підняти запис не
+// можуть, і поле лишається порожнім назавжди. Рахувати тут — безкоштовно:
+// коментарі всіх тем уже лежать у памʼяті (`setDiscussionsData` ← `fetchAllComments`),
+// другого джерела правди не заводимо і в мережу не ходимо.
+export function lastAnswerTs(postId) {
+  let max = 0;
+  for (const c of activeComments(postId)) {
+    const t = tsMs(postTime(c));
+    if (t > max) max = t;
+  }
+  return max;
+}
+
 // ── Утиліти ──────────────────────────────────────────────────────────────────
 
 // Аватарка автора в обговоренні: фото профілю (крос-юзер, по uid) або перша
@@ -355,11 +380,14 @@ function attachSheetKeyboardFix(wrap, input) {
   };
 }
 
-// Список обговорень (Мої / Збережені) — реюз renderChatCard; тап відкриває чат
-// через наявну делегацію document-рівня ([data-chat-open]).
+// Список питань (Мої / Збережені) — реюз renderQuestionCard; тап відкриває питання
+// через наявну делегацію document-рівня ([data-question-open]).
+// ⚠️ `.map(renderQuestionCard)` кликати НЕ можна: `map` передає другим аргументом
+// індекс, і будь-який майбутній другий параметр картки мовчки став би прапорцем
+// (ця пастка вже спрацьовувала у «Стрічці» — `postCardHtml` з `onPage`).
 function openDiscussionList(title, posts) {
   const body = posts.length
-    ? posts.map(renderChatCard).join('')
+    ? posts.map(p => renderQuestionCard(p)).join('')
     : '<div class="disc-sheet-empty">Поки порожньо</div>';
   openDiscSheet({ title, bodyHtml: `<div class="disc-sheet-list">${body}</div>` });
 }
@@ -367,13 +395,13 @@ function openDiscussionList(title, posts) {
 export function openMyDiscussions() {
   const uid = currentUserId();
   const mine = _getPosts().filter(p => p.type === 'chat' && p.owner_uid && p.owner_uid === uid);
-  openDiscussionList('Мої обговорення', mine);
+  openDiscussionList('Мої питання', mine);
 }
 
 export function openSavedDiscussions() {
   const saved = getSavedIds();
   const list = _getPosts().filter(p => p.type === 'chat' && saved.has(p.id));
-  openDiscussionList('Збережені обговорення', list);
+  openDiscussionList('Збережені питання', list);
 }
 
 // Модалка створення обговорення → submitDiscussion → одразу published.
@@ -652,12 +680,15 @@ export function closeChatModal(opts = {}) {
   setTimeout(() => { modal.remove(); backdrop?.remove(); }, 240);
 }
 
-// Оновити прев'ю чат-картки у списку (останнє повідомлення + лічильник)
+// Оновити картку питання у списку (кількість відповідей + час останньої).
+// ⚠️ Селектор тримається за `[data-question-open]`, а не за клас: клас — це вигляд,
+// атрибут — це роль. Стенд `board-cream.mjs` уже падав від того, що тримався за
+// імʼя файлу, а не за поведінку.
 function refreshChatCardPreview(postId) {
-  const card = document.querySelector(`.bd-card--chat[data-chat-open="${postId}"]`);
+  const card = document.querySelector(`[data-question-open="${postId}"]`);
   if (!card) return;
   const post = _getPosts().find(p => p.id === postId);
-  if (post) card.outerHTML = renderChatCard(post);
+  if (post) card.outerHTML = renderQuestionCard(post);
 }
 
 // ── Багатий чат «Обговорень» (П7): перемальовування + reply/edit/delete/меню ──────
@@ -784,45 +815,47 @@ export function unseenDiscussionsCount() {
   return n;
 }
 
-// ── Картка теми обговорення ──────────────────────────────────────────────────
-
-// CHAT: картка-прев'ю теми обговорення. Тап по картці → повноекранна модалка-чат.
-export function renderChatCard(p) {
-  const comments = activeComments(p.id);   // видалені не рахуємо і не показуємо
-  const count = comments.length;
-  const recent = comments.slice(-2);   // два останніх (невидалених) повідомлення у прев'ю картки
-  // Унікальні учасники чату — за uid акаунту (той самий юзер зі зміненим іменем
-  // рахується РАЗ; анонімів без uid зводимо за іменем як раніше).
-  const participants = new Set(comments.map(c => c.sender_uid || ('nm:' + (c.author || 'Житель')))).size;
-  const lastHtml = recent.length
-    ? `<div class="bd-chat-last">${recent.map(m => `
-         <div class="bd-chat-last-row">
-           <span class="bd-chat-last-msg"><span class="bd-chat-last-author"><span${nameUid(m.sender_uid)}>${liveName(m.author, m.sender_uid)}</span>:</span> ${escapeHtml(m.text)}</span>
-           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
-         </div>`).join('')}</div>`
-    : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
-  const liked = isLikedByMe(p.id);
+// ── Картка ПИТАННЯ ───────────────────────────────────────────────────────────
+//
+// 🔴 11.08 — ПЕРЕПИСАНО З «КАРТКИ ТЕМИ ЧАТУ» НА «КАРТКУ ПИТАННЯ» (замовлення Вови).
+//
+// Що було і чому пішло. Стара картка показувала: тему · `💬 N повідомлень` ·
+// `👥 N учасників` · **два останні повідомлення з іменами й часом** · ❤️ · автора.
+// Рядок із двома останніми повідомленнями — це розмітка списку чатів
+// (Viber/Telegram), і саме він, а не колір, казав людині «тут месенджер». Разом із
+// ним пішов лічильник учасників: «скільки людей у розмові» — метрика чату; у Q&A
+// людина вирішує «відкривати чи ні» за іншим набором.
+//
+// Що лишилось — рівно те, що потрібно для цього рішення:
+//   ЩО ЗАПИТАЛИ (домінує) · ХТО і КОЛИ · ЧИ Є ВІДПОВІДІ · КОЛИ ОСТАННЯ.
+//
+// 🔑 Стан «без відповіді» — це НЕ порожній лічильник, а ЗАКЛИК. Єдиний спосіб
+// оживити Q&A у громаді на 11 профілів — показати тому, хто знає відповідь, де
+// він потрібен. Тому замість «💬 0 відповідей» (тиха нуль-метрика) стоїть
+// «Ще ніхто не відповів» і картка отримує власну позначку `qa-card--unanswered`.
+//
+// ⚠️ ❤️ з КАРТКИ прибрано свідомо: у списку воно додавало шум і чат-семантику.
+// Сама реакція не зникла — вона переїхала ВСЕРЕДИНУ питання як «Мене теж цікавить»
+// (див. `openQuestionScreen`), і в базі лишається тим самим рядком з `❤️`, тож
+// наявні реакції не пропали.
+export function renderQuestionCard(p) {
+  const n = activeComments(p.id).length;   // видалені не рахуємо
+  const last = lastAnswerTs(p.id);
+  const foot = n
+    ? `<span class="qa-card-count">${COMMENT_ICON_SVG} ${n} ${answerWord(n)}</span>
+       <span class="qa-card-last">остання ${formatTime(last)}</span>`
+    : '<span class="qa-card-count qa-card-count--none">Ще ніхто не відповів</span>';
   return `
-    <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
-      <div class="bd-chat-topic">
-        <p class="bd-chat-text">${escapeHtml(p.text)}</p>
-      </div>
-      <div class="bd-chat-topline">
-        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
-        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
-      </div>
-      ${lastHtml}
-      <div class="bd-chat-foot">
-        <button class="bd-chat-like${liked ? ' bd-chat-like--active' : ''}" type="button"
-                data-like-id="${p.id}" aria-label="${liked ? 'Прибрати лайк' : 'Лайк'}">
-          ${likeBtnInner(p.id)}
-        </button>
-        <div class="bd-chat-by">
-          <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> <span class="bd-chat-by-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span></div>
-          <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
-        </div>
+    <article class="bd-card qa-card${n ? '' : ' qa-card--unanswered'}"
+             data-post-id="${p.id}" data-question-open="${p.id}">
+      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+      <div class="qa-card-by">
+        ${authorAvatar(p.author, p.owner_uid)}
+        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+        <span class="qa-card-when">${formatTime(postTime(p))}</span>
         ${saveBtnHtml(p)}
       </div>
+      <div class="qa-card-foot">${foot}</div>
     </article>
   `;
 }
