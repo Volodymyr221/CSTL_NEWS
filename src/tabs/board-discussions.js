@@ -42,6 +42,11 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 // ⚠️ 11.08 — `USERS_ICON_SVG` (👥 учасники) прибрано разом із лічильником учасників
 // на картці: «скільки людей у розмові» — метрика чату, у Q&A вона нічого не вирішує.
 // Разом із ним пішов і імпорт `ICONS` — другого споживача в цьому файлі не було.
+// Шеврон «›» у рядку питання. 🔑 Не текстовий гліф, а вектор: текстовий «›»
+// тонший за решту знаків екрана і сидить не по центру рядка (той самий висновок,
+// що вже записаний для `.cm-ad-author-go`). Для аудиторії 60+ ця стрілка —
+// головний сигнал «сюди можна натиснути».
+const CHEVRON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 const HEART_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 const HEART_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 
@@ -834,31 +839,39 @@ export function renderQuestionCard(p) {
   // відповіді на питання.
   // 🔑 Саме ПЕРША, а не остання: у Q&A перша відповідь майже завжди і є
   // відповіддю, а остання — це хвіст уточнень.
+  // ⚠️ РЕДАКЦІЯ 4 — ЦИТАТА БЕЗ СІРОЇ ПІДКЛАДКИ, ОДИН РЯДОК.
+  // У редакції 3 відповідь лежала в сірому прямокутнику, і це виявилось головним
+  // джерелом «зливається»: підкладка мала контраст до білого **1.16**, а лінія
+  // між питаннями — **1.24**. Тобто два РІЗНИХ за сенсом елементи (межа між
+  // питаннями і блок відповіді) читались однаковим тоном, і око бачило суцільну
+  // сіру масу замість структури. Тепер відповідь — просто тихий текст в один
+  // рядок: вона додає користі й не створює «картку всередині картки».
   const перша = відповіді[0];
   const цитата = перша
-    ? `<div class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(перша.sender_uid)}>${liveName(перша.author || 'Житель', перша.sender_uid)}:</span> ${escapeHtml(перша.text)}</div>`
+    ? `<p class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(перша.sender_uid)}>${liveName(перша.author || 'Житель', перша.sender_uid)}:</span> ${escapeHtml(перша.text)}</p>`
     : '';
-  // ⚠️ Лічильник стоїть В ОДНОМУ РЯДКУ з автором і часом, а не окремою колонкою
-  // праворуч. Колонку пробували першою: при різній висоті питань вона
-  // вирівнювалась по центру рядка і «висіла» відірвано від тексту, а напис
-  // «потрібна відповідь» ламався на два рядки. Один метарядок читається як одне
-  // речення — «хто · коли · скільки відповідей».
+
+  // 🔑 МЕТАДАНІ У ДВА РЯДКИ, а не в один. «Володимир · 8 липня · потрібна
+  // відповідь» одним рядком змішує дві різні речі: ХТО і КОЛИ (довідка) та СТАН
+  // питання (заклик). Розділені, вони читаються миттєво — особливо в 60+.
   const мітка = n
-    ? `<span class="qa-row-n">${n} ${answerWord(n)}</span>`
-    : '<span class="qa-row-n qa-row-n--none">потрібна відповідь</span>';
+    ? `<p class="qa-row-n">${n} ${answerWord(n)}</p>`
+    : '<p class="qa-row-n qa-row-n--none">Потрібна відповідь</p>';
 
   return `
     <article class="qa-row${n ? '' : ' qa-row--unanswered'}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-      <div class="qa-card-meta">
-        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
-        <span class="qa-card-dot" aria-hidden="true">·</span>
-        <span class="qa-card-when">${formatTime(postTime(p))}</span>
-        <span class="qa-card-dot" aria-hidden="true">·</span>
+      <div class="qa-row-body">
+        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+        <p class="qa-card-meta">
+          <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+          <span class="qa-card-dot" aria-hidden="true">·</span>
+          <span class="qa-card-when">${formatTime(postTime(p))}</span>
+        </p>
         ${мітка}
+        ${цитата}
       </div>
-      ${цитата}
+      <span class="qa-row-go" aria-hidden="true">${CHEVRON_SVG}</span>
     </article>
   `;
 }
