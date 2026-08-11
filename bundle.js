@@ -7373,6 +7373,7 @@
     ${renderFab()}
   `;
     hydrateNames(el);
+    hydrateAvatars(el);
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
     el.style.backgroundPosition = "";
