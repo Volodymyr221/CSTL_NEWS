@@ -8119,16 +8119,11 @@
   function normCategory(c) {
     return CATEGORY_ALIAS[c] || (CATEGORY_COLORS[c] ? c : "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E");
   }
-  var NEWS_GEO_GROUPS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
+  var NEWS_GEO_GROUPS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430", "\u0421\u0432\u0456\u0442"];
   function matchGeoGroup(a, group) {
     if (group === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
       return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-    if (group === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
-      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
     return a.geo === group;
-  }
-  function geoGroupOf(a) {
-    return NEWS_GEO_GROUPS.find((g) => matchGeoGroup(a, g)) || null;
   }
   function articlesOfGroup(arts, group) {
     return arts.filter((a) => matchGeoGroup(a, group)).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -8177,13 +8172,24 @@
     }
     return articles.map((a) => renderCard2(a, opts.variant || "row")).join("");
   }
+  var _newsLoadFailed = false;
+  function newsLoadFailed() {
+    return _newsLoadFailed;
+  }
   async function ensureNewsLoaded() {
     if (!allArticles.length) {
       try {
         const res = await fetch("./data/articles.json");
-        allArticles = await res.json();
+        if (!res.ok)
+          throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data))
+          throw new Error("\u043D\u0435 \u043C\u0430\u0441\u0438\u0432");
+        allArticles = data;
+        _newsLoadFailed = false;
       } catch (e) {
         allArticles = [];
+        _newsLoadFailed = true;
       }
     }
     return allArticles;
@@ -8207,7 +8213,33 @@
     ${a.imageType === "illustration" ? '<span class="nc-badge nc-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
   }
+  function renderHeroCard(a) {
+    return `
+    <article class="nc nc--hero${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || "?").trim().charAt(0).toUpperCase())}</div>`}
+      <!-- \u0417\u0430\u0442\u0435\u043C\u043D\u0435\u043D\u043D\u044F \u0437\u043D\u0438\u0437\u0443 \u2014 \u043D\u0435 \u0434\u0435\u043A\u043E\u0440, \u0430 \u0443\u043C\u043E\u0432\u0430 \u0447\u0438\u0442\u0430\u0431\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0456: \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0431\u0456\u043B\u0438\u0439, \u0430
+           \u044F\u043A\u0435 \u043F\u0440\u0438\u0439\u0434\u0435 \u0444\u043E\u0442\u043E, \u043C\u0438 \u043D\u0435 \u0437\u043D\u0430\u0454\u043C\u043E (\u0441\u0432\u0456\u0442\u043B\u0435 \u043D\u0435\u0431\u043E \u0442\u0440\u0430\u043F\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u043F\u043E\u0441\u0442\u0456\u0439\u043D\u043E). -->
+      <div class="nc-veil" aria-hidden="true"></div>
+      <div class="nc-body">
+        <h2 class="nc-title">${escapeHtml(a.title)}</h2>
+        <div class="nc-foot">${formatTime(a.ts)} \xB7 ${escapeHtml(a.source || "")}</div>
+      </div>
+    </article>
+  `;
+  }
+  function renderLineCard(a) {
+    return `
+    <article class="nc nc--line" data-article-id="${a.id}">
+      <h3 class="nc-title">${escapeHtml(a.title)}</h3>
+      <span class="nc-foot">${formatTime(a.ts)}</span>
+    </article>
+  `;
+  }
   function renderCard2(a, variant) {
+    if (variant === "hero")
+      return renderHeroCard(a);
+    if (variant === "line")
+      return renderLineCard(a);
     return `
     <article class="nc nc--${variant}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
       ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || "?").trim().charAt(0).toUpperCase())}</div>`}
@@ -12365,38 +12397,77 @@
     // дедуп — раніше байт-в-байт копія з board.js PHONE_ICON_SVG
   };
   var CM_NEWS_GROUP = NEWS_GEO_GROUPS[0];
-  var NEWS_PER_PAGE = 3;
+  var NEWS_LINES_PER_PAGE = 2;
   var NEWS_CYCLE_MS = 7e3;
   var _newsTimer = null;
   var _newsIO = null;
+  function heroOf(list) {
+    return list.find((a) => a.image) || list[0];
+  }
+  function newsPageOf(arts, group) {
+    const all = articlesOfGroup(arts, group);
+    if (!all.length)
+      return null;
+    const hero = heroOf(all);
+    const lines = all.filter((a) => a !== hero).slice(0, NEWS_LINES_PER_PAGE);
+    return { group, hero, lines };
+  }
   function paintCmNews(el, arts) {
-    const groups = NEWS_GEO_GROUPS.map((g) => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) })).filter((p) => p.items.length);
-    if (!groups.length) {
+    if (newsLoadFailed()) {
+      el.innerHTML = `
+      <div class="hm-nerr">
+        <div class="hm-nerr-tx">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438</div>
+        <button class="hm-nerr-btn" type="button" data-cm-news-retry>\u0421\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438 \u0449\u0435</button>
+      </div>`;
+      return;
+    }
+    const pages2 = NEWS_GEO_GROUPS.map((g) => newsPageOf(arts, g)).filter(Boolean);
+    if (!pages2.length) {
       el.innerHTML = '<div class="hm-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0438\u0439\u0434\u0435 \u043F\u0435\u0440\u0448\u0430 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>';
       paintNewsBadge(arts);
       return;
     }
-    const flat = [];
-    groups.forEach((g) => g.items.forEach((a) => flat.push({ a, group: g.group })));
     el.innerHTML = `
     <div class="hm-nwrap">
-      <div class="hm-ncat" id="hm-ncat">${escapeHtml(flat[0].group)}</div>
       <div class="hm-ntrack" id="hm-ntrack">
-        ${flat.map((x) => newsCardsHtml([x.a], { variant: "tile" })).join("")}
+        ${pages2.map((p) => `
+          <div class="hm-npage" data-news-group="${escapeHtml(p.group)}">
+            ${newsCardsHtml([p.hero], { variant: "hero" })}
+            ${p.lines.length ? `<div class="hm-nlines">${newsCardsHtml(p.lines, { variant: "line" })}</div>` : ""}
+          </div>`).join("")}
       </div>
       <div class="hm-ndots" aria-hidden="true">
-        ${groups.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
+        ${pages2.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
       </div>
     </div>`;
-    [...el.querySelectorAll(".nc")].forEach((node, i) => {
-      const b = node.querySelector(".nc-badge--geo");
-      if (b)
-        b.textContent = geoGroupOf(flat[i].a) || b.textContent;
-    });
-    startNewsCarousel(el, flat, groups);
+    paintNewsCat(pages2[0].group);
+    startNewsCarousel(el, pages2);
     paintNewsBadge(arts);
   }
-  function startNewsCarousel(el, flat, groups) {
+  function paintNewsCat(group) {
+    const el = document.getElementById("hm-ncat");
+    if (el && el.textContent !== group)
+      el.textContent = group;
+  }
+  function visibleNewsGroup() {
+    const track = document.getElementById("hm-ntrack");
+    if (!track)
+      return CM_NEWS_GROUP;
+    const pages2 = [...track.querySelectorAll(".hm-npage")];
+    if (!pages2.length)
+      return CM_NEWS_GROUP;
+    const left = track.scrollLeft;
+    let best = pages2[0], bestD = Infinity;
+    pages2.forEach((p) => {
+      const d = Math.abs(p.offsetLeft - track.offsetLeft - left);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    });
+    return best.dataset.newsGroup || CM_NEWS_GROUP;
+  }
+  function startNewsCarousel(el, pages2) {
     clearInterval(_newsTimer);
     _newsTimer = null;
     if (_newsIO) {
@@ -12404,12 +12475,10 @@
       _newsIO = null;
     }
     const track = el.querySelector("#hm-ntrack");
-    const catEl = el.querySelector("#hm-ncat");
     const dots = [...el.querySelectorAll(".hm-ndots i")];
-    if (!track || flat.length < 2)
+    if (!track || pages2.length < 2)
       return;
-    const cards = [...track.querySelectorAll(".nc")];
-    const groupNames = groups.map((g) => g.group);
+    const cards = [...track.querySelectorAll(".hm-npage")];
     const visibleIndex = () => {
       const left = track.scrollLeft;
       let best = 0, bestD = Infinity;
@@ -12424,11 +12493,8 @@
     };
     const sync = () => {
       const i = visibleIndex();
-      const g = flat[i] ? flat[i].group : groupNames[0];
-      if (catEl && catEl.textContent !== g)
-        catEl.textContent = g;
-      const gi = groupNames.indexOf(g);
-      dots.forEach((d, j) => d.classList.toggle("on", j === gi));
+      paintNewsCat(pages2[i] ? pages2[i].group : pages2[0].group);
+      dots.forEach((d, j) => d.classList.toggle("on", j === i));
     };
     let raf = 0;
     track.addEventListener("scroll", () => {
@@ -12513,6 +12579,10 @@
     section.dataset.wired = "1";
     section.addEventListener("error", handleImgError, true);
     section.addEventListener("click", (e) => {
+      if (e.target.closest("[data-cm-news-retry]")) {
+        renderCommunityNews();
+        return;
+      }
       const card = e.target.closest("[data-article-id]");
       if (card) {
         const id = Number(card.dataset.articleId);
@@ -12520,7 +12590,7 @@
           openArticle(id);
         return;
       }
-      openNewsHub(CM_NEWS_GROUP);
+      openNewsHub(visibleNewsGroup());
     });
     window.addEventListener("cstl-news-seen", () => paintNewsBadge(arts));
   }
@@ -12634,11 +12704,17 @@
          \xAB\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438\xBB \u2192 \u043D\u0430\u044F\u0432\u043D\u0438\u0439 openNewsHub \u0411\u0415\u0417 \u0437\u043C\u0456\u043D\u0438 \u0439\u043E\u0433\u043E \u043B\u043E\u0433\u0456\u043A\u0438. -->
     <section id="cm-news-board" class="hm-sec">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">\u041D\u043E\u0432\u0438\u043D\u0438</h2>
+        <!-- \u{1F195} 11.08 \u2014 \u043D\u0430\u0437\u0432\u0430 \u0420\u041E\u0417\u0414\u0406\u041B\u0423 \u0436\u0438\u0432\u0435 \u0432 \u0448\u0430\u043F\u0446\u0456, \u043F\u043E\u0440\u0443\u0447 \u0437\u0456 \u0441\u043B\u043E\u0432\u043E\u043C \xAB\u041D\u043E\u0432\u0438\u043D\u0438\xBB.
+             \u0414\u043E \u0446\u044C\u043E\u0433\u043E \u0432\u043E\u043D\u0430 \u0441\u0442\u043E\u044F\u043B\u0430 \u043E\u043A\u0440\u0435\u043C\u0438\u043C \u043D\u0430\u043F\u0438\u0441\u043E\u043C \u043D\u0430\u0434 \u0441\u0442\u0440\u0456\u0447\u043A\u043E\u044E: \u0434\u0432\u0430 \u043F\u0456\u0434\u043F\u0438\u0441\u0438 \u043E\u0434\u0438\u043D
+             \u043F\u0456\u0434 \u043E\u0434\u043D\u0438\u043C \u043A\u043E\u0448\u0442\u0443\u0432\u0430\u043B\u0438 ~20px \u0432\u0438\u0441\u043E\u0442\u0438 \u0456 \u043A\u0430\u0437\u0430\u043B\u0438 \u043E\u0434\u043D\u0435 \u0439 \u0442\u0435 \u0441\u0430\u043C\u0435 \u0434\u0432\u0456\u0447\u0456.
+             \u0417\u0430\u043F\u043E\u0432\u043D\u044E\u0454 paintNewsCat \u0443 community-blocks.js; span \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u0434\u043E \u043F\u0435\u0440\u0448\u043E\u0457
+             \u0432\u0456\u0434\u043C\u0430\u043B\u044C\u043E\u0432\u043A\u0438, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u0434\u0456\u043B\u044C\u043D\u0438\u043A \xAB\xB7\xBB \u043C\u0430\u043B\u044E\u0454 CSS \u043F\u0440\u0430\u0432\u0438\u043B\u043E\u043C \u0434\u043B\u044F \u043D\u0435\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E\u0433\u043E
+             \u0432\u043C\u0456\u0441\u0442\u0443 \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u043D\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432 \u0448\u0430\u043F\u0446\u0456 \u0432\u0438\u0441\u0456\u043B\u0430 \u0431 \u0441\u0430\u043C\u0430 \u043A\u0440\u0430\u043F\u043A\u0430. -->
+        <h2 class="hm-kicker">\u041D\u043E\u0432\u0438\u043D\u0438<span class="hm-kicker-cat" id="hm-ncat"></span></h2>
         <button class="hm-more" type="button" data-cm-news-all>\u0423\u0441\u0456 \u043D\u043E\u0432\u0438\u043D\u0438 \u2192</button>
       </div>
       <div id="cm-news-content" class="hm-list">
-        ${skeletonRows(3)}
+        ${skeletonNews()}
       </div>
       <div id="cm-news-controls" hidden></div>
     </section>
@@ -12683,6 +12759,14 @@
       <div id="cm-contacts-content" class="hm-list">${skeletonRows(1)}</div>
     </section>
   `;
+  }
+  function skeletonNews() {
+    return `
+    <div class="hm-nsk" aria-hidden="true">
+      <div class="hm-sk hm-nsk-hero"></div>
+      <div class="hm-sk hm-nsk-line"></div>
+      <div class="hm-sk hm-nsk-line"></div>
+    </div>`;
   }
   function skeletonRows(n) {
     const row = `

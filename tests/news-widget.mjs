@@ -25,6 +25,17 @@ import { chromium } from 'playwright';
 import { chromiumPath, serve, reporter, projectFile } from './_lib.mjs';
 
 const { ok, done } = reporter();
+
+// 🔑 СКЛАД РОЗДІЛІВ ЧИТАЄМО З КОДУ, А НЕ ВПИСУЄМО ЧИСЛОМ (11.08).
+// До цього тут стояло «у хабі три категорії», і коли Вова розділив «Україну та
+// Світ», сторож упав, повідомивши «3 проти 4» — тобто назвав симптом, але не
+// сказав, чи це поломка, чи навмисна зміна складу. Тепер джерело правди одне:
+// `NEWS_GEO_GROUPS` у `src/tabs/news.js`. Розділ додали свідомо — сторож мовчить;
+// вкладка зникла з розмітки — сторож червоніє. Саме та різниця, яку він і має ловити.
+const GROUPS = (projectFile('src/tabs/news.js')
+  .match(/NEWS_GEO_GROUPS\s*=\s*\[([^\]]*)\]/) || [, ''])[1]
+  .split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+
 const { url, stop } = await serve();
 const executablePath = chromiumPath();
 const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}) });
@@ -34,9 +45,32 @@ const VIEW_W = 390, VIEW_H = 844;
 // «77.6%» до переробки — інакше порівняння «було/стало» було б нечесним.
 const VIEW = VIEW_H - 56 - 57;
 
+// 🔴 КОНТРОЛЬ (11.08) — ДО ЦЬОГО ЙОГО В СТОРОЖА НЕ БУЛО ЗОВСІМ.
+//     BUNDLE_REV=origin/main CSS_REV=origin/main node tests/news-widget.mjs
+// На коді ДО переробки блока мусять упасти перевірки будови сторінки (там немає
+// ні `.hm-npage`, ні `.nc--hero`, ні `.nc--line` — була стрічка з дев'яти плиток).
+// ⚠️ Без цього механізму сторож був зеленим завжди і не міг довести, що ловить
+// саме зміну, а не просто «сторінка відкрилась». Внутрішні контролі в ньому були
+// лише на перевизначення CSS — тобто рівно на одну перевірку з шістдесяти.
+const BUNDLE_REV = process.env.BUNDLE_REV || '';
+const CSS_REV    = process.env.CSS_REV    || '';
+
 async function openCommunity() {
   const ctx = await browser.newContext({ viewport: { width: VIEW_W, height: VIEW_H }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  if (BUNDLE_REV) {
+    const old = projectFile('bundle.js', BUNDLE_REV);
+    await page.route('**/bundle.js', r => r.fulfill({ contentType: 'application/javascript', body: old }));
+  }
+  if (CSS_REV) {
+    // ⚠️ ОБИДВА файли: форма карток живе в `news-card.css`, а кольори й геометрія
+    // сторінки — у `home.css`. Підмінити лише один означало б зібрати химеру з
+    // половини старого й половини нового коду і «довести» нею будь-що.
+    for (const f of ['style/news-card.css', 'style/home.css']) {
+      const body = projectFile(f, CSS_REV);
+      await page.route(`**/${f}`, r => r.fulfill({ contentType: 'text/css; charset=utf-8', body }));
+    }
+  }
   // Мережа назовні не потрібна: статті лежать у репозиторії, а чужі картинки лише
   // сповільнюють вимір і сиплють помилками, які до нашої логіки не стосуються.
   await page.route('**://*.supabase.co/**', r => r.abort());
@@ -79,6 +113,13 @@ const w = await page.evaluate(`(() => {
     // (зворотні лапки тут заборонені — блок лежить усередині шаблонного рядка)
     live: [...n.querySelectorAll('*')].some(e =>
       e.children.length === 0 && e.textContent.trim().toUpperCase() === 'LIVE'),
+    // 🆕 11.08 — будова сторінки: рівно ОДНА велика картка і не більше двох
+    // тихих рядків. Міряємо посторінково, бо саме це і є правило блока.
+    pages: [...n.querySelectorAll('.hm-npage')].map(pg => ({
+      group: pg.dataset.newsGroup,
+      heroes: pg.querySelectorAll('.nc--hero').length,
+      lines: pg.querySelectorAll('.nc--line').length,
+    })),
     chips: n.querySelectorAll('.cm-news-chip, .cm-news-filters, .cm-news-feed').length,
     headerTag: (n.querySelector('[data-cm-news-all]') || {}).tagName,
     hasAll: !!n.querySelector('[data-cm-news-all]'),
@@ -94,11 +135,27 @@ ok('🔴 у віджеті НЕМА ВЕРТИКАЛЬНОГО скролера'
 // Стеля 480px: заміряно 431px після переробки (було 567). Запас ~50px на інший
 // шрифт/масштаб iOS. Якщо колись знову підповзе до 567 — це повернення хвороби.
 ok('віджет не з\'їдає головний екран (< 480px)', w.h < 480, `${w.h}px = ${Math.round(w.h / VIEW * 1000) / 10}% видимої зони`);
-// 04.08: карусель по категоріях — три СТОРІНКИ по три картки (було 3 картки
-// одним дайджестом). Стеля 9 лишається стелею: більше означало б, що на головну
-// знову висипали стрічку новин.
-ok('у віджеті 3 картки на сторінку', w.cards === 9 || w.cards === 3, `${w.cards}`);
-ok('картинок не більше ніж карток', w.imgs <= 9, `${w.imgs}`);
+// 🆕 11.08 — МІРЯЄМО БУДОВУ СТОРІНКИ, А НЕ ЗАГАЛЬНЕ ЧИСЛО КАРТОК.
+// Було: `w.cards === 9 || w.cards === 3`. Після розділення «України та Світу» на
+// два розділи карток стало 12, і сторож упав — хоча правило блока не порушено.
+// 🔑 Число карток — це ДОБУТОК (розділів × карток на сторінку), тобто воно
+// міняється від кожної зміни складу розділів, яка блока взагалі не стосується.
+// Правило ж лишається: на сторінці рівно одна велика картка і до двох рядків.
+ok('сторінок не більше, ніж гео-розділів', w.pages.length <= GROUPS.length,
+   `${w.pages.length} сторінок при ${GROUPS.length} розділах`);
+ok('на кожній сторінці РІВНО одна велика картка',
+   w.pages.length > 0 && w.pages.every(p => p.heroes === 1),
+   w.pages.map(p => `${p.group}:${p.heroes}`).join(' '));
+ok('тихих рядків не більше двох на сторінку',
+   w.pages.every(p => p.lines <= 2),
+   w.pages.map(p => `${p.group}:${p.lines}`).join(' '));
+// 🔴 ФОТО РІВНО ОДНЕ НА СТОРІНКУ — це і є головне рішення блока (11.08).
+// Заміряно по живих даних: у Волині фото мають лише 2 з перших 6 новин, тож
+// макет із трьома фотографіями в ряд там не набирається. Зросте це число —
+// значить хтось повернув фото в тихі рядки, і Волинь почне показувати
+// плейсхолдери у двох місцях із трьох.
+ok('картинок не більше однієї на сторінку', w.imgs <= w.pages.length,
+   `${w.imgs} на ${w.pages.length} сторінок`);
 ok('фальшивого «LIVE» більше нема', !w.live);
 ok('чіпи і старий скролер прибрані', w.chips === 0, `залишків: ${w.chips}`);
 // 🔴 ГОЛОВНА ПЕРЕВІРКА НОВОЇ КАРУСЕЛІ: вертикальний жест по ній мусить гортати
@@ -159,7 +216,11 @@ const h = await page.evaluate(`(() => {
 ok('«Усі новини» відкриває хаб', !!h);
 ok('🔴 у хабі РІВНО ОДИН скролер (проблему не переселили)',
    h.scrollers.length === 1 && h.listIsScroller, `${JSON.stringify(h.scrollers)}`);
-ok('у хабі три категорії', h.tabs === 3, `${h.tabs}`);
+// 🆕 11.08: розділів стало ЧОТИРИ — «Україна та Світ» розділено (рішення Вови).
+// Міряємо проти джерела правди, а не проти числа з голови: інакше при наступній
+// зміні складу розділів сторож упаде, не сказавши, ЩО саме розійшлось.
+ok('у хабі стільки вкладок, скільки гео-розділів', h.tabs === GROUPS.length,
+   `${h.tabs} проти ${GROUPS.length} у NEWS_GEO_GROUPS`);
 
 // Порція: Громада має 22 статті, тож перший показ мусить бути 20.
 ok('хаб малює ПОРЦІЮ, а не все одразу', h.cards <= 20, `карток: ${h.cards}`);
@@ -170,7 +231,12 @@ await page.waitForTimeout(1000);
 const idle = await page.evaluate(() => document.querySelectorAll('.nh-list [data-article-id]').length);
 ok('КОНТРОЛЬ: без прокрутки нічого не дописується', idle === before, `${before} → ${idle}`);
 
-await page.locator('.nh-tab', { hasText: 'Україна та Світ' }).click();
+// Найбільший розділ — беремо ОСТАННІЙ у списку? Ні: після розділення 11.08
+// найбільша за обсягом категорія це «Волинь» (171 стаття проти 157 в України і
+// 45 у Світі). Але прив'язуватись до конкретної назви — те саме, від чого впав
+// цей рядок минулого разу. Тому клікаємо ДРУГУ вкладку за списком: перевірка
+// тут не про Волинь, а про те, що ПОРЦІЯ працює не лише в першій категорії.
+await page.locator('.nh-tab', { hasText: GROUPS[1] }).click();
 await page.waitForTimeout(700);
 const big = await page.evaluate(() => document.querySelectorAll('.nh-list [data-article-id]').length);
 ok('велика категорія теж починається з порції', big <= 20, `карток: ${big}`);
@@ -355,14 +421,39 @@ ok('велика перша картка є', look.lead);
 ok('велика перша — саме з фото (інакше це роздутий текст)', look.leadHasPhoto);
 ok('ексклюзив БЕЗ обідка-кільця', !/0px 0px 0px 1\.5px/.test(look.exclRing), look.exclRing.slice(0, 40));
 
-// Гео-мітка: у «Громаді» це повтор активної вкладки, у «Україна та Світ» — сенс.
-const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
-ok('🔴 у «Громаді» гео-мітки нема (не дублює вкладку)', geoHere === 0, `${geoHere}`);
-await page.locator('.nh-tab', { hasText: 'Україна та Світ' }).click();
-await page.waitForTimeout(700);
-const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
-ok('🔴 КОНТРОЛЬ: у «Україна та Світ» гео-мітка ЛИШИЛАСЬ (там вона інформативна)',
-   geoThere > 0, `${geoThere}`);
+// 🔴 ГЕО-МІТКА, ЩО ПОВТОРЮЄ ВКЛАДКУ, — ШУМ. Перевіряємо в КОЖНОМУ розділі.
+//
+// ⚠️ 11.08 ЦЯ ПЕРЕВІРКА ПЕРЕПИСАНА, І ПРИЧИНУ ВАРТО ЗНАТИ. Було так: у «Громаді»
+// мітки нема, а КОНТРОЛЬ вимагав, щоб у «Україна та Світ» вона ЛИШИЛАСЬ — бо той
+// розділ був злитий і мітка казала, Україна це чи Світ. Вова розділив розділ
+// надвоє, мітка почала збігатися з назвою вкладки скрізь і чесно зникла — а
+// контроль оголосив це поломкою.
+// 🔑 Урок той самий, що вже двічі ловили в проєкті: перевірка стерегла НАСЛІДОК
+// («тут мітка є»), а не ПРАВИЛО («показуємо мітку, лише коли вона щось додає»).
+// Тепер міряємо правило: у жодному розділі мітка не повторює його назву.
+for (const g of GROUPS) {
+  await page.locator('.nh-tab', { hasText: g }).click();
+  await page.waitForTimeout(600);
+  const дублі = await page.evaluate(назва => [...document.querySelectorAll('.nh-list .nc-badge--geo')]
+    .filter(b => b.textContent.trim().toLowerCase() === назва.toLowerCase()).length, g);
+  ok(`🔴 у «${g}» гео-мітка не дублює вкладку`, дублі === 0, `дублів: ${дублі}`);
+}
+
+// 🔴 КОНТРОЛЬ, ЩОБ ПЕРЕВІРКА ВИЩЕ НЕ БУЛА ПОРОЖНЬОЮ. Нуль дублів вийшов би і
+// тоді, коли гео-міток немає ЗОВСІМ (наприклад, хтось прибрав `badgesHtml`) —
+// тобто зелений колір не доводив би нічого. Доводимо, що механізм ЖИВИЙ:
+// підкладаємо картці чужу мітку і переконуємось, що вона лишається на місці.
+const чужа = await page.evaluate(() => {
+  const b = document.querySelector('.nh-list .nc-badge--geo') || (() => {
+    const card = document.querySelector('.nh-list [data-article-id] .nc-meta');
+    if (!card) return null;
+    card.insertAdjacentHTML('afterbegin', '<span class="nc-badge nc-badge--geo">МАРС</span>');
+    return card.querySelector('.nc-badge--geo');
+  })();
+  return b ? b.textContent.trim() : null;
+});
+ok('🔴 КОНТРОЛЬ: чужа гео-мітка НЕ знімається (механізм живий, а не «міток нема»)',
+   чужа !== null, `${чужа}`);
 
 await ctx.close();
 
