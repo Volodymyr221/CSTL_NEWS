@@ -4005,26 +4005,33 @@
         subsOf.set(parent, []);
       subsOf.get(parent).push(c);
     }
+    const byIdAll = new Map(all.map((c) => [c.id, c]));
     const answer = (c, sub) => {
       const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const edited = c.edited_at ? '<span class="qa-answer-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span>' : "";
-      const replyBtn = sub ? "" : `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">${ACT_ICONS.reply}\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>`;
+      const edited = c.edited_at ? ' \xB7 <span class="qa-answer-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span>' : "";
+      const \u0431\u0430\u0442\u044C\u043A\u043E = c.reply_to_id ? byIdAll.get(c.reply_to_id) : null;
+      const \u0441\u0430\u043C\u043E\u043C\u0443\u0421\u043E\u0431\u0456 = \u0431\u0430\u0442\u044C\u043A\u043E && \u0431\u0430\u0442\u044C\u043A\u043E.sender_uid && \u0431\u0430\u0442\u044C\u043A\u043E.sender_uid === c.sender_uid;
+      const \u0437\u0433\u0430\u0434\u043A\u0430 = sub && \u0431\u0430\u0442\u044C\u043A\u043E && !\u0441\u0430\u043C\u043E\u043C\u0443\u0421\u043E\u0431\u0456 ? `<span class="qa-answer-to"${nameUid(\u0431\u0430\u0442\u044C\u043A\u043E.sender_uid)}>${liveName(\u0431\u0430\u0442\u044C\u043A\u043E.author || "\u0416\u0438\u0442\u0435\u043B\u044C", \u0431\u0430\u0442\u044C\u043A\u043E.sender_uid)}</span>, ` : "";
+      const replyBtn = sub ? "" : `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>`;
+      const \u043C\u043E\u0457 = isMyComment(c);
+      const \u0441\u0432\u043E\u0457 = \u043C\u043E\u0457 ? `<button class="qa-answer-act" type="button" data-answer-menu="${c.id}">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button><button class="qa-answer-act qa-answer-act--del" type="button" data-answer-del="${c.id}">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : "";
       return `
       <article class="qa-answer${sub ? " qa-answer--sub" : ""}" data-msg="${c.id}" data-tag="${c.client_tag || ""}">
-        <div class="qa-answer-head">
-          ${authorAvatar(author, c.sender_uid)}
-          <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
-          <span class="qa-answer-when">${formatTime(postTime(c))}</span>
-          ${edited}
-          <button class="qa-answer-more" type="button" data-answer-menu="${c.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
+        <span class="qa-answer-ava">${authorAvatar(author, c.sender_uid)}</span>
+        <div class="qa-answer-body">
+          <div class="qa-answer-head">
+            <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+            <span class="qa-answer-when">${formatTime(postTime(c))}${edited}</span>
+          </div>
+          <p class="qa-answer-text">${\u0437\u0433\u0430\u0434\u043A\u0430}${escapeHtml(c.text)}</p>
+          <div class="qa-answer-acts">${replyBtn}${\u0441\u0432\u043E\u0457}</div>
         </div>
-        <p class="qa-answer-text">${escapeHtml(c.text)}</p>
-        ${replyBtn}
       </article>`;
     };
     const html = roots.map((r) => {
-      const subs = (subsOf.get(r.id) || []).map((s) => answer(s, true)).join("");
-      return answer(r, false) + (subs ? `<div class="qa-answer-subs">${subs}</div>` : "");
+      const subs = subsOf.get(r.id) || [];
+      const \u0433\u0456\u043B\u043A\u0430 = subs.map((s) => `<div class="qa-branch">${answer(s, true)}</div>`).join("");
+      return `<div class="qa-thread${subs.length ? " qa-thread--branched" : ""}">${answer(r, false)}${\u0433\u0456\u043B\u043A\u0430}</div>`;
     }).join("");
     return `<div class="qa-answers" data-comments-for="${post.id}">${html}</div>`;
   }
@@ -4280,11 +4287,18 @@
           startDiscReply(c);
         return;
       }
-      const m = e.target.closest("[data-answer-menu]");
-      if (m) {
-        const c = findDiscComment(m.dataset.answerMenu);
+      const ed = e.target.closest("[data-answer-menu]");
+      if (ed) {
+        const c = findDiscComment(ed.dataset.answerMenu);
         if (c)
-          openDiscActions(c);
+          startDiscEdit(c);
+        return;
+      }
+      const del = e.target.closest("[data-answer-del]");
+      if (del) {
+        const c = findDiscComment(del.dataset.answerDel);
+        if (c)
+          doDiscDelete(c);
       }
     });
     screen.querySelector("#bd-compose-x")?.addEventListener("click", () => {
@@ -4421,45 +4435,6 @@
       input.value = c.text || "";
       input.focus();
     }
-  }
-  function openDiscActions(c) {
-    if (c.deleted_at)
-      return;
-    const mine = isMyComment(c);
-    const sheet = document.createElement("div");
-    sheet.className = "pm-actions-back";
-    sheet.innerHTML = `
-    <div class="pm-actions">
-      <button type="button" data-act="reply"><span class="pm-act-ic">${ACT_ICONS.reply}</span>\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>
-      ${c.text ? `<button type="button" data-act="copy"><span class="pm-act-ic">${ACT_ICONS.copy}</span>\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438</button>` : ""}
-      ${mine && c.text ? `<button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>` : ""}
-      ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
-      <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
-    </div>`;
-    const close = () => sheet.remove();
-    sheet.addEventListener("click", async (e) => {
-      const b = e.target.closest("[data-act]");
-      if (!b) {
-        if (e.target === sheet)
-          close();
-        return;
-      }
-      close();
-      const act = b.dataset.act;
-      if (act === "reply")
-        startDiscReply(c);
-      else if (act === "copy") {
-        try {
-          await navigator.clipboard.writeText(c.text || "");
-          showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
-        } catch (_) {
-        }
-      } else if (act === "edit")
-        startDiscEdit(c);
-      else if (act === "delete")
-        doDiscDelete(c);
-    });
-    (_chatModalEl || document.body).appendChild(sheet);
   }
   async function doDiscDelete(c) {
     const postId = c.post_id;
