@@ -4044,7 +4044,7 @@
     const el = document.getElementById("qa-answers-count");
     if (el) {
       const n = activeComments(postId).length;
-      el.textContent = n ? `${n} ${answerWord(n).toUpperCase()}` : "\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406";
+      el.textContent = n ? `${n} ${answerWord(n)}` : "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456";
     }
   }
   var _chatModalEl = null;
@@ -4195,6 +4195,16 @@
       ${n ? `<span class="qa-interest-n">${n}</span>` : ""}
     </button>`;
   }
+  function qaHeadHtml(post) {
+    return `
+    <header class="qa-head">
+      <button class="qa-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <span class="qa-head-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</span>
+      ${saveBtnHtml(post)}
+    </header>`;
+  }
   function openChatModal(post) {
     if (_chatModalEl)
       return;
@@ -4203,13 +4213,7 @@
     screen.className = "qa-screen";
     const n = activeComments(post.id).length;
     screen.innerHTML = `
-    <header class="qa-head">
-      <button class="qa-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
-      </button>
-      <span class="qa-head-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</span>
-      ${saveBtnHtml(post)}
-    </header>
+    ${qaHeadHtml(post)}
 
     <div class="qa-body">
       <section class="qa-question">
@@ -4217,12 +4221,13 @@
         <div class="qa-question-by">
           ${authorAvatar(post.author, post.owner_uid)}
           <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-card-dot" aria-hidden="true">\xB7</span>
           <span class="qa-question-when">${formatTime(postTime(post))}</span>
         </div>
         ${qaInterestHtml(post.id)}
       </section>
 
-      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n).toUpperCase()}` : "\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406"}</h2>
+      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n)}` : "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456"}</h2>
       ${answersHtml(post)}
     </div>
 
@@ -4492,20 +4497,22 @@
   }
   function renderQuestionCard(p) {
     const n = activeComments(p.id).length;
-    const last = lastAnswerTs(p.id);
-    const foot = n ? `<span class="qa-card-count">${COMMENT_ICON_SVG} ${n} ${answerWord(n)}</span>
-       <span class="qa-card-last">\u043E\u0441\u0442\u0430\u043D\u043D\u044F ${formatTime(last)}</span>` : '<span class="qa-card-count qa-card-count--none">\u0429\u0435 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432</span>';
+    const \u043C\u0456\u0442\u043A\u0430 = n ? `<span class="qa-card-count">${n} ${answerWord(n)}</span>` : '<span class="qa-card-count qa-card-count--none">\u0429\u0435 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432</span>';
     return `
     <article class="bd-card qa-card${n ? "" : " qa-card--unanswered"}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-      <div class="qa-card-by">
-        ${authorAvatar(p.author, p.owner_uid)}
-        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
-        <span class="qa-card-when">${formatTime(postTime(p))}</span>
+      <div class="qa-card-top">
+        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
         ${saveBtnHtml(p)}
       </div>
-      <div class="qa-card-foot">${foot}</div>
+      <div class="qa-card-meta">
+        ${authorAvatar(p.author, p.owner_uid)}
+        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+        <span class="qa-card-dot" aria-hidden="true">\xB7</span>
+        <span class="qa-card-when">${formatTime(postTime(p))}</span>
+        <span class="qa-card-dot" aria-hidden="true">\xB7</span>
+        ${\u043C\u0456\u0442\u043A\u0430}
+      </div>
     </article>
   `;
   }
@@ -6546,6 +6553,7 @@
   var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
   var qaUnansweredOnly = false;
+  var QA_CHIPS_FROM = 8;
   function boardActionsHtml(post) {
     return `
     <div class="bd-actions bd-actions--board-compact">
@@ -7041,9 +7049,10 @@
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed board-trigger--labeled" id="board-trigger" type="button" aria-label="\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="qa-fab-label">\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438</span>
       </button>
     </div>`;
     }
@@ -7145,16 +7154,14 @@
   }
   function renderHeader() {
     const unanswered = activeType === "chat" ? unansweredCount() : 0;
+    const \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C = activeType === "chat" ? getFilteredPosts({ ignoreQaChip: true }).length : 0;
+    const \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 = unanswered > 0 && \u0443\u0441\u044C\u043E\u0433\u043E\u041F\u0438\u0442\u0430\u043D\u044C >= QA_CHIPS_FROM;
     const discHead = activeType !== "chat" ? "" : `
     <div class="qa-hero">
-      <h2 class="qa-hero-title">\u041F\u0418\u0422\u0410\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</h2>
+      <h1 class="qa-hero-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</h1>
       <p class="qa-hero-sub">\u041D\u0435 \u0437\u043D\u0430\u0454\u0442\u0435 \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432</p>
-      <button class="qa-ask" type="button" data-qa-ask>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9.5a4 4 0 1 1 4 4v2"/><path d="M12 19.5v.01"/></svg>
-        \u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443
-      </button>
-      ${unanswered ? `
-      <div class="qa-chips">
+      ${\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438\u0427\u0456\u043F\u0438 ? `
+      <div class="qa-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u043F\u0438\u0442\u0430\u043D\u044C">
         <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456</button>
         <button class="qa-chip${qaUnansweredOnly ? " qa-chip--on" : ""}" type="button" data-qa-chip="unanswered">\u0411\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 <span class="qa-chip-n">${unanswered}</span></button>
       </div>` : ""}
@@ -7366,6 +7373,7 @@
     ${renderFab()}
   `;
     hydrateNames(el);
+    hydrateAvatars(el);
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
     el.style.backgroundPosition = "";

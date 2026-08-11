@@ -288,7 +288,7 @@ function updateChatHeaderCount(postId) {
   const el = document.getElementById('qa-answers-count');
   if (el) {
     const n = activeComments(postId).length;
-    el.textContent = n ? `${n} ${answerWord(n).toUpperCase()}` : 'ВІДПОВІДІ';
+    el.textContent = n ? `${n} ${answerWord(n)}` : 'Відповіді';
   }
 }
 
@@ -478,6 +478,22 @@ function qaInterestHtml(postId) {
     </button>`;
 }
 
+// Шапка екрана питання. 🔑 ПРОЗОРА, зі скляним розмиттям — контент їде ПІД нею.
+// Було: суцільна бордова плита на всю ширину. Різниця не декоративна: непрозора
+// смуга ЗАБИРАЄ висоту назавжди, скляна — лише накриває, тож питання починається
+// одразу під статус-баром і читається як заголовок сторінки, а не як вміст
+// коробки. Це та сама відмова від «кольорових плит», що і в списку.
+function qaHeadHtml(post) {
+  return `
+    <header class="qa-head">
+      <button class="qa-back" type="button" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <span class="qa-head-title">Питання</span>
+      ${saveBtnHtml(post)}
+    </header>`;
+}
+
 // ⚠️ Імена `openChatModal` / `closeChatModal` збережені навмисно: на них зав'язані
 // ЧОТИРИ зовнішні точки (`board.js` делегація і deep-link, `core/saved-hub.js`
 // `openChatById`, `handleDiscussionsAuthChange`). Перейменування дало б широкий diff
@@ -490,13 +506,7 @@ export function openChatModal(post) {
   screen.className = 'qa-screen';
   const n = activeComments(post.id).length;
   screen.innerHTML = `
-    <header class="qa-head">
-      <button class="qa-back" type="button" aria-label="Назад">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
-      </button>
-      <span class="qa-head-title">Питання</span>
-      ${saveBtnHtml(post)}
-    </header>
+    ${qaHeadHtml(post)}
 
     <div class="qa-body">
       <section class="qa-question">
@@ -504,12 +514,13 @@ export function openChatModal(post) {
         <div class="qa-question-by">
           ${authorAvatar(post.author, post.owner_uid)}
           <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-question-when">${formatTime(postTime(post))}</span>
         </div>
         ${qaInterestHtml(post.id)}
       </section>
 
-      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n).toUpperCase()}` : 'ВІДПОВІДІ'}</h2>
+      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n)}` : 'Відповіді'}</h2>
       ${answersHtml(post)}
     </div>
 
@@ -796,24 +807,39 @@ export function unseenDiscussionsCount() {
 // Сама реакція не зникла — вона переїхала ВСЕРЕДИНУ питання як «Мене теж цікавить»
 // (див. `openQuestionScreen`), і в базі лишається тим самим рядком з `❤️`, тож
 // наявні реакції не пропали.
+// 🔴 11.08, ДРУГА РЕДАКЦІЯ. Перша була відхилена Вовою («фейсбук 2006»), і прилад
+// `tests/tools/qa-audit.mjs` показав, чому саме: 67 ліній у першому екрані і 8
+// кольорів тексту. Картка вносила в це три борги: власну рамку, ВНУТРІШНЮ
+// роздільну лінію під метаданими і бордовий колір на лічильнику відповідей.
+//
+// Що змінилось і чому:
+//   • метадані звелись в ОДИН рядок «Олена · 2 год · 2 відповіді» — роздільна
+//     лінія була потрібна лише тому, що рядків було два;
+//   • лічильник відповідей більше НЕ бордовий: акцентний колір належить ДІЯМ,
+//     а «скільки відповідей» — це метадані. Бордовим лишився тільки стан
+//     «Ще ніхто не відповів», бо це заклик, тобто заклик до дії;
+//   • закладка переїхала праворуч від питання: у рядку метаданих вона робила
+//     цей рядок клікабельним на всю ширину і плутала ціль тапу.
 export function renderQuestionCard(p) {
   const n = activeComments(p.id).length;   // видалені не рахуємо
-  const last = lastAnswerTs(p.id);
-  const foot = n
-    ? `<span class="qa-card-count">${COMMENT_ICON_SVG} ${n} ${answerWord(n)}</span>
-       <span class="qa-card-last">остання ${formatTime(last)}</span>`
+  const мітка = n
+    ? `<span class="qa-card-count">${n} ${answerWord(n)}</span>`
     : '<span class="qa-card-count qa-card-count--none">Ще ніхто не відповів</span>';
   return `
     <article class="bd-card qa-card${n ? '' : ' qa-card--unanswered'}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-      <div class="qa-card-by">
-        ${authorAvatar(p.author, p.owner_uid)}
-        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
-        <span class="qa-card-when">${formatTime(postTime(p))}</span>
+      <div class="qa-card-top">
+        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
         ${saveBtnHtml(p)}
       </div>
-      <div class="qa-card-foot">${foot}</div>
+      <div class="qa-card-meta">
+        ${authorAvatar(p.author, p.owner_uid)}
+        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+        <span class="qa-card-dot" aria-hidden="true">·</span>
+        <span class="qa-card-when">${formatTime(postTime(p))}</span>
+        <span class="qa-card-dot" aria-hidden="true">·</span>
+        ${мітка}
+      </div>
     </article>
   `;
 }

@@ -235,6 +235,10 @@ let searchQuery    = '';
 // сьогодні заходить читати — і мовчазний фільтр, який пережив перезапуск, показав
 // би їй порожній екран замість усіх питань.
 let qaUnansweredOnly = false;
+// Від скількох питань показувати чіпи-фільтр. Нижче цього порога вони — шум:
+// пʼятий орган керування над списком із трьох рядків, тоді як стан «без відповіді»
+// уже написаний на самій картці. 8 — це приблизно повний перший екран списку.
+const QA_CHIPS_FROM = 8;
 
 // Коментарі/лайки обговорень — стан у board-discussions.js (setDiscussionsData
 // з renderBoard нижче). Закладки (savedIds) — стан у core/board-shared.js.
@@ -1247,9 +1251,10 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Запитати громаду" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed board-trigger--labeled" id="board-trigger" type="button" aria-label="Запитати громаду" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="qa-fab-label">Запитати</span>
       </button>
     </div>`;
   }
@@ -1438,19 +1443,38 @@ function renderHeader() {
   // ⚠️ Той самий рахунок уже вигравала Дошка 01.08: назва + слоган-дієслова
   // повернулись туди після скарги «взагалі неясно, що це таке».
   //
-  // Чіп «Без відповіді» малюється, ЛИШЕ коли такі питання є (`unansweredCount`) —
-  // мертва кнопка з нулем вбиває екран; той самий відбір, що в меню категорій Дошки.
+  // 🔴 11.08, ДРУГИЙ ЗАХІД — ПЕРША РЕДАКЦІЯ БУЛА ВІДХИЛЕНА ВОВОЮ:
+  // «це не схоже на стиль Apple, це схоже на щось на фейсбук 2006 року».
+  //
+  // 📐 Заміряно приладом `tests/tools/qa-audit.mjs` — критика підтвердилась числами:
+  // **67 ліній і рамок** у першому екрані · **8 різних кольорів тексту** · шапка
+  // **220px**, перша реальна інформація аж на **302px = 36% екрана** · **6 тап-цілей
+  // менших за 44px**. Тобто ієрархія будувалась ЛІНІЯМИ і КОЛЬОРОВИМИ ПЛИТАМИ.
+  // Apple будує її простором, типографікою і тоном — саме тому банер і читався
+  // як старий Facebook.
+  //
+  // ⚠️ Та сама помилка вже коштувала проєкту роботи: у Громади hero займав 560px
+  // (76% екрана), і перша інформація починалась на 662px. Я повторив її на новій
+  // вкладці, маючи цей урок записаним у `CLAUDE.md`.
+  //
+  // 🔑 СТАЛО: Large Title у стилі iOS — заголовок живе на фоні СТОРІНКИ, без
+  // кольорової плити. Дію не втрачено: вона переїхала у FAB, який тепер ПІДПИСАНИЙ
+  // («Запитати»), тобто лишається на видноті постійно, але не зʼїдає третину екрана.
+  // Це не відкат рішення «дія має бути видимою» — це те саме рішення в легшій формі.
+  //
+  // 🔑 ЧІПИ ПОКАЗУЮТЬСЯ ЛИШЕ ВІД 8 ПИТАНЬ (`QA_CHIPS_FROM`). При трьох питаннях
+  // фільтр — це пʼятий елемент керування над списком із трьох рядків, тобто шум:
+  // стан «без відповіді» видно на самій картці. Поріг, а не «прибрати назавжди» —
+  // той самий підхід, що «порожні категорії не малюються» на Дошці.
   const unanswered = activeType === 'chat' ? unansweredCount() : 0;
+  const усьогоПитань = activeType === 'chat' ? getFilteredPosts({ ignoreQaChip: true }).length : 0;
+  const показатиЧіпи = unanswered > 0 && усьогоПитань >= QA_CHIPS_FROM;
   const discHead = activeType !== 'chat' ? '' : `
     <div class="qa-hero">
-      <h2 class="qa-hero-title">ПИТАННЯ ГРОМАДИ</h2>
+      <h1 class="qa-hero-title">Питання</h1>
       <p class="qa-hero-sub">Не знаєте — запитайте сусідів</p>
-      <button class="qa-ask" type="button" data-qa-ask>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9.5a4 4 0 1 1 4 4v2"/><path d="M12 19.5v.01"/></svg>
-        Запитати громаду
-      </button>
-      ${unanswered ? `
-      <div class="qa-chips">
+      ${показатиЧіпи ? `
+      <div class="qa-chips" role="group" aria-label="Фільтр питань">
         <button class="qa-chip${qaUnansweredOnly ? '' : ' qa-chip--on'}" type="button" data-qa-chip="all">Усі</button>
         <button class="qa-chip${qaUnansweredOnly ? ' qa-chip--on' : ''}" type="button" data-qa-chip="unanswered">Без відповіді <span class="qa-chip-n">${unanswered}</span></button>
       </div>` : ''}
@@ -1914,7 +1938,18 @@ function renderAll() {
     ${renderFab()}
   `;
 
-  hydrateNames(el);   // синк живих імен профілю (за uid) у картках обговорень
+  hydrateNames(el);   // синк живих імен профілю (за uid) у картках питань
+  // 🔴 11.08 — ДОДАНО РАЗОМ З АВАТАРАМИ В КАРТЦІ ПИТАННЯ.
+  // Тут стояв ЛИШЕ `hydrateNames`, бо доти жодна картка списку аватара не
+  // показувала. Наслідок був неочевидний: фото в картках усе одно зʼявлялись —
+  // але випадково, через гідрацію ВСЬОГО документа з `core/refresh-on-return.js`
+  // (вона спрацьовує при поверненні у вкладку, не раніше ніж через 5с). Тобто
+  // до першого повернення людина бачила літери, а потім раптом фото.
+  // ⚠️ Саме цим шляхом на прод і приїхав баг, який знайшов Вова: фото
+  // прилітало в картку, а стилів для нього в зоні не було — і воно розліталось
+  // на пів екрана. Лікуємо обидві половини: тут — щоб фото приходило вчасно і
+  // передбачувано, у `style/board.css` — щоб воно лишалось у кружечку.
+  hydrateAvatars(el);
 
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';
