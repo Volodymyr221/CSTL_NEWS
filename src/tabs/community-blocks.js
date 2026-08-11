@@ -24,7 +24,11 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
-import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, geoGroupOf, handleImgError } from './news.js';
+// ⚠️ `geoGroupOf` прибрано з цього списку 11.08 разом із його єдиним ужитком:
+// стара стрічка плиток дописувала мітку розділу на КОЖНУ картку, бо в одному
+// вікні лежали новини з різних розділів. Тепер сторінка = один розділ, і його
+// назву каже шапка секції — мітка на картці повторювала б її втретє.
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, newsLoadFailed, handleImgError } from './news.js';
 import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
@@ -1487,66 +1491,119 @@ function digestOf(arts) {
 //   • `document.hidden` → стоп;  • поза екраном (`IntersectionObserver`) → стоп;
 //   • `prefers-reduced-motion` → авто-гортання не запускається взагалі;
 //   • дотик пальцем → пауза (людина читає — не смикаємо під рукою).
-const NEWS_PER_PAGE = 3;
-const NEWS_CYCLE_MS = 7000;   // довше за капсули: тут треба встигнути прочитати
+const NEWS_LINES_PER_PAGE = 2;   // тихих рядків під великою карткою
+const NEWS_CYCLE_MS = 7000;      // довше за капсули: тут треба встигнути прочитати
 let _newsTimer = null, _newsIO = null;
 
-function paintCmNews(el, arts) {
-  // Стрічка плиток, згрупована за категоріями: спершу Громада, далі Волинь,
-  // далі Україна та Світ. Підпис над стрічкою міняється за тим, яка картка
-  // зараз у вікні — тобто «інтервал між категоріями» лишився, але тепер він
-  // природний: гортаєш і проходиш категорії, а не чекаєш перемикання сторінки.
-  const groups = NEWS_GEO_GROUPS
-    .map(g => ({ group: g, items: articlesOfGroup(arts, g).slice(0, NEWS_PER_PAGE) }))
-    .filter(p => p.items.length);
+// 🔴 ВЕЛИКА КАРТКА = НАЙСВІЖІША З ФОТО, а не просто найсвіжіша (11.08).
+//
+// 📐 Ціна заміряна ДО рішення, по живих `data/articles.json`: перша новина з
+// фотографією стоїть на позиції **1** у Громаді, Україні й Світі та на позиції
+// **2** у Волині, тобто максимальна втрата свіжості — **0.6 години**. За це ми
+// отримуємо велику картку, яка ніколи не буває порожньою плитою.
+// ⚠️ Якщо фото немає в УСІЙ категорії — беремо найсвіжішу як є; вона намалюється
+// з монограмою джерела (`.nc-img--mono`), і це свідомо, бо порожній розділ гірший
+// за розділ без картинки.
+function heroOf(list) {
+  return list.find(a => a.image) || list[0];
+}
 
-  if (!groups.length) {
+// Сторінка каруселі = одна категорія: велика картка + до двох тихих рядків.
+// Порожня категорія сторінки не дає взагалі (`null` відсіється фільтром) —
+// карток-заглушок не малюємо, це правило проєкту.
+function newsPageOf(arts, group) {
+  const all = articlesOfGroup(arts, group);
+  if (!all.length) return null;
+  const hero = heroOf(all);
+  const lines = all.filter(a => a !== hero).slice(0, NEWS_LINES_PER_PAGE);
+  return { group, hero, lines };
+}
+
+function paintCmNews(el, arts) {
+  // 🔴 ЗБІЙ І ПОРОЖНЕЧА — ДВА РІЗНІ ЕКРАНИ (11.08).
+  // До цього обидва стани давали той самий напис «Новини зʼявляться…», тобто
+  // застосунок стверджував «новин немає» там, де насправді «не зміг прочитати».
+  // Той самий клас помилки, за який 05.08 прибирали демо-оголошення Дошки.
+  if (newsLoadFailed()) {
+    el.innerHTML = `
+      <div class="hm-nerr">
+        <div class="hm-nerr-tx">Не вдалось завантажити новини</div>
+        <button class="hm-nerr-btn" type="button" data-cm-news-retry>Спробувати ще</button>
+      </div>`;
+    return;
+  }
+
+  const pages = NEWS_GEO_GROUPS.map(g => newsPageOf(arts, g)).filter(Boolean);
+
+  if (!pages.length) {
     el.innerHTML = '<div class="hm-empty">Новини зʼявляться, щойно вийде перша за сьогодні</div>';
     paintNewsBadge(arts);
     return;
   }
 
-  // Плаский список карток + мапа «індекс картки → категорія» для підпису.
-  const flat = [];
-  groups.forEach(g => g.items.forEach(a => flat.push({ a, group: g.group })));
-
   el.innerHTML = `
     <div class="hm-nwrap">
-      <div class="hm-ncat" id="hm-ncat">${escapeHtml(flat[0].group)}</div>
       <div class="hm-ntrack" id="hm-ntrack">
-        ${flat.map(x => newsCardsHtml([x.a], { variant: 'tile' })).join('')}
+        ${pages.map(p => `
+          <div class="hm-npage" data-news-group="${escapeHtml(p.group)}">
+            ${newsCardsHtml([p.hero], { variant: 'hero' })}
+            ${p.lines.length ? `<div class="hm-nlines">${newsCardsHtml(p.lines, { variant: 'line' })}</div>` : ''}
+          </div>`).join('')}
       </div>
       <div class="hm-ndots" aria-hidden="true">
-        ${groups.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
+        ${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
       </div>
     </div>`;
 
-  // Мітка розділу на самій картці — щоб і поза стрічкою було видно, звідки новина.
-  [...el.querySelectorAll('.nc')].forEach((node, i) => {
-    const b = node.querySelector('.nc-badge--geo');
-    if (b) b.textContent = geoGroupOf(flat[i].a) || b.textContent;
-  });
-
-  startNewsCarousel(el, flat, groups);
+  paintNewsCat(pages[0].group);
+  startNewsCarousel(el, pages);
   paintNewsBadge(arts);
+}
+
+// Назва поточної категорії живе в ШАПЦІ секції — «НОВИНИ · ГРОМАДА».
+// 🔑 Один рядок замість двох: до 11.08 «Новини» стояло в шапці, а назва категорії
+// окремим написом над стрічкою — два підписи одне під одним коштували ~20px
+// висоти й казали одне й те саме двічі.
+function paintNewsCat(group) {
+  const el = document.getElementById('hm-ncat');
+  if (el && el.textContent !== group) el.textContent = group;
+}
+
+// Розділ, який людина зараз бачить у віджеті. Читаємо з РОЗМІТКИ сторінки, що
+// стоїть у вікні, а не з окремої змінної: другий лічильник того самого стану вже
+// розходився з першим (B-27), а тут джерело правди — те саме, за чим малюються
+// крапки. Віджета немає або дані не приїхали → перший розділ, як і було.
+function visibleNewsGroup() {
+  const track = document.getElementById('hm-ntrack');
+  if (!track) return CM_NEWS_GROUP;
+  const pages = [...track.querySelectorAll('.hm-npage')];
+  if (!pages.length) return CM_NEWS_GROUP;
+  const left = track.scrollLeft;
+  let best = pages[0], bestD = Infinity;
+  pages.forEach(p => {
+    const d = Math.abs(p.offsetLeft - track.offsetLeft - left);
+    if (d < bestD) { bestD = d; best = p; }
+  });
+  return best.dataset.newsGroup || CM_NEWS_GROUP;
 }
 
 // Авто-гортання сторінок. Прокрутку робить сам браузер (`scrollTo` зі `smooth`),
 // а не наша анімація: так жест пальцем і авто-рух не борються за той самий
 // елемент — це вже коштувало окремого блока роботи 02.08 у модалці оголошення.
-function startNewsCarousel(el, flat, groups) {
+function startNewsCarousel(el, pages) {
   clearInterval(_newsTimer); _newsTimer = null;
   if (_newsIO) { _newsIO.disconnect(); _newsIO = null; }
 
   const track = el.querySelector('#hm-ntrack');
-  const catEl = el.querySelector('#hm-ncat');
   const dots = [...el.querySelectorAll('.hm-ndots i')];
-  if (!track || flat.length < 2) return;
+  if (!track || pages.length < 2) return;
 
-  const cards = [...track.querySelectorAll('.nc')];
-  const groupNames = groups.map(g => g.group);
+  // 🔑 Одиниця гортання — СТОРІНКА (категорія), а не картка. До 11.08 у стрічці
+  // лежали дев'ять окремих плиток, і крапки доводилось перераховувати з індексу
+  // картки в індекс категорії. Тепер одне до одного: сторінка = крапка = розділ.
+  const cards = [...track.querySelectorAll('.hm-npage')];
 
-  // Яка картка зараз у вікні — рахуємо за реальним положенням прокрутки, а не
+  // Яка сторінка зараз у вікні — рахуємо за реальним положенням прокрутки, а не
   // за власним лічильником: людина могла гортнути пальцем, і лічильник
   // розійшовся б із тим, що на екрані.
   const visibleIndex = () => {
@@ -1560,10 +1617,8 @@ function startNewsCarousel(el, flat, groups) {
   };
   const sync = () => {
     const i = visibleIndex();
-    const g = flat[i] ? flat[i].group : groupNames[0];
-    if (catEl && catEl.textContent !== g) catEl.textContent = g;
-    const gi = groupNames.indexOf(g);
-    dots.forEach((d, j) => d.classList.toggle('on', j === gi));
+    paintNewsCat(pages[i] ? pages[i].group : pages[0].group);
+    dots.forEach((d, j) => d.classList.toggle('on', j === i));
   };
   let raf = 0;
   track.addEventListener('scroll', () => {
@@ -1652,8 +1707,15 @@ export async function renderCommunityNews() {
   // Обробник СПІЛЬНИЙ — своєї копії тут нема.
   section.addEventListener('error', handleImgError, true);
   section.addEventListener('click', e => {
-    // Картка → стаття. Стоїть ПЕРШИМ: картки лежать усередині віджета, а сам віджет
-    // теж веде в хаб — без цієї черговості тап по новині відкривав би хаб.
+    // «Спробувати ще» після збою мережі. Стоїть ПЕРШИМ: кнопка лежить усередині
+    // секції, тож без цієї гілки тап по ній відкривав би хаб — тобто екран, який
+    // теж не має даних. Людина отримала б другий глухий кут замість повтору.
+    if (e.target.closest('[data-cm-news-retry]')) {
+      renderCommunityNews();
+      return;
+    }
+    // Картка → стаття. Стоїть перед хабом: картки лежать усередині віджета, а сам
+    // віджет теж веде в хаб — без цієї черговості тап по новині відкривав би хаб.
     const card = e.target.closest('[data-article-id]');
     if (card) {
       const id = Number(card.dataset.articleId);
@@ -1661,10 +1723,12 @@ export async function renderCommunityNews() {
       return;
     }
     // Будь-яке інше місце віджета (шапка, «Усі новини», порожнє поле) → хаб.
-    // Категорію передаємо ЯВНО: віджет показує Громаду, тож і хаб має відкритись на
-    // Громаді. Інакше людина тапала б по місцевій новині, а потрапляла у «Волинь»,
-    // яку востаннє гортала (хаб памʼятає останню категорію для свайпів усередині себе).
-    openNewsHub(CM_NEWS_GROUP);
+    // 🔑 Категорію беремо ТУ, ЯКА ЗАРАЗ У ВІКНІ, а не жорстко Громаду (11.08).
+    // Аргумент лишився той самий, що й був: людина має потрапити туди, куди
+    // дивилась. Просто до 11.08 віджет завжди показував Громаду першою, а тепер
+    // він гортає чотири розділи — і «завжди Громада» стало б тією самою
+    // помилкою, від якої цей рядок і застерігав.
+    openNewsHub(visibleNewsGroup());
   });
 
   // Хаб відкрили → новини побачено → бейдж гасне. Слухаємо ПОДІЮ, а не імпортуємо

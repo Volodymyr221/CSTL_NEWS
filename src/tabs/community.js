@@ -185,11 +185,17 @@ function renderSkeleton() {
          «Усі новини» → наявний openNewsHub БЕЗ зміни його логіки. -->
     <section id="cm-news-board" class="hm-sec">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">Новини</h2>
+        <!-- 🆕 11.08 — назва РОЗДІЛУ живе в шапці, поруч зі словом «Новини».
+             До цього вона стояла окремим написом над стрічкою: два підписи один
+             під одним коштували ~20px висоти і казали одне й те саме двічі.
+             Заповнює paintNewsCat у community-blocks.js; span порожній до першої
+             відмальовки, тому роздільник «·» малює CSS правилом для непорожнього
+             вмісту — інакше на порожній категорії в шапці висіла б сама крапка. -->
+        <h2 class="hm-kicker">Новини<span class="hm-kicker-cat" id="hm-ncat"></span></h2>
         <button class="hm-more" type="button" data-cm-news-all>Усі новини →</button>
       </div>
       <div id="cm-news-content" class="hm-list">
-        ${skeletonRows(3)}
+        ${skeletonNews()}
       </div>
       <div id="cm-news-controls" hidden></div>
     </section>
@@ -239,6 +245,19 @@ function renderSkeleton() {
 // Скелет рядка = форма того, що прийде (фото 64px + три смужки тексту).
 // ⚠️ Розміри мусять збігатися з реальною карткою, інакше при появі даних
 // сторінка сіпнеться — а це рівно те, від чого ми йдемо.
+// Скелет блока новин — повторює його НОВУ форму (велика картка + два тихі рядки),
+// а не три однакові рядки, як до 11.08. Скелет, що не збігається з тим, що
+// приїде, дає ривок розкладки в момент появи даних — саме те, від чого скелет і
+// має рятувати.
+function skeletonNews() {
+  return `
+    <div class="hm-nsk" aria-hidden="true">
+      <div class="hm-sk hm-nsk-hero"></div>
+      <div class="hm-sk hm-nsk-line"></div>
+      <div class="hm-sk hm-nsk-line"></div>
+    </div>`;
+}
+
 function skeletonRows(n) {
   const row = `
     <div class="hm-card hm-sk-row" aria-hidden="true">
