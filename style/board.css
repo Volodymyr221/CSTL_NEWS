@@ -3896,51 +3896,88 @@ textarea.cm-board-input.bm-invalid {
   color: var(--qa-ink-2);
 }
 
-/* ── Відповідь ───────────────────────────────────────────────────────────── */
-/* 🔴 НЕ БУЛЬБАШКА і НЕ КАРТКА З РАМКОЮ. Відповіді розділяє ПРОСТІР і тон
-   поверхні; обведення в списку однотипних блоків створює «сітку», через яку
-   екран і читався як стара стрічка. */
+/* ── ВІДПОВІДІ — ПАТЕРН КОМЕНТАРІВ «СТРІЧКИ» (редакція 5, 11.08) ─────────── */
+/*
+   🔴 Скарга Вови: «коли відкриваю карточку запитання, я не до кінця розумію, що,
+   хто, кому написав, чи це якісь нові карточки… це геть незрозуміло». Орієнтир
+   назвав він сам: «зроби так, як ми налаштовували коментарі».
+
+   🔑 Що було не так: кожна відповідь була ОКРЕМОЮ БІЛОЮ КАРТКОЮ з тінню, тобто
+   читалась як самостійний обʼєкт, а не як репліка під питанням. Вкладеність
+   показував лише відступ, і між однаковими білими картками його не було видно.
+   Зв'язку «хто кому» не існувало взагалі.
+
+   🔑 Звідки геометрія: `style/feed.css`, блок `.fd-com-*` — вона там ВИМІРЯНА, а
+   не взята на око (аватар 34px → центр 17px; відступ гілки 44px; гачок −28px).
+   Повторювати вимір немає сенсу, тому числа ті самі. ⚠️ Але класи ВЛАСНІ: `fd-*`
+   живуть у контексті «Стрічки» зі своїми токенами, і чужий екран не має від них
+   залежати — інакше зміна там мовчки поламає тут.
+*/
+.qa-answers { display: flex; flex-direction: column; gap: 20px; }
+.qa-thread { position: relative; display: flex; flex-direction: column; gap: 16px; }
+
+/* Рядок відповіді: аватар ліворуч, тіло праворуч. БЕЗ підкладки і без тіні —
+   репліка не є карткою. */
 .qa-answer {
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  border: 0;
-  border-radius: 16px;
-  background: var(--qa-surface);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  position: relative;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 0; margin: 0;
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
 }
-.qa-answer-head { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--qa-ink-2); }
-.qa-answer-head .bd-avatar { width: 26px; height: 26px; font-size: 12px; flex: none; }
-.qa-answer-name { font-weight: 600; color: var(--qa-ink-2); }
-.qa-answer-when::before { content: '·'; margin-right: 6px; opacity: 0.45; }
-.qa-answer-edited { font-size: 13px; opacity: 0.65; }
-.qa-answer-more {
-  margin-left: auto; width: 44px; height: 44px; flex: none; margin-right: -10px;
-  display: flex; align-items: center; justify-content: center;
-  border: 0; border-radius: 50%;
-  background: transparent; color: var(--qa-ink-2);
-  font-size: 20px; line-height: 1; cursor: pointer;
+.qa-answer-ava { flex: none; }
+.qa-answer-ava .bd-avatar { width: 34px; height: 34px; font-size: 14px; }
+.qa-answer-body { flex: 1; min-width: 0; }
+
+/* ТРИ ПОВЕРХИ: шапка (імʼя + час) · текст · дії.
+   ⚠️ У «Стрічці» окремо записано «не повертати імʼя і текст в один абзац» —
+   Вова вказував на це по зразках FB/IG. Тут те саме. */
+.qa-answer-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.qa-answer-name {
+  font-size: 15px; font-weight: 700; color: var(--qa-ink);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.qa-answer-more:active { background: var(--qa-fill); }
+.qa-answer-when { font-size: 13px; color: var(--qa-ink-3); flex: none; }
+.qa-answer-edited { font-style: italic; }
+
 .qa-answer-text {
-  margin: 8px 0 0;
-  font-size: 16px; line-height: 1.47; color: var(--qa-ink);
+  margin: 2px 0 0;
+  font-size: 15.5px; line-height: 1.45; color: var(--qa-ink);
   white-space: pre-wrap; word-break: break-word;
 }
-/* «Відповісти» — ЯВНА кнопка, а не прихований свайп: приховані жести для
-   аудиторії 60+ означають «функції немає». */
-.qa-answer-reply {
-  display: inline-flex; align-items: center; gap: 6px;
-  margin: 6px 0 -6px -10px; min-height: 44px; padding: 0 10px;
-  border: 0; border-radius: 12px;
-  background: transparent; color: var(--red);
-  font-size: 15px; font-weight: 600; cursor: pointer;
-}
-.qa-answer-reply:active { background: var(--qa-fill); }
-.qa-answer-reply svg { width: 16px; height: 16px; }
+/* 🔑 ЗГАДКА АДРЕСАТА — саме вона відповідає на «хто кому написав». Бордовим, бо
+   це посилання на людину, а не текст репліки. */
+.qa-answer-to { color: var(--red); font-weight: 600; }
 
-/* Вкладена відповідь: відступ замість лінії. Глибина рівно ДВА рівні. */
-.qa-answer-subs { margin: 0 0 10px 20px; }
-.qa-answer--sub { margin-bottom: 8px; padding: 12px 14px; border-radius: 14px; }
+/* Дії — тихі й дрібні: вони не мають конкурувати з текстом відповіді.
+   Було 15px бордовим на кожній відповіді — п'ять однакових акцентів поспіль. */
+.qa-answer-acts { display: flex; gap: 14px; margin-top: 6px; }
+.qa-answer-reply, .qa-answer-act {
+  min-height: 32px; padding: 0;
+  border: 0; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: var(--qa-ink-3); cursor: pointer;
+}
+.qa-answer-reply:active, .qa-answer-act:active { color: var(--red); }
+.qa-answer-act--del:active { color: #C0392B; }
+
+/* ── Лінія-звʼязувач гілки ────────────────────────────────────────────────── */
+/* Стовбур уздовж кореневої відповіді — від низу її аватара донизу гілки. */
+.qa-thread--branched > .qa-answer::after {
+  content: ''; position: absolute; left: 16px; top: 40px; bottom: -16px;
+  border-left: 2px solid var(--qa-line); pointer-events: none;
+}
+/* Обгортка вкладеної: відступ 44px + гачок, що загинається до її аватара.
+   ⚠️ Обгортка, а не сам рядок: у рядка вже зайнятий `::after` стовбуром, а один
+   елемент має один псевдоелемент кожного типу. */
+.qa-branch { position: relative; margin-left: 44px; }
+.qa-branch::before {
+  content: ''; position: absolute; left: -28px; top: -16px; width: 18px; height: 33px;
+  border-left: 2px solid var(--qa-line);
+  border-bottom: 2px solid var(--qa-line);
+  border-bottom-left-radius: 10px;
+  pointer-events: none;
+}
+.qa-answer--sub .qa-answer-ava .bd-avatar { width: 30px; height: 30px; font-size: 13px; }
 .qa-answer--sub .qa-answer-text { font-size: 15px; }
 
 /* Порожній список відповідей — заклик, а не констатація. Без пунктирної рамки:

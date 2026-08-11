@@ -245,30 +245,74 @@ function answersHtml(post) {
     subsOf.get(parent).push(c);
   }
 
+  // 🔴 11.08, РЕДАКЦІЯ 5 — ВІДПОВІДІ ЗА ПАТЕРНОМ КОМЕНТАРІВ «СТРІЧКИ».
+  //
+  // Скарга Вови на попередній вигляд: «коли відкриваю карточку запитання, я не до
+  // кінця розумію, що, хто, кому написав, чи це якісь нові карточки… це геть
+  // незрозуміло». Він же назвав орієнтир: «зроби так, як ми налаштовували
+  // коментарі».
+  //
+  // 🔑 ЩО САМЕ БУЛО НЕ ТАК. Кожна відповідь була ОКРЕМОЮ БІЛОЮ КАРТКОЮ з тінню —
+  // тобто виглядала як самостійний обʼєкт у списку, а не як репліка під питанням.
+  // Вкладеність показувалась лише відступом, і при однакових білих картках його
+  // майже не було видно. Зв'язку «хто кому» не було взагалі.
+  //
+  // 🔑 ЩО ВЗЯТО З `tabs/feed.js` (патерн, який Вова вже приймав 25-26.07):
+  //   • рядок замість картки: аватар 34px ліворуч, тіло праворуч, БЕЗ підкладки;
+  //   • три поверхи — шапка (імʼя + час) · текст · дії. У «Стрічці» окремо
+  //     записано «не повертати імʼя і текст в один абзац» — тут так само;
+  //   • ЗГАДКА АДРЕСАТА на початку відповіді («Володимир, …») бордовим — саме
+  //     вона й відповідає на питання «хто кому»;
+  //   • лінія-звʼязувач гілки: стовбур від аватара кореня + загин до відповіді.
+  // ⚠️ Класи власні (`qa-*`), а не позичені `fd-*`: ті живуть у контексті «Стрічки»
+  // зі своїми токенами, і чужий екран не має від них залежати. Спільна тут
+  // ГЕОМЕТРІЯ (44px відступ гілки, 34px аватар) — вона в `feed.css` виміряна, а не
+  // взята на око, тож повторювати вимір немає сенсу.
+  const byIdAll = new Map(all.map(c => [c.id, c]));
   const answer = (c, sub) => {
     const author = c.author || 'Житель';
-    const edited = c.edited_at ? '<span class="qa-answer-edited">змінено</span>' : '';
-    // «Відповісти» лише на КОРЕНЕВІЙ — інакше з другого рівня росло б дерево,
-    // і Q&A перетворилось би на ту саму розмову, від якої ми відходимо.
+    const edited = c.edited_at ? ' · <span class="qa-answer-edited">змінено</span>' : '';
+    // Кому адресована відповідь. Беремо ЖИВЕ імʼя за uid (`liveName`), а не текст:
+    // після перейменування старі відповіді покажуть нове імʼя, і підробити згадку
+    // набором тексту неможливо — той самий підхід, що у «Стрічці».
+    const батько = c.reply_to_id ? byIdAll.get(c.reply_to_id) : null;
+    // ⚠️ Згадку НЕ показуємо, коли людина відповідає сама собі: «Володимир, Олп»
+    // під заголовком «Володимир» читається як помилка, а не як адресат. Порівняння
+    // за uid, а не за іменем — двоє тезок мають лишитись різними людьми.
+    const самомуСобі = батько && батько.sender_uid && батько.sender_uid === c.sender_uid;
+    const згадка = (sub && батько && !самомуСобі)
+      ? `<span class="qa-answer-to"${nameUid(батько.sender_uid)}>${liveName(батько.author || 'Житель', батько.sender_uid)}</span>, `
+      : '';
+    // «Відповісти» лише на КОРЕНЕВІЙ — інакше з другого рівня росло б дерево.
     const replyBtn = sub ? '' :
-      `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">${ACT_ICONS.reply}Відповісти</button>`;
+      `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">Відповісти</button>`;
+    // 🔑 ДІЇ НАД СВОЄЮ ВІДПОВІДДЮ — ЯВНИМИ СЛОВАМИ, а не за кнопкою «Ще».
+    // «Ще» читалось як «ще відповіді» і стояло під КОЖНОЮ реплікою, зокрема
+    // чужою, де за ним ховалось саме лише «Копіювати». Тепер, як у «Стрічці»:
+    // свої репліки мають «Редагувати · Видалити», чужі — нічого зайвого.
+    const мої = isMyComment(c);
+    const свої = мої
+      ? `<button class="qa-answer-act" type="button" data-answer-menu="${c.id}">Редагувати</button>` +
+        `<button class="qa-answer-act qa-answer-act--del" type="button" data-answer-del="${c.id}">Видалити</button>`
+      : '';
     return `
       <article class="qa-answer${sub ? ' qa-answer--sub' : ''}" data-msg="${c.id}" data-tag="${c.client_tag || ''}">
-        <div class="qa-answer-head">
-          ${authorAvatar(author, c.sender_uid)}
-          <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
-          <span class="qa-answer-when">${formatTime(postTime(c))}</span>
-          ${edited}
-          <button class="qa-answer-more" type="button" data-answer-menu="${c.id}" aria-label="Дії">⋯</button>
+        <span class="qa-answer-ava">${authorAvatar(author, c.sender_uid)}</span>
+        <div class="qa-answer-body">
+          <div class="qa-answer-head">
+            <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+            <span class="qa-answer-when">${formatTime(postTime(c))}${edited}</span>
+          </div>
+          <p class="qa-answer-text">${згадка}${escapeHtml(c.text)}</p>
+          <div class="qa-answer-acts">${replyBtn}${свої}</div>
         </div>
-        <p class="qa-answer-text">${escapeHtml(c.text)}</p>
-        ${replyBtn}
       </article>`;
   };
 
   const html = roots.map(r => {
-    const subs = (subsOf.get(r.id) || []).map(s => answer(s, true)).join('');
-    return answer(r, false) + (subs ? `<div class="qa-answer-subs">${subs}</div>` : '');
+    const subs = subsOf.get(r.id) || [];
+    const гілка = subs.map(s => `<div class="qa-branch">${answer(s, true)}</div>`).join('');
+    return `<div class="qa-thread${subs.length ? ' qa-thread--branched' : ''}">${answer(r, false)}${гілка}</div>`;
   }).join('');
 
   return `<div class="qa-answers" data-comments-for="${post.id}">${html}</div>`;
@@ -573,14 +617,17 @@ export function openChatModal(post) {
   // Дії над відповіддю — ЯВНІ КНОПКИ, а не жести. Було: свайп-вліво = відповісти,
   // довге натискання = меню (`setupBubbleGestures`). Приховані жести — мова
   // месенджера, і для аудиторії 60+ вони означають «функції немає»: про них ніде
-  // не написано. Тепер «Відповісти» видно текстом, решта — під «⋯».
+  // не написано. Тепер усі дії підписані словами: «Відповісти» на кожній репліці,
+  // «Редагувати» і «Видалити» — лише на своїй (редакція 5).
   _discReplyTo = null; _discEditing = null;
   const bodyEl = screen.querySelector('.qa-body');
   bodyEl?.addEventListener('click', (e) => {
     const r = e.target.closest('[data-answer-reply]');
     if (r) { const c = findDiscComment(r.dataset.answerReply); if (c) startDiscReply(c); return; }
-    const m = e.target.closest('[data-answer-menu]');
-    if (m) { const c = findDiscComment(m.dataset.answerMenu); if (c) openDiscActions(c); }
+    const ed = e.target.closest('[data-answer-menu]');
+    if (ed) { const c = findDiscComment(ed.dataset.answerMenu); if (c) startDiscEdit(c); return; }
+    const del = e.target.closest('[data-answer-del]');
+    if (del) { const c = findDiscComment(del.dataset.answerDel); if (c) doDiscDelete(c); }
   });
   screen.querySelector('#bd-compose-x')?.addEventListener('click', () => {
     const input = screen.querySelector('[data-comment-input]');
