@@ -129,12 +129,22 @@ async function boardAndDiscussionMessages() {
       tap: () => window.switchTab && window.switchTab('board') });
   }
 
+  // 🔴 ЗНАЙДЕНО 11.08, НЕ ВИПРАВЛЕНО СВІДОМО — ЧЕКАЄ СЛОВА ВОВИ.
+  // Умова шукає `type === 'discussion'`, а в базі цей тип зветься **`'chat'`**
+  // (звірено `posts.type CHECK (type IN ('board','chat','greeting'))` і живими
+  // даними). Тобто `disc` тут ЗАВЖДИ порожній, і капсули питань на Громаді не
+  // бачив жоден користувач — вона мовчки не малюється з моменту написання.
+  // 🛑 Не міняю на `'chat'` разом із перейменуванням: це не помилка тексту, а
+  // оживлення блока, якого на Громаді ніколи не було, — тобто нова поведінка на
+  // головному екрані, про яку Вова не просив (HOT_RULES №9). Одна зміна = один
+  // дозвіл. Підпис і мову капсули приведено до Q&A наперед, щоб коли її ввімкнуть,
+  // вона не заговорила «темами».
   const disc = posts.filter(p => p.type === 'discussion');
   if (disc.length) {
     const today = countToday(disc);
-    const msgs = [`${disc.length} ${plural(disc.length, 'тема', 'теми', 'тем')}`];
-    if (today) msgs.push(`${today} ${plural(today, 'нова', 'нові', 'нових')} сьогодні`);
-    out.push({ key: 'disc', icon: ICONS.message, label: 'Обговорення', msgs,
+    const msgs = [`${disc.length} ${plural(disc.length, 'питання', 'питання', 'питань')}`];
+    if (today) msgs.push(`${today} ${plural(today, 'нове', 'нові', 'нових')} сьогодні`);
+    out.push({ key: 'disc', icon: ICONS.message, label: 'Питання', msgs,
       tap: () => window.switchTab && window.switchTab('discussions') });
   }
   return out;

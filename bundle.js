@@ -2552,10 +2552,6 @@
   function sheetRemaining(panel, dy) {
     return Math.max((panel.offsetHeight || 0) - dy, 1);
   }
-  function centeredRemaining(panel) {
-    const top = panel.getBoundingClientRect().top;
-    return Math.max(window.innerHeight - top, 1);
-  }
   function lockBodyScroll() {
     const b = document.body.style;
     const scrollY = window.scrollY || 0;
@@ -3838,6 +3834,69 @@
           aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
   }
 
+  // src/core/list-patch.js
+  function scrollParent(el) {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
+        return p;
+    }
+    return null;
+  }
+  function scrollerOf(node) {
+    return scrollParent(node) || document.scrollingElement || document.documentElement;
+  }
+  function viewRect(scroller) {
+    if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
+      return { top: 0, bottom: window.innerHeight };
+    }
+    const r = scroller.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom };
+  }
+  function isNodeVisible(node, scroller) {
+    const r = node.getBoundingClientRect();
+    const v = viewRect(scroller);
+    return r.bottom > v.top && r.top < v.bottom;
+  }
+  function keepScroll(scroller, fn, skip = null, key = "data-post") {
+    if (!scroller) {
+      fn();
+      return;
+    }
+    const idOf = (el) => el.getAttribute(key);
+    const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
+    const anchor = [...scroller.querySelectorAll(`[${key}]`)].find((c) => c.getBoundingClientRect().bottom > viewTop + 1 && String(idOf(c)) !== String(skip));
+    const anchorId = anchor ? idOf(anchor) : null;
+    const before = anchor ? anchor.getBoundingClientRect().top : 0;
+    fn();
+    if (anchorId == null)
+      return;
+    const after = scroller.querySelector(`[${key}="${anchorId}"]`);
+    if (!after)
+      return;
+    const delta = after.getBoundingClientRect().top - before;
+    if (delta)
+      scroller.scrollTop += delta;
+  }
+  var CARD_LEAVE_MS = 340;
+  function collapseNode(node, after) {
+    const h = node.offsetHeight;
+    node.style.overflow = "hidden";
+    node.style.height = h + "px";
+    node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
+    requestAnimationFrame(() => {
+      node.style.height = "0px";
+      node.style.opacity = "0";
+    });
+    setTimeout(after, CARD_LEAVE_MS + 20);
+  }
+  function restoreNode(node) {
+    node.style.transition = "";
+    node.style.height = "";
+    node.style.overflow = "";
+    node.style.opacity = "";
+  }
+
   // src/tabs/board-discussions.js
   var _getPosts = () => [];
   function initDiscussionsEngine({ getPosts }) {
@@ -3845,7 +3904,6 @@
       _getPosts = getPosts;
   }
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-  var USERS_ICON_SVG = ICONS.users;
   var HEART_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var HEART_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var commentsByPost = /* @__PURE__ */ new Map();
@@ -3864,8 +3922,11 @@
     return reactionsByPost.get(postId)?.my === LIKE_EMOJI;
   }
   function likeBtnInner(postId) {
-    const liked = isLikedByMe(postId);
-    return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
+    const on = isLikedByMe(postId);
+    const n = getLikeCount(postId);
+    return `${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
+          <span class="qa-interest-label">\u041C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C</span>
+          ${n ? `<span class="qa-interest-n">${n}</span>` : ""}`;
   }
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
   function getComments(postId) {
@@ -3877,41 +3938,6 @@
   function isMyComment(c) {
     const uid = currentUserId();
     return !!uid && c.sender_uid === uid;
-  }
-  function clockTime2(ts) {
-    const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  }
-  var CHAT_MONTHS_GEN = [
-    "\u0441\u0456\u0447\u043D\u044F",
-    "\u043B\u044E\u0442\u043E\u0433\u043E",
-    "\u0431\u0435\u0440\u0435\u0437\u043D\u044F",
-    "\u043A\u0432\u0456\u0442\u043D\u044F",
-    "\u0442\u0440\u0430\u0432\u043D\u044F",
-    "\u0447\u0435\u0440\u0432\u043D\u044F",
-    "\u043B\u0438\u043F\u043D\u044F",
-    "\u0441\u0435\u0440\u043F\u043D\u044F",
-    "\u0432\u0435\u0440\u0435\u0441\u043D\u044F",
-    "\u0436\u043E\u0432\u0442\u043D\u044F",
-    "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
-    "\u0433\u0440\u0443\u0434\u043D\u044F"
-  ];
-  function chatDayLabel(ts) {
-    const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
-    const now = /* @__PURE__ */ new Date();
-    const sToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const day = 864e5;
-    if (d.getTime() >= sToday)
-      return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (d.getTime() >= sToday - day)
-      return "\u0412\u0447\u043E\u0440\u0430";
-    if (d.getFullYear() === now.getFullYear())
-      return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
-    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
   }
   function tsMs(v) {
     if (!v)
@@ -3927,133 +3953,104 @@
     m[String(postId)] = ts;
     lsSet(LS_CHAT_SEEN, m);
   }
-  function newMsgLabel(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return "\u043D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
-      return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
-    return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
-  }
   var RATE_SCOPE = "disc";
-  function msgWord(n) {
+  function answerWord(n) {
     const mod10 = n % 10, mod100 = n % 100;
     if (mod10 === 1 && mod100 !== 11)
-      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+      return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C";
     if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
-    return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+      return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456";
+    return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439";
+  }
+  function answersCount(postId) {
+    return activeComments(postId).length;
+  }
+  function lastAnswerTs(postId) {
+    let max = 0;
+    for (const c of activeComments(postId)) {
+      const t = tsMs(postTime(c));
+      if (t > max)
+        max = t;
+    }
+    return max;
   }
   function authorAvatar(author, uid) {
     return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || "", cls: "bd-avatar" });
   }
-  function chatMessagesHtml(post) {
+  function answersHtml(post) {
     const all = getComments(post.id);
     const items = all.filter((c) => !c.deleted_at);
     if (!items.length) {
-      return `<div class="bd-chat-stream" data-comments-for="${post.id}">
-      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
+      return `<div class="qa-answers" data-comments-for="${post.id}">
+      <div class="qa-empty">
+        <span class="qa-empty-icon">${COMMENT_ICON_SVG}</span>
+        <span class="qa-empty-title">\u0429\u0435 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432</span>
+        <span class="qa-empty-sub">\u0417\u043D\u0430\u0454\u0442\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u2014 \u0441\u0443\u0441\u0456\u0434\u0438 \u0447\u0435\u043A\u0430\u044E\u0442\u044C.</span>
+      </div>
     </div>`;
     }
-    const byId2 = new Map(all.map((c) => [c.id, c]));
-    const dividerTs = _chatDividerTs;
-    let hadOld = false, dividerPlaced = false, lastDay = null;
-    const renderDiscBubble = (c) => {
-      const reply = c.reply_to_id ? byId2.get(c.reply_to_id) : null;
-      const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "").slice(0, 90))}</span>` : "";
-      const edited = c.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
-      return `<div class="pm-bubble" data-msg="${c.id}" data-tag="${c.client_tag || ""}">${replyHtml}<span class="pm-bubble-text">${escapeHtml(c.text)}</span><span class="pm-bubble-time">${edited}${clockTime2(postTime(c))}</span></div>`;
-    };
-    let html = "";
-    let group = null;
-    const flush = () => {
-      if (!group)
-        return;
-      if (group.mine) {
-        html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join("")}</div>`;
-      } else {
-        html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name"${nameUid(group.uid)}>${liveName(group.author, group.uid)}</span>${group.bubbles.join("")}</div></div>`;
-      }
-      group = null;
-    };
-    items.forEach((c) => {
-      const t = postTime(c);
-      const day = chatDayLabel(t);
-      if (day && day !== lastDay) {
-        flush();
-        html += `<div class="pm-daysep"><span>${day}</span></div>`;
-        lastDay = day;
-      }
-      const isNew = dividerTs > 0 && tsMs(t) > dividerTs;
-      if (!isNew)
-        hadOld = true;
-      if (isNew && hadOld && !dividerPlaced) {
-        flush();
-        html += '<div class="bd-chat-divider" data-chat-divider><span>\u041D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span></div>';
-        dividerPlaced = true;
-      }
-      const mine = isMyComment(c);
-      const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const key = mine ? "__me" : c.sender_uid || author;
-      if (group && group.key === key)
-        group.bubbles.push(renderDiscBubble(c));
-      else {
-        flush();
-        group = { key, mine, author, uid: c.sender_uid || "", bubbles: [renderDiscBubble(c)] };
-      }
-    });
-    flush();
-    return `<div class="bd-chat-stream" data-comments-for="${post.id}">${html}</div>`;
-  }
-  function scrollChatToBottom() {
-    const body = document.getElementById("bd-chat-modal-body");
-    if (body)
-      body.scrollTop = body.scrollHeight;
-  }
-  function chatBodyNearBottom() {
-    const body = document.getElementById("bd-chat-modal-body");
-    if (!body)
-      return true;
-    return body.scrollHeight - body.scrollTop - body.clientHeight < 80;
-  }
-  function scrollChatToNewOrBottom() {
-    const body = document.getElementById("bd-chat-modal-body");
-    if (!body)
-      return;
-    const div = body.querySelector("[data-chat-divider]");
-    if (div) {
-      body.scrollTop += div.getBoundingClientRect().top - body.getBoundingClientRect().top - 60;
-    } else {
-      body.scrollTop = body.scrollHeight;
+    const liveIds = new Set(items.map((c) => c.id));
+    const isRoot = (c) => !c.reply_to_id || !liveIds.has(c.reply_to_id);
+    const roots = items.filter(isRoot);
+    const subsOf = /* @__PURE__ */ new Map();
+    for (const c of items) {
+      if (isRoot(c))
+        continue;
+      let parent = c.reply_to_id;
+      const pNode = all.find((x) => x.id === parent);
+      if (pNode && pNode.reply_to_id && liveIds.has(pNode.reply_to_id))
+        parent = pNode.reply_to_id;
+      if (!subsOf.has(parent))
+        subsOf.set(parent, []);
+      subsOf.get(parent).push(c);
     }
+    const answer = (c, sub) => {
+      const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const edited = c.edited_at ? '<span class="qa-answer-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span>' : "";
+      const replyBtn = sub ? "" : `<button class="qa-answer-reply" type="button" data-answer-reply="${c.id}">${ACT_ICONS.reply}\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>`;
+      return `
+      <article class="qa-answer${sub ? " qa-answer--sub" : ""}" data-msg="${c.id}" data-tag="${c.client_tag || ""}">
+        <div class="qa-answer-head">
+          ${authorAvatar(author, c.sender_uid)}
+          <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+          <span class="qa-answer-when">${formatTime(postTime(c))}</span>
+          ${edited}
+          <button class="qa-answer-more" type="button" data-answer-menu="${c.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
+        </div>
+        <p class="qa-answer-text">${escapeHtml(c.text)}</p>
+        ${replyBtn}
+      </article>`;
+    };
+    const html = roots.map((r) => {
+      const subs = (subsOf.get(r.id) || []).map((s) => answer(s, true)).join("");
+      return answer(r, false) + (subs ? `<div class="qa-answer-subs">${subs}</div>` : "");
+    }).join("");
+    return `<div class="qa-answers" data-comments-for="${post.id}">${html}</div>`;
   }
-  function showChatPill(n) {
-    const pill = _chatModalEl?.querySelector(".bd-chat-newpill");
-    if (!pill)
+  function scrollToMyAnswer() {
+    const body = document.querySelector(".qa-body");
+    if (!body)
       return;
-    pill.querySelector(".bd-chat-newpill-n").textContent = `${n} ${newMsgLabel(n)}`;
-    pill.hidden = false;
-  }
-  function hideChatPill() {
-    const pill = _chatModalEl?.querySelector(".bd-chat-newpill");
-    if (pill)
-      pill.hidden = true;
+    const answers = body.querySelectorAll(".qa-answer");
+    const last = answers[answers.length - 1];
+    if (last)
+      last.scrollIntoView({ block: "center", behavior: "smooth" });
+    else
+      body.scrollTop = body.scrollHeight;
   }
   function updateChatHeaderCount(postId) {
     if (postId !== _chatOpenPostId)
       return;
-    const el = document.getElementById("bd-chat-reply-count");
+    const el = document.getElementById("qa-answers-count");
     if (el) {
       const n = activeComments(postId).length;
-      el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
+      el.textContent = n ? `${n} ${answerWord(n).toUpperCase()}` : "\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406";
     }
   }
   var _chatModalEl = null;
   var _chatViewportHandler = null;
-  var _chatScrollHandler = null;
   var _chatOpenPostId = null;
-  var _chatDividerTs = 0;
-  var _chatUnseen = 0;
+  var _qaLayer = null;
   function onChatEsc(e) {
     if (e.key === "Escape")
       closeChatModal();
@@ -4106,31 +4103,32 @@
     };
   }
   function openDiscussionList(title, posts2) {
-    const body = posts2.length ? posts2.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
+    const body = posts2.length ? posts2.map((p) => renderQuestionCard(p)).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
     openDiscSheet({ title, bodyHtml: `<div class="disc-sheet-list">${body}</div>` });
   }
   function openMyDiscussions() {
     const uid = currentUserId();
     const mine = _getPosts().filter((p) => p.type === "chat" && p.owner_uid && p.owner_uid === uid);
-    openDiscussionList("\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", mine);
+    openDiscussionList("\u041C\u043E\u0457 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", mine);
   }
   function openSavedDiscussions() {
     const saved = getSavedIds();
     const list = _getPosts().filter((p) => p.type === "chat" && saved.has(p.id));
-    openDiscussionList("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", list);
+    openDiscussionList("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", list);
   }
   function openDiscussionCompose() {
     const form = `
     <form class="disc-compose" id="disc-compose-form">
-      <label class="disc-compose-label" for="disc-compose-topic">\u0422\u0435\u043C\u0430 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</label>
+      <label class="disc-compose-label" for="disc-compose-topic">\u0429\u043E \u0432\u0438 \u0445\u043E\u0447\u0435\u0442\u0435 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C?</label>
       <textarea id="disc-compose-topic" class="disc-compose-input" rows="3"
-                placeholder="\u041F\u0440\u043E \u0449\u043E \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043C\u043E? \u041D\u0430\u043F\u0440.: \u0427\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043D\u043E\u0432\u0438\u0439 \u043C\u0430\u0439\u0434\u0430\u043D\u0447\u0438\u043A \u0443 \u0446\u0435\u043D\u0442\u0440\u0456?" maxlength="300"></textarea>
-      <button type="submit" class="disc-compose-submit">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
-      <p class="disc-compose-note">\u0417\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443. \u041C\u0430\u0442\u044E\u043A\u0438/\u043E\u0431\u0440\u0430\u0437\u0438 \u0431\u043B\u043E\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.</p>
+                placeholder="\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u2026" maxlength="300"></textarea>
+      <p class="disc-compose-hint">\u041D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \xAB\u041A\u043E\u043B\u0438 \u0440\u0435\u043C\u043E\u043D\u0442\u0443\u0432\u0430\u0442\u0438\u043C\u0443\u0442\u044C \u0434\u043E\u0440\u043E\u0433\u0443 \u0432 \u041C\u0438\u0442\u0438\u043B\u044C\u043D\u043E\u043C\u0443?\xBB</p>
+      <button type="submit" class="disc-compose-submit">\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443</button>
+      <p class="disc-compose-note">\u041F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u0431\u0430\u0447\u0430\u0442\u044C \u0436\u0438\u0442\u0435\u043B\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043E\u0434\u0440\u0430\u0437\u0443. \u041C\u0430\u0442\u044E\u043A\u0438 \u0442\u0430 \u043E\u0431\u0440\u0430\u0437\u0438 \u0431\u043B\u043E\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.</p>
     </form>`;
     let detachKb = null;
     openDiscSheet({
-      title: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
+      title: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443",
       bodyHtml: form,
       // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
       // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
@@ -4143,12 +4141,12 @@
           e.preventDefault();
           const text = (ta?.value || "").trim();
           if (!text) {
-            showToast("\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u0442\u0435\u043C\u0443 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", 2500);
+            showToast("\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u0441\u0432\u043E\u0454 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", 2500);
             ta?.focus();
             return;
           }
           if (containsProfanity(text)) {
-            showToast("\u{1F6AB} \u0422\u0435\u043C\u0430 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 4e3, "error");
+            showToast("\u{1F6AB} \u041F\u0438\u0442\u0430\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 4e3, "error");
             return;
           }
           const btn = sheet.querySelector(".disc-compose-submit");
@@ -4167,14 +4165,14 @@
             if (!res.ok) {
               if (btn) {
                 btn.disabled = false;
-                btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438";
+                btn.textContent = "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443";
               }
               showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (res.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C"), 4e3, "error");
               return;
             }
           }
           close();
-          showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
+          showToast("\u041F\u0438\u0442\u0430\u043D\u043D\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456", 3500);
           window.dispatchEvent(new CustomEvent("cstl-posts-changed"));
         });
       },
@@ -4184,34 +4182,51 @@
       }
     });
   }
+  function qaInterestHtml(postId) {
+    const on = isLikedByMe(postId);
+    const n = getLikeCount(postId);
+    return `
+    <button class="qa-interest${on ? " qa-interest--on" : ""}" type="button"
+            data-like-id="${postId}"
+            aria-pressed="${on ? "true" : "false"}"
+            aria-label="${on ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0443 \xAB\u043C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C\xBB" : "\u041C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C"}">
+      ${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
+      <span class="qa-interest-label">\u041C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C</span>
+      ${n ? `<span class="qa-interest-n">${n}</span>` : ""}
+    </button>`;
+  }
   function openChatModal(post) {
     if (_chatModalEl)
       return;
     _chatOpenPostId = post.id;
-    _chatDividerTs = getChatSeen(post.id);
-    _chatUnseen = 0;
-    const replyCount = activeComments(post.id).length;
-    const backdrop = document.createElement("div");
-    backdrop.className = "board-backdrop bd-chat-backdrop";
-    const modal = document.createElement("div");
-    modal.className = "bd-chat-modal";
-    modal.innerHTML = `
-    <div class="bd-chat-modal-handle"></div>
-    <header class="bd-chat-modal-head">
-      <button class="bd-chat-modal-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-      <div class="bd-chat-modal-titles">
-        <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">${COMMENT_ICON_SVG} ${replyCount} ${msgWord(replyCount)}</div>
-      </div>
+    const screen = document.createElement("div");
+    screen.className = "qa-screen";
+    const n = activeComments(post.id).length;
+    screen.innerHTML = `
+    <header class="qa-head">
+      <button class="qa-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <span class="qa-head-title">\u041F\u0438\u0442\u0430\u043D\u043D\u044F</span>
+      ${saveBtnHtml(post)}
     </header>
-    <div class="bd-chat-modal-body" id="bd-chat-modal-body">
-      ${chatMessagesHtml(post)}
+
+    <div class="qa-body">
+      <section class="qa-question">
+        <h1 class="qa-question-text">${escapeHtml(post.text)}</h1>
+        <div class="qa-question-by">
+          ${authorAvatar(post.author, post.owner_uid)}
+          <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-question-when">${formatTime(postTime(post))}</span>
+        </div>
+        ${qaInterestHtml(post.id)}
+      </section>
+
+      <h2 class="qa-answers-title" id="qa-answers-count">${n ? `${n} ${answerWord(n).toUpperCase()}` : "\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u0406"}</h2>
+      ${answersHtml(post)}
     </div>
-    <button class="bd-chat-newpill" type="button" hidden>\u2193 <span class="bd-chat-newpill-n"></span></button>
-    <button class="pm-scrolldown" id="bd-scrolldown" type="button" aria-label="\u0414\u043E \u043E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0433\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div class="pm-composebar" id="bd-compose" hidden>
+
+    <div class="pm-composebar qa-composebar" id="bd-compose" hidden>
       <span class="pm-composebar-ic" id="bd-compose-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
         <span class="pm-composebar-title" id="bd-compose-title"></span>
@@ -4219,94 +4234,76 @@
       </div>
       <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438">\u2715</button>
     </div>
+
     ${isLoggedIn() ? `
-    <form class="bd-chat-modal-form" data-comment-form="${post.id}">
-      <input class="bd-chat-modal-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
-             aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" data-comment-input="${post.id}">
-      <button class="bd-chat-modal-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+    <form class="qa-form" data-comment-form="${post.id}">
+      <input class="qa-input" type="text" placeholder="\u0412\u0430\u0448\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C\u2026"
+             aria-label="\u0412\u0430\u0448\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C" data-comment-input="${post.id}">
+      <button class="qa-send" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438</button>
     </form>` : `
-    <button class="bd-chat-login-cta" type="button" id="bd-chat-login">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u0438\u0441\u0430\u0442\u0438</button>`}
+    <button class="qa-login-cta" type="button" id="bd-chat-login">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>`}
   `;
-    document.body.appendChild(backdrop);
-    document.body.appendChild(modal);
+    document.body.appendChild(screen);
     document.body.classList.add("modal-open");
-    _chatModalEl = modal;
-    hydrateAvatars(modal.querySelector("[data-comments-for]"));
-    hydrateNames(modal.querySelector("[data-comments-for]"));
-    requestAnimationFrame(() => {
-      backdrop.classList.add("visible");
-      modal.classList.add("visible");
+    _chatModalEl = screen;
+    hydrateAvatars(screen);
+    hydrateNames(screen);
+    requestAnimationFrame(() => screen.classList.add("visible"));
+    _qaLayer = openLayer(() => finishCloseQuestion(), {
+      animateOut: (done) => {
+        screen.classList.remove("visible");
+        setTimeout(done, 220);
+      }
     });
-    setTimeout(scrollChatToNewOrBottom, 80);
-    backdrop.addEventListener("click", closeChatModal);
-    modal.querySelector(".bd-chat-modal-back")?.addEventListener("click", closeChatModal);
-    modal.querySelector("#bd-chat-login")?.addEventListener(
+    screen.querySelector(".qa-back")?.addEventListener("click", () => closeLayer(_qaLayer, { animate: true }));
+    screen.querySelector("#bd-chat-login")?.addEventListener(
       "click",
-      () => requireAuth("\u043F\u0438\u0441\u0430\u0442\u0438 \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u0456", () => {
+      () => requireAuth("\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", () => {
       })
     );
     document.addEventListener("keydown", onChatEsc);
-    const bodyEl = modal.querySelector("#bd-chat-modal-body");
-    const scrollBtn = modal.querySelector("#bd-scrolldown");
-    _chatScrollHandler = () => {
-      const near = chatBodyNearBottom();
-      if (near) {
-        _chatUnseen = 0;
-        hideChatPill();
-      }
-      scrollBtn?.classList.toggle("visible", !near);
-    };
-    bodyEl?.addEventListener("scroll", _chatScrollHandler, { passive: true });
-    modal.querySelector(".bd-chat-newpill")?.addEventListener("click", () => {
-      scrollChatToBottom();
-      _chatUnseen = 0;
-      hideChatPill();
-    });
-    scrollBtn?.addEventListener("click", () => {
-      scrollChatToBottom();
-      _chatUnseen = 0;
-      hideChatPill();
-      scrollBtn.classList.remove("visible");
-    });
-    modal.querySelector(".bd-chat-modal-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
+    screen.querySelector(".qa-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
     _discReplyTo = null;
     _discEditing = null;
-    setupBubbleGestures(bodyEl, onDiscBubbleAction);
-    modal.querySelector("#bd-compose-x")?.addEventListener("click", () => {
-      const input2 = modal.querySelector("[data-comment-input]");
+    const bodyEl = screen.querySelector(".qa-body");
+    bodyEl?.addEventListener("click", (e) => {
+      const r = e.target.closest("[data-answer-reply]");
+      if (r) {
+        const c = findDiscComment(r.dataset.answerReply);
+        if (c)
+          startDiscReply(c);
+        return;
+      }
+      const m = e.target.closest("[data-answer-menu]");
+      if (m) {
+        const c = findDiscComment(m.dataset.answerMenu);
+        if (c)
+          openDiscActions(c);
+      }
+    });
+    screen.querySelector("#bd-compose-x")?.addEventListener("click", () => {
+      const input2 = screen.querySelector("[data-comment-input]");
       if (_discEditing && input2)
         input2.value = "";
       clearDiscCompose();
     });
-    bodyEl?.addEventListener("click", (e) => {
-      const jump = e.target.closest("[data-jump]");
-      if (!jump)
-        return;
-      const b = bodyEl.querySelector(`.pm-bubble[data-msg="${jump.dataset.jump}"]`);
-      if (b) {
-        b.scrollIntoView({ behavior: "smooth", block: "center" });
-        b.classList.add("pm-bubble--flash");
-        setTimeout(() => b.classList.remove("pm-bubble--flash"), 1e3);
-      }
-    });
     const vv = window.visualViewport;
-    const input = modal.querySelector(".bd-chat-modal-input");
+    const input = screen.querySelector(".qa-input");
     const fullH = window.innerHeight;
     const applyKb = () => {
       const visH = vv ? vv.height : window.innerHeight;
       const open = visH < fullH - 80;
       if (open) {
-        modal.classList.add("bd-chat-modal--kb");
-        modal.style.top = (vv ? vv.offsetTop : 0) + "px";
-        modal.style.height = (vv ? vv.height : window.innerHeight) - 4 + "px";
-        modal.style.bottom = "auto";
+        screen.classList.add("qa-screen--kb");
+        screen.style.top = (vv ? vv.offsetTop : 0) + "px";
+        screen.style.height = (vv ? vv.height : window.innerHeight) - 4 + "px";
+        screen.style.bottom = "auto";
       } else {
-        modal.classList.remove("bd-chat-modal--kb");
-        modal.style.top = "";
-        modal.style.height = "";
-        modal.style.bottom = "";
+        screen.classList.remove("qa-screen--kb");
+        screen.style.top = "";
+        screen.style.height = "";
+        screen.style.bottom = "";
       }
-      scrollChatToBottom();
     };
     let kbTimer = null;
     _chatViewportHandler = () => {
@@ -4318,77 +4315,28 @@
     vv?.addEventListener("scroll", _chatViewportHandler);
     input?.addEventListener("focus", _chatViewportHandler);
     input?.addEventListener("blur", _chatViewportHandler);
-    let startY = 0, curY = 0, dragging = false, rafId = 0, travel = 1;
-    const dragZone = modal.querySelector(".bd-chat-modal-head");
-    const drag = createDragTracker();
-    const fade = createBackdropFade(document.querySelector(".bd-chat-backdrop"));
-    const applyDrag = () => {
-      rafId = 0;
-      modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
-      fade?.track(curY / travel);
-    };
-    dragZone.addEventListener("touchstart", (e) => {
-      startY = e.touches[0].clientY;
-      curY = 0;
-      dragging = true;
-      travel = centeredRemaining(modal);
-      drag.start(startY);
-      modal.style.transition = "none";
-      modal.style.willChange = "transform";
-    }, { passive: true });
-    dragZone.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
-      curY = Math.max(0, e.touches[0].clientY - startY);
-      drag.move(e.touches[0].clientY);
-      if (!rafId)
-        rafId = requestAnimationFrame(applyDrag);
-    }, { passive: true });
-    const endDrag = () => {
-      if (!dragging)
-        return;
-      dragging = false;
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = 0;
-      }
-      modal.style.willChange = "";
-      const remaining = centeredRemaining(modal);
-      finishSwipe({
-        panel: modal,
-        dy: curY,
-        velocity: drag.velocity,
-        remaining,
-        dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
-        onDismiss: () => closeChatModal({ keepTransform: true }),
-        backdrop: fade
-      });
-      curY = 0;
-    };
-    dragZone.addEventListener("touchend", endDrag);
-    dragZone.addEventListener("touchcancel", endDrag);
   }
-  function closeChatModal(opts = {}) {
+  function closeChatModal() {
     if (!_chatModalEl)
       return;
-    const modal = _chatModalEl;
-    const backdrop = document.querySelector(".bd-chat-backdrop");
+    if (_qaLayer)
+      closeLayer(_qaLayer, { animate: true });
+    else
+      finishCloseQuestion();
+  }
+  function finishCloseQuestion() {
+    const screen = _chatModalEl;
+    if (!screen)
+      return;
     if (_chatOpenPostId != null) {
       setChatSeen(_chatOpenPostId, Date.now());
       window.dispatchEvent(new CustomEvent("cstl-disc-seen"));
     }
-    const bodyEl = modal.querySelector("#bd-chat-modal-body");
-    if (bodyEl && _chatScrollHandler)
-      bodyEl.removeEventListener("scroll", _chatScrollHandler);
-    _chatScrollHandler = null;
     _chatOpenPostId = null;
-    _chatDividerTs = 0;
-    _chatUnseen = 0;
     _chatModalEl = null;
-    modal.classList.remove("visible");
-    if (!opts.keepTransform)
-      modal.style.transform = "";
-    backdrop?.classList.remove("visible");
+    _qaLayer = null;
+    clearDiscCompose();
+    screen.classList.remove("visible");
     document.body.classList.remove("modal-open");
     document.removeEventListener("keydown", onChatEsc);
     if (_chatViewportHandler) {
@@ -4399,34 +4347,31 @@
       }
       _chatViewportHandler = null;
     }
-    setTimeout(() => {
-      modal.remove();
-      backdrop?.remove();
-    }, 240);
+    setTimeout(() => screen.remove(), 240);
   }
   function refreshChatCardPreview(postId) {
-    const card = document.querySelector(`.bd-card--chat[data-chat-open="${postId}"]`);
+    const card = document.querySelector(`[data-question-open="${postId}"]`);
     if (!card)
       return;
     const post = _getPosts().find((p) => p.id === postId);
     if (post)
-      card.outerHTML = renderChatCard(post);
+      card.outerHTML = renderQuestionCard(post);
   }
-  function rerenderCommentsBlock(postId) {
+  function rerenderCommentsBlock(postId, { scroll = false } = {}) {
     const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
     if (!wrap)
       return;
     const post = _getPosts().find((p) => p.id === postId);
     if (!post)
       return;
-    wrap.outerHTML = chatMessagesHtml(post);
-    hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));
-    hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));
-    scrollChatToBottom();
-    _chatUnseen = 0;
-    hideChatPill();
+    wrap.outerHTML = answersHtml(post);
+    const fresh = document.querySelector(`[data-comments-for="${postId}"]`);
+    hydrateAvatars(fresh);
+    hydrateNames(fresh);
     updateChatHeaderCount(postId);
     refreshChatCardPreview(postId);
+    if (scroll)
+      scrollToMyAnswer();
   }
   var _discReplyTo = null;
   var _discEditing = null;
@@ -4470,15 +4415,6 @@
       input.value = c.text || "";
       input.focus();
     }
-  }
-  function onDiscBubbleAction(id, kind) {
-    const c = findDiscComment(id);
-    if (!c)
-      return;
-    if (kind === "reply")
-      startDiscReply(c);
-    else if (kind === "menu")
-      openDiscActions(c);
   }
   function openDiscActions(c) {
     if (c.deleted_at)
@@ -4554,44 +4490,28 @@
     }
     return n;
   }
-  function renderChatCard(p) {
-    const comments = activeComments(p.id);
-    const count = comments.length;
-    const recent = comments.slice(-2);
-    const participants = new Set(comments.map((c) => c.sender_uid || "nm:" + (c.author || "\u0416\u0438\u0442\u0435\u043B\u044C"))).size;
-    const lastHtml = recent.length ? `<div class="bd-chat-last">${recent.map((m) => `
-         <div class="bd-chat-last-row">
-           <span class="bd-chat-last-msg"><span class="bd-chat-last-author"><span${nameUid(m.sender_uid)}>${liveName(m.author, m.sender_uid)}</span>:</span> ${escapeHtml(m.text)}</span>
-           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
-         </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
-    const liked = isLikedByMe(p.id);
+  function renderQuestionCard(p) {
+    const n = activeComments(p.id).length;
+    const last = lastAnswerTs(p.id);
+    const foot = n ? `<span class="qa-card-count">${COMMENT_ICON_SVG} ${n} ${answerWord(n)}</span>
+       <span class="qa-card-last">\u043E\u0441\u0442\u0430\u043D\u043D\u044F ${formatTime(last)}</span>` : '<span class="qa-card-count qa-card-count--none">\u0429\u0435 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432</span>';
     return `
-    <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
-      <div class="bd-chat-topic">
-        <p class="bd-chat-text">${escapeHtml(p.text)}</p>
-      </div>
-      <div class="bd-chat-topline">
-        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
-        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
-      </div>
-      ${lastHtml}
-      <div class="bd-chat-foot">
-        <button class="bd-chat-like${liked ? " bd-chat-like--active" : ""}" type="button"
-                data-like-id="${p.id}" aria-label="${liked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A"}">
-          ${likeBtnInner(p.id)}
-        </button>
-        <div class="bd-chat-by">
-          <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> <span class="bd-chat-by-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span></div>
-          <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
-        </div>
+    <article class="bd-card qa-card${n ? "" : " qa-card--unanswered"}"
+             data-post-id="${p.id}" data-question-open="${p.id}">
+      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+      <div class="qa-card-by">
+        ${authorAvatar(p.author, p.owner_uid)}
+        <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+        <span class="qa-card-when">${formatTime(postTime(p))}</span>
         ${saveBtnHtml(p)}
       </div>
+      <div class="qa-card-foot">${foot}</div>
     </article>
   `;
   }
   function handleLikeClick(likeBtn) {
     const id = Number(likeBtn.dataset.likeId);
-    requireAuth("\u043B\u0430\u0439\u043A\u0430\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", async () => {
+    requireAuth("\u043F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", async () => {
       const uid = currentUserId();
       const wasLiked = isLikedByMe(id);
       const entry = reactionsByPost.get(id) || { counts: {}, my: null };
@@ -4599,17 +4519,19 @@
       entry.my = wasLiked ? null : LIKE_EMOJI;
       reactionsByPost.set(id, entry);
       likeBtn.innerHTML = likeBtnInner(id);
-      likeBtn.classList.toggle("bd-chat-like--active", !wasLiked);
-      likeBtn.setAttribute("aria-label", wasLiked ? "\u041B\u0430\u0439\u043A" : "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A");
+      likeBtn.classList.toggle("qa-interest--on", !wasLiked);
+      likeBtn.setAttribute("aria-pressed", wasLiked ? "false" : "true");
+      likeBtn.setAttribute("aria-label", wasLiked ? "\u041C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C" : "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0443 \xAB\u043C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C\xBB");
       const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
       if (!res.ok) {
         entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
         entry.my = wasLiked ? LIKE_EMOJI : null;
         reactionsByPost.set(id, entry);
         likeBtn.innerHTML = likeBtnInner(id);
-        likeBtn.classList.toggle("bd-chat-like--active", wasLiked);
-        likeBtn.setAttribute("aria-label", wasLiked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A");
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043B\u0430\u0439\u043A", 2500, "error");
+        likeBtn.classList.toggle("qa-interest--on", wasLiked);
+        likeBtn.setAttribute("aria-pressed", wasLiked ? "true" : "false");
+        likeBtn.setAttribute("aria-label", wasLiked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0443 \xAB\u043C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C\xBB" : "\u041C\u0435\u043D\u0435 \u0442\u0435\u0436 \u0446\u0456\u043A\u0430\u0432\u0438\u0442\u044C");
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0443", 2500, "error");
       }
     });
   }
@@ -4705,7 +4627,7 @@
       if (input)
         input.value = "";
       clearDiscCompose();
-      rerenderCommentsBlock(postId);
+      rerenderCommentsBlock(postId, { scroll: true });
       input?.focus();
       if (isSupabaseReady()) {
         const tag = crypto.randomUUID && crypto.randomUUID() || String(Date.now()) + Math.random().toString(36).slice(2);
@@ -4729,34 +4651,14 @@
     const postId = (payload.new || payload.old || {}).post_id;
     if (!postId)
       return;
-    const prevCount = getComments(postId).length;
     fetchAllComments().then((fresh) => {
       commentsByPost = fresh;
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (wrap) {
-        const post = _getPosts().find((p) => p.id === postId);
-        if (post) {
-          const body = document.getElementById("bd-chat-modal-body");
-          const near = chatBodyNearBottom();
-          const prevTop = body ? body.scrollTop : 0;
-          wrap.outerHTML = chatMessagesHtml(post);
-          hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));
-          hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));
-          if (near) {
-            scrollChatToBottom();
-          } else {
-            if (body)
-              body.scrollTop = prevTop;
-            const delta = Math.max(0, getComments(postId).length - prevCount);
-            if (delta > 0 && postId === _chatOpenPostId) {
-              _chatUnseen += delta;
-              showChatPill(_chatUnseen);
-            }
-          }
-          updateChatHeaderCount(postId);
-        }
+      const body = document.querySelector(".qa-body");
+      if (body && document.querySelector(`[data-comments-for="${postId}"]`)) {
+        keepScroll(body, () => rerenderCommentsBlock(postId), null, "data-msg");
+      } else {
+        refreshChatCardPreview(postId);
       }
-      refreshChatCardPreview(postId);
     });
   }
   function onReactionRealtimeEvent(payload) {
@@ -6591,69 +6493,6 @@
   <div id="legal-terms">${TERMS_HTML}</div>
 `;
 
-  // src/core/list-patch.js
-  function scrollParent(el) {
-    for (let p = el.parentElement; p; p = p.parentElement) {
-      const oy = getComputedStyle(p).overflowY;
-      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
-        return p;
-    }
-    return null;
-  }
-  function scrollerOf(node) {
-    return scrollParent(node) || document.scrollingElement || document.documentElement;
-  }
-  function viewRect(scroller) {
-    if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
-      return { top: 0, bottom: window.innerHeight };
-    }
-    const r = scroller.getBoundingClientRect();
-    return { top: r.top, bottom: r.bottom };
-  }
-  function isNodeVisible(node, scroller) {
-    const r = node.getBoundingClientRect();
-    const v = viewRect(scroller);
-    return r.bottom > v.top && r.top < v.bottom;
-  }
-  function keepScroll(scroller, fn, skip = null, key = "data-post") {
-    if (!scroller) {
-      fn();
-      return;
-    }
-    const idOf = (el) => el.getAttribute(key);
-    const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
-    const anchor = [...scroller.querySelectorAll(`[${key}]`)].find((c) => c.getBoundingClientRect().bottom > viewTop + 1 && String(idOf(c)) !== String(skip));
-    const anchorId = anchor ? idOf(anchor) : null;
-    const before = anchor ? anchor.getBoundingClientRect().top : 0;
-    fn();
-    if (anchorId == null)
-      return;
-    const after = scroller.querySelector(`[${key}="${anchorId}"]`);
-    if (!after)
-      return;
-    const delta = after.getBoundingClientRect().top - before;
-    if (delta)
-      scroller.scrollTop += delta;
-  }
-  var CARD_LEAVE_MS = 340;
-  function collapseNode(node, after) {
-    const h = node.offsetHeight;
-    node.style.overflow = "hidden";
-    node.style.height = h + "px";
-    node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
-    requestAnimationFrame(() => {
-      node.style.height = "0px";
-      node.style.opacity = "0";
-    });
-    setTimeout(after, CARD_LEAVE_MS + 20);
-  }
-  function restoreNode(node) {
-    node.style.transition = "";
-    node.style.height = "";
-    node.style.overflow = "";
-    node.style.opacity = "";
-  }
-
   // src/tabs/board.js
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
@@ -6706,6 +6545,7 @@
   var activeCategory = "all";
   var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
+  var qaUnansweredOnly = false;
   function boardActionsHtml(post) {
     return `
     <div class="bd-actions bd-actions--board-compact">
@@ -7147,7 +6987,7 @@
   }
   function renderCard(post) {
     if (post.type === "chat")
-      return renderChatCard(post);
+      return renderQuestionCard(post);
     return renderBoardCard(post);
   }
   function myActiveAdsCount() {
@@ -7189,11 +7029,11 @@
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
         <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
-          <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-label">\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
-          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043F\u0438\u0442\u0430\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
@@ -7201,7 +7041,7 @@
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       </button>
@@ -7272,6 +7112,10 @@
         if (p.category !== activeCategory)
           return false;
       }
+      if (activeType === "chat" && qaUnansweredOnly && !opts.ignoreQaChip) {
+        if (answersCount(p.id) > 0)
+          return false;
+      }
       if (activeType === "board" && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
         if (p.location !== activeLocation && !isCommunityWide(p.location))
           return false;
@@ -7289,6 +7133,9 @@
       return true;
     });
   }
+  function unansweredCount() {
+    return getFilteredPosts({ ignoreQaChip: true }).filter((p) => answersCount(p.id) === 0).length;
+  }
   function getBoardDisplayCount() {
     if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
       return getFilteredPosts().length;
@@ -7297,7 +7144,21 @@
     return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
   }
   function renderHeader() {
-    const discHead = "";
+    const unanswered = activeType === "chat" ? unansweredCount() : 0;
+    const discHead = activeType !== "chat" ? "" : `
+    <div class="qa-hero">
+      <h2 class="qa-hero-title">\u041F\u0418\u0422\u0410\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</h2>
+      <p class="qa-hero-sub">\u041D\u0435 \u0437\u043D\u0430\u0454\u0442\u0435 \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432</p>
+      <button class="qa-ask" type="button" data-qa-ask>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9.5a4 4 0 1 1 4 4v2"/><path d="M12 19.5v.01"/></svg>
+        \u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443
+      </button>
+      ${unanswered ? `
+      <div class="qa-chips">
+        <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456</button>
+        <button class="qa-chip${qaUnansweredOnly ? " qa-chip--on" : ""}" type="button" data-qa-chip="unanswered">\u0411\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 <span class="qa-chip-n">${unanswered}</span></button>
+      </div>` : ""}
+    </div>`;
     const showCategories = activeType === "board";
     const heroHtml = showCategories ? `
     <div class="bd-hero">
@@ -7335,7 +7196,7 @@
         <div class="bd-search">
           <span class="bd-search-icon">${ICONS.search}</span>
           <input class="bd-search-input" id="bd-search-input" type="search"
-                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
+                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0441\u0435\u0440\u0435\u0434 \u043F\u0438\u0442\u0430\u043D\u044C\u2026" : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
         </div>
         ${showCategories ? locFilterHtml : ""}
@@ -7395,6 +7256,14 @@
       \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0434\u043B\u044F \xAB${escapeHtml(locLabel(activeLocation))}\xBB`);
     if (searchQuery.trim())
       \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0437\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery.trim())}\xBB`);
+    if (activeType === "chat" && qaUnansweredOnly)
+      \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push("\u0441\u0435\u0440\u0435\u0434 \u043F\u0438\u0442\u0430\u043D\u044C \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456");
+    if (!\u043F\u0440\u0438\u0447\u0438\u043D\u0438.length && activeType === "chat") {
+      return `<span class="bd-empty-title">\u041F\u0438\u0442\u0430\u043D\u044C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</span>
+      \u0422\u0443\u0442 \u0436\u0438\u0442\u0435\u043B\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u0438\u0442\u0430\u044E\u0442\u044C \u043E\u0434\u043D\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u043F\u0440\u043E \u0442\u0435, \u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0442\u0438 \u0432 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0456:
+      \u043A\u043E\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0447\u0438 \u043F\u0440\u0430\u0446\u044E\u0454 \u0430\u043C\u0431\u0443\u043B\u0430\u0442\u043E\u0440\u0456\u044F, \u043A\u043E\u043B\u0438 \u0440\u0435\u043C\u043E\u043D\u0442\u0443\u0432\u0430\u0442\u0438\u043C\u0443\u0442\u044C \u0434\u043E\u0440\u043E\u0433\u0443.
+      <button class="bd-empty-reset" type="button" data-qa-ask>\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F</button>`;
+    }
     if (!\u043F\u0440\u0438\u0447\u0438\u043D\u0438.length)
       return "\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
     const \u0442\u0435\u043A\u0441\u0442 = `\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043B\u043E\u0441\u044C ${\u043F\u0440\u0438\u0447\u0438\u043D\u0438.join(" ")}`;
@@ -7406,7 +7275,10 @@
     if (!filtered.length) {
       return `<div class="bd-empty">${emptyStateHtml()}</div>`;
     }
-    const rankTs = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
+    const rankTs = (x) => {
+      const base = x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
+      return x.type === "chat" ? Math.max(base, lastAnswerTs(x.id)) : base;
+    };
     const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
     if (activeType === "board") {
       const adList = (list) => `<div class="bd-ads">${list.map((p) => renderBoardCard(p)).join("")}</div>`;
@@ -7518,15 +7390,15 @@
         const act = item.dataset.fab;
         closeFab();
         if (act === "disc-create") {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
+          requireAuth("\u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openDiscussionCompose);
           return;
         }
         if (act === "disc-mine") {
-          requireAuth("\u043C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openMyDiscussions);
+          requireAuth("\u043C\u043E\u0457 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openMyDiscussions);
           return;
         }
         if (act === "disc-saved") {
-          requireAuth("\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openSavedDiscussions);
+          requireAuth("\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openSavedDiscussions);
           return;
         }
         if (act === "post") {
@@ -7585,6 +7457,18 @@
       activeCategory = "all";
       activeLocation = COMMUNITY_ALL;
       searchQuery = "";
+      qaUnansweredOnly = false;
+      renderAll();
+    });
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("[data-qa-ask]")) {
+        requireAuth("\u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openDiscussionCompose);
+        return;
+      }
+      const chip = e.target.closest("[data-qa-chip]");
+      if (!chip)
+        return;
+      qaUnansweredOnly = chip.dataset.qaChip === "unanswered";
       renderAll();
     });
     const wireMenuButton = (btnId, menuId, onPick) => {
@@ -7804,9 +7688,9 @@
       return;
     _delegationAttached2 = true;
     document.addEventListener("click", (e) => {
-      const chatCard = e.target.closest("[data-chat-open]");
-      if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]") && !e.target.closest("[data-like-id]")) {
-        const id = Number(chatCard.dataset.chatOpen);
+      const chatCard = e.target.closest("[data-question-open]");
+      if (chatCard && !e.target.closest(".qa-screen") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]") && !e.target.closest("[data-like-id]")) {
+        const id = Number(chatCard.dataset.questionOpen);
         const post = allPosts.find((p) => p.id === id);
         if (post)
           openChatModal(post);
@@ -10273,7 +10157,7 @@
   var CATS = [
     { key: "articles", icon: ICONS.newspaper, label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
     { key: "buses", icon: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
-    { key: "chats", icon: ICONS.message, label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
+    { key: "chats", icon: ICONS.message, label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F", needsAuth: true },
     { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
   ];
   function closeHub() {
@@ -11087,13 +10971,13 @@
     const disc = posts2.filter((p) => p.type === "discussion");
     if (disc.length) {
       const today = countToday(disc);
-      const msgs = [`${disc.length} ${plural2(disc.length, "\u0442\u0435\u043C\u0430", "\u0442\u0435\u043C\u0438", "\u0442\u0435\u043C")}`];
+      const msgs = [`${disc.length} ${plural2(disc.length, "\u043F\u0438\u0442\u0430\u043D\u043D\u044F", "\u043F\u0438\u0442\u0430\u043D\u043D\u044F", "\u043F\u0438\u0442\u0430\u043D\u044C")}`];
       if (today)
-        msgs.push(`${today} ${plural2(today, "\u043D\u043E\u0432\u0430", "\u043D\u043E\u0432\u0456", "\u043D\u043E\u0432\u0438\u0445")} \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`);
+        msgs.push(`${today} ${plural2(today, "\u043D\u043E\u0432\u0435", "\u043D\u043E\u0432\u0456", "\u043D\u043E\u0432\u0438\u0445")} \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`);
       out.push({
         key: "disc",
         icon: ICONS.message,
-        label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
+        label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F",
         msgs,
         tap: () => window.switchTab && window.switchTab("discussions")
       });
@@ -16458,7 +16342,11 @@ END:VEVENT`
       { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.usersGroup, kind: "tab", tab: "community" },
       // 🔴 Назву виправлено: вкладка `shotam` у таб-барі підписана «Стрічка».
       { id: "shotam", label: "\u0421\u0442\u0440\u0456\u0447\u043A\u0430", icon: ICONS.fileText, kind: "tab", tab: "shotam" },
-      { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions", dot: "discussions" },
+      // 11.08: підпис зведено з таб-баром — «Питання» (було «Обговорення»).
+      // ⚠️ `id` лишається `discussions`: це технічний ключ вкладки (`switchTab`,
+      // `data-tab-dot`, крапка «є нове»), і перейменувати його означало б чіпати
+      // маршрутизацію заради слова, якого людина не бачить.
+      { id: "discussions", label: "\u041F\u0438\u0442\u0430\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions", dot: "discussions" },
       { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.clipboard, kind: "tab", tab: "board", dot: "board" },
       { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
       // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
@@ -16472,7 +16360,7 @@ END:VEVENT`
     // в `requireAuth`, а `openSavedHub` має власну перевірку. Ховати групу від
     // гостя означало б приховати від нього ще й привід зайти.
     { id: "mine", caption: "\u041C\u043E\u0454", items: [
-      // ⚠️ Іконка `mail`, а не `message`: `message` носить «Обговорення» — і саме
+      // ⚠️ Іконка `mail`, а не `message`: `message` носить «Питання» — і саме
       // ту саму мовну бульбашку показує таб-бар. Два однакові значки в одному
       // списку читаються як помилка, а відповідність меню з таб-баром важливіша.
       {

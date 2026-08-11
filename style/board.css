@@ -1047,7 +1047,6 @@ textarea.cm-board-input.bm-invalid {
   overflow: hidden;
 }
 /* Картки-обговорення у стрічці «Збережені» — ті самі відступи, що й оголошення */
-.bd-stream .bd-card--chat { padding: 13px 13px 12px; }
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
@@ -2293,274 +2292,25 @@ textarea.cm-board-input.bm-invalid {
 
 /* ── INLINE-КОМЕНТАРІ ДЛЯ CHAT-КАРТОК ───────────────────────────────────── */
 /* ── Прев'ю картки обговорення (тап → модалка-чат) ──────────────────────── */
-.bd-card--chat { cursor: pointer; }
-.bd-chat-topic {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
 /* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
-.bd-chat-topline {
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.bd-chat-msgcount, .bd-chat-participants {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--gray);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.bd-chat-last {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;   /* два останніх повідомлення — окремими рядками */
-  align-items: stretch;
-  gap: 5px;
-  background: rgba(0,0,0,0.03);
-  border-radius: 10px;
-  padding: 7px 12px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #555;
-}
-.bd-chat-last-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bd-chat-last-msg {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bd-chat-last-time {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--gray);
-  white-space: nowrap;
-}
-.bd-chat-last-author { font-weight: 600; color: var(--red); }
-.bd-chat-last--empty { color: var(--gray); font-style: italic; }
-.bd-chat-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;          /* штрих-пунктирна лінія зміщена нижче (більший відступ над підвалом) */
-  padding-top: 10px;
-  border-top: 1px dashed rgba(0,0,0,0.10);
-  font-size: 12px;
-  color: var(--gray);
-}
-.bd-chat-like {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-right: auto;
-  padding: 4px 6px;
-  margin-left: -6px;
-  border: 0;
-  background: transparent;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 13px;   /* лічильник трохи більший разом із сердечком (Вова 14.07) */
-  font-weight: 600;
-  color: var(--gray);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-like:active { background: rgba(0,0,0,0.05); }
-.bd-chat-like--active { color: var(--red); }
-.bd-chat-like svg { flex-shrink: 0; }
-/* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
-.bd-chat-by {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  line-height: 1.25;
-  font-size: 11px;
-  color: #1C1C1E;
-}
-.bd-chat-by-author { text-transform: uppercase; }
-.bd-chat-by-label { font-weight: 700; color: var(--red); }
-.bd-chat-by-date { font-size: 10.5px; color: var(--gray); }
-/* Кнопка «зберегти» в підвалі картки — трохи компактніша */
-.bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
+/* 🗑 11.08 — ТУТ ЖИЛА ВКЛАДКА «ОБГОВОРЕННЯ» ЯК ЧАТ: картка-прев'ю з двома
+   останніми повідомленнями, повноекранна модалка-чат із бульбашками, роздільник
+   «Нові повідомлення», пігулка «N нових», поле «Написати повідомлення…».
+   54 правила видалено разом із переходом на Q&A — новий вигляд лежить у секції
+   «ВКЛАДКА ПИТАННЯ» в кінці файлу.
+   ⚠️ Мертвий CSS тут не лишаємо навмисне: наступна сесія прийняла б його за
+   живий (той самий випадок, що вже був із .bd-title і .board-vignette--bottom).
+   🔴 УРОК ПРО ІНСТРУМЕНТ, а не про стилі. Перша спроба цього прибирання йшла
+   скриптом, який шукав кінець коментаря і брав зріз на ОДИН символ коротший,
+   ніж треба. Закривальний слеш через це губився, коментар лишався незакритим і
+   мовчки зʼїдав наступні правила — зокрема .bd-avatar, через що аватари в списку
+   стали квадратами. Жоден стенд цього не побачив; побачив ЗНІМОК ЕКРАНА.
+   ➡️ Ріжеш CSS скриптом — звіряй кількість відкритих і закритих коментарів
+   ДО і ПІСЛЯ. Рівність — обовʼязкова умова, і вона перевіряється однією командою. */
 
-/* Гість у чаті обговорення — замість поля вводу кнопка входу (читати можна, писати — ні) */
-.bd-chat-login-cta {
-  display: block;
-  width: calc(100% - 24px);
-  margin: 8px 12px calc(10px + env(safe-area-inset-bottom));
-  padding: 13px;
-  border: none;
-  border-radius: 12px;
-  background: var(--brand-grad-sm);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
-.bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
-
-.bd-chat-modal {
-  position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 6px);
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
-  left: 50%;
-  width: min(94vw, 460px);
-  z-index: 1100;                        /* вище таб-бару — меню не перекриває */
-  display: flex;
-  flex-direction: column;
-  background: #F3EFE3;                  /* Вова 20.07: контейнер = колір верх/низ блоків → зона рисочки і заокруглені кути суцільні з шапкою (тіло має власний колір нижче) */
-  border-radius: 22px;
-  overflow: hidden;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.40), 0 6px 18px rgba(0,0,0,0.22);
-  transform: translateX(-50%) scale(0.96);
-  opacity: 0;
-  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease,
-              top 0.28s ease, height 0.28s ease, bottom 0.28s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-modal.visible {
-  transform: translateX(-50%) scale(1);
-  opacity: 1;
-}
-/* Клавіатура відкрита: верх піднімається до самого верху (низ — inline-стилем у JS) */
-.bd-chat-modal--kb {
-  top: calc(env(safe-area-inset-top, 0px) + 6px);
-}
-/* Прибрати нижній safe-area відступ поля при відкритій клавіатурі (інакше кремова
-   смуга між полем і клавіатурою). Та сама логіка, що в приватному чаті (.pm-kb-open). */
-.bd-chat-modal--kb .bd-chat-modal-form { padding-bottom: 10px; }
-
-.bd-chat-modal-handle {
-  width: 38px; height: 4px; border-radius: 2px;
-  background: rgba(0,0,0,0.12);
-  margin: 8px auto 2px; flex-shrink: 0;
-}
-.bd-chat-modal-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 8px 10px;
-  flex-shrink: 0;
-  background: #F3EFE3;                  /* Вова 20.07: верхній блок = колір нижнього (форми #F3EFE3); тіло чату лишається в колір картки #FCFAF4 */
-  /* Тінь ТІЛЬКИ донизу (відділяє шапку від повідомлень — Вова: «знизу добре»).
-     Було 0 4px 12px — blur 12 бив ~8px і ВГОРУ, даючи темну смугу над заголовком
-     (виглядало накладеним). Тепер відʼємний spread -4 прибирає верхнє розпливання:
-     верх модалки суцільний до заокруглених кутів (Вова 14.07). */
-  box-shadow: 0 6px 8px -4px rgba(0,0,0,0.12);
-  z-index: 1;
-}
-.bd-chat-modal-back,
-.bd-chat-modal-close {
-  width: 34px; height: 34px; border: none; background: transparent;
-  font-size: 20px; color: var(--black); border-radius: 50%; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-}
-.bd-chat-modal-back:active,
-.bd-chat-modal-close:active { background: rgba(0,0,0,0.07); }
-.bd-chat-modal-titles { flex: 1; min-width: 0; }
-.bd-chat-modal-title {
-  font-size: 16px; font-weight: 700; color: var(--black);
-  text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.bd-chat-modal-meta {
-  font-size: 12px; color: var(--gray); margin-top: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.bd-chat-modal-meta svg { vertical-align: -2px; margin-right: 2px; }
-.bd-chat-modal-body {
-  flex: 1; overflow-y: auto; padding: 14px 12px;
-  display: flex; flex-direction: column;
-  -webkit-overflow-scrolling: touch;
-  background: #FCFAF4;                  /* Вова 20.07: тіло (де повідомлення) — колір картки; верх/низ модалки #F3EFE3 */
-}
-.bd-chat-stream {
-  display: flex; flex-direction: column; gap: 12px;
-  margin-top: auto;                     /* мало повідомлень → притиснуті донизу */
-}
-.bd-chat-empty {
-  margin: auto; text-align: center; color: var(--gray);
-  font-size: 13px; line-height: 1.5; padding: 24px 12px;
-}
-.bd-chat-empty-icon { display: block; margin-bottom: 8px; opacity: 0.5; }
-.bd-chat-empty-icon svg { width: 32px; height: 32px; }
 .bd-msg-group .bd-avatar { flex-shrink: 0; }
 
-/* ── Роздільник «Нові повідомлення» ── */
-.bd-chat-divider {
-  display: flex; align-items: center; gap: 10px;
-  align-self: stretch; margin: 4px 0;
-  color: var(--red); font-size: 12px; font-weight: 700;
-}
-.bd-chat-divider::before, .bd-chat-divider::after {
-  content: ''; flex: 1; height: 1px; background: rgba(114,47,55,0.25);
-}
-.bd-chat-divider span { white-space: nowrap; }
-
-/* ── Floating-пігулка «N нових повідомлень» ── */
-.bd-chat-newpill {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: 74px; z-index: 5;
-  background: var(--brand-grad-sm); color: #fff; border: none;
-  padding: 7px 16px; border-radius: 18px;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  box-shadow: 0 3px 12px rgba(114,47,55,0.40);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  animation: bd-newpill-in 0.2s ease;
-}
-.bd-chat-newpill[hidden] { display: none; }
-
-/* ── Поле вводу ── */
-.bd-chat-modal-form {
-  display: flex; gap: 8px; align-items: center;
-  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
-  background: #F3EFE3;
-  box-shadow: 0 -5px 14px -2px rgba(0,0,0,0.20);  /* Вова 20.07: помітна тінь вгору (на світлому тілі слабку не видно — посилено) */
-  flex-shrink: 0;
-}
-.bd-chat-modal-input {
-  flex: 1; background: #fff; border: 1px solid rgba(0,0,0,0.10);
-  border-radius: 20px; padding: 10px 16px;
-  font-size: 16px;   /* iOS Safari zoom-fix — нижче 16px iOS auto-zoom-ить input */
-  font-family: inherit; color: var(--black);
-  outline: none; min-width: 0;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-  transition: border-color 0.15s;
-}
-.bd-chat-modal-input:focus { border-color: var(--red); }
-.bd-chat-modal-input::placeholder { color: var(--gray); }
-.bd-chat-modal-send {
-  width: 38px; height: 38px; border: none; border-radius: 50%;
-  background: var(--brand-grad-sm); color: #fff; font-size: 18px; font-weight: 700;
-  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(114,47,55,0.35);
-  -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
-}
-.bd-chat-modal-send:active { transform: scale(0.9); }
-
-/* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
-.bd-card--chat {
-  /* Вова 20.07: картки на глибшому беж-фоні (#E7E1D2) — контраст «аркуш на столі».
-     Не чисто білі, а трохи теплі (#FCFAF4) — Вова: «трохи насиченіші, але не такі
-     кремові як були раніше (#FAF8EF), трішки». */
-  background: #FCFAF4;
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 3px rgba(60,45,20,0.10), 0 8px 22px rgba(60,45,20,0.12);
-}
+/* ── Аватар-кружечок (спільний для карток і екранів зони) ───────────────── */
 .bd-avatar {
   width: 36px;
   height: 36px;
@@ -2571,19 +2321,8 @@ textarea.cm-board-input.bm-invalid {
   font-size: 15px;
   flex-shrink: 0;
 }
-.bd-chat-text {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--black);
-  margin-bottom: 6px;
-}
 /* Заголовок теми у картці обговорення — великі літери, чорний, жирний.
    Лише в межах .bd-card--chat, щоб не зачепити лайв-прев'ю у модалці «Новий пост». */
-.bd-card--chat .bd-chat-text {
-  text-transform: uppercase;
-  color: #1C1C1E;
-  font-weight: 700;
-}
 
 /* Затемнений верхній край — поверх карток (z:8), нижче контролів (z:90).
    ⚠️ 28.07: лишився ТІЛЬКИ для Обговорень (їхній теплий беж `#E7E1D2` не чіпали).
@@ -3795,3 +3534,296 @@ textarea.cm-board-input.bm-invalid {
    екрана і сидить не по центру рядка, бо це гліф шрифту, а не іконка. */
 .cm-ad-author-go { flex: none; display: flex; color: #B0B0B0; }
 .cm-ad-author-go svg { width: 18px; height: 18px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ВКЛАДКА «ПИТАННЯ» (Q&A) — 11.08.2026
+   ──────────────────────────────────────────────────────────────────────────
+   Замінила вигляд «Обговорень». Правило відбору кольорів тут одне: НІЧОГО НЕ
+   ВИГАДУВАТИ. Уся зона бере наявну родину поверхні Дошки (`--board-bg` /
+   `--board-card` / `--board-line` / `--board-press`), бо це той самий екран зі
+   списком карток, і бренд-бордовий (`--red`, `--brand-grad-sm`) для акцентів.
+   Нових сірих не заведено жодного — саме через розсипані «майже однакові» сірі
+   у проєкті вже був окремий прохід зведення 29.07.
+
+   🔴 Усе scoped під `#disc-content`, крім `.qa-screen` і `.qa-answer*` — ті
+   живуть у `body` (повноекранний шар) і в аркушах FAB, тобто поза коренем.
+
+   📐 Розміри під аудиторію 40-70+: текст питання 17px, відповідь 15.5px, тихий
+   рядок 13px (нижче не опускаємось). Стара картка чату мала прев'ю 12-13px —
+   саме воно й було найдрібнішим текстом вкладки.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Шапка вкладки: назва · слоган · головна дія ─────────────────────────── */
+#disc-content .qa-hero {
+  padding: 14px 14px 12px;
+  background: var(--brand-grad);
+  border-radius: 0 0 18px 18px;
+}
+#disc-content .qa-hero-title {
+  margin: 0;
+  font-size: 19px; font-weight: 800; letter-spacing: 0.4px;
+  color: #fff;
+}
+#disc-content .qa-hero-sub {
+  margin: 3px 0 0;
+  font-size: 13.5px; font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+}
+/* Головна дія екрана. Біла на бордовому — найвищий контраст, який тут можливий;
+   вона мусить читатись як кнопка з першого погляду, без наведення й без здогадів. */
+#disc-content .qa-ask {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 12px;
+  min-height: 48px;                     /* > 44px тап-цілі Apple HIG */
+  padding: 0 16px;
+  border: 0; border-radius: 14px;
+  background: #fff; color: var(--red);
+  font-size: 16px; font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+#disc-content .qa-ask:active { transform: scale(0.985); background: #F2F2F0; }
+#disc-content .qa-ask svg { width: 20px; height: 20px; flex: none; }
+
+/* Чіпи. Малюються, лише коли є питання без відповіді (`unansweredCount`) —
+   мертвий фільтр із нулем вбиває екран (урок чіпів табла новин 31.07). */
+#disc-content .qa-chips { display: flex; gap: 8px; margin-top: 10px; }
+#disc-content .qa-chip {
+  min-height: 34px; padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  background: transparent; color: rgba(255, 255, 255, 0.9);
+  font-size: 13.5px; font-weight: 700;
+  cursor: pointer;
+}
+#disc-content .qa-chip--on { background: #fff; color: var(--red); border-color: #fff; }
+#disc-content .qa-chip-n { opacity: 0.75; margin-left: 3px; }
+
+/* ── Картка питання ──────────────────────────────────────────────────────── */
+/* Не scoped: ту саму картку показують аркуші FAB «Мої / Збережені питання»,
+   які створюються в `body`. Розійтись цим двом виглядом не можна — це один
+   об'єкт, і саме через дві копії одного правила проєкт уже мав розбіжності. */
+.qa-card {
+  padding: 14px;
+  border: 1px solid var(--board-line);
+  border-radius: 14px;
+  background: var(--board-card);
+  cursor: pointer;
+}
+.qa-card:active { background: var(--board-press); }
+/* ПИТАННЯ домінує: це єдине, за чим людина вирішує «відкривати чи ні». */
+.qa-card-q {
+  margin: 0;
+  font-size: 17px; font-weight: 700; line-height: 1.32;
+  color: #1A1A1A;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.qa-card-by {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 10px;
+  font-size: 13px; color: var(--gray);
+}
+.qa-card-by .bd-avatar { width: 24px; height: 24px; font-size: 11px; flex: none; }
+.qa-card-name { font-weight: 700; color: #3A3A3A; }
+/* Крапка-роздільник малюється псевдоелементом, а не символом у розмітці: у
+   розмітці вона стала б частиною тексту для читача екрана («Олена крапка 2 год»). */
+.qa-card-when::before { content: '·'; margin-right: 6px; opacity: 0.6; }
+.qa-card-by .bd-bookmark { margin-left: auto; }
+.qa-card-foot {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--board-line);
+  font-size: 13px;
+}
+.qa-card-count { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--red); }
+.qa-card-count svg { width: 15px; height: 15px; }
+.qa-card-last { color: var(--gray); }
+/* 🔑 «Без відповіді» — це ЗАКЛИК, а не порожній лічильник: єдиний спосіб оживити
+   Q&A — показати тому, хто знає, де він потрібен. Тому стан має власний акцент,
+   а не приглушення. Ліва смужка, а не колір тексту: колір мусив би конкурувати
+   з бордовим лічильником відповідей, а смужка працює в іншому вимірі. */
+.qa-card--unanswered { border-left: 3px solid var(--red); }
+.qa-card-count--none { color: var(--red); font-weight: 700; }
+
+/* Порожній стан вкладки — перше знайомство. */
+#disc-content .bd-empty-title {
+  display: block; margin-bottom: 6px;
+  font-size: 17px; font-weight: 800; color: #1A1A1A;
+}
+
+/* ── Повноекранний екран питання ─────────────────────────────────────────── */
+/* Живе в `body` (шар `core/layers.js`), тому НЕ scoped. Закриття — системний
+   жест iPhone; власного свайпу тут немає навмисно (див. core/layers.js). */
+.qa-screen {
+  position: fixed; inset: 0;
+  z-index: 1200;
+  display: flex; flex-direction: column;
+  background: var(--board-bg);
+  transform: translateX(100%);
+  transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.qa-screen.visible { transform: translateX(0); }
+
+.qa-head {
+  flex: none;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 10px;
+  background: var(--brand-grad);
+  color: #fff;
+}
+.qa-back {
+  width: 40px; height: 40px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14); color: #fff;
+  cursor: pointer;
+}
+.qa-back:active { background: rgba(255, 255, 255, 0.26); }
+.qa-back svg { width: 22px; height: 22px; }
+.qa-head-title { font-size: 16px; font-weight: 700; }
+.qa-head .bd-bookmark { margin-left: auto; color: #fff; }
+
+.qa-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;                /* Safari не має якоря — свій у keepScroll */
+  padding: 14px 14px calc(env(safe-area-inset-bottom) + 16px);
+}
+
+/* Саме питання — «шапка змісту», не картка: рамка навколо нього змагалася б
+   з картками відповідей за увагу, а ієрархія тут однозначна. */
+.qa-question { padding-bottom: 14px; border-bottom: 1px solid var(--board-line); }
+.qa-question-text {
+  margin: 0;
+  font-size: 22px; font-weight: 800; line-height: 1.28;
+  color: #1A1A1A;
+}
+.qa-question-by {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px;
+  font-size: 13.5px; color: var(--gray);
+}
+.qa-question-by .bd-avatar { width: 30px; height: 30px; font-size: 13px; flex: none; }
+.qa-question-name { font-weight: 700; color: #3A3A3A; }
+.qa-question-when::before { content: '·'; margin-right: 6px; opacity: 0.6; }
+
+/* «Мене теж цікавить» — той самий рядок реакції в базі, що раніше був ❤️ на
+   картці (значення `❤️` не змінилось, див. handleLikeClick). Тут воно доречне:
+   лайкати чуже незнання нема чого, а сказати «я теж хочу знати» — є що. */
+.qa-interest {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px; min-height: 44px; padding: 0 15px;
+  border: 1px solid var(--board-line); border-radius: 999px;
+  background: var(--board-card); color: #3A3A3A;
+  font-size: 14.5px; font-weight: 600;
+  cursor: pointer;
+}
+.qa-interest:active { background: var(--board-press); }
+.qa-interest svg { width: 18px; height: 18px; flex: none; }
+.qa-interest--on { border-color: var(--red); color: var(--red); }
+.qa-interest-n { font-weight: 800; }
+
+.qa-answers-title {
+  margin: 18px 0 10px;
+  font-size: 12.5px; font-weight: 800; letter-spacing: 0.7px;
+  color: var(--gray);
+}
+
+/* ── Відповідь ───────────────────────────────────────────────────────────── */
+/* 🔴 НЕ БУЛЬБАШКА. Картка на всю ширину, без вирівнювання «мої справа / чужі
+   зліва» — саме воно, а не колір, робило екран месенджером. Тут усі відповіді
+   рівні між собою: у Q&A немає «моєї сторони діалогу», є спільна відповідь на
+   спільне питання. */
+.qa-answer {
+  padding: 13px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--board-line); border-radius: 14px;
+  background: var(--board-card);
+}
+.qa-answer-head { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--gray); }
+.qa-answer-head .bd-avatar { width: 26px; height: 26px; font-size: 12px; flex: none; }
+.qa-answer-name { font-weight: 700; color: #3A3A3A; }
+.qa-answer-when::before { content: '·'; margin-right: 5px; opacity: 0.6; }
+.qa-answer-edited { font-size: 11.5px; opacity: 0.7; }
+.qa-answer-more {
+  margin-left: auto; width: 34px; height: 34px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--gray);
+  font-size: 18px; line-height: 1; cursor: pointer;
+}
+.qa-answer-more:active { background: var(--board-press); }
+.qa-answer-text {
+  margin: 8px 0 0;
+  font-size: 15.5px; line-height: 1.45; color: #1A1A1A;
+  white-space: pre-wrap; word-break: break-word;
+}
+/* «Відповісти» — ЯВНА кнопка, а не прихований свайп. Приховані жести для
+   аудиторії 60+ означають «функції немає»: про них ніде не написано. */
+.qa-answer-reply {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px; min-height: 36px; padding: 0 10px 0 6px;
+  border: 0; border-radius: 10px;
+  background: transparent; color: var(--red);
+  font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.qa-answer-reply:active { background: var(--board-press); }
+.qa-answer-reply svg { width: 15px; height: 15px; }
+
+/* Вкладена відповідь: відступ + смужка. Глибина рівно ДВА рівні — третій
+   перетворив би Q&A на ту саму розмову, від якої вкладка відходить. */
+.qa-answer-subs { margin: -4px 0 10px 16px; padding-left: 12px; border-left: 2px solid var(--board-line); }
+.qa-answer--sub { margin-bottom: 8px; padding: 11px 12px; border-radius: 12px; }
+.qa-answer--sub .qa-answer-text { font-size: 14.5px; }
+
+/* Порожній список відповідей — теж заклик, а не констатація. */
+.qa-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 26px 18px; text-align: center;
+  border: 1px dashed var(--board-line); border-radius: 14px;
+}
+.qa-empty-icon { color: var(--red); }
+.qa-empty-icon svg { width: 26px; height: 26px; }
+.qa-empty-title { font-size: 15.5px; font-weight: 700; color: #3A3A3A; }
+.qa-empty-sub { font-size: 13.5px; color: var(--gray); }
+
+/* ── Поле відповіді ──────────────────────────────────────────────────────── */
+.qa-form {
+  flex: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  background: var(--board-card);
+  border-top: 1px solid var(--board-line);
+}
+.qa-input {
+  flex: 1; min-width: 0; min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--board-line); border-radius: 999px;
+  background: var(--board-bg);
+  font-size: 16px;                      /* < 16px → iOS зумить сторінку на фокусі */
+  color: #1A1A1A;
+}
+.qa-input:focus { outline: none; border-color: var(--red); }
+/* Кнопка ПІДПИСАНА словом, а не стрілкою «↑». Стрілка — мова месенджера і
+   вимагає здогадки; «Надіслати» не вимагає нічого. */
+.qa-send {
+  flex: none; min-height: 44px; padding: 0 16px;
+  border: 0; border-radius: 999px;
+  background: var(--brand-grad-sm); color: #fff;
+  font-size: 14.5px; font-weight: 700; cursor: pointer;
+}
+.qa-send:active { background: var(--brand-grad-press); }
+.qa-login-cta {
+  flex: none; margin: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  min-height: 48px; border: 0; border-radius: 14px;
+  background: var(--brand-grad-sm); color: #fff;
+  font-size: 15.5px; font-weight: 700; cursor: pointer;
+}
+/* Клавіатура відкрита: екран займає рівно видиму область (див. applyKb). */
+.qa-screen--kb .qa-body { padding-bottom: 12px; }
+.qa-composebar { flex: none; }
+
+/* Підказка-приклад у формі створення питання. */
+.disc-compose-hint { margin: 6px 0 0; font-size: 13px; color: var(--gray); }
