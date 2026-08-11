@@ -161,6 +161,14 @@ function answerWord(n) {
 // можуть, і поле лишається порожнім назавжди. Рахувати тут — безкоштовно:
 // коментарі всіх тем уже лежать у памʼяті (`setDiscussionsData` ← `fetchAllComments`),
 // другого джерела правди не заводимо і в мережу не ходимо.
+// Скільки живих відповідей має питання. Експортовано, бо на це число спираються
+// ДВА місця поза цим файлом: чіп «Без відповіді» і його лічильник у шапці вкладки
+// (`board.js`). Другого підрахунку не заводимо — два лічильники того самого вже
+// розходились у проєкті (баг B-27).
+export function answersCount(postId) {
+  return activeComments(postId).length;
+}
+
 export function lastAnswerTs(postId) {
   let max = 0;
   for (const c of activeComments(postId)) {

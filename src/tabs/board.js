@@ -44,7 +44,7 @@ import {
   cardTitleText,
 } from '../core/board-shared.js';
 import {
-  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs,
+  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs, answersCount,
   openDiscussionCompose, openMyDiscussions, openSavedDiscussions,
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange,
@@ -230,6 +230,11 @@ let activeType     = 'board';
 let activeCategory = 'all';
 let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
+// Чіп «Без відповіді» на вкладці «Питання» (11.08). Стан ЛИШЕ в памʼяті модуля і
+// свідомо не зберігається між сесіями: людина, яка вчора допомагала відповідати,
+// сьогодні заходить читати — і мовчазний фільтр, який пережив перезапуск, показав
+// би їй порожній екран замість усіх питань.
+let qaUnansweredOnly = false;
 
 // Коментарі/лайки обговорень — стан у board-discussions.js (setDiscussionsData
 // з renderBoard нижче). Закладки (savedIds) — стан у core/board-shared.js.
@@ -1371,6 +1376,13 @@ function getFilteredPosts(opts = {}) {
     if (activeType === 'board' && activeCategory !== 'all' && !opts.ignoreCategory) {
       if (p.category !== activeCategory) return false;
     }
+    // Чіп «Без відповіді» (питання). ⚠️ `ignoreQaChip` — для ЛІЧИЛЬНИКА на самому
+    // чіпі: він мусить рахуватись по набору, що пройшов решту фільтрів (пошук), але
+    // ще не звужений собою, інакше чіп показував би власний результат замість
+    // кількості. Та сама пастка, що з лічильниками категорій Дошки.
+    if (activeType === 'chat' && qaUnansweredOnly && !opts.ignoreQaChip) {
+      if (answersCount(p.id) > 0) return false;
+    }
     // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
     // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
     if (activeType === 'board' && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
@@ -1386,6 +1398,13 @@ function getFilteredPosts(opts = {}) {
     }
     return true;
   });
+}
+
+// Скільки питань ще без жодної відповіді — число для чіпа «Без відповіді».
+// Рахуємо по набору ПІСЛЯ пошуку (`ignoreQaChip` знімає лише сам чіп), інакше він
+// обіцяв би більше, ніж покаже.
+function unansweredCount() {
+  return getFilteredPosts({ ignoreQaChip: true }).filter(p => answersCount(p.id) === 0).length;
 }
 
 // Кількість для лічильника шапки Дошки. Коли обраний конкретний НП і в ньому
@@ -1406,12 +1425,36 @@ function renderHeader() {
   // Перемикач Дошка|Обговорення прибрано (Етап 1 крок 2b): Дошка = чистий маркетплейс.
   // «Обговорення» відкриваються з вкладки «Чати» (режим activeType='chat') і мають
   // власну шапку з кнопкою «← назад» (веде у вкладку Чати). «Збережені» — з FAB-підменю.
-  // Обговорення — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
-  // Обговорення (варіант C, Вова 21.07): заголовок «ОБГОВОРЕННЯ» прибрано — він
-  // ДУБЛЮВАВ таб-бар знизу (там та сама назва підсвічена). Лишаємо лише пошук →
-  // чистіше + більше місця під картки. Висоту шапки міряє syncBoardBodyOffset
-  // (CSS-fallback #disc-content .bd-body теж зменшено під нову висоту).
-  const discHead = '';
+  // Питання — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
+  //
+  // 🔴 11.08 — ШАПКА ПОВЕРНУЛАСЬ, І ЦЕ СВІДОМИЙ ВІДКАТ РІШЕННЯ 21.07.
+  // Тоді заголовок «ОБГОВОРЕННЯ» прибрали з аргументом «дублює таб-бар». Аргумент
+  // був чинний рівно для НАЗВИ — і хибний для того, що тут насправді бракувало.
+  // Таб-бар каже, ДЕ людина. Він не каже, ЩО тут робити, а вся проблема вкладки
+  // була саме в цьому (Вова: «не дуже розумію, що я тут маю робити»).
+  // 🔑 Тому повертається не назва, а ДІЯ: кнопка «Запитати громаду» першим
+  // елементом сторінки. Вона робить те саме, що пункт FAB `disc-create`, тобто
+  // другого шляху подачі не заводимо — лише другий, видимий вхід.
+  // ⚠️ Той самий рахунок уже вигравала Дошка 01.08: назва + слоган-дієслова
+  // повернулись туди після скарги «взагалі неясно, що це таке».
+  //
+  // Чіп «Без відповіді» малюється, ЛИШЕ коли такі питання є (`unansweredCount`) —
+  // мертва кнопка з нулем вбиває екран; той самий відбір, що в меню категорій Дошки.
+  const unanswered = activeType === 'chat' ? unansweredCount() : 0;
+  const discHead = activeType !== 'chat' ? '' : `
+    <div class="qa-hero">
+      <h2 class="qa-hero-title">ПИТАННЯ ГРОМАДИ</h2>
+      <p class="qa-hero-sub">Не знаєте — запитайте сусідів</p>
+      <button class="qa-ask" type="button" data-qa-ask>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9.5a4 4 0 1 1 4 4v2"/><path d="M12 19.5v.01"/></svg>
+        Запитати громаду
+      </button>
+      ${unanswered ? `
+      <div class="qa-chips">
+        <button class="qa-chip${qaUnansweredOnly ? '' : ' qa-chip--on'}" type="button" data-qa-chip="all">Усі</button>
+        <button class="qa-chip${qaUnansweredOnly ? ' qa-chip--on' : ''}" type="button" data-qa-chip="unanswered">Без відповіді <span class="qa-chip-n">${unanswered}</span></button>
+      </div>` : ''}
+    </div>`;
 
   const showCategories = activeType === 'board';
   // 🕘 ІСТОРІЯ ФІЛЬТРА КАТЕГОРІЙ — три стани, щоб наступна сесія не ходила по колу:
@@ -1539,7 +1582,7 @@ function renderHeader() {
         <div class="bd-search">
           <span class="bd-search-icon">${ICONS.search}</span>
           <input class="bd-search-input" id="bd-search-input" type="search"
-                 placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
+                 placeholder="${activeType === 'chat' ? 'Пошук серед питань…' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
         </div>
         ${showCategories ? locFilterHtml : ''}
@@ -1659,6 +1702,19 @@ function emptyStateHtml() {
   if (activeCategory !== 'all') причини.push(`у «${escapeHtml(catLabel(activeCategory))}»`);
   if (activeLocation !== COMMUNITY_ALL) причини.push(`для «${escapeHtml(locLabel(activeLocation))}»`);
   if (searchQuery.trim()) причини.push(`за запитом «${escapeHtml(searchQuery.trim())}»`);
+  if (activeType === 'chat' && qaUnansweredOnly) причини.push('серед питань без відповіді');
+
+  // 🔑 ПОРОЖНЯ ВКЛАДКА «ПИТАННЯ» — ЦЕ МОМЕНТ ПЕРШОГО ЗНАЙОМСТВА, А НЕ ПОМИЛКА.
+  // «Тут поки порожньо» на Дошці доречне (людина знає, що таке дошка оголошень), а
+  // тут це був би єдиний екран, який новачок побачить — і він не сказав би нічого
+  // про те, навіщо сюди заходити. Пояснення живе саме тут, а не плашкою в шапці, яку
+  // сотий раз прогортає той, хто вже все зрозумів.
+  if (!причини.length && activeType === 'chat') {
+    return `<span class="bd-empty-title">Питань поки немає</span>
+      Тут жителі громади питають одне одного про те, чого не знайти в інтернеті:
+      коли концерт, чи працює амбулаторія, коли ремонтуватимуть дорогу.
+      <button class="bd-empty-reset" type="button" data-qa-ask>Поставити перше питання</button>`;
+  }
 
   if (!причини.length) return 'Тут поки порожньо';
 
@@ -1973,7 +2029,24 @@ function renderAll() {
     activeCategory = 'all';
     activeLocation = COMMUNITY_ALL;
     searchQuery = '';
+    qaUnansweredOnly = false;
     renderAll();
+  });
+
+  // Вкладка «Питання»: головна кнопка і чіпи. Делегування на корені, а не слухач на
+  // самій кнопці — вона живе в шапці, яку `renderAll` перестворює, і прямий слухач
+  // помер би на першому ж перемальовуванні (та сама причина, що в скидання фільтрів).
+  el.addEventListener('click', (e) => {
+    // Той самий шлях, що пункт FAB `disc-create` — другого способу подати питання
+    // не заводимо, лише другий вхід у нього.
+    if (e.target.closest('[data-qa-ask]')) {
+      requireAuth('поставити питання', openDiscussionCompose);
+      return;
+    }
+    const chip = e.target.closest('[data-qa-chip]');
+    if (!chip) return;
+    qaUnansweredOnly = chip.dataset.qaChip === 'unanswered';
+    renderAll();   // саме renderAll: міняється і стан чіпів у шапці, і список
   });
 
 

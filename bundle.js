@@ -3962,6 +3962,9 @@
       return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456";
     return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439";
   }
+  function answersCount(postId) {
+    return activeComments(postId).length;
+  }
   function lastAnswerTs(postId) {
     let max = 0;
     for (const c of activeComments(postId)) {
@@ -6542,6 +6545,7 @@
   var activeCategory = "all";
   var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
+  var qaUnansweredOnly = false;
   function boardActionsHtml(post) {
     return `
     <div class="bd-actions bd-actions--board-compact">
@@ -7108,6 +7112,10 @@
         if (p.category !== activeCategory)
           return false;
       }
+      if (activeType === "chat" && qaUnansweredOnly && !opts.ignoreQaChip) {
+        if (answersCount(p.id) > 0)
+          return false;
+      }
       if (activeType === "board" && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
         if (p.location !== activeLocation && !isCommunityWide(p.location))
           return false;
@@ -7125,6 +7133,9 @@
       return true;
     });
   }
+  function unansweredCount() {
+    return getFilteredPosts({ ignoreQaChip: true }).filter((p) => answersCount(p.id) === 0).length;
+  }
   function getBoardDisplayCount() {
     if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
       return getFilteredPosts().length;
@@ -7133,7 +7144,21 @@
     return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
   }
   function renderHeader() {
-    const discHead = "";
+    const unanswered = activeType === "chat" ? unansweredCount() : 0;
+    const discHead = activeType !== "chat" ? "" : `
+    <div class="qa-hero">
+      <h2 class="qa-hero-title">\u041F\u0418\u0422\u0410\u041D\u041D\u042F \u0413\u0420\u041E\u041C\u0410\u0414\u0418</h2>
+      <p class="qa-hero-sub">\u041D\u0435 \u0437\u043D\u0430\u0454\u0442\u0435 \u2014 \u0437\u0430\u043F\u0438\u0442\u0430\u0439\u0442\u0435 \u0441\u0443\u0441\u0456\u0434\u0456\u0432</p>
+      <button class="qa-ask" type="button" data-qa-ask>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9.5a4 4 0 1 1 4 4v2"/><path d="M12 19.5v.01"/></svg>
+        \u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443
+      </button>
+      ${unanswered ? `
+      <div class="qa-chips">
+        <button class="qa-chip${qaUnansweredOnly ? "" : " qa-chip--on"}" type="button" data-qa-chip="all">\u0423\u0441\u0456</button>
+        <button class="qa-chip${qaUnansweredOnly ? " qa-chip--on" : ""}" type="button" data-qa-chip="unanswered">\u0411\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 <span class="qa-chip-n">${unanswered}</span></button>
+      </div>` : ""}
+    </div>`;
     const showCategories = activeType === "board";
     const heroHtml = showCategories ? `
     <div class="bd-hero">
@@ -7171,7 +7196,7 @@
         <div class="bd-search">
           <span class="bd-search-icon">${ICONS.search}</span>
           <input class="bd-search-input" id="bd-search-input" type="search"
-                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
+                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0441\u0435\u0440\u0435\u0434 \u043F\u0438\u0442\u0430\u043D\u044C\u2026" : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
         </div>
         ${showCategories ? locFilterHtml : ""}
@@ -7231,6 +7256,14 @@
       \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0434\u043B\u044F \xAB${escapeHtml(locLabel(activeLocation))}\xBB`);
     if (searchQuery.trim())
       \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push(`\u0437\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery.trim())}\xBB`);
+    if (activeType === "chat" && qaUnansweredOnly)
+      \u043F\u0440\u0438\u0447\u0438\u043D\u0438.push("\u0441\u0435\u0440\u0435\u0434 \u043F\u0438\u0442\u0430\u043D\u044C \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456");
+    if (!\u043F\u0440\u0438\u0447\u0438\u043D\u0438.length && activeType === "chat") {
+      return `<span class="bd-empty-title">\u041F\u0438\u0442\u0430\u043D\u044C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</span>
+      \u0422\u0443\u0442 \u0436\u0438\u0442\u0435\u043B\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u0438\u0442\u0430\u044E\u0442\u044C \u043E\u0434\u043D\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u043F\u0440\u043E \u0442\u0435, \u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0442\u0438 \u0432 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0456:
+      \u043A\u043E\u043B\u0438 \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0447\u0438 \u043F\u0440\u0430\u0446\u044E\u0454 \u0430\u043C\u0431\u0443\u043B\u0430\u0442\u043E\u0440\u0456\u044F, \u043A\u043E\u043B\u0438 \u0440\u0435\u043C\u043E\u043D\u0442\u0443\u0432\u0430\u0442\u0438\u043C\u0443\u0442\u044C \u0434\u043E\u0440\u043E\u0433\u0443.
+      <button class="bd-empty-reset" type="button" data-qa-ask>\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F</button>`;
+    }
     if (!\u043F\u0440\u0438\u0447\u0438\u043D\u0438.length)
       return "\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
     const \u0442\u0435\u043A\u0441\u0442 = `\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043B\u043E\u0441\u044C ${\u043F\u0440\u0438\u0447\u0438\u043D\u0438.join(" ")}`;
@@ -7424,6 +7457,18 @@
       activeCategory = "all";
       activeLocation = COMMUNITY_ALL;
       searchQuery = "";
+      qaUnansweredOnly = false;
+      renderAll();
+    });
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("[data-qa-ask]")) {
+        requireAuth("\u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F", openDiscussionCompose);
+        return;
+      }
+      const chip = e.target.closest("[data-qa-chip]");
+      if (!chip)
+        return;
+      qaUnansweredOnly = chip.dataset.qaChip === "unanswered";
       renderAll();
     });
     const wireMenuButton = (btnId, menuId, onPick) => {
