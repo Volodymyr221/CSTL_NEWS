@@ -4496,23 +4496,23 @@
     return n;
   }
   function renderQuestionCard(p) {
-    const n = activeComments(p.id).length;
-    const \u043C\u0456\u0442\u043A\u0430 = n ? `<span class="qa-card-count">${n} ${answerWord(n)}</span>` : '<span class="qa-card-count qa-card-count--none">\u0429\u0435 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432</span>';
+    const \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 = activeComments(p.id);
+    const n = \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456.length;
+    const \u043F\u0435\u0440\u0448\u0430 = \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456[0];
+    const \u0446\u0438\u0442\u0430\u0442\u0430 = \u043F\u0435\u0440\u0448\u0430 ? `<div class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(\u043F\u0435\u0440\u0448\u0430.sender_uid)}>${liveName(\u043F\u0435\u0440\u0448\u0430.author || "\u0416\u0438\u0442\u0435\u043B\u044C", \u043F\u0435\u0440\u0448\u0430.sender_uid)}:</span> ${escapeHtml(\u043F\u0435\u0440\u0448\u0430.text)}</div>` : "";
+    const \u043C\u0456\u0442\u043A\u0430 = n ? `<span class="qa-row-n">${n} ${answerWord(n)}</span>` : '<span class="qa-row-n qa-row-n--none">\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C</span>';
     return `
-    <article class="bd-card qa-card${n ? "" : " qa-card--unanswered"}"
+    <article class="qa-row${n ? "" : " qa-row--unanswered"}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <div class="qa-card-top">
-        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-        ${saveBtnHtml(p)}
-      </div>
+      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
       <div class="qa-card-meta">
-        ${authorAvatar(p.author, p.owner_uid)}
         <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
         <span class="qa-card-dot" aria-hidden="true">\xB7</span>
         <span class="qa-card-when">${formatTime(postTime(p))}</span>
         <span class="qa-card-dot" aria-hidden="true">\xB7</span>
         ${\u043C\u0456\u0442\u043A\u0430}
       </div>
+      ${\u0446\u0438\u0442\u0430\u0442\u0430}
     </article>
   `;
   }
@@ -7306,6 +7306,11 @@
       <div class="board-backdrop" id="board-backdrop"></div>
       ${corkboard(sorted)}
     `;
+    }
+    if (activeType === "chat") {
+      return `
+      <div class="board-backdrop" id="board-backdrop"></div>
+      <div class="qa-group">${sorted.map((p) => renderCard(p)).join("")}</div>`;
     }
     return `
     <div class="board-backdrop" id="board-backdrop"></div>
