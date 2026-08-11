@@ -7064,11 +7064,22 @@
            \u0432\u0443\u0437\u043B\u043E\u043C \u0456 \u0439\u043E\u0433\u043E \u043D\u0435 \u0442\u0440\u0435\u0431\u0430 \u043F\u0435\u0440\u0435\u043C\u0430\u043B\u044C\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0440\u0430\u0437\u043E\u043C \u0437 \u0456\u043A\u043E\u043D\u043A\u043E\u044E.
            \u26A0\uFE0F \u0411\u0435\u0437 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0443 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 \u2014 \u0432\u0456\u043D \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E
            \u0440\u044F\u0434\u043A\u0430, \u0456 \u043B\u0430\u043F\u043A\u0430 \u0437\u0430\u043A\u0440\u0438\u043B\u0430 \u0431 \u0439\u043E\u0433\u043E. \u0421\u0442\u043E\u0440\u043E\u0436 check-imports \u043B\u043E\u0432\u0438\u0442\u044C \u0446\u0435 \u043D\u0430 \u0437\u0431\u0456\u0440\u0446\u0456. -->
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
+      <!-- \u{1F195} 11.08 \u2014 \u0422\u0410 \u0421\u0410\u041C\u0410 \u041F\u0406\u0414\u041A\u0410\u0417\u041A\u0410, \u0429\u041E \u041D\u0410 \xAB\u041F\u0418\u0422\u0410\u041D\u041D\u042F\u0425\xBB (\u0437\u0430\u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438).
+           \u041A\u043D\u043E\u043F\u043A\u0430 \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \u0437\u0430 \u0437\u0430\u043F\u0443\u0441\u043A \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 \u0440\u043E\u0437\u0433\u043E\u0440\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u0456 \u043A\u0430\u0436\u0435, \u0449\u043E \u0440\u043E\u0431\u0438\u0442\u044C.
+           \u041F\u0456\u0434\u043F\u0438\u0441 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u0443 \u0440\u043E\u0437\u043C\u0456\u0442\u0446\u0456 \u041D\u0410\u0412\u041C\u0418\u0421\u041D\u041E: \u043D\u0430 \u0414\u043E\u0448\u0446\u0456 \u0432\u0456\u043D \u0437\u0430\u043B\u0435\u0436\u0438\u0442\u044C \u0432\u0456\u0434
+           \u043D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0438\u0445, \u044F\u043A\u0456 \u0434\u043E\u0457\u0436\u0434\u0436\u0430\u044E\u0442\u044C \u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u043E, \u0442\u043E\u0436 \u0442\u0435\u043A\u0441\u0442 \u0441\u0442\u0430\u0432\u0438\u0442\u044C JS \u0443 \u043C\u043E\u043C\u0435\u043D\u0442
+           \u043F\u043E\u043A\u0430\u0437\u0443 (\u0444\u0443\u043D\u043A\u0446\u0456\u044F fabHintLabel) \u2014 \u043F\u043B\u044E\u0441 \xAB\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\xBB, \u043A\u043E\u043D\u0432\u0435\u0440\u0442
+           \xAB\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F N\xBB. \u0412\u043F\u0438\u0441\u0430\u043D\u0438\u0439 \u0441\u044E\u0434\u0438 \u0440\u044F\u0434\u043E\u043A \u0431\u0443\u0432 \u0431\u0438 \u0442\u0438\u043C \u0441\u0430\u043C\u0438\u043C \u0434\u0443\u0431\u043B\u0435\u043C \u043F\u0440\u0430\u0432\u0434\u0438,
+           \u0449\u043E \u0432\u0436\u0435 \u0434\u0432\u0456\u0447\u0456 \u0433\u043E\u0440\u0456\u0432 \u0443 \u0446\u044C\u043E\u043C\u0443 \u0444\u0430\u0439\u043B\u0456.
+           \u26A0\uFE0F \u0411\u0415\u0417 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0443 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 \u2014 \u0432\u0456\u043D \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E
+           \u0440\u044F\u0434\u043A\u0430, \u0456 \u043B\u0430\u043F\u043A\u0430 \u0437\u0430\u043A\u0440\u0438\u043B\u0430 \u0431 \u0439\u043E\u0433\u043E. \u0421\u0430\u043C\u0435 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043C\u0435\u043D\u0435 \u0439 \u0441\u043F\u0456\u0439\u043C\u0430\u0432
+           check-imports \u043F\u0456\u0434 \u0447\u0430\u0441 \u0446\u0456\u0454\u0457 \u043F\u0440\u0430\u0432\u043A\u0438. -->
+      <button class="cm-board-trigger board-trigger--fixed board-trigger--labeled" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-msg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+        <span class="qa-fab-label"></span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
@@ -7763,27 +7774,40 @@
   function getBoardRoot() {
     return discOpen ? document.getElementById("disc-content") : document.getElementById("board-content");
   }
-  var askHintPlayed = false;
+  var askHintPlayed = { discussions: false, board: false };
   var askHintTimers = [];
   function stopAskHint() {
     askHintTimers.forEach(clearTimeout);
     askHintTimers = [];
     document.getElementById("board-trigger")?.classList.remove("qa-fab-wide");
   }
-  function playAskHint() {
-    if (askHintPlayed)
+  function fabHintLabel(btn, \u0437\u043E\u043D\u0430) {
+    if (\u0437\u043E\u043D\u0430 === "discussions")
+      return "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438";
+    const n = unreadChatsCount();
+    if (btn.classList.contains("has-unread") && n > 0) {
+      return `\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F <span class="qa-fab-n">${n}</span>`;
+    }
+    return "\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+  }
+  function playAskHint(\u0437\u043E\u043D\u0430 = "discussions") {
+    if (askHintPlayed[\u0437\u043E\u043D\u0430])
       return;
     const btn = document.getElementById("board-trigger");
     if (!btn || !btn.classList.contains("board-trigger--labeled"))
       return;
     const label = btn.querySelector(".qa-fab-label");
-    const icon = btn.querySelector(".cm-board-trigger-icon svg");
     if (!label)
       return;
-    askHintPlayed = true;
-    const need = Math.ceil(label.scrollWidth) + 6;
-    btn.style.setProperty("--qa-fab-w", need + "px");
+    const \u0432\u0438\u0434\u0438\u043C\u0430\u0406\u043A\u043E\u043D\u043A\u0430 = () => btn.querySelector(
+      btn.classList.contains("has-unread") ? ".cm-board-trigger-msg svg" : ".cm-board-trigger-icon svg"
+    );
+    let icon = null;
+    askHintPlayed[\u0437\u043E\u043D\u0430] = true;
     askHintTimers.push(setTimeout(() => {
+      label.innerHTML = fabHintLabel(btn, \u0437\u043E\u043D\u0430);
+      btn.style.setProperty("--qa-fab-w", Math.ceil(label.scrollWidth) + 6 + "px");
+      icon = \u0432\u0438\u0434\u0438\u043C\u0430\u0406\u043A\u043E\u043D\u043A\u0430();
       requestAnimationFrame(() => {
         btn.classList.add("qa-fab-wide");
         if (icon)
@@ -8030,6 +8054,10 @@
           syncBoardBodyOffset();
           fitBoardAuthors();
         });
+      if (tab === "board")
+        setTimeout(() => playAskHint("board"), 0);
+      if (tab !== "board" && tab !== "discussions")
+        stopAskHint();
       if (tab === "board")
         maybeShowBoardRules();
     });

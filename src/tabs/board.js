@@ -18,7 +18,7 @@ import { openBoardModal } from './community-modal.js';
 // він жив у кнопці-меню категорій, втратив користувача 01.08 разом із нею, і
 // повернувся, коли фільтр став кружечком у шапці (рішення Вови).
 import { catColor, catIcon, catShort, catLabel, ALL_ICON, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached, unreadChatsCount } from './board-chat.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
@@ -1321,11 +1321,22 @@ function renderFab() {
            вузлом і його не треба перемальовувати разом з іконкою.
            ⚠️ Без зворотних лапок у цьому коментарі — він усередині шаблонного
            рядка, і лапка закрила б його. Сторож check-imports ловить це на збірці. -->
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
+      <!-- 🆕 11.08 — ТА САМА ПІДКАЗКА, ЩО НА «ПИТАННЯХ» (замовлення Вови).
+           Кнопка один раз за запуск застосунку розгортається і каже, що робить.
+           Підпис порожній у розмітці НАВМИСНО: на Дошці він залежить від
+           непрочитаних, які доїжджають асинхронно, тож текст ставить JS у момент
+           показу (функція fabHintLabel) — плюс «Подати оголошення», конверт
+           «Повідомлення N». Вписаний сюди рядок був би тим самим дублем правди,
+           що вже двічі горів у цьому файлі.
+           ⚠️ БЕЗ зворотних лапок у цьому коментарі — він усередині шаблонного
+           рядка, і лапка закрила б його. Саме на цьому мене й спіймав
+           check-imports під час цієї правки. -->
+      <button class="cm-board-trigger board-trigger--fixed board-trigger--labeled" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-msg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
+        <span class="qa-fab-label"></span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>`;
@@ -2583,7 +2594,11 @@ function getBoardRoot() {
 // кличеться на КОЖЕН вхід у вкладку, тож без прапорця кнопка розгорталась би
 // щоразу, як людина перемикається між «Стрічкою» і «Питаннями» — це вже не
 // пояснення, а смикання в кутку екрана.
-let askHintPlayed = false;
+// 🆕 11.08 — ЗОН ДВІ, І ПРАПОРЦІ В НИХ ОКРЕМІ. Замовлення Вови: та сама підказка
+// має бути й на Дошці. Окремі прапорці, а не один спільний: людина, яка за один
+// запуск відкрила обидві вкладки, мусить побачити підказку в КОЖНІЙ — вони
+// пояснюють різні дії («Запитати» проти «Подати оголошення»).
+const askHintPlayed = { discussions: false, board: false };
 let askHintTimers = [];
 
 // Зняти підказку негайно (тап по кнопці, вихід із вкладки, розкриття меню).
@@ -2593,14 +2608,41 @@ function stopAskHint() {
   document.getElementById('board-trigger')?.classList.remove('qa-fab-wide');
 }
 
-function playAskHint() {
-  if (askHintPlayed) return;
+// Підпис розгорнутої кнопки. 🔴 ВИРІШУЄТЬСЯ В МОМЕНТ ПОКАЗУ, а не при вході у
+// вкладку, і це не дрібниця: кількість непрочитаних приходить АСИНХРОННО
+// (`refreshUnreadBadge` — два запити в базу), тож на холодному старті при вході
+// вона ще нуль, а через півсекунди вже ні.
+// 🔑 Стан беремо з КЛАСУ САМОЇ КНОПКИ (`has-unread`), а не з окремого запиту:
+// цей клас керує тим, ЯКА ІКОНКА намальована (плюс чи конверт), тож підпис і
+// малюнок фізично не можуть розійтись. Другий лічильник того самого вже
+// розходився в проєкті (баг B-27) — повторювати не будемо.
+function fabHintLabel(btn, зона) {
+  if (зона === 'discussions') return 'Запитати';
+  const n = unreadChatsCount();
+  if (btn.classList.contains('has-unread') && n > 0) {
+    // ⚠️ «Повідомлення N», а НЕ «N повідомлень»: число рахує РОЗМОВИ (людей), а
+    // не окремі повідомлення — `_unreadChats = people.size` у board-chat.js, і
+    // так зроблено свідомо, щоб бейдж і список казали одне й те саме. Підпис
+    // «2 повідомлення» стверджував би те, чого ми не знаємо.
+    return `Повідомлення <span class="qa-fab-n">${n}</span>`;
+  }
+  return 'Подати оголошення';
+}
+
+function playAskHint(зона = 'discussions') {
+  if (askHintPlayed[зона]) return;
   const btn = document.getElementById('board-trigger');
   if (!btn || !btn.classList.contains('board-trigger--labeled')) return;
   const label = btn.querySelector('.qa-fab-label');
-  const icon  = btn.querySelector('.cm-board-trigger-icon svg');
   if (!label) return;
-  askHintPlayed = true;
+  // ⚠️ Крутити треба ТУ іконку, яку видно. На Дошці при непрочитаних замість
+  // плюса намальований конверт (`.cm-board-trigger-msg`), і жорстко взятий
+  // `.cm-board-trigger-icon` крутив би прозорий вузол — рух був би, а на екрані
+  // нічого. Вибір робимо в момент показу, тим самим класом, що й підпис.
+  const видимаІконка = () => btn.querySelector(
+    btn.classList.contains('has-unread') ? '.cm-board-trigger-msg svg' : '.cm-board-trigger-icon svg');
+  let icon = null;
+  askHintPlayed[зона] = true;
 
   // 🔴 МІРЯЄМО РІВНО ПІДПИС, І БІЛЬШЕ НІЧОГО.
   // Перша редакція рахувала ширину КНОПКИ: `scrollWidth + 46 + 20` (padding
@@ -2612,14 +2654,27 @@ function playAskHint() {
   // (`width: auto`), а тут лишилась єдина величина, якої браузер не знає, — до
   // якої стелі анімувати сам підпис. Запас 6px — на різницю метрик шрифту між
   // рушіями й на субпіксельне округлення.
-  const need = Math.ceil(label.scrollWidth) + 6;
-  btn.style.setProperty('--qa-fab-w', need + 'px');
-
   // Крок 1 — розгортання. `requestAnimationFrame` обовʼязковий: кнопку щойно
   // створив `renderAll()`, і без окремого кадру браузер порахував би початковий
   // і кінцевий стан разом — переходу не було б узагалі, кнопка просто зʼявилась
   // би широкою (та сама пастка, що з класом плавності у `feed.js`, 26.07).
   askHintTimers.push(setTimeout(() => {
+    // ⚠️ Текст і ЙОГО ВИМІР — тут, а не вище: підпис на Дошці залежить від
+    // непрочитаних, а вони доїжджають асинхронно. Міряти ширину до того, як
+    // текст став на місце, означало б міряти чужий рядок.
+    label.innerHTML = fabHintLabel(btn, зона);
+    // 🔴 МІРЯЄМО РІВНО ПІДПИС, І БІЛЬШЕ НІЧОГО.
+    // Перша редакція рахувала ширину КНОПКИ: `scrollWidth + 46 + 20` (padding
+    // ліворуч і праворуч) — і **забула рамку 1+1px**, а `box-sizing: border-box`
+    // означає, що все це входить усередину заданої ширини. Тексту лишалось 70px
+    // при потрібних 71.6 — на iPhone, де шрифт ширший, зрізало помітно більше, і
+    // Вова побачив «Запитат». 🔑 Урок не про 2px: **формула, що дублює числа з
+    // CSS, ламається щоразу, коли CSS міняють.** Тепер ширину кнопки рахує
+    // браузер (`width: auto`), а тут лишилась єдина величина, якої браузер не
+    // знає, — до якої стелі анімувати сам підпис. Запас 6px — на різницю метрик
+    // шрифту між рушіями й на субпіксельне округлення.
+    btn.style.setProperty('--qa-fab-w', (Math.ceil(label.scrollWidth) + 6) + 'px');
+    icon = видимаІконка();
     requestAnimationFrame(() => {
       btn.classList.add('qa-fab-wide');
       if (icon) icon.style.transform = 'rotate(180deg)';
@@ -2973,6 +3028,13 @@ export function initBoard() {
     // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
     // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.
     if (tab === 'board') requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); });
+    // 🆕 11.08 — підказка кнопки й на Дошці, один раз за запуск застосунку.
+    // ⚠️ Стоїть ПІСЛЯ гілок вище невипадково: `renderBoard()`/`renderAll()` у них
+    // перестворюють FAB, і підказка, запущена до цього, чіплялась би до вузла,
+    // якого за мить не стане. Свій прапорець (`board`) — щоб людина побачила
+    // підказку і тут, і в «Питаннях», якщо за один запуск відкрила обидві.
+    if (tab === 'board') setTimeout(() => playAskHint('board'), 0);
+    if (tab !== 'board' && tab !== 'discussions') stopAskHint();
     // Правила Дошки — один раз на акаунт, при вході на вкладку.
     if (tab === 'board') maybeShowBoardRules();
   });

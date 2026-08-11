@@ -69,7 +69,16 @@ const w = await page.evaluate(`(() => {
     h: Math.round(n.getBoundingClientRect().height),
     cards: n.querySelectorAll('[data-article-id]').length,
     imgs: n.querySelectorAll('img').length,
-    live: /LIVE/.test(n.textContent),
+    // 🔴 11.08 — ПЕРЕВІРКА БРЕХАЛА. Було: чи є літери LIVE десь у textContent
+    // віджета. Вона мала ловити ЗНЯТИЙ фальшивий БЕЙДЖ «LIVE» (31.07), а
+    // спіймала українське видання «Новини.LIVE», яке приїхало у свіжій новині
+    // від парсера. Код був цілком правильний — брехала мірка, і повторювалось би
+    // це щоразу, коли видання потрапляє у стрічку.
+    // ➡️ Міряємо БЕЙДЖ: вузол, чий ВЛАСНИЙ текст дорівнює LIVE (саме так
+    // виглядала знята плашка), а не згадку літер у чужому заголовку.
+    // (зворотні лапки тут заборонені — блок лежить усередині шаблонного рядка)
+    live: [...n.querySelectorAll('*')].some(e =>
+      e.children.length === 0 && e.textContent.trim().toUpperCase() === 'LIVE'),
     chips: n.querySelectorAll('.cm-news-chip, .cm-news-filters, .cm-news-feed').length,
     headerTag: (n.querySelector('[data-cm-news-all]') || {}).tagName,
     hasAll: !!n.querySelector('[data-cm-news-all]'),
