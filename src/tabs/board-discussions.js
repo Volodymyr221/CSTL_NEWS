@@ -821,25 +821,44 @@ export function unseenDiscussionsCount() {
 //   • закладка переїхала праворуч від питання: у рядку метаданих вона робила
 //     цей рядок клікабельним на всю ширину і плутала ціль тапу.
 export function renderQuestionCard(p) {
-  const n = activeComments(p.id).length;   // видалені не рахуємо
+  const відповіді = activeComments(p.id);
+  const n = відповіді.length;   // видалені не рахуємо
+
+  // 🔑 ПЕРША ВІДПОВІДЬ ПРЯМО В СПИСКУ — головна зміна редакції 3.
+  // Питання в цій громаді практичні: «чи працює амбулаторія», «коли концерт».
+  // На них є коротка конкретна відповідь, і людині потрібна САМЕ ВОНА, а не
+  // подорож у другий екран. Один рядок цитати відповідає на питання ще у списку.
+  // ⚠️ Це НЕ повернення прев'ю чату, від якого пішли: там було ДВА останні
+  // повідомлення з іменами й часом (розмітка списку розмов), тут — ОДНА перша
+  // відповідь по суті. Різниця в тому, що показує рядок: хід розмови проти
+  // відповіді на питання.
+  // 🔑 Саме ПЕРША, а не остання: у Q&A перша відповідь майже завжди і є
+  // відповіддю, а остання — це хвіст уточнень.
+  const перша = відповіді[0];
+  const цитата = перша
+    ? `<div class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(перша.sender_uid)}>${liveName(перша.author || 'Житель', перша.sender_uid)}:</span> ${escapeHtml(перша.text)}</div>`
+    : '';
+  // ⚠️ Лічильник стоїть В ОДНОМУ РЯДКУ з автором і часом, а не окремою колонкою
+  // праворуч. Колонку пробували першою: при різній висоті питань вона
+  // вирівнювалась по центру рядка і «висіла» відірвано від тексту, а напис
+  // «потрібна відповідь» ламався на два рядки. Один метарядок читається як одне
+  // речення — «хто · коли · скільки відповідей».
   const мітка = n
-    ? `<span class="qa-card-count">${n} ${answerWord(n)}</span>`
-    : '<span class="qa-card-count qa-card-count--none">Ще ніхто не відповів</span>';
+    ? `<span class="qa-row-n">${n} ${answerWord(n)}</span>`
+    : '<span class="qa-row-n qa-row-n--none">потрібна відповідь</span>';
+
   return `
-    <article class="bd-card qa-card${n ? '' : ' qa-card--unanswered'}"
+    <article class="qa-row${n ? '' : ' qa-row--unanswered'}"
              data-post-id="${p.id}" data-question-open="${p.id}">
-      <div class="qa-card-top">
-        <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
-        ${saveBtnHtml(p)}
-      </div>
+      <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
       <div class="qa-card-meta">
-        ${authorAvatar(p.author, p.owner_uid)}
         <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
         <span class="qa-card-dot" aria-hidden="true">·</span>
         <span class="qa-card-when">${formatTime(postTime(p))}</span>
         <span class="qa-card-dot" aria-hidden="true">·</span>
         ${мітка}
       </div>
+      ${цитата}
     </article>
   `;
 }

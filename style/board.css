@@ -3640,78 +3640,74 @@ textarea.cm-board-input.bm-invalid {
 #disc-content .qa-chip--on { background: var(--red); color: #fff; font-weight: 600; }
 #disc-content .qa-chip-n { opacity: 0.6; margin-left: 4px; }
 
-/* ── Картка питання ──────────────────────────────────────────────────────── */
-/* Не scoped: ту саму картку показують аркуші FAB «Мої / Збережені питання»,
-   які створюються в `body`. Розійтись цим двом виглядом не можна. */
-.qa-card {
-  position: relative;
-  padding: 16px;
-  border: 0;                            /* 🔴 рамки НЕМА — картку тримає тон і тінь */
+/* ── СПИСОК ПИТАНЬ — суцільний блок (iOS inset grouped) ──────────────────── */
+/* 🔴 РЕДАКЦІЯ 3. Було: окремі картки з власною тінню. Заміряно на живих даних —
+   при трьох питаннях картки лишали 21% екрана порожнім, і кожна забирала 124px.
+   У громаді з пʼятьма питаннями це виглядало бідно, і жодне оформлення цього не
+   лікує: причина в кількості контенту, а не в стилі. Суцільний блок дає
+   5 питань на екран замість 3 при тій самій висоті рядка.
+   Не scoped: той самий список показують аркуші FAB «Мої / Збережені питання». */
+.qa-group {
+  margin: 14px 16px;
   border-radius: 16px;
   background: var(--qa-surface);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.045);
-  cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  overflow: hidden;                    /* щоб натиск не вилазив за кути блока */
 }
-/* Відгук на НАТИСК, а не на відпускання (Apple: «respond on pointer-down»). */
-.qa-card:active { transform: scale(0.985); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.qa-row {
+  display: block;
+  padding: 14px 16px;
+  position: relative;
+  cursor: pointer;
+  background: var(--qa-surface);
+  transition: background 0.12s ease;
+}
+.qa-row:active { background: var(--qa-fill); }
+/* Роздільник — псевдоелементом МІЖ рядками, з відступом зліва (як в iOS).
+   Не `border-bottom` на кожному: тоді лінія лягала б і під останнім рядком,
+   тобто по краю блока — а це вже обведення, від якого ми пішли. */
+.qa-row + .qa-row::before {
+  content: ''; position: absolute; left: 16px; right: 0; top: 0;
+  height: 1px; background: var(--qa-line);
+}
 
-.qa-card-top { display: flex; align-items: flex-start; gap: 10px; }
 .qa-card-q {
-  flex: 1; min-width: 0;
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;                     /* 600, не 700: вага + розмір разом, без крику */
-  line-height: 1.34;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.32;
   letter-spacing: -0.01em;
   color: var(--qa-ink);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* Закладка — біля питання, а не в рядку метаданих: там вона робила весь рядок
-   змішаною ціллю тапу. 44px тап-ціль дає padding, видимий кружечок лишається малим. */
-.qa-card-top .bd-bookmark {
-  flex: none; width: 44px; height: 44px; margin: -10px -8px 0 0;
-  display: flex; align-items: center; justify-content: center;
-}
-
-/* Метадані — ОДИН рядок. Саме через два рядки тут і зʼявився роздільник. */
 .qa-card-meta {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-top: 12px;
-  font-size: 14px;                      /* мінімум для 40-70+; було 13 і 11 */
-  line-height: 1.3;
+  margin-top: 5px;
+  font-size: 13.5px; line-height: 1.3;
   color: var(--qa-ink-2);
 }
-.qa-card-meta .bd-avatar { width: 24px; height: 24px; font-size: 12px; flex: none; margin-right: 2px; }
-.qa-card-name { font-weight: 600; color: var(--qa-ink-2); }
+.qa-card-name { font-weight: 500; }
 .qa-card-dot { opacity: 0.45; }
-/* 🔑 Лічильник відповідей ТИХИЙ: акцентний колір належить діям, а «скільки
-   відповідей» — метадані. Бордовим лишився тільки заклик нижче. */
-.qa-card-count { color: var(--qa-ink-2); }
-.qa-card-count--none { color: var(--red); font-weight: 600; }
-/* 🗑 Стан «без відповіді» НЕ має власної позначки-крапки. Перша спроба ставила
-   крихітну крапку 4px ліворуч від питання — на знімку вона читалась як брак
-   друку, а не як сигнал. Стан уже сказаний СЛОВАМИ («Ще ніхто не відповів»)
-   і єдиним акцентним кольором у метаданих. Два сигнали про одне — це шум,
-   а не наголос. Клас `qa-card--unanswered` лишається: він потрібен стенду і
-   майбутньому фільтру, просто не малює нічого. */
 
-/* Закладка в зоні питань — ІКОНКА, а не кнопка-медальйон.
-   🔴 Спільний `.bd-icon-btn` має обведення + білий фон + тінь; на трьох картках
-   це давало 12 із 40 ліній першого екрана (заміряно `qa-audit`), і закладка
-   важила більше за саме питання. Тап-ціль 44px лишається — вона в padding. */
-#disc-content .bd-icon-btn.bd-bookmark,
-.qa-screen .bd-icon-btn.bd-bookmark {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  color: var(--qa-ink-3);
+/* 🔑 ПЕРША ВІДПОВІДЬ У СПИСКУ — щоб людина отримала відповідь, не відкриваючи.
+   Заливка, а не рамка: рамка повернула б лінії, від яких пішли в редакції 2. */
+.qa-row-answer {
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--app-bg);
+  font-size: 14.5px; line-height: 1.4;
+  color: var(--qa-ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-#disc-content .bd-bookmark--active,
-.qa-screen .bd-bookmark--active { color: var(--red); }
+.qa-row-answer-who { font-weight: 600; color: var(--qa-ink-2); }
+
+/* Лічильник відповідей — ТИХИЙ (це метадані), у тому ж рядку, що автор і час.
+   Акцентним лишається тільки заклик «потрібна відповідь»: він єдиний тут
+   звернений до людини, а не описує стан. */
+.qa-row-n { color: var(--qa-ink-2); }
+.qa-row-n--none { color: var(--red); font-weight: 600; }
 
 /* Порожній стан вкладки — перше знайомство. */
 #disc-content .bd-empty-title {

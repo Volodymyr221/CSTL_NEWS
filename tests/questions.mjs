@@ -165,7 +165,9 @@ const card = await p.evaluate(() => {
     розмірПитання: q ? parseFloat(getComputedStyle(q).fontSize) : 0,
     автор: cs('.qa-card-name')?.textContent.trim() || '',
     коли: !!cs('.qa-card-when'),
-    відповіді: cs('.qa-card-count')?.textContent.trim() || '',
+    відповіді: cs('.qa-row-n')?.textContent.trim() || '',
+    // 🆕 редакція 3: перша відповідь показується прямо в списку.
+    цитата: cs('.qa-row-answer')?.textContent.trim() || '',
     // ЧАТ-МАРКЕРИ, яких не має бути:
     превюЧату: !!cs('.bd-chat-last'),
     учасники: !!cs('.bd-chat-participants'),
@@ -180,6 +182,13 @@ ok('3в. є автор і час', !!card && !!card.автор && card.коли,
 ok('3г. є кількість ВІДПОВІДЕЙ (мова Q&A, не «повідомлень»)',
    !!card && /відповід/i.test(card.відповіді) && !/повідомл/i.test(card.відповіді),
    card ? `«${card.відповіді}»` : '—');
+// 🆕 РЕДАКЦІЯ 3: перша відповідь стоїть у СПИСКУ — щоб людина отримала відповідь,
+// не відкриваючи нічого. ⚠️ Це НЕ повернення прев'ю чату (перевірка 3д нижче його
+// далі забороняє): там були ДВА останні повідомлення з іменами й часом, тобто хід
+// розмови; тут — ОДНА перша відповідь по суті питання.
+ok('3ґ. 🆕 перша відповідь видно прямо в списку',
+   !!card && /Начебто 24 серпня/.test(card.цитата),
+   card ? `«${card.цитата.slice(0, 46)}»` : '—');
 ok('3д. 🔴 НЕМА прев\'ю останніх повідомлень (розмітка списку чатів)',
    !!card && !card.превюЧату);
 ok('3е. 🔴 НЕМА лічильника «учасників» (метрика чату)', !!card && !card.учасники);
@@ -190,11 +199,11 @@ ok('3є. ❤️ прибрано з картки (переїхало всере�
 const none = await p.evaluate(() => {
   const el = document.querySelector('#disc-content [data-question-open="702"]');
   if (!el) return null;
-  const c = el.querySelector('.qa-card-count');
-  return { текст: c?.textContent.trim() || '', позначка: el.classList.contains('qa-card--unanswered') };
+  const c = el.querySelector('.qa-row-n');
+  return { текст: c?.textContent.trim() || '', позначка: el.classList.contains('qa-row--unanswered') };
 });
 ok('4а. без відповідей показано словами, а не «0»',
-   !!none && /Ще ніхто не відповів/i.test(none.текст) && !/\b0\b/.test(none.текст),
+   !!none && /потрібна відповідь/i.test(none.текст) && !/\b0\b/.test(none.текст),
    none ? `«${none.текст}»` : '—');
 ok('4б. картка має власну позначку стану', !!none && none.позначка);
 
