@@ -1916,6 +1916,44 @@ def rehydrate_short_articles(existing_articles: list) -> int:
     return upgraded
 
 
+def report_fulltext_quality(articles: list) -> None:
+    """Звіт у лог CI: скільки статей мають повний текст, і де саме ми його не беремо.
+
+    🔑 НАВІЩО. Плашка «джерело надає лише анонс» три місяці стояла на 27% статей, і
+    ніхто цього не бачив — бо ніде не було ЧИСЛА. Проблему знайшов Вова знімком з
+    телефона, а не ми з логів. Одне число на прогін робить наступну таку регресію
+    видимою за день, а не за квартал.
+
+    ⚠️ Розбивка саме ПО ДЖЕРЕЛАХ, а не загальний відсоток: 12.08 виявилось, що
+    `volynpost.com` віддає 403 і дає 73 з 73 неповних — тобто проблема була
+    зосереджена в ОДНОМУ джерелі, а середнє по лікарні (27%) цього не показувало.
+    """
+    from collections import Counter
+    total = len(articles)
+    if not total:
+        return
+    by_src_bad, by_src_all = Counter(), Counter()
+    for a in articles:
+        src = a.get("source") or "?"
+        by_src_all[src] += 1
+        if a.get("exclusive") or not a.get("sourceUrl"):
+            continue
+        # Дзеркалить showsShortNote() у src/tabs/news.js.
+        if a.get("contentSource"):
+            bad = a["contentSource"] == "rss"
+        else:
+            bad = not a.get("fullText") and len(strip_html(a.get("content") or "").strip()) < 600
+        if bad:
+            by_src_bad[src] += 1
+    bad_total = sum(by_src_bad.values())
+    print(f"📊 Повний текст: {total - bad_total}/{total} статей "
+          f"({round((total - bad_total) / total * 100)}%) — без плашки «лише анонс»")
+    for src, n in by_src_bad.most_common(6):
+        share = round(n / by_src_all[src] * 100)
+        mark = "🔴" if share >= 50 else "⚠️"
+        print(f"   {mark} {src}: {n}/{by_src_all[src]} без повного тексту ({share}%)")
+
+
 # ── Головна функція ────────────────────────────────────────────────────────────
 
 def main():
@@ -2025,6 +2063,7 @@ def main():
     # Зберегти articles.json
     if new_articles or rehydrated:
         all_articles = new_articles + existing_articles
+        report_fulltext_quality(all_articles)
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
         all_articles = prune_by_age(all_articles)     # зберігання за віком (тиждень/місяць)
         all_articles = cap_articles(all_articles)     # запобіжна стеля, з квотою Громади
