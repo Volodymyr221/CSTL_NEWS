@@ -382,6 +382,29 @@ function renderArticleBody(content) {
   return paragraphs.map(p => `<p class="article-p">${escapeHtml(p)}</p>`).join('');
 }
 
+// 🔴 ПЛАШКА «ЛИШЕ АНОНС» — ОДНЕ ПРАВИЛО, І ВОНО НЕ МІРЯЄ ДОВЖИНУ (12.08).
+//
+// Було: `!fullText && rawText.trim().length < 600`. Тобто клієнт мав ВЛАСНИЙ
+// поріг (600), а парсер — свій (500), і на статтях між ними двоє «джерел правди»
+// казали різне. Гірше: довжина тут не до речі взагалі — коротка стаття, взята зі
+// сторінки видання цілком, є ПОВНОЮ, а плашка обіцяла людині «повний текст на
+// сайті», якого там уже немає. Скарга Вови зі знімка v4271 була саме про це
+// (стаття про загиблого земляка, 452 символи — уся стаття).
+//
+// 🔑 Тепер причина одна і приходить з даних: `contentSource === 'rss'` означає
+// «тіло взято з анонсу, повного тексту ми не бачили». Парсер вирішує, клієнт
+// показує — ніхто нічого не перевимірює вдруге.
+//
+// ⚠️ `contentSource` немає у статей, спаршених ДО 12.08 — для них лишається
+// старий доказ (`fullText !== true` і тіло коротке). Це не «про всяк випадок»:
+// у `data/articles.json` таких статей 400, і без запасного шляху вони всі
+// показали б плашку однаково, поки парсер їх не перебере.
+function showsShortNote(article, rawText) {
+  if (article.exclusive || !article.sourceUrl) return false;
+  if (article.contentSource) return article.contentSource === 'rss';
+  return !article.fullText && rawText.trim().length < 600;
+}
+
 export function openArticle(id) {
   const article = allArticles.find(a => a.id === id);
   if (!article) return;
@@ -436,7 +459,7 @@ export function openArticle(id) {
       <div class="article-author"><span class="article-author-ic">${ICONS.user}</span><strong>Автор:</strong> ${escapeHtml(article.author)}</div>
     ` : ''}
     <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl && !article.fullText && rawText.trim().length < 600 ? `
+    ${showsShortNote(article, rawText) ? `
       <div class="article-short-note">
         Джерело надає лише анонс через RSS — повний текст на сайті видання.
         <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю →</a>

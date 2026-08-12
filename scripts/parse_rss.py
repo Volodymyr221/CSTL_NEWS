@@ -373,6 +373,83 @@ def strip_html(text: str) -> str:
     return text
 
 
+# ── ПОВНОТА ТЕКСТУ — ОДНЕ МІСЦЕ ПРАВДИ (12.08) ────────────────────────────────
+#
+# 🔴 ЩО БУЛО НЕ ТАК. «Повний текст» визначався як «довжина ≥ 500 символів», і це
+# плутало ДВА різні стани, які нічим не схожі:
+#   • «RSS дав анонс, повного тексту ми не бачили» — справді неповно;
+#   • «зайшли на сторінку статті, взяли ВЕСЬ її текст, і він короткий» — повно.
+#
+# 📐 Ціна помилки заміряна на живих даних (12.08): стаття «На війні загинув Герой
+# з Волині Сергій Щербатих» (Конкурент) має **452 символи** — це весь її текст,
+# разом із фінальним «Редакція… висловлює співчуття». Парсер ТРИЧІ сходив на
+# сторінку, тричі дістав повний текст і тричі відкинув його через недобір
+# 48 символів, після чого самолікування здалося назавжди (`_fullTries` = 3).
+# Людина бачила плашку «джерело надає лише анонс» під ПОВНОЮ статтею.
+# Таких статей ~26 із 107, що показують плашку.
+#
+# 🔑 НОВЕ ВИЗНАЧЕННЯ: повнота — це ПОХОДЖЕННЯ тексту, а не його довжина.
+#   `contentSource = 'page'` — тіло взято зі сторінки статті → текст повний;
+#   `contentSource = 'rss'`  — тіло взято з RSS-анонсу → неповний.
+# Довжина лишається, але тільки як захист від сміття (порожні тіла, «читати
+# далі», навігаційні недоїдки), а не як критерій повноти.
+#
+# ⚠️ ЧОМУ ПОТРІБЕН ЩЕ Й СИГНАЛ ПОДІБНОСТІ. Частина видань віддає в RSS довгий
+# анонс (600-800 символів), і сама лише довжина оголосила б його повним текстом.
+# Тому текст, узятий зі сторінки, додатково звіряється з RSS-анонсом: якщо вони
+# майже збігаються — ми не дістали нічого нового, і це чесно лишається 'rss'.
+# Це єдина теза з присланого розбору Grok, яка лягла в корінь (ratio summary/full).
+
+MIN_BODY_CHARS = 180      # нижче — це не стаття, а недоїдок розмітки
+SIMILAR_RATIO  = 0.90     # текст зі сторінки ≈ анонс → нічого нового не дістали
+
+# Версія правил повноти. Зміниш правила — підніми число, і статті, на яких
+# самолікування колись здалося, дістануть новий шанс (див. `rehydrate_short_articles`).
+# 🛑 Не «косметичне» поле: без нього виправлення правил не доходить до вже
+# збережених статей узагалі.
+FULL_ALGO_VERSION = 2
+
+
+def _norm_for_compare(t: str) -> str:
+    """Текст до порівняння: без розмітки, регістру, пунктуації і пробілів."""
+    return re.sub(r"[^\w]+", "", strip_html(t or "").lower())
+
+
+def looks_like_same_text(page_text: str, rss_text: str) -> bool:
+    """Чи текст зі сторінки — це той самий анонс, що вже був у RSS.
+
+    Порівнюємо ВКЛАДЕНІСТЬ, а не рівність: сторінка зазвичай містить анонс
+    плюс решту статті, тож рівними вони не бувають майже ніколи. Питання в
+    тому, чи додалось щось СУТТЄВЕ понад анонс.
+    """
+    a, b = _norm_for_compare(page_text), _norm_for_compare(rss_text)
+    if not a or not b:
+        return False
+    # Якщо сторінка не довша за анонс більш ніж на 10% — нового немає.
+    return len(a) <= len(b) / SIMILAR_RATIO * 1.0 and (b[:200] in a or a[:200] in b)
+
+
+def decide_content(rss_html: str, page_html: str | None, rss_summary: str) -> tuple[str, str]:
+    """Вирішує, який текст лишити і звідки він. Повертає (html, contentSource).
+
+    🔑 Уся логіка «повно чи ні» живе ТУТ, в одній функції, і її споживають
+    обидва шляхи — свіжий розбір (`parse_source`) і самолікування
+    (`rehydrate_short_articles`). До 12.08 правило було записане ДВІЧІ, різними
+    числами (500 у парсері, 600 у клієнті), і саме тому розійшлось.
+    """
+    page_plain = strip_html(page_html or "")
+    rss_plain  = strip_html(rss_html or "")
+
+    if page_html and len(page_plain) >= MIN_BODY_CHARS:
+        # Сторінка дала щось змістовне. Лишається спитати, чи це не той самий анонс.
+        if looks_like_same_text(page_plain, rss_summary or rss_plain):
+            return (page_html if len(page_plain) > len(rss_plain) else rss_html), "rss"
+        return page_html, "page"
+
+    # Сторінку не взяли (403, JS-only, немає тіла) → лишається те, що дав RSS.
+    return rss_html, "rss"
+
+
 def get_full_content(entry, title: str = "") -> str:
     """Повний текст статті → БАГАТИЙ HTML (варіант A): з content:encoded зберігаємо
     структуру (_blocks_to_html), інакше summary → абзаци. Повертає безпечний HTML."""
@@ -1151,6 +1228,37 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
         mass = sum(len(p.get_text(" ", strip=True)) for p in ps)
         if mass >= 400:
             candidates.append((mass, tag))
+
+    # 🔴 12.08 — ДРУГИЙ ФОЛБЕК: СТОРІНКИ, ДЕ ТЕКСТ НЕ В <p>.
+    #
+    # Знайдено з логів GitHub Actions (не з пісочниці — там домен заблокований
+    # проксі, і мій перший діагноз «сайт віддає 403» виявився ХИБНИМ):
+    #     [FETCH] volynpost.com/news/268523… — завантажено 37341 байт
+    #     [FETCH] volynpost.com/news/268523… — НЕ ЗНАЙДЕНО тіла (0 кандидатів)
+    # Тобто сторінка приходить цілою, але жоден контейнер не має ДВОХ тегів <p> —
+    # видання верстає текст голим текстом із <br> усередині <div>.
+    # Це 73 з 73 статей джерела, тобто найбільший клас проблеми.
+    #
+    # 🔑 Лікуємо КЛАС, а не домен: правило «текст може бути не в <p>» стосується
+    # будь-якого видання зі старою версткою, і доменний селектор тут не допоміг би —
+    # у volynpost їх уже п'ять, і жоден не спрацював.
+    # ⚠️ Міряємо ВЛАСНИЙ текст вузла (`recursive=False`), а не весь піддерев'яний:
+    # інакше найбільшу масу завжди має <body>, і ми б узяли сторінку цілком разом
+    # із меню. `_blocks_to_text` нижче однаково має свій `_paragraphs_fallback`
+    # для голих div — тобто витягти текст ми вміємо, бракувало саме КАНДИДАТА.
+    if not candidates:
+        from bs4 import NavigableString
+        for tag in soup.find_all(["div", "section", "article"]):
+            own = sum(len(str(c).strip()) for c in tag.children
+                      if isinstance(c, NavigableString))
+            brs = len(tag.find_all("br", recursive=False))
+            # Текст із <br> — ознака абзаців у старій верстці. Без <br> це може бути
+            # просто підпис або хлібні крихти, тому вимагаємо і масу, і розбиття.
+            if own >= 400 and brs >= 2:
+                candidates.append((own, tag))
+        if candidates and DEBUG_FETCH:
+            print(f"[FETCH] {url[:70]} — тіло знайдено ДРУГИМ фолбеком (текст без <p>)")
+
     if candidates:
         best_mass, best_el = max(candidates, key=lambda x: x[0])
         rich = _blocks_to_html(best_el, title)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
@@ -1666,6 +1774,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
         raise ValueError("Порожній фід (entries=0)")
 
     articles = []
+    skipped_thin = 0        # відсіяно політикою повноти (див. нижче) — для звіту
     for entry in feed.entries[:20]:
         if len(articles) >= MAX_PER_SOURCE:
             break
@@ -1688,15 +1797,18 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
 
         try:
             # content — БАГАТИЙ HTML (get_full_content зберігає структуру + чистить)
-            content = get_full_content(entry, title)
-            # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
-            if len(strip_html(content)) < 500 and link:
-                full = fetch_full_article(link, title)
-                if full and len(full) > len(content):
-                    content = full
-            # «Повний» за ПЛОСКОЮ довжиною (HTML-теги не рахуємо). Короткий анонс →
-            # fullText=False (клієнт покаже «Читати повністю»).
-            full_text = len(strip_html(content)) >= 500
+            rss_html = get_full_content(entry, title)
+            rss_summary = strip_html(entry.get("summary") or entry.get("description") or "")
+
+            # 🔴 12.08 — НА СТОРІНКУ ХОДИМО ЗАВЖДИ, а не лише коли анонс короткий.
+            # Було: `if len(strip_html(content)) < 500`. Тобто джерело, що віддає в
+            # RSS довгий анонс (600+ символів), НІКОЛИ не перевірялось — його анонс
+            # автоматично зараховувався як повна стаття. Саме так «Українська правда»
+            # давала 15 статей із плашкою: анонс довгий, поріг пройдено, на сторінку
+            # ніхто не сходив, а тексту в статті насправді набагато більше.
+            page_html = fetch_full_article(link, title) if link else None
+            content, content_source = decide_content(rss_html, page_html, rss_summary)
+            full_text = content_source == "page"
 
             # excerpt — ЗАВЖДИ плоский (для карток): summary або текст без тегів
             excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
@@ -1715,6 +1827,25 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             if geo == "Україна" and not is_nationally_relevant(text):
                 continue
             if geo == "Світ" and not is_world_relevant(text):
+                continue
+
+            # 🔴 ПОЛІТИКА ПОВНОТИ (12.08, рішення за дорученням Вови «роби як краще»).
+            #
+            # Слова замовника: *«з такими плашками новини не треба парсити геть.
+            # Але й не треба обходити такі новини, тому що є деякі новини громади,
+            # які потрібно брати»*. Тобто вимога РІЗНА для різних розділів:
+            #   • Громада — беремо ЗАВЖДИ. Місцева новина (загинув земляк, змінили
+            #     розклад, зникло світло) потрібна людині навіть анонсом: іншого
+            #     джерела цієї інформації в неї немає.
+            #   • Волинь / Україна / Світ — без повного тексту НЕ публікуємо. Там
+            #     цінність новини не унікальна, а плашка «читайте на сайті видання»
+            #     створює саме те тертя, проти якого весь цей потік.
+            #
+            # ⚠️ Правило діє лише на НОВІ статті. Наявні не чіпаємо: їх лікує
+            # `rehydrate_short_articles`, і масове зникнення вже опублікованого
+            # виглядало б для людини як поломка застосунку.
+            if content_source == "rss" and geo not in ("Громада", "Олика"):
+                skipped_thin += 1
                 continue
 
             # Розумний парсер Олики (Крок 3b): Google News → лишаємо тільки релевантне;
@@ -1748,6 +1879,10 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 "image": image,
                 "source": src_name,
                 "fullText": full_text,   # чи текст повний (не анонс) — для «Читати повністю»
+                # 🆕 12.08 — ЗВІДКИ тіло. `fullText` тепер ВИВОДИТЬСЯ звідси, а не
+                # з довжини. Поле зберігаємо в даних, щоб і клієнт, і звіт якості
+                # спирались на ту саму причину, а не перевимірювали текст кожен по-своєму.
+                "contentSource": content_source,
                 "sourceUrl": link,
                 "exclusive": False,
                 "ts": ts,
@@ -1758,6 +1893,11 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
         except Exception:
             continue
 
+    # Видно в логах CI одразу: якщо джерело раптом перестало віддавати тіло статей,
+    # воно тут тихо зникне зі стрічки — і без цього рядка ми дізнались би про це
+    # лише зі скарги Вови, як і сталося з плашкою.
+    if skipped_thin:
+        print(f"   ↷ {source['name']}: відсіяно {skipped_thin} без повного тексту")
     return articles
 
 
@@ -1781,12 +1921,20 @@ def rehydrate_short_articles(existing_articles: list) -> int:
     for a in existing_articles:
         if a.get("exclusive") or a.get("fullText"):
             continue
+
+        # 🔴 12.08 — СКИДАННЯ ЛІЧИЛЬНИКА ПРИ ЗМІНІ АЛГОРИТМУ.
+        # Без цього рядка вся ця робота була б НЕВИДИМОЮ: заміряно 12.08 — зі 107
+        # статей із плашкою у **100** лічильник `_fullTries` уже дорівнював стелі 3,
+        # тобто самолікування здалося на них назавжди. Полагоджений парсер до них
+        # просто не підійшов би, і Вова побачив би ті самі плашки.
+        # ⚠️ Скидаємо саме за ВЕРСІЄЮ алгоритму, а не «раз почистили і забули»:
+        # наступна зміна правил повноти має так само дати статтям новий шанс,
+        # інакше через місяць ми знову ловитимемо той самий клас помилки.
+        if a.get("_fullAlgo") != FULL_ALGO_VERSION:
+            a.pop("_fullTries", None)
+            a["_fullAlgo"] = FULL_ALGO_VERSION
+
         plain = strip_html(a.get("content") or "")
-        # Уже фактично повний текст (≥500) — лише виставляємо прапорець (без мережі)
-        if len(plain) >= 500:
-            a["fullText"] = True
-            upgraded += 1
-            continue
         url = a.get("sourceUrl")
         if not url or int(a.get("_fullTries", 0)) >= MAX_TRIES_PER_ART:
             continue
@@ -1804,18 +1952,62 @@ def rehydrate_short_articles(existing_articles: list) -> int:
                 new_html = fetch_full_article(url, a.get("title", ""))
         except Exception:
             new_html = None
-        new_plain = strip_html(new_html or "")
-        if new_html and len(new_plain) > len(plain) and len(new_plain) >= 500:
-            a["content"]  = new_html          # excerpt лишаємо плоским (для картки)
+        # 🔑 Рішення ухвалює ТА САМА функція, що й на свіжому розборі. До 12.08 тут
+        # стояла власна копія правила (`>= 500`), і саме вона відкидала повні короткі
+        # статті: fetch удавався, віддавав усю статтю — і її не зараховували.
+        # Анонсом для порівняння служить те, що вже лежить у статті (`excerpt`).
+        merged, src = decide_content(a.get("content") or "", new_html, a.get("excerpt") or "")
+        if src == "page" and len(strip_html(merged)) >= len(plain):
+            a["content"]  = merged            # excerpt лишаємо плоским (для картки)
             a["fullText"] = True
+            a["contentSource"] = "page"
             a.pop("_fullTries", None)
             upgraded += 1
         else:
+            a["contentSource"] = "rss"
             a["_fullTries"] = int(a.get("_fullTries", 0)) + 1
     if upgraded or fetched:
         print(f"↻ Re-hydrate: доповнено {upgraded} статей повним текстом "
               f"(мережевих спроб: {fetched})")
     return upgraded
+
+
+def report_fulltext_quality(articles: list) -> None:
+    """Звіт у лог CI: скільки статей мають повний текст, і де саме ми його не беремо.
+
+    🔑 НАВІЩО. Плашка «джерело надає лише анонс» три місяці стояла на 27% статей, і
+    ніхто цього не бачив — бо ніде не було ЧИСЛА. Проблему знайшов Вова знімком з
+    телефона, а не ми з логів. Одне число на прогін робить наступну таку регресію
+    видимою за день, а не за квартал.
+
+    ⚠️ Розбивка саме ПО ДЖЕРЕЛАХ, а не загальний відсоток: 12.08 виявилось, що
+    `volynpost.com` віддає 403 і дає 73 з 73 неповних — тобто проблема була
+    зосереджена в ОДНОМУ джерелі, а середнє по лікарні (27%) цього не показувало.
+    """
+    from collections import Counter
+    total = len(articles)
+    if not total:
+        return
+    by_src_bad, by_src_all = Counter(), Counter()
+    for a in articles:
+        src = a.get("source") or "?"
+        by_src_all[src] += 1
+        if a.get("exclusive") or not a.get("sourceUrl"):
+            continue
+        # Дзеркалить showsShortNote() у src/tabs/news.js.
+        if a.get("contentSource"):
+            bad = a["contentSource"] == "rss"
+        else:
+            bad = not a.get("fullText") and len(strip_html(a.get("content") or "").strip()) < 600
+        if bad:
+            by_src_bad[src] += 1
+    bad_total = sum(by_src_bad.values())
+    print(f"📊 Повний текст: {total - bad_total}/{total} статей "
+          f"({round((total - bad_total) / total * 100)}%) — без плашки «лише анонс»")
+    for src, n in by_src_bad.most_common(6):
+        share = round(n / by_src_all[src] * 100)
+        mark = "🔴" if share >= 50 else "⚠️"
+        print(f"   {mark} {src}: {n}/{by_src_all[src]} без повного тексту ({share}%)")
 
 
 # ── Головна функція ────────────────────────────────────────────────────────────
@@ -1927,6 +2119,7 @@ def main():
     # Зберегти articles.json
     if new_articles or rehydrated:
         all_articles = new_articles + existing_articles
+        report_fulltext_quality(all_articles)
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
         all_articles = prune_by_age(all_articles)     # зберігання за віком (тиждень/місяць)
         all_articles = cap_articles(all_articles)     # запобіжна стеля, з квотою Громади
