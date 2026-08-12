@@ -1284,7 +1284,7 @@
   object-position: center 55%;   /* зсув донизу (Рома 09.07): показати НИЗ костелу до верху картки, менше зрізати знизу */
   display: block;
   opacity: 0;
-  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.55s var(--ease-in-out);
   z-index: 1;
 }
 .cm-hero-img.active { opacity: 1; z-index: 2; }

@@ -43,7 +43,7 @@
   background: var(--board-bg);
   display: flex; flex-direction: column;
   z-index: 2401;
-  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.28s var(--ease-drawer);
   box-shadow: -8px 0 40px rgba(40, 25, 10, 0.18);
 }
 .pm-screen.visible { transform: translateX(0); }
@@ -310,7 +310,7 @@
   /* Тіні НЕМАЄ — модель OLX: розділяє чітка лінія, а розмита тінь поруч із нею
      читається як бруд і конкурує за ту саму роль межі (розбір — у community.css). */
   box-shadow: none;
-  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.22s var(--ease-drawer);
 }
 .pm-thread-body { flex: 1; min-width: 0; }
 .pm-thread-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -395,7 +395,7 @@
   border-radius: 16px;
   box-shadow: none;   /* модель OLX — лінія замість тіні, див. community.css */
   position: relative; z-index: 1;
-  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.22s var(--ease-drawer);
 }
 /* Рядок з відкритим меню — над сусідніми картками, щоб випадне меню (і його нижній
    пункт «Видалити») не ховалось під наступною карткою (.pm-ad має свій stacking z-index:1). */

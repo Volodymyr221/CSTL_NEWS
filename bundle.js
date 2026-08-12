@@ -12434,6 +12434,7 @@
       paintNewsBadge(arts);
       return;
     }
+    const \u0431\u0443\u0432\u0421\u043A\u0435\u043B\u0435\u0442 = !!el.querySelector(".hm-nsk");
     el.innerHTML = `
     <div class="hm-nwrap">
       <div class="hm-ntrack" id="hm-ntrack">
@@ -12447,6 +12448,8 @@
         ${pages2.map((_, i) => `<i${i === 0 ? ' class="on"' : ""}></i>`).join("")}
       </div>
     </div>`;
+    if (\u0431\u0443\u0432\u0421\u043A\u0435\u043B\u0435\u0442)
+      el.firstElementChild?.classList.add("hm-news-in");
     paintNewsCat(pages2[0].group);
     startNewsCarousel(el, pages2);
     paintNewsBadge(arts);

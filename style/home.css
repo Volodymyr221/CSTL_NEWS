@@ -70,7 +70,7 @@
   /* Плавність: один час і одна крива на всю головну.
      240мс — доїзд, який відчувається миттєвим, але видно; крива стандартна
      iOS-подібна (швидкий старт, мʼяке гальмо). */
-  --hm-ease: cubic-bezier(.4, 0, .2, 1);
+  --hm-ease: var(--ease-in-out);
   --hm-dur: 240ms;
 }
 
@@ -1184,6 +1184,16 @@
    що не збігається з тим, що приїде, дає ривок розкладки в момент появи даних —
    рівно те, від чого скелет має рятувати. Висоти взяті з живих правил карток
    (`aspect-ratio: 2/1` і рядок 11px padding + 2 рядки тексту). */
+/* Поява новин на місці скелета: 150мс згасання замість стрибка.
+   📐 Чому 150, а не більше: скелет уже показав ФОРМУ, тобто пояснювати нічого не
+   треба — рух тут лише прибирає клац. За playbook це «feedback», а не
+   «explanation», і бюджет такого руху 100-200мс.
+   ⚠️ Лише `opacity`, без зсуву: картка вже стоїть там, де стояв скелет, і будь-який
+   рух убік читався б як «щось переїхало». */
+@keyframes hm-news-in { from { opacity: 0; } to { opacity: 1; } }
+.hm-news-in { animation: hm-news-in 150ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .hm-news-in { animation: none; } }
+
 .hm-nsk { display: flex; flex-direction: column; gap: var(--hm-s2); }
 .hm-nsk-hero { aspect-ratio: 2 / 1; border-radius: var(--hm-r-card); }
 .hm-nsk-line { height: 44px; border-radius: 12px; }

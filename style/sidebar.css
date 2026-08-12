@@ -246,7 +246,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
      ⚠️ Затримка мусить збігатися з тривалістю `transform` (0.28s). Зміниш одну —
      зміни й другу, інакше панель або зникне посеред руху, або лишиться видимою. */
   visibility: hidden;
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+  transition: transform 0.28s var(--ease-out),
               visibility 0s linear 0.28s;
   display: flex;
   flex-direction: column;
@@ -278,7 +278,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   visibility: visible;
   /* Без затримки: при ВІДКРИТТІ панель має стати видимою на першому ж кадрі,
      інакше виїзд почався б, коли її ще не малюють. */
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+  transition: transform 0.28s var(--ease-out), visibility 0s;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -668,7 +668,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   background: #2b2b2b; color: #fff;
   padding: 12px 14px; border-radius: 14px;
   box-shadow: 0 8px 26px rgba(0,0,0,0.32);
-  transform: translateY(140%); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+  transform: translateY(140%); transition: transform 0.3s var(--ease-out);
 }
 .consent-bar--show { transform: translateY(0); }
 .consent-text { flex: 1; font-size: 12.5px; line-height: 1.4; }
