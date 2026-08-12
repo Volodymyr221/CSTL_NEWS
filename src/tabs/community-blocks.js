@@ -1541,6 +1541,14 @@ function paintCmNews(el, arts) {
     return;
   }
 
+  // 🆕 12.08 — СКЕЛЕТ ЗГАСАЄ, А НЕ СТРИБАЄ (аудит `improve-animations`).
+  // Сірі смужки-заглушки замінювались карткою одним `innerHTML`, тобто миттєво.
+  // Клац помітний саме тому, що скелет уже намалював ФОРМУ: око чекає, що на
+  // тому самому місці проявиться вміст, а він телепортується.
+  // ⚠️ Клас вішаємо ЛИШЕ коли до цього справді був скелет — інакше блок мигав би
+  // на кожному перемальовуванні (їх багато: повтор після збою, гасіння бейджа).
+  const бувСкелет = !!el.querySelector('.hm-nsk');
+
   el.innerHTML = `
     <div class="hm-nwrap">
       <div class="hm-ntrack" id="hm-ntrack">
@@ -1554,6 +1562,8 @@ function paintCmNews(el, arts) {
         ${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}
       </div>
     </div>`;
+
+  if (бувСкелет) el.firstElementChild?.classList.add('hm-news-in');
 
   paintNewsCat(pages[0].group);
   startNewsCarousel(el, pages);

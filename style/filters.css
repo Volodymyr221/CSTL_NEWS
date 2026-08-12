@@ -17,7 +17,10 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  /* 12.08: було `all`. Активний чіп міняє тло, обідок і колір тексту —
+     перелічено явно. `font-weight` свідомо НЕ анімуємо: він змушує браузер
+     перерахувати текст на кожному кадрі. */
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }

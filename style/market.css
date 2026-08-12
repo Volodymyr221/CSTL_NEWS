@@ -352,7 +352,7 @@ a { color: inherit; }
   background: #141417; border-top: 1px solid var(--mk-line);
   border-radius: 22px 22px 0 0;
   padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
-  transform: translateY(100%); transition: transform .26s cubic-bezier(.32,.72,0,1);
+  transform: translateY(100%); transition: transform .26s var(--ease-drawer);
 }
 .mk-sheet--on { transform: translateY(0); }
 .mk-sheet__grip { width: 38px; height: 4px; border-radius: 2px; background: #3A3A42; margin: 6px auto 14px; }

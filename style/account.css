@@ -168,7 +168,7 @@
      лежить окремими картками в дві колонки. */
   background: var(--app-bg, #ECEEF1);
   transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.28s var(--ease-out);
   display: flex;
   flex-direction: column;
 }
@@ -358,12 +358,23 @@
   transition: background 0.2s ease;
 }
 .acc-tog.off { background: #c9c9c9; }
+/* 🔴 12.08 — ПЕРЕМИКАЧ НЕ АНІМУВАВСЯ ВЗАГАЛІ, попри рядок `transition: all`.
+   Було: увімкнений стан `right: 2px`, вимкнений `right: auto; left: 2px`.
+   Браузер не вміє анімувати перехід у `auto` — тож кружечок СТРИБАВ, а
+   `transition: all` лише вдавав, що рух є. Знайдено аудитом `improve-animations`
+   (там `transition: all` числиться помилкою завжди — він анімує все підряд повз
+   відеокарту; тут з'ясувалось, що він до того ж не працював).
+   ➡️ Тепер позиція одна (`left: 2px`), а рух робить `transform` — GPU, без
+   перерахунку розкладки.
+   📐 Хід 16px = ширина 42 − кружечок 22 − поля 2+2. Зміниш розмір перемикача —
+   перерахуй це число, воно з геометрії, а не з ока. */
 .acc-tog::after {
   content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%;
-  background: #fff; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-  transition: all 0.2s ease;
+  background: #fff; top: 2px; left: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transform: translateX(16px);
+  transition: transform 0.2s var(--ease-out);
 }
-.acc-tog.off::after { right: auto; left: 2px; }
+.acc-tog.off::after { transform: translateX(0); }
 .acc-cab-logout {
   display: block; margin: 8px 12px; width: calc(100% - 24px);
   background: transparent; border: 1.5px solid var(--red, #722F37); color: var(--red, #722F37);
@@ -381,7 +392,7 @@
   box-shadow: 0 -8px 30px rgba(0,0,0,0.18);
   z-index: 2401;
   transform: translateY(100%);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.28s var(--ease-in-out);
   padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   max-height: 72vh;
   display: flex;

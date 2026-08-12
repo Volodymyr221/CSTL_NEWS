@@ -1107,7 +1107,7 @@ textarea.cm-board-input.bm-invalid {
     0 6px 16px rgba(0,0,0,0.25);
   transform: translate(-50%, -50%) scale(0.9);
   opacity: 0;
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+  transition: transform 0.24s var(--ease-out), opacity 0.24s ease;
 }
 .cm-board-modal-note.visible {
   transform: translate(-50%, -50%) scale(1);
@@ -1153,7 +1153,7 @@ textarea.cm-board-input.bm-invalid {
   overflow: hidden;
   opacity: 1;
   transform: translateY(100%);
-  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.32s var(--ease-drawer);
 
   /* Висота панелі дій — одне число на два місця: сама панель і відступ знизу в аркуші,
      щоб останній рядок опису ніколи не ховався за кнопками. Сторож звіряє, що вони
@@ -2001,7 +2001,7 @@ textarea.cm-board-input.bm-invalid {
   top: calc(-1 * (var(--bd-h, 125px) + 6px));
   /* Плавність саме на `top`: показ шапки міняє ТОЧКУ ПРИЛИПАННЯ (нижче), а не
      зсуває її поверх. `transform` більше не анімуємо — ним ніхто не рухає. */
-  transition: top 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: top 0.28s var(--ease-in-out),
               box-shadow 0.2s ease;
 }
 
@@ -3817,18 +3817,18 @@ textarea.cm-board-input.bm-invalid {
   min-width: var(--fab-size);
   padding: 0;
   border-radius: 999px;
-  transition: padding 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: padding 0.44s var(--ease-out);
 }
 .board-trigger--labeled .qa-fab-label {
   font-size: 16px; font-weight: 600; letter-spacing: -0.01em;
   color: #fff; white-space: nowrap;
   max-width: 0; overflow: hidden; opacity: 0;
-  transition: max-width 0.44s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+  transition: max-width 0.44s var(--ease-out), opacity 0.18s ease;
 }
 /* Плюс крутиться разом із розгортанням. Кут задає JS і завжди ВПЕРЕД (+180° за
    крок): якби згортання поверталo кут назад, рух читався б як «передумав». */
 .board-trigger--labeled .cm-board-trigger-icon svg {
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.52s var(--ease-out);
 }
 
 /* Розгорнутий стан — живе рівно поки триває підказка (клас ставить JS).
@@ -3924,7 +3924,7 @@ textarea.cm-board-input.bm-invalid {
   display: flex; flex-direction: column;
   background: var(--app-bg);
   transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.32s var(--ease-drawer);
 }
 .qa-screen.visible { transform: translateX(0); }
 @media (prefers-reduced-motion: reduce) {
