@@ -1228,6 +1228,37 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
         mass = sum(len(p.get_text(" ", strip=True)) for p in ps)
         if mass >= 400:
             candidates.append((mass, tag))
+
+    # 🔴 12.08 — ДРУГИЙ ФОЛБЕК: СТОРІНКИ, ДЕ ТЕКСТ НЕ В <p>.
+    #
+    # Знайдено з логів GitHub Actions (не з пісочниці — там домен заблокований
+    # проксі, і мій перший діагноз «сайт віддає 403» виявився ХИБНИМ):
+    #     [FETCH] volynpost.com/news/268523… — завантажено 37341 байт
+    #     [FETCH] volynpost.com/news/268523… — НЕ ЗНАЙДЕНО тіла (0 кандидатів)
+    # Тобто сторінка приходить цілою, але жоден контейнер не має ДВОХ тегів <p> —
+    # видання верстає текст голим текстом із <br> усередині <div>.
+    # Це 73 з 73 статей джерела, тобто найбільший клас проблеми.
+    #
+    # 🔑 Лікуємо КЛАС, а не домен: правило «текст може бути не в <p>» стосується
+    # будь-якого видання зі старою версткою, і доменний селектор тут не допоміг би —
+    # у volynpost їх уже п'ять, і жоден не спрацював.
+    # ⚠️ Міряємо ВЛАСНИЙ текст вузла (`recursive=False`), а не весь піддерев'яний:
+    # інакше найбільшу масу завжди має <body>, і ми б узяли сторінку цілком разом
+    # із меню. `_blocks_to_text` нижче однаково має свій `_paragraphs_fallback`
+    # для голих div — тобто витягти текст ми вміємо, бракувало саме КАНДИДАТА.
+    if not candidates:
+        from bs4 import NavigableString
+        for tag in soup.find_all(["div", "section", "article"]):
+            own = sum(len(str(c).strip()) for c in tag.children
+                      if isinstance(c, NavigableString))
+            brs = len(tag.find_all("br", recursive=False))
+            # Текст із <br> — ознака абзаців у старій верстці. Без <br> це може бути
+            # просто підпис або хлібні крихти, тому вимагаємо і масу, і розбиття.
+            if own >= 400 and brs >= 2:
+                candidates.append((own, tag))
+        if candidates and DEBUG_FETCH:
+            print(f"[FETCH] {url[:70]} — тіло знайдено ДРУГИМ фолбеком (текст без <p>)")
+
     if candidates:
         best_mass, best_el = max(candidates, key=lambda x: x[0])
         rich = _blocks_to_html(best_el, title)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
@@ -1743,6 +1774,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
         raise ValueError("Порожній фід (entries=0)")
 
     articles = []
+    skipped_thin = 0        # відсіяно політикою повноти (див. нижче) — для звіту
     for entry in feed.entries[:20]:
         if len(articles) >= MAX_PER_SOURCE:
             break
@@ -1797,6 +1829,25 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             if geo == "Світ" and not is_world_relevant(text):
                 continue
 
+            # 🔴 ПОЛІТИКА ПОВНОТИ (12.08, рішення за дорученням Вови «роби як краще»).
+            #
+            # Слова замовника: *«з такими плашками новини не треба парсити геть.
+            # Але й не треба обходити такі новини, тому що є деякі новини громади,
+            # які потрібно брати»*. Тобто вимога РІЗНА для різних розділів:
+            #   • Громада — беремо ЗАВЖДИ. Місцева новина (загинув земляк, змінили
+            #     розклад, зникло світло) потрібна людині навіть анонсом: іншого
+            #     джерела цієї інформації в неї немає.
+            #   • Волинь / Україна / Світ — без повного тексту НЕ публікуємо. Там
+            #     цінність новини не унікальна, а плашка «читайте на сайті видання»
+            #     створює саме те тертя, проти якого весь цей потік.
+            #
+            # ⚠️ Правило діє лише на НОВІ статті. Наявні не чіпаємо: їх лікує
+            # `rehydrate_short_articles`, і масове зникнення вже опублікованого
+            # виглядало б для людини як поломка застосунку.
+            if content_source == "rss" and geo not in ("Громада", "Олика"):
+                skipped_thin += 1
+                continue
+
             # Розумний парсер Олики (Крок 3b): Google News → лишаємо тільки релевантне;
             # джерелом показуємо реального видавця (не «Google News»)
             src_name = source["name"]
@@ -1842,6 +1893,11 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
         except Exception:
             continue
 
+    # Видно в логах CI одразу: якщо джерело раптом перестало віддавати тіло статей,
+    # воно тут тихо зникне зі стрічки — і без цього рядка ми дізнались би про це
+    # лише зі скарги Вови, як і сталося з плашкою.
+    if skipped_thin:
+        print(f"   ↷ {source['name']}: відсіяно {skipped_thin} без повного тексту")
     return articles
 
 
