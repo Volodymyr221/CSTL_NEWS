@@ -41,8 +41,49 @@ function timeToMins(hhmm: string): number {
   return h * 60 + m;
 }
 
-serve(async () => {
+// 🔴 12.08 — АВТЕНТИФІКАЦІЯ ВИКЛИКУ (безпековий аудит, клас «неперевірені вебхуки»).
+//
+// Було: `serve(async () => …)` — функція не дивилась на запит ВЗАГАЛІ. Cron слав
+// заголовок `Authorization: Bearer sb_publishable_…`, але це **публічний ключ із
+// `bundle.js`**, відомий кожному, хто відкрив сайт. Тобто захисту не існувало:
+// заголовок був, сенсу в ньому не було.
+//
+// 📐 Чому не Critical, а Medium: корисне навантаження обмежене прапорцями
+// `notified_warning` / `notified_dep` / `notified_canc` — повторне сповіщення тій
+// самій людині не піде. Залишковий ризик — витрата квоти Edge Functions і
+// навантаження на базу сторонніми викликами.
+//
+// 🔑 Секрет лежить у `app_secrets`, яку читає ЛИШЕ `service_role` (RLS:
+// `auth.role() = 'service_role'`). Той самий прийом, що вже працює в
+// `send-comment-push` і `send-page-push` — нової конструкції не вигадуємо.
+//
+// ⚠️ ПОРЯДОК УВІМКНЕННЯ МАВ ЗНАЧЕННЯ і був саме таким: (1) секрет створено в
+// базі, (2) cron почав його слати, (3) аж тоді функція почала вимагати. Якби
+// кроки 2 і 3 помінялись місцями, автобусні сповіщення перестали б ходити до
+// наступного деплою — а їх чекають на зупинці.
+// ⚠️ `verify_jwt` лишається УВІМКНЕНИМ: секрет тут ДРУГИЙ рубіж, а не заміна
+// першого. Cron шле обидва заголовки. (Перша редакція цієї правки прибрала
+// `Authorization` з cron — тоді платформа відхиляла б виклик ДО нашого коду.)
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: { 'Access-Control-Allow-Origin': '*',
+                 'Access-Control-Allow-Headers': 'authorization, content-type, x-cstl-push-secret' },
+    });
+  }
+
   const supa    = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const secretHeader = req.headers.get('x-cstl-push-secret') || '';
+  if (!secretHeader) {
+    return new Response(JSON.stringify({ error: 'no secret' }), { status: 401 });
+  }
+  const { data: secretRow } = await supa
+    .from('app_secrets').select('value').eq('name', 'bus_push_secret').maybeSingle();
+  if (!secretRow?.value || secretRow.value !== secretHeader) {
+    return new Response(JSON.stringify({ error: 'bad secret' }), { status: 401 });
+  }
+
   const today   = todayKyiv();
   const nowMins = nowKyivMins();
 
