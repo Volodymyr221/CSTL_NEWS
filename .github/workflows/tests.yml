@@ -1,0 +1,74 @@
+name: Стенди — перевірка поведінки
+
+# 🔴 ЗАВЕДЕНО 13.08.2026. До цього в проєкті було 71 стенд, і ЖОДЕН із них не
+# запускався автоматично — тільки руками, коли хтось згадає. Тобто захист діяв
+# лише тоді, коли про нього пам'ятали. Знайдено при підготовці репозиторію до
+# зовнішнього перегляду.
+#
+# ⚠️ Стенди піднімають Chromium і справжній застосунок, тому прогін довгий
+# (кілька хвилин). Це прийнятно: він не блокує деплой, а лише позначає PR.
+#
+# 🛑 НЕ ставити цей workflow у ланцюг деплою. Деплой має лишатись швидким і
+# незалежним: якщо стенд упаде через часозалежність (див. `weather-day` нижче),
+# сайт однаково має публікуватись.
+
+on:
+  pull_request:
+    branches: [main]
+    # Документаційні зміни стенди не зачіпають — не ганяємо Chromium даремно.
+    paths:
+      - 'src/**'
+      - 'style/**'
+      - 'tests/**'
+      - 'index.html'
+      - 'sw.js'
+      - 'build.js'
+      - 'package.json'
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stands:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Залежності
+        run: npm install
+
+      # Стенди шукають браузер самі (`chromiumPath()` у tests/_lib.mjs):
+      # спершу CHROMIUM_PATH, далі стандартна тека Playwright. Ставимо саме
+      # chromium, без решти браузерів — вони не потрібні.
+      - name: Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Збірка
+        run: node build.js
+
+      # Python-стенди парсерів. Вони не потребують браузера і швидкі, тому
+      # стоять ПЕРЕД браузерними: якщо зламано логіку парсера, дізнаємось за
+      # секунди, а не за п'ять хвилин.
+      - name: Python-стенди
+        run: |
+          python3 -m pip install --quiet beautifulsoup4
+          python3 scripts/test_fulltext.py
+          python3 scripts/test_rls_snapshot.py
+          python3 scripts/test_retention.py
+          python3 scripts/test_dedup.py
+
+      - name: Сторож документації
+        run: node tests/docs-refs.mjs
+
+      - name: Браузерні стенди
+        run: npm test
