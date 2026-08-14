@@ -10,14 +10,29 @@
 // Прогін і на еталоні («Стрічка», .fd-sheet), і на примітиві — числа мають зійтись.
 import { chromium } from 'playwright';
 import { readFileSync } from 'fs';
-import { ROOT, launch, projectFile } from './_lib.mjs';
+import { ROOT, launch, projectFile, rootTokens, unresolvedTokens } from './_lib.mjs';
 const R = ROOT;
 
+// Контроль (доведення падінням): узяти токени з ревізії, де їх ще не було —
+//   TOKENS_REV=eec05b53 node tests/motion.mjs
+// Тоді сторож мусить почервоніти, а за ним і всі три перевірки відкриття. Саме
+// так виглядала поломка 13-14.08, і саме це тепер видно ОДРАЗУ, а не як «0px».
+const TOKENS_REV = process.env.TOKENS_REV || '';
+
+// 🔴 14.08 — ТОКЕНИ БЕРУТЬСЯ З `style/base.css`, А НЕ ВПИСУЮТЬСЯ СЮДИ ЧИСЛАМИ.
+// Три перевірки відкриття тут показували «0px» і звинувачували застосунок, а
+// насправді в цій синтетичній сторінці не було оголошено `--ease-drawer` (крива
+// переїхала в токени 13.08). `transition: transform .25s var(--ease-drawer)` при
+// неоголошеному токені дає обчислене `all 0s ease` — браузер викидає ВСЮ
+// властивість. Закриття при цьому лишалось зеленим, бо його `transition` ставить
+// JS інлайном; саме ця асиметрія й ховала причину.
+// 🛑 Не вписуй криву сюди руками: тоді стенд знову міряв би СВОЮ анімацію, а не ту,
+// що поїде на прод. Сторож `unresolvedTokens` нижче падає, щойно зʼявиться ще один
+// такий токен.
 const page = (css, markup, openJs, closeJs) => `<!doctype html><html><head><meta charset="utf-8"><style>
  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
  html,body{height:100%;overflow:hidden}
- :root{--bg-card:#fff;--ink:#2b2b2b;--gray-light:#eee;--red:#722F37;--border:#ddd;
-       --fd-surface:#fff;--fd-ink:#2b2b2b;--fd-bg:#faf8f5}
+ :root{${rootTokens(TOKENS_REV)}}
  ${css}
 </style></head><body>${markup}
 <script>
@@ -80,9 +95,15 @@ const boardCase = page(modalCss,
 const b = await launch(chromium);
 const res = []; const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${n}${i ? '  — ' + i : ''}`); };
 
-async function run(label, html) {
+async function run(label, html, css) {
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   await p.setContent(html);
+
+  // Сторож ПЕРЕД замірами: якщо крива, від якої залежить рух, на цій сторінці не
+  // оголошена — усе, що ми зміряємо далі, буде про зламану сцену, а не про код.
+  const missing = await unresolvedTokens(p, css);
+  ok(`${label}: усі криві руху оголошені на сторінці`, missing.length === 0,
+     missing.length ? `не знайдено: ${missing.join(', ')}` : 'жодного пропуску');
 
   // ВІДКРИТТЯ
   await p.evaluate(() => window.__open());
@@ -122,9 +143,9 @@ async function run(label, html) {
   return { travelled, minVis, steps };
 }
 
-const feed  = await run('«Стрічка» (еталон)', feedCase);
-const prim  = await run('примітив модалок', primCase);
-const board = await run('«Подати оголошення»', boardCase);
+const feed  = await run('«Стрічка» (еталон)', feedCase,  feedCss);
+const prim  = await run('примітив модалок', primCase,  modalCss);
+const board = await run('«Подати оголошення»', boardCase, modalCss);
 
 console.log('\n── звірка з еталоном ──');
 ok('примітив проходить не менший шлях, ніж «Стрічка»', prim.travelled >= feed.travelled - 8,
