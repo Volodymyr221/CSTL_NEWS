@@ -4,8 +4,11 @@
 // але математику модуля (від чого відлічується верх) перевірити можна точно.
 import { chromium } from 'playwright';
 import { readFileSync } from 'fs';
-import { ROOT, launch } from './_lib.mjs';
+import { ROOT, launch, rootTokens, unresolvedTokens } from './_lib.mjs';
 
+// Контроль: TOKENS_REV=eec05b53 node tests/keyboard.mjs — токени з ревізії, де
+// їх ще не було; сторож і перевірка плавності мусять почервоніти.
+const TOKENS_REV = process.env.TOKENS_REV || '';
 const css = readFileSync(`${ROOT}/style/feed.css`, 'utf8');
 const kbSrc = readFileSync(`${ROOT}/src/core/keyboard.js`, 'utf8')
   .replace(/^export /gm, '');   // робимо модуль інлайновим для сторінки
@@ -17,7 +20,14 @@ const page_html = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;padding:0;height:100%}
   body{overflow:hidden}
   .app-main{height:100%;overflow-y:auto}
-  :root{--fd-surface:#fff;--fd-ink:#111}
+  /* 🔴 14.08 — токени беруться зі style/base.css, а не вписуються сюди.
+     Перевірка «перехід реально анімується» показувала 496 -> 496 і виглядала як
+     зламаний застосунок; насправді тут не було оголошено --ease-drawer, а
+     transition: height .25s var(--ease-drawer) при неоголошеному токені дає
+     обчислене all 0s ease — браузер викидає всю властивість. Розбір і сторож —
+     у tests/_lib.mjs, функція rootTokens.
+     (зворотні лапки в цьому блоці заборонені: він лежить у шаблонному рядку) */
+  :root{${rootTokens(TOKENS_REV)}--fd-surface:#fff;--fd-ink:#111}
   ${css}
 </style></head><body>
   <div class="app-main"><div style="height:3000px"></div></div>
@@ -92,6 +102,13 @@ const before = await p.evaluate((g) => {
 console.log('СПОКІЙ  ', before);
 const top0 = before.sheetTop;
 ok('у спокої лист НЕ на весь екран (є верхній простір)', top0 > 60, `top=${top0}`);
+
+// Сторож сцени: криві руху, від яких залежить перехід, мусять бути оголошені на
+// цій сторінці. Інакше все, що зміряємо далі про плавність, буде про зламану
+// сцену, а не про `core/keyboard.js` (саме так і сталось 13-14.08).
+const missingTokens = await unresolvedTokens(p, css);
+ok('усі криві руху оголошені на сторінці', missingTokens.length === 0,
+   missingTokens.length ? `не знайдено: ${missingTokens.join(', ')}` : 'жодного пропуску');
 
 // ── Клавіатура відкривається (спосіб А: стиск видимої області) ─────────────────
 const opened = await p.evaluate(async (KB) => {
