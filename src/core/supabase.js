@@ -705,6 +705,25 @@ export async function fetchPublicProfile(uid) {
   } catch (_) { return null; }
 }
 
+// ── ВИДАЛЕННЯ АКАУНТА (14.08, правова відповідність) ──────────────────────
+// Один виклик `delete_my_account()` — SECURITY DEFINER у базі
+// (`scripts/supabase_delete_account.sql`). 🔑 Чому вся робота ТАМ, а не тут:
+// видалення торкається ~15 таблиць і сховища, і зробити його з клієнта означало б
+// послати 15 запитів, кожен зі своїм шансом обірватись посередині — людина
+// лишилась би з наполовину видаленим акаунтом. У базі це ОДНА транзакція: або
+// все, або нічого. Плюс частину рядків RLS клієнтові чіпати й не дозволила б.
+//
+// ⚠️ Повторів навмисно НЕМА (`retries: 0`). Дія незворотна: якщо відповідь
+// загубилась у мережі вже ПІСЛЯ виконання, другий виклик прийде від людини,
+// якої вже немає (`not_authenticated`) і показав би помилку на успішному
+// видаленні. Краще один раз і чесний результат.
+export async function deleteMyAccount() {
+  if (!supa) return { ok: false, error: 'Немає зв\'язку із сервером' };
+  const r = await netCall(() => supa.rpc('delete_my_account'), { retries: 0 });
+  if (!r.ok) return { ok: false, error: r.error, raw: r.raw };
+  return { ok: true };
+}
+
 // ── ПРИВАТНИЙ ЧАТ (Фаза Б, Етап 4) ───────────────────────────────────────
 // Усі функції приймають uid аргументом (не імпортуємо auth.js — циклічна
 // залежність). RLS у БД все одно перевіряє auth.uid() на сервері.
@@ -1482,8 +1501,35 @@ export function subscribePageReactions(onChange) {
 // це аналітика. Людині вона нічого не показує, тож людський текст помилки ні до чого,
 // а повтор при обриві накрутив би подію двічі й перекосив статистику в адмінці.
 // Ціна втраченої події при обриві — нуль; ціна дубля — брехлива цифра.
+// 🔴 ВИМИКАЧ СТАТИСТИКИ (14.08, правова відповідність). Правова підстава обробки
+// в нас — ЗГОДА (ст. 11 ЗУ №2297-VI), а згода без можливості її відкликати згодою
+// не є. Пункт «Статистика користування» в кабінеті пише сюди.
+//
+// 🔑 Чому localStorage, а не колонка в профілі: вимикач мусить діяти й у ГОСТЯ
+// (він теж потрапляє в статистику — під випадковим номером пристрою), а в гостя
+// рядка профілю не існує. Плюс подія пишеться fire-and-forget на кожному переході
+// між вкладками — зчитування з мережі перед кожним записом коштувало б дорожче за
+// саму подію.
+// ⚠️ Наслідок, який треба знати: вимикач живе НА ПРИСТРОЇ. Другий телефон того
+// самого акаунта треба вимкнути окремо — так і написано в кабінеті.
+const ANALYTICS_OFF_KEY = 'cstl-analytics-off';
+
+export function analyticsEnabled() {
+  try { return localStorage.getItem(ANALYTICS_OFF_KEY) !== '1'; } catch (_) { return true; }
+}
+
+export function setAnalyticsEnabled(on) {
+  try {
+    if (on) localStorage.removeItem(ANALYTICS_OFF_KEY);
+    else    localStorage.setItem(ANALYTICS_OFF_KEY, '1');
+  } catch (_) {}
+}
+
 export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
   if (!supa || !visitorId) return;
+  // Сторож стоїть ТУТ, а не у викликачів: точок виклику вже три (дві у `app.js`,
+  // одна в `boot.js`), і четверта неминуче забула б перевірку.
+  if (!analyticsEnabled()) return;
   supa.from('analytics_events')
     .insert({ visitor_id: visitorId, event_type: type, tab, meta })
     .then(({ error }) => { if (error) console.warn('[supabase] logEvent:', error.message); });

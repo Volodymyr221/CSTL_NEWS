@@ -381,6 +381,34 @@
   padding: 13px; border-radius: 14px; font-weight: 700; font-size: 15px; cursor: pointer;
 }
 
+/* ── Небезпечний рядок кабінету (14.08: «Видалити акаунт») ───────────────────
+   🔑 Червоним світиться ТІЛЬКИ плитка-іконка і назва, а не весь рядок: суцільна
+   червона смуга серед сірих рядків читається як помилка застосунку, а не як дія
+   людини. Той самий прийом уже стоїть на `.acc-avmenu-item--danger` (#C0392B) —
+   беремо той самий колір, щоб «небезпечно» виглядало однаково в усьому кабінеті.
+   ⚠️ `--red` (#722F37) тут НЕ підходить: це бренд, ним пофарбовані звичайні
+   іконки сусідніх рядків, і небезпека від них не відрізнялась би. */
+.acc-cab-row--danger .acc-cab-row-ic { background: rgba(192,57,43,0.10); color: #C0392B; }
+.acc-cab-row--danger .acc-cab-row-name { color: #C0392B; }
+
+/* ── Підтвердження видалення акаунта ──────────────────────────────────────── */
+.acc-del { padding: 4px 2px; }
+.acc-del-h { margin: 0 0 12px; font-size: 19px; font-weight: 800; color: var(--ink, #2b2b2b); }
+.acc-del-p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.45; color: var(--ink, #2b2b2b); }
+.acc-del-p--warn { color: #C0392B; font-weight: 600; }
+.acc-del-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+/* 🔑 Кнопки стовпчиком, а НЕ поруч: назва небезпечної дії довга («Видалити
+   назавжди»), і в ряд по 50% ширини вона переносилась би на два рядки, через що
+   дві кнопки ставали б різної висоти. Стовпчик заразом розводить пальці —
+   випадковий тап по руйнівній кнопці коштує дорожче за зайві 8px висоти. */
+.acc-del-cancel, .acc-del-go {
+  width: 100%; padding: 13px; border-radius: 14px;
+  font: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.acc-del-cancel { background: transparent; border: 1.5px solid rgba(0,0,0,0.14); color: var(--ink, #2b2b2b); }
+.acc-del-go { background: #C0392B; border: 0; color: #fff; }
+.acc-del-go:disabled { opacity: 0.6; cursor: default; }
+
 /* =============================================================
    ХАБ «ЗБЕРЕЖЕНІ» (іконка 🔖 в шапці) — bottom-sheet з категоріями
    ============================================================= */

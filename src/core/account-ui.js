@@ -6,7 +6,17 @@
 // вхід пропонується контекстно (через подію cstl-need-login від requireAuth).
 
 import { openLayer, closeLayer } from './layers.js';   // шари ↔ історія браузера (жест «назад»)
-import { netErrorText } from './supabase.js';   // єдиний словник людських формулювань помилок
+// netErrorText — єдиний словник людських формулювань помилок;
+// analyticsEnabled/setAnalyticsEnabled — вимикач статистики (правова відповідність, 14.08);
+// deleteMyAccount — RPC delete_my_account() (одна транзакція в базі).
+// ⚠️ Коментарі стоять НАД блоком, а не в рядках із іменами: сторож
+// `scripts/check-imports.js` розбирає імпорт регуляркою по комі, і коментар
+// усередині дужок він читає як частину імені (спіймано 14.08 — збірка впала).
+import {
+  netErrorText,
+  analyticsEnabled, setAnalyticsEnabled,
+  deleteMyAccount,
+} from './supabase.js';
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
@@ -227,6 +237,26 @@ async function openAccount() {
           </div>`).join('')}
       </div>
 
+      <div class="acc-cab-sec acc-cab-sec--rows">
+        <h3>Приватність і дані</h3>
+        <div class="acc-cab-row acc-cab-row--tog">
+          <span class="acc-cab-row-ic">${ICONS.shield}</span>
+          <span class="acc-cab-row-body">
+            <span class="acc-cab-row-name">Статистика користування</span>
+            <span class="acc-cab-row-desc">Знеособлені події: які розділи відкривають і коли. Вимикається лише на цьому пристрої</span>
+          </span>
+          <button class="acc-tog${analyticsEnabled() ? '' : ' off'}" data-priv="analytics" type="button" aria-label="Статистика користування"></button>
+        </div>
+        <button class="acc-cab-row acc-cab-row--danger" id="cf-delete" type="button">
+          <span class="acc-cab-row-ic">${ICONS.trash}</span>
+          <span class="acc-cab-row-body">
+            <span class="acc-cab-row-name">Видалити акаунт</span>
+            <span class="acc-cab-row-desc">Назавжди, без можливості відновити</span>
+          </span>
+          <i>${ICONS.chevronRight}</i>
+        </button>
+      </div>
+
       <button class="acc-cab-logout" type="button" id="cf-logout">Вийти</button>
     </div>`;
   document.body.appendChild(cab);
@@ -334,6 +364,59 @@ async function openAccount() {
     t.classList.toggle('off', !prefs[k]);
     saveNotifPrefs(u.id, prefs);
   }));
+  // Вимикач статистики. Пише в localStorage через дата-шар — діє з наступної події,
+  // без перезапуску застосунку (сторож стоїть усередині самого `logEvent`).
+  const privTog = cab.querySelector('[data-priv="analytics"]');
+  privTog.addEventListener('click', () => {
+    const on = privTog.classList.contains('off');    // був вимкнений → вмикаємо
+    setAnalyticsEnabled(on);
+    privTog.classList.toggle('off', !on);
+    showToast(on ? 'Статистику увімкнено' : 'Статистику вимкнено на цьому пристрої', 2600);
+  });
+
+  // ── Видалення акаунта ────────────────────────────────────────────────────
+  // 🔑 Модалка перелічує НЕ «ви впевнені?», а що саме зникне і що лишиться.
+  // Людина має ухвалювати рішення, знаючи наслідок: найнесподіваніша його частина —
+  // приватне листування, яке НЕ зникає у співрозмовника (воно дані обох).
+  cab.querySelector('#cf-delete').addEventListener('click', () => {
+    const m = openModalPrimitive({
+      variant: 'center',
+      className: 'app-modal--top',   // кабінет живе на 3100 — без цього модалка під ним
+      bodyHtml: `
+        <div class="acc-del">
+          <h3 class="acc-del-h">Видалити акаунт?</h3>
+          <p class="acc-del-p"><b>Буде стерто назавжди:</b> профіль і фото, ваші
+          оголошення разом зі знімками, питання, коментарі, реакції, збережене
+          та підписки на сповіщення.</p>
+          <p class="acc-del-p"><b>Лишиться:</b> приватне листування у скриньці
+          співрозмовника — воно є даними обох, — але вже без вашого імені.
+          Розмови про ваші оголошення зникнуть разом з оголошеннями.</p>
+          <p class="acc-del-p acc-del-p--warn">Відновити акаунт буде неможливо.</p>
+          <div class="acc-del-btns">
+            <button type="button" class="acc-del-cancel" data-del="no">Скасувати</button>
+            <button type="button" class="acc-del-go" data-del="yes">Видалити назавжди</button>
+          </div>
+        </div>`,
+    });
+    m.el.querySelector('[data-del="no"]').addEventListener('click', () => closeModalPrimitive());
+    m.el.querySelector('[data-del="yes"]').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true; btn.textContent = 'Видаляємо…';
+      const res = await deleteMyAccount();
+      if (!res.ok) {
+        btn.disabled = false; btn.textContent = 'Видалити назавжди';
+        showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 5000, 'error');
+        return;
+      }
+      // Сесія вказує на людину, якої вже немає, — вийти ОБОВʼЯЗКОВО, інакше
+      // застосунок далі ходив би в базу з мертвим токеном і сипав помилками.
+      closeModalPrimitive();
+      await signOut();
+      closeCabinet();
+      showToast('Акаунт видалено', 4000);
+    });
+  });
+
   cab.querySelector('#cf-logout').addEventListener('click', async () => {
     await signOut();
     closeCabinet();
