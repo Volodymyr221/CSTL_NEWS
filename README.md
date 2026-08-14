@@ -57,7 +57,7 @@ src/
   tabs/    (16)     екрани: community (головна), feed, board, buses,
                     board-discussions (питання), news, news-hub
 style/     (21)     стилі по модулях, підключені через @import у style.css
-tests/     (71)     браузерні стенди на Playwright
+tests/     (72)     браузерні стенди на Playwright
 scripts/          парсери (Python), SQL-міграції, Python-стенди
 supabase/functions/  6 Edge Functions (push-сповіщення, аналітика)
 data/             контент: articles.json, schedule.json, events.json
@@ -95,7 +95,7 @@ GitHub Pages роздає **статику**, і хоча CI перезбира�
 
 ## Тестування
 
-**71 браузерний стенд** (Playwright, Chromium) + Python-стенди для парсерів.
+**72 браузерні стенди** (Playwright, Chromium) + Python-стенди для парсерів.
 
 Особливість підходу: більшість стендів мають **контрольну перевірку** — вони
 доведені падінням на коді *до* виправлення. Наприклад:
