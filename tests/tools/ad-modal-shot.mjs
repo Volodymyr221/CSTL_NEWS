@@ -38,10 +38,16 @@ await p.route('**://api.open-meteo.com/**', r => r.abort());
 await p.route('**/data/community-board.json*', r => json(r, { posts: POSTS }));
 
 // Банер згоди з Політикою показується при ПЕРШОМУ вході й накриває панель дій —
-// саме те, заради чого й робиться знімок. Ключ той самий, що у `core/consent.js`.
-await ctx.addInitScript(() => { try { localStorage.setItem('cstl-legal-consent-v1', '1'); } catch (_) {} });
+// саме те, заради чого й робиться знімок, тож його треба прибрати.
+// ⚠️ 14.08: тут стояв запис `'1'` у ключ згоди. Відтоді `core/consent.js` звіряє
+// ЗНАЧЕННЯ з чинною редакцією (`LEGAL_UPDATED`), і стороння позначка читається як
+// «згода на стару редакцію» — банер прийшов би знову, а знімок вийшов би з ним.
+// Тому не підробляємо сховище, а тиснемо ту саму кнопку, що й людина: цей шлях
+// не залежить від формату ключа взагалі.
 await p.goto(url, { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(2500);
+await p.evaluate(() => document.querySelector('.consent-accept')?.click());
+await p.waitForTimeout(400);
 await p.evaluate(() => window.switchTab && window.switchTab('board'));
 await p.waitForTimeout(1500);
 
