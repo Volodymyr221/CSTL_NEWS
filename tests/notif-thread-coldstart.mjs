@@ -18,8 +18,11 @@
 // Правило, яке з цього випливає: якщо замовлення звучить «має відкритись» —
 // перевіряти треба ВІДКРИТТЯ, а не наявність рядка в коді.
 //
-// Контроль (доведення падінням) — версія ДО фікса:
-//   BUNDLE_REV=origin/main node tests/notif-thread-coldstart.mjs
+// Контроль (доведення падінням) — версія ДО фікса, тобто коміт ПЕРЕД PR #927:
+//   BUNDLE_REV=f400ad18 node tests/notif-thread-coldstart.mjs      → 3/9
+// ⚠️ `origin/main` для контролю БІЛЬШЕ НЕ ГОДИТЬСЯ: фікс уже там, і контрольний
+// прогін показав би 9/9, тобто «довів» би сам себе. Ревізію контролю треба
+// оновлювати щоразу, коли лікування доїжджає в `main`.
 // Стенд підмінює `bundle.js` вказаною ревізією з git.
 import { chromium } from '@playwright/test';
 import { reporter, launch, serve, blockExternal, projectFile } from './_lib.mjs';
@@ -100,7 +103,15 @@ async function відкрити({ hash = '', delay = 0, after = null }) {
     r.fulfill({ body: OLD_BUNDLE, contentType: 'text/javascript; charset=utf-8' }));
   await page.addInitScript(stub(delay));
   await page.goto(`${site.url}/index.html${hash}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(900 + delay);
+  // 🔴 15.08, ДРУГА РЕДАКЦІЯ СТЕНДА. Було `waitForTimeout(900 + delay)` — і стенд
+  // почервонів, щойно показову частину deep-link'а свідомо відсунули за заставку
+  // (скарга Вови: «назад» показувало сторінку завантаження). Код був правий,
+  // застаріло ЧИСЛО в перевірці.
+  // ➡️ Тепер чекаємо ПОДІЮ, а не мілісекунди: заставка зникла з DOM. Так стенд
+  // переживе будь-яку зміну її тривалості й не доведеться правити його втретє.
+  await page.waitForFunction(() => !document.getElementById('splash'), null, { timeout: 15000 })
+    .catch(() => {});
+  await page.waitForTimeout(400 + delay);   // осісти після заставки
   if (after) { await after(page); await page.waitForTimeout(900); }
   const стан = await page.evaluate(() => ({
     екранів: document.querySelectorAll('.pm-screen--chat').length,

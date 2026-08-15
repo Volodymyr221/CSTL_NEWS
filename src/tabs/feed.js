@@ -31,6 +31,7 @@ import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, rest
          paintIfChanged, forgetPaint, patchList }
   from '../core/list-patch.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
+import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
@@ -748,8 +749,16 @@ async function sharePost(id) {
 // відкрити лист коментарів і підсвітити той самий рядок. Інакше людина тапає
 // «Вам відповіли» і опиняється просто біля поста, шукаючи відповідь очима.
 export async function focusFeedPost(id, commentId = null) {
+  // Вкладку перемикаємо ОДРАЗУ: під заставкою цього не видно, зате коли вона
+  // зійде — застосунок уже стоїть на «Стрічці», без стрибка на очах.
   window.switchTab?.('shotam');
   if (!loaded) { await loadData(); renderFeed(); }
+  // 🔴 15.08 — ПОКАЗОВУ ЧАСТИНУ ЧЕКАЄМО НА ЗАСТАВКУ. Вова: «треба вважати те, що
+  // три секунди сторінка завантаження ще йде… щоб він почав виділятися трішки
+  // пізніше, вже після завантаження». Прокрутка до поста, спалах картки й
+  // підсвітка коментаря тривають 1.6-2.4с, а `#splash` стоїть 3.5с + 0.4с —
+  // тобто вся підказка встигала згаснути НЕПОБАЧЕНОЮ. Деталі — `core/splash.js`.
+  await whenSplashGone();
   let tries = 0;
   const tryFocus = () => {
     const el = document.querySelector(`#feed-list [data-post="${id}"]`);

@@ -4832,6 +4832,36 @@
     }
   }
 
+  // src/core/splash.js
+  var \u0437\u0456\u0439\u0448\u043B\u0430 = false;
+  var \u043E\u0445\u043E\u0447\u0456 = [];
+  var \u0421\u0422\u0415\u041B\u042F_\u041C\u0421 = 6e3;
+  function markSplashGone() {
+    if (\u0437\u0456\u0439\u0448\u043B\u0430)
+      return;
+    \u0437\u0456\u0439\u0448\u043B\u0430 = true;
+    const \u0447\u0435\u0440\u0433\u0430 = \u043E\u0445\u043E\u0447\u0456;
+    \u043E\u0445\u043E\u0447\u0456 = [];
+    \u0447\u0435\u0440\u0433\u0430.forEach((fn) => {
+      try {
+        fn();
+      } catch (_) {
+      }
+    });
+  }
+  function whenSplashGone() {
+    if (\u0437\u0456\u0439\u0448\u043B\u0430)
+      return Promise.resolve();
+    if (!document.getElementById("splash")) {
+      \u0437\u0456\u0439\u0448\u043B\u0430 = true;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      \u043E\u0445\u043E\u0447\u0456.push(resolve);
+      setTimeout(resolve, \u0421\u0422\u0415\u041B\u042F_\u041C\u0421);
+    });
+  }
+
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   var EDIT_ICON_SVG = ICONS.pencil;
@@ -6375,6 +6405,10 @@
     const thread = threads.find((t) => String(t.id) === String(threadId));
     if (!thread)
       return;
+    await whenSplashGone();
+    window.switchTab?.("board");
+    if (!document.querySelector(".pm-screen"))
+      openThreadsList();
     const conv = groupConversations(threads, me).find((c) => c.threads.some((t) => t.id === thread.id));
     openChat(conv || thread, thread.post, thread.id);
   }
@@ -13977,6 +14011,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       await loadData2();
       renderFeed();
     }
+    await whenSplashGone();
     let tries = 0;
     const tryFocus = () => {
       const el = document.querySelector(`#feed-list [data-post="${id}"]`);
@@ -17914,11 +17949,16 @@ END:VEVENT`
     logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab2, meta: { device: _analyticsDevice } });
     setTimeout(() => {
       const splash = document.getElementById("splash");
-      if (splash) {
-        splash.style.opacity = "0";
-        splash.style.transition = "opacity 0.4s";
-        setTimeout(() => splash.remove(), 600);
+      if (!splash) {
+        markSplashGone();
+        return;
       }
+      splash.style.opacity = "0";
+      splash.style.transition = "opacity 0.4s";
+      setTimeout(() => {
+        splash.remove();
+        markSplashGone();
+      }, 600);
     }, 3500);
   }
   if (document.readyState === "loading") {
