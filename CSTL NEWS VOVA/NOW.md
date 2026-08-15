@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-15 11:17 UTC
+**Зріз на:** 2026-08-15 11:46 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-6v6car` |
-| останній коміт людини | `1925abc6` 15.08 11:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1046` |
-| останній PR у `main` | #921 |
+| останній коміт людини | `c14b178f` 15.08 11:46 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1145` |
+| останній PR у `main` | #922 |
 | стендів на диску | 76 |
 | незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-08-15 | є ✅ |
@@ -25,24 +25,22 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
 - `_session-log/vova-2026-08-15.md`
 - `bundle.js`
-- `src/core/list-patch.js`
-- `src/tabs/feed.js`
+- `src/tabs/board.js`
+- `style/board.css`
 - `sw.js`
-- `tests/pin.mjs`
+- `tests/fab-hint.mjs`
 - `tests/tab-return-repaint.mjs`
-- `tests/tools/display-none-flash.mjs`
-- `tests/tools/tab-bg-flash.mjs`
+- `tests/tools/fab-overlap.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `1925abc6` 15.08 11:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
-- `57cf9699` 15.08 10:49 — docs(now): фікс блимання лежить на гілці, не задеплоєний — чекає рішення Вови
-- `e048f264` 15.08 10:48 — fix: прибрано маркери конфлікту з feed.js, list-patch.js, sw.js і bundle.js
-- `696e0a0f` 15.08 10:47 — fix: прибрано маркери конфлікту, які я сам закомітив у tests/tab-return-repaint.mjs
-- `753ecd2f` 15.08 10:46 — docs(now): пульс під другий захід
+- `c14b178f` 15.08 11:46 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
+- `3ddca393` 15.08 11:45 — FAB: підйом над «Громадою» + іконка більше не перевернута
+- `2d208bb9` 15.08 11:30 — Сторож: перевірено, що фікс не блокує доставку змін (12/12)
+- `a9bf390d` 15.08 11:18 — Блим при поверненні на вкладку: справжня причина — відносний час у картці (#922)
+- `383a68d5` 15.08 11:17 — docs(now): пульс під другий захід фікса блимання
 
 <!-- AUTO:END -->---
 
