@@ -165,7 +165,11 @@ async function flushPending(admin: Admin) {
       type: 'comment-new', post_id: post.id,
       title: page?.name || 'Стрічка',
       body: `Ще ${st.pending} ${pluralComments(st.pending)} під вашим дописом${post.text ? `: «${trim(post.text, 60)}»` : ''}`,
-      tag: `comment-post-${post.id}`, url: `./#/post/feed/${post.id}`,
+      // 🔴 15.08 — `?c=all`: тап відкриває САМІ КОМЕНТАРІ, а не лише пост.
+      // Скарга Вови: «воно повинно… наводитись саме на цей допис і відкривати
+      // модалку коментарів». Тут зведення («Ще N коментарів»), тож конкретного
+      // рядка для підсвітки немає — звідси `all`, а не номер.
+      tag: `comment-post-${post.id}`, url: `./#/post/feed/${post.id}?c=all`,
     });
     await admin.from('page_comment_push_state').upsert({
       post_id: st.post_id, uid: st.uid,

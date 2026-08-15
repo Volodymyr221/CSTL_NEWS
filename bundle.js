@@ -6253,7 +6253,8 @@
     const sbBadge = document.getElementById("sb-msg-badge");
     const fabBtn = document.getElementById("board-trigger");
     const chats = isLoggedIn() ? _unreadChats : 0;
-    fabBtn?.classList.toggle("has-unread", chats > 0);
+    const \u043C\u0430\u0454\u041A\u043E\u043D\u0432\u0435\u0440\u0442 = !!fabBtn?.querySelector(".cm-board-trigger-msg");
+    fabBtn?.classList.toggle("has-unread", chats > 0 && \u043C\u0430\u0454\u041A\u043E\u043D\u0432\u0435\u0440\u0442);
     if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
@@ -13969,7 +13970,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.classList.add("fd-card--flash");
         setTimeout(() => el.classList.remove("fd-card--flash"), 1600);
-        if (commentId)
+        if (commentId === "all")
+          openComments(id);
+        else if (commentId)
           openComments(id, commentId);
         return;
       }
@@ -17830,14 +17833,14 @@ END:VEVENT`
     openThreadById(Number(m[1]));
   }
   function handlePostHash() {
-    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+))?/);
+    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+|all))?/);
     if (!m)
       return;
     history.replaceState(null, "", location.pathname + location.search);
     const [, source, id, commentId] = m;
     const n = Number(id);
     if (source === "feed")
-      focusFeedPost(n, commentId ? Number(commentId) : null);
+      focusFeedPost(n, commentId === "all" ? "all" : commentId ? Number(commentId) : null);
     else if (source === "board" || source === "disc")
       openBoardItemById(n);
     else if (source === "news")
@@ -17879,7 +17882,13 @@ END:VEVENT`
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", (e) => {
         const d = e.data;
-        if (!d || d.__cstl !== "notif-click" || !d.url)
+        if (!d || d.__cstl !== "notif-click")
+          return;
+        if (d.threadId != null) {
+          openThreadById(Number(d.threadId));
+          return;
+        }
+        if (!d.url)
           return;
         const i = String(d.url).indexOf("#");
         if (i < 0)
