@@ -757,7 +757,12 @@ export async function focusFeedPost(id, commentId = null) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('fd-card--flash');
       setTimeout(() => el.classList.remove('fd-card--flash'), 1600);
-      if (commentId) openComments(id, commentId);
+      // 🔴 15.08 — `'all'` означає «відкрий лист, підсвічувати нема чого». Так
+      // приходить ЗВЕДЕНЕ сповіщення («Ще N коментарів під вашим дописом»): там
+      // немає ОДНОГО коментаря, але Вова просив, щоб тап однаково відкривав
+      // самі коментарі, а не лишав людину дивитись на пост.
+      if (commentId === 'all') openComments(id);
+      else if (commentId) openComments(id, commentId);
       return;
     }
     if (++tries < 8) { requestAnimationFrame(tryFocus); return; }

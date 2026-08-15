@@ -358,12 +358,14 @@ function handleThreadHash() {
 function handlePostHash() {
   // ?c=<id> — сповіщення про коментар: відкрити не просто пост, а й лист коментарів
   // із підсвіченим рядком. Хвіст необовʼязковий, тож старі посилання працюють як досі.
-  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+))?/);
+  // `?c=` приймає або НОМЕР коментаря (підсвітити рядок), або `all` — «просто
+  // відкрий лист» (зведене сповіщення «Ще N коментарів»: одного коментаря там нема).
+  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+|all))?/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
   const [, source, id, commentId] = m;
   const n = Number(id);
-  if      (source === 'feed')              focusFeedPost(n, commentId ? Number(commentId) : null);
+  if      (source === 'feed')              focusFeedPost(n, commentId === 'all' ? 'all' : (commentId ? Number(commentId) : null));
   else if (source === 'board' || source === 'disc') openBoardItemById(n);
   else if (source === 'news')              openArticleById(n);
 }
@@ -429,7 +431,18 @@ async function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', e => {
       const d = e.data;
-      if (!d || d.__cstl !== 'notif-click' || !d.url) return;
+      if (!d || d.__cstl !== 'notif-click') return;
+      // 🔴 15.08 — ПРИВАТНЕ ЛИСТУВАННЯ ОБРОБЛЯЄМО ПЕРШИМ. Скарга Вови: «якщо
+      // прийшло приватне повідомлення і я натискаю на сповіщення — мене має
+      // перекидати прямо в той чат».
+      // 🔑 Раніше воно НЕ працювало при ВІДКРИТОМУ застосунку, і відсіювалось аж
+      // двічі: `send-chat-push` шле не `url`, а `thread_id`, тож умова `!d.url`
+      // виходила одразу; а якби й дійшло, `url: './'` не містить `#`, і другий
+      // рубіж (`indexOf('#') < 0`) відкинув би теж. При ХОЛОДНОМУ старті чат
+      // відкривався правильно — там інша гілка (`#/thread/<id>` у `sw.js`), і
+      // саме тому вада виглядала як «іноді працює».
+      if (d.threadId != null) { openThreadById(Number(d.threadId)); return; }
+      if (!d.url) return;
       const i = String(d.url).indexOf('#');
       if (i < 0) return;                           // url без deep-link — нічого відкривати
       location.hash = String(d.url).slice(i);

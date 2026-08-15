@@ -75,7 +75,10 @@ serve(async (req) => {
       title: senderName,
       body:  bodyText.length > 120 ? bodyText.slice(0, 117) + '…' : bodyText,
       tag:   `chat-${thread.id}`,
-      url:   './',
+      // 🔴 15.08 — явний deep-link замість «просто відкрий застосунок». `thread_id`
+      // у payload лишається (його читає `sw.js` на холодному старті), але тепер і
+      // `url` веде в ту саму розмову — тобто шлях один для обох станів застосунку.
+      url:   `./#/thread/${thread.id}`,
     });
 
     let sent = 0;
