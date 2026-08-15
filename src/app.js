@@ -17,6 +17,7 @@ import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
+import { attachSheetDismiss } from './core/sheet-motion.js';    // спільний свайп-закриття аркушів (15.08 — модалка статті теж на ньому)
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 
@@ -237,78 +238,41 @@ window.closeArticleModal = function() {
   if (metaTags) metaTags.innerHTML = '';
 };
 
-// Свайп вниз для закриття модалки
+// Свайп вниз для закриття модалки статті.
+//
+// 🔴 15.08 (plans/001) — ВЛАСНИЙ ЖЕСТ ЗНЯТО, поведінку віддано спільному
+// `attachSheetDismiss()` із `core/sheet-motion.js`. Це було ОСТАННЄ місце в
+// застосунку з самописним свайпом-закриттям; решта зон (`core/modal.js`,
+// `saved-hub`, «Стрічка», Дошка, Питання) сидять на ньому з 10.08.
+//
+// Що саме полагодила заміна — чотири вади, кожна вимірна (повний розбір із
+// цитатами старого коду — `plans/001-article-modal-shared-swipe.md`):
+//   (а) крива закриття мала ПОВІЛЬНИЙ СТАРТ, тобто гальмувала рівно ту мить, на
+//       яку людина дивиться. Та сама вада, що в банері автобусів (plans/002) і
+//       в `style/buses.css`, звідки її прибрали 12.08.
+//   (б) крива була вписана числом ДВІЧІ — а це рівно `SHEET_EASE` / токен
+//       `--ease-drawer`; тепер береться з одного місця.
+//   (в) поріг закриття був ТІЛЬКИ по відстані, тож швидкий короткий кидок —
+//       головний жест на iPhone — модалку не закривав. Спільний `finishSwipe()`
+//       рахує ще й швидкість пальця.
+//   (г) таймер прибирання вузла був на 10мс КОРОТШИЙ за сам рух. Тепер час
+//       доїзду рахує механізм і сам віддає його в `onDismiss(ms)`.
+// Заразом зникла неоголошена змінна-прапорець «скрол на самому верху»: вона
+// писалась у ГЛОБАЛЬНУ область, бо в `bundle.js` немає суворого режиму — помилки
+// не було, і побачити її було нічим.
+//
+// 🛑 Контролі плану — це `grep` по цьому файлу (кривих і таймерів тут лишитись не
+// має). Тому вади описані СЛОВАМИ: коментар, що цитує прибрану ваду дослівно,
+// завалює перевірку на цю ваду. За сесію 15.08 я наступив на це тричі.
 function initModalSwipe() {
   const inner = document.querySelector('.article-modal-inner');
   if (!inner) return;
-  const handle = inner.querySelector('.modal-handle');
-  let startY = 0;
-  let isSwiping = false;
-  let startedOnHandle = false;
-  let rafId = null;
-
-  const reset = () => {
-    inner.style.transition = '';
-    inner.style.transform = '';
-    inner.style.animation = '';
-  };
-
-  inner.addEventListener('touchstart', e => {
-    startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
-    startedAtTop = inner.scrollTop <= 2;
-    const canSwipe = startedOnHandle || startedAtTop;
-    if (!canSwipe) {
-      startY = e.touches[0].clientY;
-      isSwiping = false;
-      return;
-    }
-
-    inner.style.animation = 'none';
-    inner.style.transition = 'none';
-    inner.style.transform = 'translateY(0)';
-    startY = e.touches[0].clientY;
-    isSwiping = false;
-  }, { passive: true });
-
-  inner.addEventListener('touchmove', e => {
-    if (!startedOnHandle) return;
-    const dy = e.touches[0].clientY - startY;
-    if (dy > 0) {
-      e.preventDefault();
-      isSwiping = true;
-      // requestAnimationFrame — плавне оновлення 60fps без ривків
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        inner.style.transform = `translateY(${dy}px)`;
-        rafId = null;
-      });
-    }
-  }, { passive: false });
-
-  inner.addEventListener('touchend', e => {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    if (!startedOnHandle || !isSwiping) { if (startedOnHandle) reset(); return; }
-    isSwiping = false;
-    const dy = e.changedTouches[0].clientY - startY;
-    if (dy > 80) {
-      inner.style.transition = 'transform 0.25s ease-in';
-      inner.style.transform = 'translateY(100%)';
-      setTimeout(window.closeArticleModal, 240);
-    } else {
-      inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-      inner.style.transform = 'translateY(0)';
-      setTimeout(reset, 300);
-    }
-    startedOnHandle = false;
-  });
-
-  inner.addEventListener('touchcancel', () => {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    startedOnHandle = false;
-    isSwiping = false;
-    inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    inner.style.transform = 'translateY(0)';
-    setTimeout(reset, 300);
+  attachSheetDismiss({
+    panel: inner,
+    scroller: inner,          // у цієї модалки панель сама собі скролер
+    backdrop: null,           // затемнення тут знімає closeArticleModal()
+    onDismiss: (ms) => setTimeout(window.closeArticleModal, ms),
+    headerZone: 64,           // смуга з рисочкою .modal-handle
   });
 }
 

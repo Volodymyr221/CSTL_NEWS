@@ -8,6 +8,7 @@ import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRo
 import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { ICONS } from '../core/icons.js';
+import { SHEET_EASE } from '../core/sheet-motion.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -2096,9 +2097,15 @@ export async function initBuses() {
     const _onBannerRelease = (dy) => {
       if (dy > 40) {
         // Плавно ховаємо вниз
-        banner.style.transition = 'transform 0.25s cubic-bezier(0.4,0,1,1)';
+        // 🔴 15.08 — крива береться з SHEET_EASE, а не вписується числом.
+        // Було `0.4,0,1,1` — це рівно `ease-in`: рух ПОЧИНАЄТЬСЯ повільно,
+        // тобто банер перші кадри стоїть після того, як палець уже відпустили.
+        // Рівно цю криву з рівно цим підписом прибрали зі `style/buses.css:1642`
+        // 12.08 — той прохід дивився CSS і не дивився JS. Прибирання з DOM
+        // зрівняне з тривалістю (було 260 при 250 — банер 10мс висів нерухомий).
+        banner.style.transition = `transform 250ms ${SHEET_EASE}`;
         banner.style.transform = `translateX(-50%) translateY(${dy + 80}px) scale(0.85)`;
-        setTimeout(() => { banner.style.transition = ''; hideBanner(); }, 260);
+        setTimeout(() => { banner.style.transition = ''; hideBanner(); }, 250);
       } else {
         // Плавно повертаємо на місце
         banner.style.transition = 'transform 0.3s cubic-bezier(0.22,1,0.36,1)';
