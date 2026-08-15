@@ -21,6 +21,7 @@ import { attachSheetDismiss } from './core/sheet-motion.js';    // спільн�
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 import { markSplashGone } from './core/splash.js';              // сигнал «заставка зійшла» для deep-link'ів (15.08)
+import { guardAppRoot } from './core/layers.js';                // «назад» з кореня не вивалює в порожню вкладку (15.08)
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -349,7 +350,15 @@ function handleInviteHash() {
 function handleThreadHash() {
   const m = (location.hash || '').match(/^#\/thread\/(\d+)/);
   if (!m) return;
+  // 🛑 ПОРЯДОК КРИТИЧНИЙ І ДОВЕДЕНИЙ ВИМІРОМ: спершу прибираємо хеш, і лише
+  // потім ставимо запобіжник. Перша редакція робила навпаки — `replaceState`
+  // затирав щойно покладений запис (`{cstlRoot:1}` → `null`), а хеш лишався на
+  // записі ПІД ним. Тому третій «назад» повертав `#/thread/<id>`, слухач
+  // `hashchange` спрацьовував удруге і чат відкривався заново.
+  // Заміряно приладом: стан `{cstlLayer:4}` замість кореня.
   history.replaceState(null, '', location.pathname + location.search);
+  // Сеанс почався зі СПОВІЩЕННЯ: вкладка свіжа, позаду порожньо (див. layers.js).
+  guardAppRoot();
   openThreadById(Number(m[1]));
 }
 
@@ -364,6 +373,7 @@ function handlePostHash() {
   const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+|all))?/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
+  guardAppRoot();   // ⚠️ САМЕ ПІСЛЯ replaceState — див. пояснення в handleThreadHash
   const [, source, id, commentId] = m;
   const n = Number(id);
   if      (source === 'feed')              focusFeedPost(n, commentId === 'all' ? 'all' : (commentId ? Number(commentId) : null));
