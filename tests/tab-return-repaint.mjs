@@ -26,17 +26,12 @@ const { ok, done } = reporter();
 const REV = process.env.BUNDLE_REV || '';
 const SRC = projectFile('src/core/list-patch.js', REV);
 
-<<<<<<< HEAD
 // ⚠️ Шукаємо і `export function`, і звичайну — допоміжні функції модуля не
 // експортуються, але без них витягнутий код не працює (стенд уже впав на цьому:
 // `adoptLoadedImages is not defined`).
 function grab(name) {
   let i = SRC.indexOf(`export function ${name}(`);
   if (i < 0) i = SRC.indexOf(`function ${name}(`);
-=======
-function grab(name) {
-  const i = SRC.indexOf(`export function ${name}(`);
->>>>>>> origin/main
   if (i < 0) return null;
   let d = 0, started = false;
   for (let j = i; j < SRC.length; j++) {
@@ -49,7 +44,6 @@ function grab(name) {
 const LEGACY = `function paintIfChanged(el, html) { el.innerHTML = html; return true; }
 function forgetPaint() {}`;
 const painted = SRC.includes('const _painted = new WeakMap()') ? 'const _painted = new WeakMap();' : '';
-<<<<<<< HEAD
 const cardSig = SRC.includes('const _cardSig = new WeakMap()') ? 'const _cardSig = new WeakMap();' : '';
 const fns = grab('paintIfChanged');
 const patchFn = grab('patchList');
@@ -59,11 +53,6 @@ const LEGACY_PATCH = `function patchList(c, items, keyOf, htmlOf) { c.innerHTML 
 const code = FIXED
   ? `${painted}\n${cardSig}\n${fns}\n${grab('forgetPaint') || 'function forgetPaint(){}'}\n${grab('adoptLoadedImages') || 'function adoptLoadedImages(){}'}\n${patchFn || LEGACY_PATCH}`
   : `${LEGACY}\n${LEGACY_PATCH}`;
-=======
-const fns = grab('paintIfChanged');
-const FIXED = !!fns;
-const code = FIXED ? `${painted}\n${fns}\n${grab('forgetPaint') || 'function forgetPaint(){}'}` : LEGACY;
->>>>>>> origin/main
 console.log(`\n── код: ${FIXED ? 'З ФІКСОМ' : '🕰 СТАРИЙ (контроль)'}${REV ? `  [${REV}]` : ''}`);
 
 const html = `<!doctype html><meta charset="utf-8"><style>
@@ -84,11 +73,8 @@ const list = document.getElementById('list');
 const build = () => data.map(cardHtml).join('');
 
 window.__render = () => paintIfChanged(list, build());
-<<<<<<< HEAD
 // Рендер ПОКАРТКОВО — саме той шлях, яким тепер іде «Стрічка».
 window.__renderCards = () => patchList(list, data, p => p.id, cardHtml, 'data-post');
-=======
->>>>>>> origin/main
 window.__render();
 
 window.__drawn = () => [...list.querySelectorAll('img')].filter(i => i.complete && i.naturalWidth > 0).length;
@@ -96,11 +82,8 @@ window.__firstNode = () => list.querySelector('.card');
 window.__setText = (i, s) => { data[i] = { ...data[i], text: s }; };
 window.__forget = () => forgetPaint(list);
 // Точкова зміна повз render — як patchPostCard у застосунку.
-<<<<<<< HEAD
 // Змінити ЛИШЕ відносний час — рівно те, що робить relTime щохвилини.
 window.__tickTime = () => { data = data.map(p => ({ ...p, text: p.text.replace(/ · .*$/, '') + ' · ' + Date.now() })); };
-=======
->>>>>>> origin/main
 window.__patchOne = (i, s) => {
   list.querySelector('[data-post="' + i + '"] .t').textContent = s;
 };
@@ -165,7 +148,6 @@ console.log(`   кадри при безумовній перемальовці:
 ok('КОНТРОЛЬ: безумовна перемальовка справді дає блим',
    forced.blank > 0, `${forced.blank} кадрів без фото`);
 
-<<<<<<< HEAD
 // ── 🔴 ГОЛОВНЕ ДРУГОГО ЗАХОДУ: змінився ЛИШЕ час, фото не мають смикнутись ──────
 // Слова Вови після першого фікса: «блим є досі… контент на долі секунди зникає і
 // зʼявляється знову, так ніби обновилась сторінка». Причина: `relTime` у картці
@@ -195,7 +177,5 @@ await p.waitForFunction(() => window.__drawn() === 12, null, { timeout: 6000 });
   ok('картка, чий час змінився, справді замінена', !sameNode, sameNode ? 'вузол той самий' : 'замінено');
 }
 
-=======
->>>>>>> origin/main
 await b.close();
 done();
