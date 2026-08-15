@@ -37,7 +37,7 @@ import { openModal } from '../core/modal.js';
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
-import { keepScroll } from '../core/list-patch.js';
+import { keepScroll, paintIfChanged } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
@@ -2285,8 +2285,15 @@ function renderBodyOnly() {
   if (!el) return;
   const body = document.getElementById('bd-body');
   if (!body) return renderAll();
-  body.innerHTML = renderBody();
+  // 🔴 15.08 — перемальовуємо, ЛИШЕ якщо розмітка справді інша (скарга Вови про
+  // блимання при поверненні на вкладку). `innerHTML` перестворює всі `<img>`:
+  // заміряно 5 кадрів, у яких жодне фото не намальоване. Деталі — у коментарі до
+  // `paintIfChanged` (`core/list-patch.js`).
+  const changed = paintIfChanged(body, renderBody());
   updateAdCount();   // Д-11: лічильник у шапці синхронний з відфільтрованим списком
+  // 🔑 Обробники дротуємо лише після СПРАВЖНЬОЇ перемальовки: якщо вузли ті самі,
+  // усе вже на них стоїть, а `initBoardNoteExpand` на незмінному DOM — марна робота.
+  if (!changed) return;
   // Перепідключаємо handlers для cm-board-call всередині нового HTML
   body.querySelectorAll('.cm-board-call').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
