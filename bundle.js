@@ -17682,79 +17682,15 @@ END:VEVENT`
     const inner = document.querySelector(".article-modal-inner");
     if (!inner)
       return;
-    const handle = inner.querySelector(".modal-handle");
-    let startY = 0;
-    let isSwiping = false;
-    let startedOnHandle = false;
-    let rafId = null;
-    const reset = () => {
-      inner.style.transition = "";
-      inner.style.transform = "";
-      inner.style.animation = "";
-    };
-    inner.addEventListener("touchstart", (e) => {
-      startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
-      startedAtTop = inner.scrollTop <= 2;
-      const canSwipe = startedOnHandle || startedAtTop;
-      if (!canSwipe) {
-        startY = e.touches[0].clientY;
-        isSwiping = false;
-        return;
-      }
-      inner.style.animation = "none";
-      inner.style.transition = "none";
-      inner.style.transform = "translateY(0)";
-      startY = e.touches[0].clientY;
-      isSwiping = false;
-    }, { passive: true });
-    inner.addEventListener("touchmove", (e) => {
-      if (!startedOnHandle)
-        return;
-      const dy = e.touches[0].clientY - startY;
-      if (dy > 0) {
-        e.preventDefault();
-        isSwiping = true;
-        if (rafId)
-          cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => {
-          inner.style.transform = `translateY(${dy}px)`;
-          rafId = null;
-        });
-      }
-    }, { passive: false });
-    inner.addEventListener("touchend", (e) => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      if (!startedOnHandle || !isSwiping) {
-        if (startedOnHandle)
-          reset();
-        return;
-      }
-      isSwiping = false;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (dy > 80) {
-        inner.style.transition = "transform 0.25s ease-in";
-        inner.style.transform = "translateY(100%)";
-        setTimeout(window.closeArticleModal, 240);
-      } else {
-        inner.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
-        inner.style.transform = "translateY(0)";
-        setTimeout(reset, 300);
-      }
-      startedOnHandle = false;
-    });
-    inner.addEventListener("touchcancel", () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      startedOnHandle = false;
-      isSwiping = false;
-      inner.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
-      inner.style.transform = "translateY(0)";
-      setTimeout(reset, 300);
+    attachSheetDismiss({
+      panel: inner,
+      scroller: inner,
+      // у цієї модалки панель сама собі скролер
+      backdrop: null,
+      // затемнення тут знімає closeArticleModal()
+      onDismiss: (ms) => setTimeout(window.closeArticleModal, ms),
+      headerZone: 64
+      // смуга з рисочкою .modal-handle
     });
   }
   function onFiveTaps(el, action) {
