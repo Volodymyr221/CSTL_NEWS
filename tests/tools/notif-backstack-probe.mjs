@@ -53,6 +53,8 @@ function builder(table) {
   });
   return chain;
 }
+window.__initCount = 0;
+document.addEventListener('DOMContentLoaded', () => { window.__initCount++; });
 window.supabase = {
   createClient() {
     return {
@@ -89,8 +91,9 @@ const зняти = () => {
     заставка: видно(splash) ? 'ВИДНО' : (splash ? 'є, але прозора' : 'немає'),
     екрани,
     вкладка: document.querySelector('.app-main')?.dataset.tab || '—',
-    листКоментарів: !!document.querySelector('.fd-sheet'),
+    стан: JSON.stringify(history.state),
     історія: history.length,
+    ініціалізацій: window.__initCount ?? '?',
   };
 };
 
@@ -107,13 +110,15 @@ await page.goto(`${site.url}/index.html#/thread/${THREAD_ID}`, { waitUntil: 'dom
 await page.waitForTimeout(ЧЕКАТИ);
 console.log(`   0. одразу після тапу (через ${ЧЕКАТИ}мс):`, JSON.stringify(await page.evaluate(зняти)));
 
-await page.goBack();
-await page.waitForTimeout(500);
-console.log('   1. після ПЕРШОГО «назад»:        ', JSON.stringify(await page.evaluate(зняти)));
-
-await page.goBack().catch(() => {});
-await page.waitForTimeout(500);
-console.log('   2. після ДРУГОГО «назад»:        ', JSON.stringify(await page.evaluate(зняти).catch(() => ({}))));
+for (let i = 1; i <= 4; i++) {
+  await page.goBack().catch(() => {});
+  await page.waitForTimeout(500);
+  const ст = await page.evaluate(зняти).catch(() => null);
+  const url = page.url();
+  console.log(`   ${i}. після «назад» №${i}:`.padEnd(34),
+    ст ? JSON.stringify(ст) : '— сторінку покинуто',
+    `\n      url: ${url.length > 70 ? '…' + url.slice(-60) : url}`);
+}
 
 console.log('\n   🔑 Чого хоче Вова: 0 = чат · 1 = Повідомлення · 2 = застосунок на Дошці.');
 console.log('      «заставка: ВИДНО» на кроці 1 і є тією «сторінкою завантаження» зі знімка.\n');

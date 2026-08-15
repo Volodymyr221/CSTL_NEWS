@@ -2,6 +2,13 @@
   // src/core/layers.js
   var stack = [];
   var seq = 0;
+  var rootGuarded = false;
+  function guardAppRoot() {
+    if (rootGuarded)
+      return;
+    rootGuarded = true;
+    history.pushState({ cstlRoot: 1 }, "");
+  }
   function openLayer(close, opts = {}) {
     const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
     const top = stack[stack.length - 1];
@@ -49,8 +56,12 @@
   }
   window.addEventListener("popstate", () => {
     const top = stack[stack.length - 1];
-    if (top)
+    if (top) {
       finish(top);
+      return;
+    }
+    if (rootGuarded)
+      history.pushState({ cstlRoot: 1 }, "");
   });
 
   // src/core/utils.js
@@ -17879,6 +17890,7 @@ END:VEVENT`
     if (!m)
       return;
     history.replaceState(null, "", location.pathname + location.search);
+    guardAppRoot();
     openThreadById(Number(m[1]));
   }
   function handlePostHash() {
@@ -17886,6 +17898,7 @@ END:VEVENT`
     if (!m)
       return;
     history.replaceState(null, "", location.pathname + location.search);
+    guardAppRoot();
     const [, source, id, commentId] = m;
     const n = Number(id);
     if (source === "feed")
