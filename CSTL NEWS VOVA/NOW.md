@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-15 21:07 UTC
+**Зріз на:** 2026-08-15 21:24 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-6v6car` |
-| останній коміт людини | `92035ecf` 15.08 21:07 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
+| останній коміт людини | `13040915` 15.08 21:08 — Потік Б: документацію розрізано, --strict полагоджено, weather-day не червоніє опівночі (#932) |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1928` |
-| останній PR у `main` | #931 |
+| останній PR у `main` | #932 |
 | стендів на диску | 80 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-15 | є ✅ |
@@ -25,27 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/commands/startuem.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/RODMAP.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/BYYOU_PLAN_2026-08-15_свіжа-документація-done.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-07.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-08_01-12.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/START_HERE_попередні-стани.md`
-- `_session-log/vova-2026-08-15.md`
-- `scripts/now_update.mjs`
-- `tests/weather-day.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `92035ecf` 15.08 21:07 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
-- `0d0a3e0b` 15.08 21:06 — docs(now): пульс під фікс weather-day
-- `b9bad645` 15.08 21:06 — Стенд weather-day більше не червоніє опівночі
-- `c10ea373` 15.08 20:43 — docs(now): пульс під коміт потоку Б
-- `fedb9701` 15.08 20:42 — docs: пульс і журнал під закритий потік Б
+- `13040915` 15.08 21:08 — Потік Б: документацію розрізано, --strict полагоджено, weather-day не червоніє опівночі (#932)
+- `3e7dc32e` 15.08 20:21 — docs: передача в новий чат — 15.08.2026 (#931)
+- `dd2c4a78` 15.08 19:49 — Вихід із чату веде на Громаду + знайдено справжнє джерело «блимання» (#930)
+- `ac992ffb` 15.08 16:17 — «Назад» зі сповіщення більше не вивалює в порожню вкладку (#929)
+- `4312a3df` 15.08 15:34 — Сповіщення: «назад» веде в Повідомлення, підсвітка не згоряє під заставкою (#928)
 
 <!-- AUTO:END -->---
 
