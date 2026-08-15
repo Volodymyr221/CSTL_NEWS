@@ -27,8 +27,10 @@ import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 // Спільна з Дошкою механіка «оновити список, не смикнувши екран» (див. core/list-patch.js).
-import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS }
+import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS,
+         paintIfChanged, forgetPaint }
   from '../core/list-patch.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
@@ -766,20 +768,29 @@ export async function focusFeedPost(id, commentId = null) {
 }
 
 // ── Рендер: головна стрічка (Екран 1) ───────────────────────────────────────
+// 🔴 15.08 — ПЕРЕМАЛЬОВУЄМО, ЛИШЕ ЯКЩО РОЗМІТКА СПРАВДІ ІНША (скарга Вови про
+// блимання при поверненні на вкладку). Слухач `cstl-tab-changed` нижче кличе цю
+// функцію на КОЖНЕ повернення, а `innerHTML` перестворює всі `<img>` — заміряно
+// 5 кадрів, у яких жодне фото не намальоване. Тепер у типовому випадку («за ці
+// секунди нічого не змінилось») DOM не чіпається взагалі й блиму немає.
+// 🔑 Дротування обробників — ТІЛЬКИ після справжньої перемальовки: якщо вузли ті
+// самі, `wireGalleries`/`wireClamps` уже на них стоять, і повторний прохід
+// нічого б не додав, окрім роботи.
 function renderFeed() {
   const circlesEl = document.getElementById('feed-circles');
   const listEl = document.getElementById('feed-list');
-  if (circlesEl) { circlesEl.innerHTML = circlesHtml(); layoutCircles(); }
+  // Кружечки — окремий вузол, тому й підпис у них власний.
+  if (circlesEl && paintIfChanged(circlesEl, circlesHtml())) layoutCircles();
   if (!listEl) return;
   if (!posts.length) {
-    listEl.innerHTML = `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
+    paintIfChanged(listEl, `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`);
     return;
   }
   // ⚠️ Стрілка, а не голий `postCardHtml`: `map` передає другим аргументом ІНДЕКС, і він
   // мовчки став би прапорцем `onPage` — позначка «Закріплено» вилізла б у ГОЛОВНІЙ
   // стрічці на всіх картках, крім першої (у неї індекс 0). А головна стрічка про
   // закріплення знати не повинна взагалі — пряма вимога Вови.
-  listEl.innerHTML = posts.map(p => postCardHtml(p)).join('');
+  if (!paintIfChanged(listEl, posts.map(p => postCardHtml(p)).join(''))) return;
   wireGalleries(listEl);
   wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
@@ -813,9 +824,16 @@ function cardNode(post, onPage) {
 // Перемалювати ОДНУ картку скрізь, де вона зараз є: у головній стрічці і на відкритому
 // екрані спільноти. Делегування подій (`wireCards`) висить на КОНТЕЙНЕРІ, а не на самій
 // картці, тож заміна вузла нічого не відвʼязує — лайк, коментарі й меню «⋯» працюють далі.
+// 🔴 Точкова зміна міняє екран ПОВЗ `renderFeed`, тобто запамʼятований підпис
+// розмітки після неї описує вже неіснуючий стан. Якщо його не скинути, наступне
+// повернення на вкладку могло б вирішити «нічого не змінилось» і не перемалювати
+// те, що насправді інше. Кличеться в усіх чотирьох точкових оновленнях нижче.
+const forgetFeedPaint = () => forgetPaint(document.getElementById('feed-list'));
+
 function patchPostCard(postId) {
   const post = posts.find(p => p.id === postId);
   if (!post) return;
+  forgetFeedPaint();
   document.querySelectorAll(`[data-post="${postId}"]`).forEach(old => {
     const onPage = !!old.closest('.fd-screen');
     // Яке фото зараз відкрите в каруселі — щоб після заміни лишилось те саме.
@@ -860,6 +878,7 @@ function liveCardLists(pageId) {
 // Вставити щойно створений пост у всі відкриті списки — без перемальовки решти.
 // `posts` до цього моменту вже містить новий пост (його додав композер).
 function insertPostCard(post) {
+  forgetFeedPaint();   // точкова зміна повз renderFeed — див. коментар до forgetFeedPaint
   liveCardLists(post.page_id).forEach(({ el, onPage, ordered, tab }) => {
     // Вкладка «Події» показує лише майбутні події за датою. Допис туди не належить,
     // а подія має стати за датою — простіше й чесніше перемалювати саме цей список.
@@ -897,6 +916,7 @@ function insertPostCard(post) {
 // тож фото не перезавантажуються і нічого не блимає. Головної стрічки це не стосується
 // взагалі: там порядок завжди за датою (пряма вимога Вови).
 function reorderPagePosts(pageId, movedId) {
+  forgetFeedPaint();   // точкова зміна повз renderFeed — див. коментар до forgetFeedPaint
   document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`).forEach(screen => {
     // «Події» впорядковані за датою події — закріплення туди не лізе.
     if ((screen.querySelector('.fd-sctab.is-on')?.dataset.sctab || 'posts') !== 'posts') return;
@@ -929,6 +949,7 @@ function reorderPagePosts(pageId, movedId) {
 // Прибрати картку з усіх списків. Порожній список показує ту саму заглушку, що й
 // звичайний рендер — інакше після видалення останнього поста лишалась би біла пляма.
 function removePostCard(postId) {
+  forgetFeedPaint();   // точкова зміна повз renderFeed — див. коментар до forgetFeedPaint
   document.querySelectorAll(`[data-post="${postId}"]`).forEach(node => {
     const list = node.parentElement;
     const scroller = scrollerOf(node);
@@ -3316,9 +3337,14 @@ export async function initFeed() {
 
   // Перезавантаження при поверненні на вкладку (напр. після входу — з'явиться
   // композер/дзвіночок, оновляться мої лайки/підписки).
-  window.addEventListener('cstl-tab-changed', () => {
-    if (document.querySelector('.tab-item[data-tab="shotam"].active')) {
-      loadData().then(renderFeed);
-    }
-  });
+  // 🔴 15.08 — ПЕРЕВЕДЕНО НА СПІЛЬНИЙ `onReturn` (скарга Вови про блимання).
+  // Було: власний слухач `cstl-tab-changed` БЕЗ будь-якої паузи — тобто кожне
+  // перемикання вкладки тягло дані з мережі заново, скільки б їх не було поспіль.
+  // 🔑 `onReturn` дає те саме безкоштовно і ще й краще:
+  //   • пауза `MIN_GAP` (5с) — спільна з Дошкою, ОДНЕ число на застосунок;
+  //   • другий привід — повернення в застосунок ззовні (`visibilitychange`), а на
+  //     iPhone у PWA це головний шлях, і власний слухач його не бачив узагалі.
+  // Блим при цьому знімає не пауза, а `paintIfChanged` у `renderFeed` — пауза лише
+  // прибирає зайві походи в мережу.
+  onReturn('shotam', () => { loadData().then(renderFeed); });
 }

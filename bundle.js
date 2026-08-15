@@ -3923,6 +3923,20 @@
     node.style.overflow = "";
     node.style.opacity = "";
   }
+  var _painted = /* @__PURE__ */ new WeakMap();
+  function paintIfChanged(el, html) {
+    if (!el)
+      return false;
+    if (_painted.get(el) === html)
+      return false;
+    el.innerHTML = html;
+    _painted.set(el, html);
+    return true;
+  }
+  function forgetPaint(el) {
+    if (el)
+      _painted.delete(el);
+  }
 
   // src/tabs/board-discussions.js
   var _getPosts = () => [];
@@ -7621,8 +7635,10 @@
     const body = document.getElementById("bd-body");
     if (!body)
       return renderAll();
-    body.innerHTML = renderBody();
+    const changed = paintIfChanged(body, renderBody());
     updateAdCount();
+    if (!changed)
+      return;
     body.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -13922,17 +13938,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   function renderFeed() {
     const circlesEl = document.getElementById("feed-circles");
     const listEl = document.getElementById("feed-list");
-    if (circlesEl) {
-      circlesEl.innerHTML = circlesHtml();
+    if (circlesEl && paintIfChanged(circlesEl, circlesHtml()))
       layoutCircles();
-    }
     if (!listEl)
       return;
     if (!posts.length) {
-      listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
+      paintIfChanged(listEl, `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`);
       return;
     }
-    listEl.innerHTML = posts.map((p) => postCardHtml(p)).join("");
+    if (!paintIfChanged(listEl, posts.map((p) => postCardHtml(p)).join("")))
+      return;
     wireGalleries(listEl);
     wireClamps(listEl);
   }
@@ -13944,10 +13959,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     tpl.innerHTML = postCardHtml(post, onPage).trim();
     return tpl.content.firstElementChild;
   }
+  var forgetFeedPaint = () => forgetPaint(document.getElementById("feed-list"));
   function patchPostCard(postId) {
     const post = posts.find((p) => p.id === postId);
     if (!post)
       return;
+    forgetFeedPaint();
     document.querySelectorAll(`[data-post="${postId}"]`).forEach((old) => {
       const onPage = !!old.closest(".fd-screen");
       const shot = old.querySelector(".fd-gal-track")?.scrollLeft || 0;
@@ -13983,6 +14000,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return out;
   }
   function insertPostCard(post) {
+    forgetFeedPaint();
     liveCardLists(post.page_id).forEach(({ el, onPage, ordered, tab }) => {
       if (tab === "events") {
         keepScroll(scrollerOf(el), () => {
@@ -14016,6 +14034,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
   }
   function reorderPagePosts(pageId, movedId) {
+    forgetFeedPaint();
     document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`).forEach((screen) => {
       if ((screen.querySelector(".fd-sctab.is-on")?.dataset.sctab || "posts") !== "posts")
         return;
@@ -14051,6 +14070,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
   }
   function removePostCard(postId) {
+    forgetFeedPaint();
     document.querySelectorAll(`[data-post="${postId}"]`).forEach((node) => {
       const list = node.parentElement;
       const scroller = scrollerOf(node);
@@ -15936,10 +15956,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     await loadData2();
     renderFeed();
     healFeedPushDevice();
-    window.addEventListener("cstl-tab-changed", () => {
-      if (document.querySelector('.tab-item[data-tab="shotam"].active')) {
-        loadData2().then(renderFeed);
-      }
+    onReturn("shotam", () => {
+      loadData2().then(renderFeed);
     });
   }
 
