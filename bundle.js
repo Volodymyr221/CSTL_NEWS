@@ -7929,13 +7929,13 @@
       requestAnimationFrame(() => {
         btn.classList.add("qa-fab-wide");
         if (icon)
-          icon.style.transform = "rotate(180deg)";
+          icon.style.transform = "rotate(360deg)";
       });
     }, 420));
     askHintTimers.push(setTimeout(() => {
       btn.classList.remove("qa-fab-wide");
       if (icon)
-        icon.style.transform = "rotate(360deg)";
+        icon.style.transform = "rotate(720deg)";
     }, 420 + 440 + 2600));
   }
   function openDiscussions() {
