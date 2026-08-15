@@ -10,42 +10,32 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-15 21:07 UTC
+**Зріз на:** 2026-08-15 21:41 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/startuem-6v6car` |
-| останній коміт людини | `92035ecf` 15.08 21:07 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
+| гілка | `claude/startuem-tt38jj` |
+| останній коміт людини | `2f0a6578` 15.08 21:34 — audit: повний аудит застосунку (byyou) — знахідки і план, код не чіпано |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1928` |
-| останній PR у `main` | #931 |
+| останній PR у `main` | #932 |
 | стендів на диску | 80 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-15 | є ✅ |
-| потік `/byyou` | none — потік не названо |
+| потік `/byyou` | planned — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/commands/startuem.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/RODMAP.md`
-- `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/AUDIT_FULL_2026-08-15.md`
 - `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/BYYOU_PLAN_2026-08-15_свіжа-документація-done.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-07.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-08_01-12.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/START_HERE_попередні-стани.md`
-- `_session-log/vova-2026-08-15.md`
-- `scripts/now_update.mjs`
-- `tests/weather-day.mjs`
+- `_session-log/vova-2026-08-15c.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `92035ecf` 15.08 21:07 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
-- `0d0a3e0b` 15.08 21:06 — docs(now): пульс під фікс weather-day
-- `b9bad645` 15.08 21:06 — Стенд weather-day більше не червоніє опівночі
-- `c10ea373` 15.08 20:43 — docs(now): пульс під коміт потоку Б
-- `fedb9701` 15.08 20:42 — docs: пульс і журнал під закритий потік Б
+- `2f0a6578` 15.08 21:34 — audit: повний аудит застосунку (byyou) — знахідки і план, код не чіпано
+- `ace963f6` 15.08 21:11 — docs(log): журнал сесії 15.08 (C) — старт
+- `13040915` 15.08 21:08 — Потік Б: документацію розрізано, --strict полагоджено, weather-day не червоніє опівночі (#932)
+- `3e7dc32e` 15.08 20:21 — docs: передача в новий чат — 15.08.2026 (#931)
+- `dd2c4a78` 15.08 19:49 — Вихід із чату веде на Громаду + знайдено справжнє джерело «блимання» (#930)
 
 <!-- AUTO:END -->---
 
