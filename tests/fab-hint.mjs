@@ -179,6 +179,98 @@ const зняти = (p) => p.evaluate(() => {
   await ctx.close();
 }
 
+// ── 🔴 15.08 — РОЗГОРНУТА КНОПКА НЕ НАКЛАДАЄТЬСЯ НА «ГРОМАДУ» ──────────────────
+// Скарга Вови зі знімком: «коли FAB розгортається в Дошці, він попадає під цю
+// іконку». Заміряно `tests/tools/fab-overlap.mjs`: «Подати оголошення» давало
+// перекриття **52px по X і 10px по Y**, «Запитати» — не давало взагалі.
+// ⚠️ Тобто вада залежить від ДОВЖИНИ підпису, і перевіряти треба саме довгий.
+// Лікування — підйом `--fab-lift` (translateY) на час розгортання.
+{
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
+                                   hasTouch: true, serviceWorkers: 'block' });
+  const p = await ctx.newPage();
+  await mockSupabase(p, { posts: [], announcements: [] });
+  await p.route('**://api.open-meteo.com/**', r => r.abort());
+  await p.goto(url + '/index.html', { waitUntil: 'domcontentloaded' });
+  await p.waitForTimeout(2400);
+  await p.evaluate(() => document.querySelector('.consent-accept')?.click());
+  await p.waitForTimeout(300);
+  await p.evaluate(() => document.querySelectorAll('.splash,#splash').forEach(e => e.remove()));
+  await p.evaluate(() => window.switchTab('board'));
+  await p.waitForTimeout(400);
+  await p.evaluate(() => document.querySelector('.brules-ok')?.click());
+  await p.waitForTimeout(4200);          // дати підказці відіграти повністю
+
+  // Розгортаємо з НАЙДОВШИМ підписом — саме на ньому вада й проявлялась.
+  const geo = await p.evaluate(async () => {
+    const btn = document.getElementById('board-trigger');
+    const lab = btn.querySelector('.qa-fab-label');
+    lab.textContent = 'Подати оголошення';
+    btn.style.setProperty('--qa-fab-w', (Math.ceil(lab.scrollWidth) + 6) + 'px');
+    btn.classList.add('qa-fab-wide');
+    await new Promise(r => setTimeout(r, 800));
+    const f = btn.getBoundingClientRect();
+    const h = document.querySelector('.tab-home-circle').getBoundingClientRect();
+    const ic = btn.querySelector('.cm-board-trigger-icon svg');
+    return {
+      overlapX: Math.min(f.right, h.right) - Math.max(f.left, h.left),
+      overlapY: Math.min(f.bottom, h.bottom) - Math.max(f.top, h.top),
+      gapY: Math.round(h.top - f.bottom),
+      lift: getComputedStyle(btn).transform,
+      iconAnim: ic ? getComputedStyle(ic).transitionProperty : '',
+      msgAnim: getComputedStyle(btn.querySelector('.cm-board-trigger-msg svg')).transitionDuration,
+    };
+  });
+  ok('3а. 🔴 розгорнута кнопка НЕ перекриває «Громаду»',
+     !(geo.overlapX > 0 && geo.overlapY > 0),
+     `по X ${Math.round(geo.overlapX)}px · по Y ${Math.round(geo.overlapY)}px`);
+  ok('3б. між кнопкою і «Громадою» лишається зазор', geo.gapY > 0, `${geo.gapY}px`);
+  ok('3в. підйом робиться transform-ом (не переставляє розкладку)',
+     /matrix|translate/.test(geo.lift), geo.lift);
+
+  // 🔴 Іконка після розгортання мусить стояти РІВНО. Вова: «іконка повідомлення
+  // перевернута догори ногами… вона має ставати в свій звичайний режим».
+  // Півоберт (180°) дає matrix(-1,0,0,-1,…) — саме це й було вадою.
+  const rot = await p.evaluate(() => {
+    const btn = document.getElementById('board-trigger');
+    const ic = btn.querySelector('.cm-board-trigger-icon svg');
+    return { inline: ic.style.transform, computed: getComputedStyle(ic).transform };
+  });
+  const півоберт = /matrix\(-1,\s*0,\s*0,\s*-1/.test(rot.computed);
+  ok('3г. 🔴 іконка НЕ лишається перевернутою (оберт повний, не пів)',
+     !півоберт, `${rot.inline || '—'} → ${rot.computed}`);
+
+  // Плавність мусить бути в ОБОХ іконок: раніше вона стояла лише на плюсі, і
+  // конверт (Дошка з непрочитаними) перескакував ривком.
+  ok('3д. конверт теж має плавність повороту, а не стрибок',
+     parseFloat(geo.msgAnim) > 0, `тривалість ${geo.msgAnim}`);
+
+  // 🛑 Натиск має власний transform (scale) — він не сміє збити підйом.
+  // ⚠️ ОБХІД МУСИТЬ ЗАХОДИТИ В `@import`. `board.css` підключений саме так
+  // (`style.css` → `@import url('style/board.css')`), і його правила лежать не в
+  // плоскому списку `document.styleSheets`, а у ВКЛАДЕНІЙ таблиці
+  // (`rule.styleSheet.cssRules`). Перша редакція цієї перевірки цього не знала і
+  // сказала «правила немає» про правило, яке фізично стоїть у файлі — тобто
+  // звинуватила справний код. Чергова брехлива мірка, спіймана до висновку.
+  const press = await p.evaluate(() => {
+    const out = [];
+    const walk = (sheet) => {
+      let rules; try { rules = [...sheet.cssRules]; } catch { return; }
+      for (const r of rules) {
+        if (r.styleSheet) { walk(r.styleSheet); continue; }         // @import
+        if (r.cssRules && !r.selectorText) { walk(r); continue; }   // @media тощо
+        if (r.selectorText && r.selectorText.includes('qa-fab-wide')
+            && r.selectorText.includes(':active')) out.push(r.style.transform);
+      }
+    };
+    [...document.styleSheets].forEach(walk);
+    return out.join(' | ');
+  });
+  ok('3е. 🛑 натиск не збиває підйом (у :active теж є translateY)',
+     /translateY/.test(press), press || 'правила немає — кнопка стрибне вниз при дотику');
+  await ctx.close();
+}
+
 await stop();
 await b.close();
 done();
