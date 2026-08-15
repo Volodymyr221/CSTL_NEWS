@@ -6253,7 +6253,8 @@
     const sbBadge = document.getElementById("sb-msg-badge");
     const fabBtn = document.getElementById("board-trigger");
     const chats = isLoggedIn() ? _unreadChats : 0;
-    fabBtn?.classList.toggle("has-unread", chats > 0);
+    const \u043C\u0430\u0454\u041A\u043E\u043D\u0432\u0435\u0440\u0442 = !!fabBtn?.querySelector(".cm-board-trigger-msg");
+    fabBtn?.classList.toggle("has-unread", chats > 0 && \u043C\u0430\u0454\u041A\u043E\u043D\u0432\u0435\u0440\u0442);
     if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {

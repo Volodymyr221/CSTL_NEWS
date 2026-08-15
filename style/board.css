@@ -791,8 +791,14 @@ textarea.cm-board-input.bm-invalid {
 .board-trigger--fixed .cm-board-trigger-close svg { width: 28px; height: 28px; }
 .board-trigger--fixed .cm-board-trigger-close,
 .board-trigger--fixed .cm-board-trigger-msg { opacity: 0; pointer-events: none; }
-/* Є непрочитані й меню закрите → плюс поступається конверту. */
-.board-trigger--fixed.has-unread .cm-board-trigger-icon { opacity: 0; }
+/* Є непрочитані й меню закрите → плюс поступається конверту.
+   🛑 15.08 — `:has(.cm-board-trigger-msg)` ОБОВʼЯЗКОВИЙ. Кнопка `#board-trigger`
+   одна на дві зони, але розмітка різна: у Дошки всередині плюс І конверт, у
+   «Питань» — лише плюс. Без цієї умови клас `has-unread` (а непрочитані
+   рахуються глобально) ховав плюс там, де конверта немає, і людина бачила
+   ПОРОЖНІЙ бордовий круг. Це страховка; причину лікує `board-chat.js`, який
+   тепер не ставить клас кнопці без конверта. */
+.board-trigger--fixed.has-unread:has(.cm-board-trigger-msg) .cm-board-trigger-icon { opacity: 0; }
 .board-trigger--fixed.has-unread .cm-board-trigger-msg  { opacity: 1; }
 /* Бейдж непрочитаних чатів у кутку FAB (число ставить refreshUnreadBadge) */
 .board-trigger-badge {

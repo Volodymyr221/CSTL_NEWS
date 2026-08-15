@@ -1559,7 +1559,18 @@ export function paintUnreadBadge() {
   const fabBtn = document.getElementById('board-trigger');
 
   const chats = isLoggedIn() ? _unreadChats : 0;
-  fabBtn?.classList.toggle('has-unread', chats > 0);
+  // 🔴 15.08 — КЛАС СТАВИМО, ЛИШЕ ЯКЩО В КНОПЦІ Є КОНВЕРТ. Скарга Вови зі знімком:
+  // «іконка FAB чомусь не завжди зʼявляється у вкладці Питання» — кнопка була
+  // намальована, але ПОРОЖНЯ.
+  // 🔑 Причина: `#board-trigger` — одна кнопка на дві зони, а розмітка в них РІЗНА.
+  // У Дошки всередині два вузли (плюс + конверт), у «Питань» — тільки плюс.
+  // CSS-правило `.has-unread .cm-board-trigger-icon { opacity: 0 }` ховає плюс, щоб
+  // його замінив конверт, — але в «Питаннях» замінювати нема чим, і лишався голий
+  // бордовий круг. Непрочитані ж рахуються ГЛОБАЛЬНО, тож клас прилітав і туди.
+  // ⚠️ Лікуємо ПРИЧИНУ (не ставимо клас, якому нема чим себе показати), а не
+  // наслідок; страховка в CSS (`:has`) стоїть окремо — див. `style/board.css`.
+  const маєКонверт = !!fabBtn?.querySelector('.cm-board-trigger-msg');
+  fabBtn?.classList.toggle('has-unread', chats > 0 && маєКонверт);
   if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.classList.remove('is-on'); }
