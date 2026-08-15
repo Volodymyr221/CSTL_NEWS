@@ -154,6 +154,7 @@ export function paintIfChanged(el, html) {
 export function forgetPaint(el) {
   if (el) _painted.delete(el);
 }
+<<<<<<< HEAD
 
 // ── ПОКАРТКОВЕ ОНОВЛЕННЯ СПИСКУ ────────────────────────────────────────────────
 // 🔴 15.08, ДРУГИЙ ЗАХІД. Після `paintIfChanged` Вова сказав: **«блим є досі…
@@ -258,3 +259,5 @@ export function patchList(container, items, keyOf, htmlOf, keyAttr) {
   });
   return { mode: changed ? 'patch' : 'none', changed };
 }
+=======
+>>>>>>> origin/main

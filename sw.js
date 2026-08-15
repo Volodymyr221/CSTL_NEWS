@@ -1,7 +1,11 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
+<<<<<<< HEAD
 const CACHE_NAME = 'cstl-20260815-1046';
+=======
+const CACHE_NAME = 'cstl-20260815-1001';
+>>>>>>> origin/main
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)

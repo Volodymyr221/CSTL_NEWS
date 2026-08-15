@@ -10,41 +10,38 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-15 10:22 UTC
+**Зріз на:** 2026-08-15 10:46 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-6v6car` |
-| останній коміт людини | `a7ba4d91` 15.08 10:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1001` |
-| останній PR у `main` | #920 |
+| останній коміт людини | `f2cbf672` 15.08 10:46 — Блим при поверненні: справжня причина — відносний час у картці |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1046` |
+| останній PR у `main` | #921 |
 | стендів на диску | 76 |
-| незакомічених файлів | 1 ⚠️ |
+| незакомічених файлів | 8 ⚠️ |
 | журнал за 2026-08-15 | є ✅ |
 | потік `/byyou` | done — 15.08 — «Свіжа документація на переході: новий чат / другий акаунт» |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-15.md`
 - `bundle.js`
 - `src/core/list-patch.js`
-- `src/tabs/board.js`
 - `src/tabs/feed.js`
 - `sw.js`
+- `tests/pin.mjs`
 - `tests/tab-return-repaint.mjs`
-- `tests/tools/tab-return-flash.mjs`
+- `tests/tools/display-none-flash.mjs`
+- `tests/tools/tab-bg-flash.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `f2cbf672` 15.08 10:46 — Блим при поверненні: справжня причина — відносний час у картці
+- `893f95f5` 15.08 10:36 — Прилади: чому блим лишився — тло вкладки перетікає 300мс під готовим вмістом
+- `87429ca0` 15.08 10:22 — docs(now): пульс під фікс блимання + ущільнено під стелю 16 KB
 - `a7ba4d91` 15.08 10:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
 - `011f5f06` 15.08 10:17 — docs: стендів 76 + пульс — сторожі впіймали відставання після нового стенда
-- `8840cf42` 15.08 10:03 — Повернення на вкладку більше не блимає (Стрічка + Дошка)
-- `c45fc94e` 15.08 09:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
-- `5651d68c` 15.08 09:44 — Аудит блимання при поверненні на вкладку: заміряно 5 кадрів без фотографій
 
 <!-- AUTO:END -->---
 
