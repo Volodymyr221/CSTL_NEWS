@@ -26,8 +26,12 @@ const { ok, done } = reporter();
 const REV = process.env.BUNDLE_REV || '';
 const SRC = projectFile('src/core/list-patch.js', REV);
 
+// ⚠️ Шукаємо і `export function`, і звичайну — допоміжні функції модуля не
+// експортуються, але без них витягнутий код не працює (стенд уже впав на цьому:
+// `adoptLoadedImages is not defined`).
 function grab(name) {
-  const i = SRC.indexOf(`export function ${name}(`);
+  let i = SRC.indexOf(`export function ${name}(`);
+  if (i < 0) i = SRC.indexOf(`function ${name}(`);
   if (i < 0) return null;
   let d = 0, started = false;
   for (let j = i; j < SRC.length; j++) {
@@ -40,9 +44,15 @@ function grab(name) {
 const LEGACY = `function paintIfChanged(el, html) { el.innerHTML = html; return true; }
 function forgetPaint() {}`;
 const painted = SRC.includes('const _painted = new WeakMap()') ? 'const _painted = new WeakMap();' : '';
+const cardSig = SRC.includes('const _cardSig = new WeakMap()') ? 'const _cardSig = new WeakMap();' : '';
 const fns = grab('paintIfChanged');
+const patchFn = grab('patchList');
 const FIXED = !!fns;
-const code = FIXED ? `${painted}\n${fns}\n${grab('forgetPaint') || 'function forgetPaint(){}'}` : LEGACY;
+// Стара поведінка покарткового шляху: малюємо ВЕСЬ список цілком.
+const LEGACY_PATCH = `function patchList(c, items, keyOf, htmlOf) { c.innerHTML = items.map(htmlOf).join(''); return { mode: 'full', changed: items.length }; }`;
+const code = FIXED
+  ? `${painted}\n${cardSig}\n${fns}\n${grab('forgetPaint') || 'function forgetPaint(){}'}\n${grab('adoptLoadedImages') || 'function adoptLoadedImages(){}'}\n${patchFn || LEGACY_PATCH}`
+  : `${LEGACY}\n${LEGACY_PATCH}`;
 console.log(`\n── код: ${FIXED ? 'З ФІКСОМ' : '🕰 СТАРИЙ (контроль)'}${REV ? `  [${REV}]` : ''}`);
 
 const html = `<!doctype html><meta charset="utf-8"><style>
@@ -63,6 +73,8 @@ const list = document.getElementById('list');
 const build = () => data.map(cardHtml).join('');
 
 window.__render = () => paintIfChanged(list, build());
+// Рендер ПОКАРТКОВО — саме той шлях, яким тепер іде «Стрічка».
+window.__renderCards = () => patchList(list, data, p => p.id, cardHtml, 'data-post');
 window.__render();
 
 window.__drawn = () => [...list.querySelectorAll('img')].filter(i => i.complete && i.naturalWidth > 0).length;
@@ -70,6 +82,8 @@ window.__firstNode = () => list.querySelector('.card');
 window.__setText = (i, s) => { data[i] = { ...data[i], text: s }; };
 window.__forget = () => forgetPaint(list);
 // Точкова зміна повз render — як patchPostCard у застосунку.
+// Змінити ЛИШЕ відносний час — рівно те, що робить relTime щохвилини.
+window.__tickTime = () => { data = data.map(p => ({ ...p, text: p.text.replace(/ · .*$/, '') + ' · ' + Date.now() })); };
 window.__patchOne = (i, s) => {
   list.querySelector('[data-post="' + i + '"] .t').textContent = s;
 };
@@ -133,6 +147,35 @@ const forced = await flashFrames();
 console.log(`   кадри при безумовній перемальовці: ${forced.frames.join(', ')}`);
 ok('КОНТРОЛЬ: безумовна перемальовка справді дає блим',
    forced.blank > 0, `${forced.blank} кадрів без фото`);
+
+// ── 🔴 ГОЛОВНЕ ДРУГОГО ЗАХОДУ: змінився ЛИШЕ час, фото не мають смикнутись ──────
+// Слова Вови після першого фікса: «блим є досі… контент на долі секунди зникає і
+// зʼявляється знову, так ніби обновилась сторінка». Причина: `relTime` у картці
+// («щойно» → «5 хв») міняє розмітку САМ раз на хвилину, і порівняння «список
+// цілком» щоразу спрацьовувало → перемальовувались УСІ фотографії через один
+// текстовий рядок.
+await p.evaluate(() => window.__renderCards());          // перейти на покартковий шлях
+await p.waitForFunction(() => window.__drawn() === 12, null, { timeout: 6000 });
+{
+  const before = await p.evaluateHandle(() => window.__firstNode());
+  const frames = await p.evaluate(async () => {
+    const out = [];
+    window.__tickTime();          // «5 хв» → «6 хв» у КОЖНІЙ картці
+    window.__renderCards();
+    for (let i = 0; i < 20; i++) { out.push(window.__drawn()); await new Promise(r => requestAnimationFrame(r)); }
+    return out;
+  });
+  const after = await p.evaluateHandle(() => window.__firstNode());
+  const sameNode = await p.evaluate(([a, b]) => a === b, [before, after]);
+  const blank = frames.filter(f => f < 12).length;
+  console.log(`   кадри при зміні лише часу: ${frames.join(', ')}`);
+  ok('🔴 оновлення часу не смикає фотографії (покарткова заміна)',
+     blank === 0, `${blank} кадрів без фото`);
+  // Текст мусить оновитись — інакше «не блимає» означало б «не працює».
+  const txt = await p.evaluate(() => document.querySelector('[data-post="0"] .t').textContent);
+  ok('новий час доїхав до екрана', /·/.test(txt), txt.slice(0, 40));
+  ok('картка, чий час змінився, справді замінена', !sameNode, sameNode ? 'вузол той самий' : 'замінено');
+}
 
 await b.close();
 done();

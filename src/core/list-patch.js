@@ -154,3 +154,107 @@ export function paintIfChanged(el, html) {
 export function forgetPaint(el) {
   if (el) _painted.delete(el);
 }
+
+// ── ПОКАРТКОВЕ ОНОВЛЕННЯ СПИСКУ ────────────────────────────────────────────────
+// 🔴 15.08, ДРУГИЙ ЗАХІД. Після `paintIfChanged` Вова сказав: **«блим є досі…
+// контент на долі секунди зникає і зʼявляється знову, так ніби обновилась
+// сторінка»**. Тобто перевірка «чи змінилась розмітка» правильна, але СПРАЦЬОВУЄ
+// РІДКО — бо розмітка міняється сама по собі.
+//
+// 🔑 ПРИЧИНА, ЯКУ Я ПРОҐАВИВ ПЕРШОГО РАЗУ: у картці стоїть ВІДНОСНИЙ ЧАС
+// (`relTime` у `feed.js`: «щойно» → «5 хв» → «6 хв»). Він міняється **раз на
+// хвилину сам собою**, без жодної зміни даних. Тобто рядок усього списку виходив
+// інший, спрацьовувала повна заміна `innerHTML`, і разом із одним текстовим
+// рядком перестворювались УСІ фотографії.
+// ➡️ Висновок ширший за цю вкладку: **порівняння «весь список цілком» надто грубе**
+// там, де у вмісті є хоч щось живе за часом. Різниця в одному символі коштує
+// перемальовки всього екрана.
+//
+// ✅ ЩО РОБИМО: звіряємо КОЖНУ картку окремо і чіпаємо лише ті, чия розмітка
+// справді змінилась. Тоді «5 хв» → «6 хв» міняє один рядок в одній картці, а
+// фотографії решти навіть не знають, що щось сталося.
+//
+// ⚠️ Порядок і склад теж стежимо: якщо ключі пішли інакше (новий пост, видалення,
+// закріплення), робимо звичайну повну перемальовку — reconcile з перестановками
+// коштував би складності, якої тут не треба, а такі події рідкісні й людина
+// однаково очікує руху.
+//
+// ⚠️ Підпис живе НА ВУЗЛІ (`_cardSig`), а не в спільній мапі за ключем: вузол може
+// бути замінений точковим оновленням повз нас, і тоді підпис поїде разом зі старим
+// вузлом, а новий чесно вважатиметься невідомим.
+// 🔴 ПЕРЕНОС УЖЕ ЗАВАНТАЖЕНИХ ФОТОГРАФІЙ У НОВУ КАРТКУ.
+// Знайшов ВЛАСНИЙ СТОРОЖ на першій же спробі покарткової заміни: коли відносний
+// час оновлюється в УСІХ картках одразу, замінюються всі картки — а разом із ними
+// перестворюються `<img>`, і блим повертається. Заміряно: 4 кадри без фотографій.
+// ✅ Лікування: не даємо браузеру вантажити те, що вже намальоване — ПЕРЕНОСИМО
+// сам вузол `<img>` зі старої картки в нову.
+//
+// 🛑 ПОРЯДОК ТУТ КРИТИЧНИЙ, І ЦЕ ДОВЕДЕНО ВИМІРОМ. Перша редакція переносила фото
+// в картку, яка ще лежала у `<template>`, тобто ПОЗА документом — і заміряно, що
+// `<img>` при цьому **втрачає завантажений стан** (`complete` стає `false`), тож
+// блим лишався: 4 кадри. Обхід: спершу ставимо нову картку в документ ПОРУЧ зі
+// старою, і лише тоді переносимо — коли ОБИДВА вузли живі, стан зберігається
+// (заміряно: `complete` лишається `true`, кадрів без фото 0).
+// ⚠️ Переносимо ЛИШЕ якщо адреса збігається і фото справді намальоване: інакше
+// підмінили б нове зображення старим.
+// ⚠️ Атрибути беремо з НОВОЇ розмітки (клас, alt могли змінитись) — переносимо
+// пікселі, а не опис.
+function adoptLoadedImages(oldNode, freshNode) {
+  const old = [...oldNode.querySelectorAll('img')].filter(i => i.complete && i.naturalWidth > 0);
+  if (!old.length) return;
+  freshNode.querySelectorAll('img').forEach(ni => {
+    const hit = old.find(oi => oi.src === ni.src);
+    if (!hit) return;
+    for (const { name, value } of ni.attributes) {
+      if (name !== 'src') hit.setAttribute(name, value);
+    }
+    ni.replaceWith(hit);
+  });
+}
+
+const _cardSig = new WeakMap();
+
+/**
+ * Оновити список покартково.
+ * @param {Element} container  вузол-список
+ * @param {Array}   items      дані у порядку показу
+ * @param {Function} keyOf     item → ключ (рядок)
+ * @param {Function} htmlOf    item → розмітка КАРТКИ (один кореневий вузол)
+ * @param {string}  keyAttr    атрибут, яким картка позначена в DOM
+ * @returns {{mode:string, changed:number}} 'full' — перемальовано все;
+ *          'patch' — замінено `changed` карток; 'none' — DOM недоторканий.
+ */
+export function patchList(container, items, keyOf, htmlOf, keyAttr) {
+  if (!container) return { mode: 'none', changed: 0 };
+  const nodes = [...container.children].filter(n => n.hasAttribute?.(keyAttr));
+  const sameShape = nodes.length === items.length &&
+    items.every((it, i) => nodes[i].getAttribute(keyAttr) === String(keyOf(it)));
+
+  // Склад або порядок інші — чесна повна перемальовка (рідкісний випадок).
+  if (!sameShape) {
+    container.innerHTML = items.map(htmlOf).join('');
+    [...container.children].forEach((n, i) => {
+      if (items[i]) _cardSig.set(n, htmlOf(items[i]));
+    });
+    return { mode: 'full', changed: items.length };
+  }
+
+  // Склад той самий — міняємо лише ті картки, чия розмітка справді інша.
+  let changed = 0;
+  const tpl = document.createElement('template');
+  items.forEach((it, i) => {
+    const node = nodes[i];
+    const html = htmlOf(it);
+    if (_cardSig.get(node) === html) return;
+    tpl.innerHTML = html;
+    const fresh = tpl.content.firstElementChild;
+    if (!fresh) return;
+    // 🛑 Спершу в документ, ПОТІМ перенос фото — див. коментар до adoptLoadedImages.
+    node.before(fresh);
+    adoptLoadedImages(node, fresh);
+    node.remove();
+    _cardSig.set(fresh, html);
+    changed++;
+  });
+  return { mode: changed ? 'patch' : 'none', changed };
+}
