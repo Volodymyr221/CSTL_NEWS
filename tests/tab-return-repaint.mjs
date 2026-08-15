@@ -64,11 +64,13 @@ const html = `<!doctype html><meta charset="utf-8"><style>
 <script>
 ${code}
 const N = 12;
-let data = Array.from({length: N}, (_, i) => ({ id: i, text: 'Допис ' + i }));
+let data = Array.from({length: N}, (_, i) => ({ id: i, text: 'Допис ' + i, com: 0 }));
 // ⚠️ Абсолютний URL: сторінка на about:blank, відносний шлях не став би запитом.
+// Картка несе і лічильник коментарів — рівно як справжня (commentCounts у feed.js).
 const cardHtml = p => '<div class="card" data-post="' + p.id + '">'
   + '<img src="http://cstl.test/photo-' + p.id + '.svg">'
-  + '<div class="t">' + p.text + '</div></div>';
+  + '<div class="t">' + p.text + '</div>'
+  + '<div class="c">' + p.com + ' коментарів</div></div>';
 const list = document.getElementById('list');
 const build = () => data.map(cardHtml).join('');
 
@@ -84,6 +86,8 @@ window.__forget = () => forgetPaint(list);
 // Точкова зміна повз render — як patchPostCard у застосунку.
 // Змінити ЛИШЕ відносний час — рівно те, що робить relTime щохвилини.
 window.__tickTime = () => { data = data.map(p => ({ ...p, text: p.text.replace(/ · .*$/, '') + ' · ' + Date.now() })); };
+// Хтось написав коментар до СТАРОГО поста — у даних змінилось одне число.
+window.__addComment = (i) => { data[i] = { ...data[i], com: data[i].com + 1 }; };
 window.__patchOne = (i, s) => {
   list.querySelector('[data-post="' + i + '"] .t').textContent = s;
 };
@@ -175,6 +179,39 @@ await p.waitForFunction(() => window.__drawn() === 12, null, { timeout: 6000 });
   const txt = await p.evaluate(() => document.querySelector('[data-post="0"] .t').textContent);
   ok('новий час доїхав до екрана', /·/.test(txt), txt.slice(0, 40));
   ok('картка, чий час змінився, справді замінена', !sameNode, sameNode ? 'вузол той самий' : 'замінено');
+}
+
+// ── 🔴 ПИТАННЯ ВОВИ: «якщо хтось пише коментар до старого поста, людина доскролить
+//    і побачить цей коментар?» Тобто чи не заблокував фікс доставку змін.
+//    Сценарій: коментар зʼявився під ОДНИМ старим постом серед дванадцяти.
+{
+  await p.evaluate(() => window.__renderCards());
+  await p.waitForFunction(() => window.__drawn() === 12, null, { timeout: 6000 });
+  const N9 = await p.evaluateHandle(() => document.querySelector('[data-post="9"]'));
+  const N0 = await p.evaluateHandle(() => document.querySelector('[data-post="0"]'));
+
+  const frames = await p.evaluate(async () => {
+    const out = [];
+    window.__addComment(9);        // коментар під старим постом №9
+    window.__renderCards();
+    for (let i = 0; i < 20; i++) { out.push(window.__drawn()); await new Promise(r => requestAnimationFrame(r)); }
+    return out;
+  });
+
+  const seen = await p.evaluate(() => document.querySelector('[data-post="9"] .c').textContent);
+  ok('🔴 новий коментар під старим постом ДОЇЖДЖАЄ до стрічки',
+     seen === '1 коментарів', seen);
+
+  const nine = await p.evaluateHandle(() => document.querySelector('[data-post="9"]'));
+  const zero = await p.evaluateHandle(() => document.querySelector('[data-post="0"]'));
+  const nineReplaced = await p.evaluate(([a, b]) => a !== b, [N9, nine]);
+  const zeroUntouched = await p.evaluate(([a, b]) => a === b, [N0, zero]);
+  ok('оновилась САМЕ та картка, де зʼявився коментар', nineReplaced,
+     nineReplaced ? 'замінено' : 'НЕ замінено — зміна не доїхала б');
+  ok('🛑 решта карток НЕ перестворена (їх фото не смикнулись)', zeroUntouched,
+     zeroUntouched ? 'вузол той самий' : 'перестворено зайве');
+  ok('жодного кадру без фотографій при цьому', frames.every(f => f === 12),
+     `${frames.filter(f => f < 12).length} кадрів`);
 }
 
 await b.close();
