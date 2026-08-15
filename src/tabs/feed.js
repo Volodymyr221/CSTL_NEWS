@@ -490,6 +490,62 @@ function setupSheetShell(back, { sheet, input = null, minHeight = 200 }) {
   return { detach, beginClose };
 }
 
+// ── Закриття «тапом повз лист» — із ЗАМКОМ на зсув розкладки ────────────────────
+// 🔴 15.08, скарга Вови: «пишу коментар, натискаю Відповісти… натискаю Відповісти
+// знову, і чомусь згортається модалка коментарів».
+//
+// МЕХАНІКА (заміряна `tests/tools/click-target-probe.mjs`, дотики справжні — CDP,
+// не миша; та сама сім'я, що HOT_RULES №10):
+//   1) `blur` поля вводу повертає лист із повної висоти у висоту спокою
+//      (`setComSheetFull(false)`, нижче) — це ≈150px при екрані 844;
+//   2) кнопки списку — звичайні `<button>`, тож дотик до них САМ забирає фокус
+//      у поля, тобто запускає (1) у момент, коли палець уже на кнопці;
+//   3) кнопка їде вниз з-під пальця, і на його місці опиняється порожнеча НАД
+//      стиснутим листом — тобто `.fd-sheet-vp`.
+// Стара умова (`e.target === back || e.target === vpEl`) читала це як «тап повз
+// лист» і закривала його. Заміряно: кнопка top 462 → 662, під пальцем `vp`.
+//
+// ✅ ЛІКУВАННЯ: закриття приймається, ЛИШЕ якщо жест і ПОЧАВСЯ, і ЗАКІНЧИВСЯ на
+// задньому шарі. Тоді жодна зміна розкладки між натиском і відпусканням не може
+// перетворити тап по кнопці на закриття. Той самий патерн уже стоїть у
+// `core/sheet-motion.js` (замок «жест був прокруткою») і в `core/sidebar.js`
+// (`panelArriving()`).
+//
+// 🛑 ОДНА ФУНКЦІЯ НА ВСІ ЧОТИРИ ЛИСТИ «Стрічки» — копію не робити: у проєкті вже
+// двічі розходились копії того самого правила (списки антиспаму, B-27).
+// ⚠️ `downOn` скидається на КОЖНОМУ `click`, інакше прапорець від попереднього
+// жесту дожив би до наступного і закрив лист «заднім числом».
+function attachBackdropClose(back, vpEl, close) {
+  const onBack = (t) => t === back || t === vpEl;
+  let downOn = null;
+  back.addEventListener('pointerdown', e => { downOn = e.target; }, { passive: true });
+  back.addEventListener('click', e => {
+    const started = downOn;
+    downOn = null;
+    if (started && onBack(started) && onBack(e.target)) close();
+  });
+}
+
+// ── Кнопки аркуша не забирають фокус у поля вводу ───────────────────────────────
+// РУБІЖ 2 того самого лікування: не давати розкладці рушити взагалі.
+// `preventDefault` на `pointerdown` скасовує перенесення фокуса (типову дію
+// вказівника), тож `blur` не настає, лист не стискається, і `click` приходить
+// рівно в ту кнопку, по якій цілились.
+//
+// 🔑 Прийом у проєкті вже перевірений — саме так з 26.07 полагоджено кнопку
+// «Надіслати» (`feed.js`, нижче): та сама причина, але інший симптом, бо вона
+// стоїть УНИЗУ аркуша (там тап просто з'їдався, а не закривав лист).
+// ⚠️ Фільтр `closest('button')` обов'язковий: на `input`/`textarea`
+// `preventDefault` ставити НЕ можна — вони мусять отримувати фокус.
+// ⚠️ Кнопки листа стоять У СКРОЛЕРІ, на відміну від «Надіслати», тому вплив на
+// прокрутку пальцем заміряно окремо (`tests/tools/pd-scroll-probe.mjs`):
+// без захисту 176px, із захистом 183px — прокрутка ціла.
+function keepFocusOnButtons(root) {
+  root.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) e.preventDefault();
+  });
+}
+
 function setComSheetFull(on, { animate = true } = {}) {
   const el = document.querySelector('.fd-com-sheet');
   if (!el) return;
@@ -1756,8 +1812,10 @@ function openComments(postId, focusCommentId = null) {
   // Умова переставала виконуватись, лист не закривався. Доведено:
   // `document.elementFromPoint` у затемненні повертав `fd-sheet-vp`, обробник мовчав.
   // Тому перевіряємо ОБИДВА шари: візуальний задник і шар-координати.
+  // 🔴 15.08 — умову вбудовано в `attachBackdropClose` (замок «жест почався і
+  // закінчився на задньому шарі»): без нього тап по «Відповісти» згортав лист.
   const vpEl = sheet.querySelector('.fd-sheet-vp');
-  sheet.addEventListener('click', e => { if (e.target === sheet || e.target === vpEl) close(); });
+  attachBackdropClose(sheet, vpEl, close);
 
   // Розгорнути гілку («Ще N відповідей»).
   //   1) scrollTop знімаємо і повертаємо. ⚠️ Чесно: це СТРАХОВКА, а не рушій фіксу —
@@ -2033,6 +2091,13 @@ function openComments(postId, focusCommentId = null) {
     if (closing) return;
     kbAnim(); setComSheetFull(false, { animate: false });
   });
+  // 🔴 РУБІЖ 2 (15.08): жодна кнопка аркуша не забирає фокус у поля — тож рядок вище
+  // не спрацьовує від тапу по «Відповісти», і розкладка під пальцем не рушить.
+  // Саме цей `blur` і був причиною згортання листа; тут ми прибираємо його ПРИЧИНУ,
+  // а `attachBackdropClose` вище страхує НАСЛІДОК. Потрібні обидва: сам замок лишив
+  // би тап марним (кнопка вже поїхала), сам `preventDefault` не захистив би від
+  // майбутніх зсувів розкладки з інших причин.
+  keepFocusOnButtons(comSheet);
 
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
@@ -2515,7 +2580,7 @@ function openPageTeam(pageId) {
   const close = () => { detachKb(); back.remove(); };
   // Обидва шари — інакше тап у затемнення потрапляє у `.fd-sheet-vp` (регрес PR #631).
   const vpEl = back.querySelector('.fd-sheet-vp');
-  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
+  attachBackdropClose(back, vpEl, close);   // 🔴 15.08: замок на зсув розкладки — див. саму функцію
 
   const listEl = back.querySelector('.fd-team-list');
   const render = (rows) => {
@@ -2700,7 +2765,7 @@ function openComposer(pageId, editPost = null) {
   // (регрес PR #631): після появи `.fd-sheet-vp` (fixed, inset:0) тап у затемнення
   // потрапляє ВЖЕ В НЬОГО, і умова `e.target === back` перестає виконуватись.
   const vpEl = back.querySelector('.fd-sheet-vp');
-  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
+  attachBackdropClose(back, vpEl, close);   // 🔴 15.08: замок на зсув розкладки — див. саму функцію
 
   // Перемикач Допис/Подія — показує/ховає блок полів події.
   const eventBox = back.querySelector('.fd-comp-event');
@@ -2973,7 +3038,7 @@ function openPageEditor(pageId) {
   const close = () => { detachKb(); back.remove(); };
   // Обидва шари — інакше тап у затемнення потрапляє у `.fd-sheet-vp` і не закриває (PR #631).
   const vpEl = back.querySelector('.fd-sheet-vp');
-  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
+  attachBackdropClose(back, vpEl, close);   // 🔴 15.08: замок на зсув розкладки — див. саму функцію
 
   const setPreview = (label, file) => {
     label.querySelector('img')?.remove();
