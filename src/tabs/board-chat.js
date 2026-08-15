@@ -1664,8 +1664,39 @@ async function ensureChatPush() {
 }
 
 // ── P-9: відкрити конкретну розмову за id треда (з нотифікації/hash-роутингу) ──
+//
+// 🔴 15.08, ДРУГА СКАРГА ВОВИ: «на коментар перекидає, а коли тапаю по сповіщенню
+// про приватне повідомлення — закидає на головну сторінку, а не в чат».
+//
+// 🔑 ПРИЧИНА — ПЕРЕГОНИ З ВІДНОВЛЕННЯМ ВХОДУ, не маршрутизація. На холодному
+// старті `sw.js` відкриває вікно на `#/thread/<id>`, `app.js` у `init()` кличе
+// `handleThreadHash()` — а той першою дією робить `replaceState`, тобто СПОЖИВАЄ
+// посилання. Але `initAuth()` у тому ж `init()` НЕ дочікується (`getSession()`
+// асинхронний), тож `isLoggedIn()` тут ще `false`, і функція мовчки виходила.
+// Посилання вже зникло — другої спроби не було, людина лишалась на Громаді.
+//
+// ЗАМІРЯНО (`tests/tools/notif-thread-probe.mjs`): хеш зʼїдається на ~465мс,
+// вхід зʼявляється на ~500мс. Порядок структурний, а не випадковий — навіть із
+// нульовою затримкою сесії хеш іде першим, бо `init()` не чекає на `await`.
+//
+// 🔑 ЧОМУ КОМЕНТАРІ ПРАЦЮВАЛИ, А ЧАТ НІ: `focusFeedPost()` входу не потребує.
+// Тому та сама ланка ламалась лише на чаті — рівно як Вова й описав.
+//
+// ЛІКУВАННЯ: не губимо намір. Немає входу — відкладаємо і доводимо до кінця,
+// щойно вхід зʼявиться (нижче, в `initBoardChat` → `onAuthChange`).
+// ⏱ Вікно навмисно коротке: воно покриває відновлення сесії на старті, але не
+// перетягує людину в стару розмову, якщо вона увійде руками через пів години.
+const PENDING_THREAD_MS = 15000;
+let _pendingThreadId = null;
+let _pendingThreadUntil = 0;
+
 export async function openThreadById(threadId) {
-  if (!isLoggedIn() || threadId == null) return;
+  if (threadId == null) return;
+  if (!isLoggedIn()) {
+    _pendingThreadId = threadId;
+    _pendingThreadUntil = Date.now() + PENDING_THREAD_MS;
+    return;
+  }
   const me = currentUserId();
   const threads = await fetchMyThreads(me);
   const thread = threads.find(t => String(t.id) === String(threadId));
@@ -1717,8 +1748,16 @@ export function initBoardChat() {
   window.addEventListener('cstl-disc-seen', paintTabDots);
   // SW повідомляє про вхідний push (надійніше за realtime, який буває пропускає
   // нові треди між акаунтами): оновлюємо бейдж + сигналимо відкритому списку розмов
-  // оновитись наживо (подія 'cstl-chat-refresh') + банер якщо застосунок у фокусі (P-8)
-  // + відкриває розмову якщо клікнули по системній нотифікації (P-9).
+  // оновитись наживо (подія 'cstl-chat-refresh') + банер якщо застосунок у фокусі (P-8).
+  //
+  // 🔴 15.08 — ТАП ПО СПОВІЩЕННЮ ('notif-click') ТУТ БІЛЬШЕ НЕ ОБРОБЛЯЄТЬСЯ.
+  // Обробників було ДВА: тут і в `app.js`, обидва кликали `openThreadById()` на
+  // одну й ту саму подію — і при відкритому застосунку екран розмови відкривався
+  // ДВІЧІ, один поверх одного. Заміряно стендом `notif-thread-coldstart` (4):
+  // «екранів чату: 2». Дубль зʼявився 15.08 зранку, коли гарячий шлях лагодили
+  // в `app.js`, не помітивши, що тут така сама гілка вже стоїть із P-9.
+  // Єдиний власник тепер `app.js` — там живуть УСІ deep-link'и (пости, статті,
+  // запрошення), тож і цей має бути поруч, а не в зоні.
   if ('serviceWorker' in navigator && navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', (e) => {
       if (!e.data) return;
@@ -1735,14 +1774,27 @@ export function initBoardChat() {
             threadId: e.data.threadId, url: e.data.url,
           });
         }
-      } else if (e.data.__cstl === 'notif-click' && e.data.threadId != null) {
-        openThreadById(e.data.threadId);
       }
     });
   }
   onAuthChange(() => {
     refreshUnreadBadge();
     registerChatPushDevice();
+    // 🔴 15.08 — ДОВОДИМО ВІДКЛАДЕНИЙ ТАП ПО СПОВІЩЕННЮ ДО КІНЦЯ. Саме тут
+    // закривається розрив, описаний над `openThreadById()`: на холодному старті
+    // намір приходить РАНІШЕ за вхід, тож виконуємо його, щойно вхід зʼявився.
+    // Підписка стоїть у `initBoardChat()`, а він у `init()` кличеться ДО розбору
+    // хеша (`handleThreadHash`) — отже намір гарантовано має кому дочекатись.
+    // Забираємо намір ПЕРЕД викликом: інакше повторний `onAuthChange` (їх кілька —
+    // `getSession`, `onAuthStateChange`, прогрів профілю) відкрив би чат ще раз
+    // поверх уже відкритого.
+    if (_pendingThreadId != null && isLoggedIn()) {
+      const id = _pendingThreadId;
+      const свіжий = Date.now() <= _pendingThreadUntil;
+      _pendingThreadId = null;
+      _pendingThreadUntil = 0;
+      if (свіжий) openThreadById(id);
+    }
     // realtime по всіх моїх тредах → оновлення бейджа в реальному часі
     if (_threadsUnsub) { try { _threadsUnsub(); } catch (_) {} _threadsUnsub = null; }
     if (isLoggedIn()) _threadsUnsub = subscribeMyThreads((p) => {

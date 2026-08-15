@@ -6359,9 +6359,17 @@
       console.warn("[chat-push] ensure:", e && e.message);
     }
   }
+  var PENDING_THREAD_MS = 15e3;
+  var _pendingThreadId = null;
+  var _pendingThreadUntil = 0;
   async function openThreadById(threadId) {
-    if (!isLoggedIn() || threadId == null)
+    if (threadId == null)
       return;
+    if (!isLoggedIn()) {
+      _pendingThreadId = threadId;
+      _pendingThreadUntil = Date.now() + PENDING_THREAD_MS;
+      return;
+    }
     const me = currentUserId();
     const threads = await fetchMyThreads(me);
     const thread = threads.find((t) => String(t.id) === String(threadId));
@@ -6414,14 +6422,20 @@
               url: e.data.url
             });
           }
-        } else if (e.data.__cstl === "notif-click" && e.data.threadId != null) {
-          openThreadById(e.data.threadId);
         }
       });
     }
     onAuthChange(() => {
       refreshUnreadBadge();
       registerChatPushDevice();
+      if (_pendingThreadId != null && isLoggedIn()) {
+        const id = _pendingThreadId;
+        const \u0441\u0432\u0456\u0436\u0438\u0439 = Date.now() <= _pendingThreadUntil;
+        _pendingThreadId = null;
+        _pendingThreadUntil = 0;
+        if (\u0441\u0432\u0456\u0436\u0438\u0439)
+          openThreadById(id);
+      }
       if (_threadsUnsub) {
         try {
           _threadsUnsub();
