@@ -13713,6 +13713,25 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     return { detach, beginClose };
   }
+  function attachBackdropClose(back, vpEl, close) {
+    const onBack = (t) => t === back || t === vpEl;
+    let downOn = null;
+    back.addEventListener("pointerdown", (e) => {
+      downOn = e.target;
+    }, { passive: true });
+    back.addEventListener("click", (e) => {
+      const started = downOn;
+      downOn = null;
+      if (started && onBack(started) && onBack(e.target))
+        close();
+    });
+  }
+  function keepFocusOnButtons(root) {
+    root.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button"))
+        e.preventDefault();
+    });
+  }
   function setComSheetFull(on, { animate = true } = {}) {
     const el = document.querySelector(".fd-com-sheet");
     if (!el)
@@ -14675,10 +14694,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         openCommentSheet = null;
     };
     const vpEl = sheet.querySelector(".fd-sheet-vp");
-    sheet.addEventListener("click", (e) => {
-      if (e.target === sheet || e.target === vpEl)
-        close();
-    });
+    attachBackdropClose(sheet, vpEl, close);
     const expandThread = (rootId) => {
       const st = listEl.scrollTop;
       const before = new Set([...listEl.querySelectorAll("[data-com-id]")].map((el) => el.dataset.comId));
@@ -14892,6 +14908,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       kbAnim();
       setComSheetFull(false, { animate: false });
     });
+    keepFocusOnButtons(comSheet);
     detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
       input: kbInput,
       minHeight: 180,
@@ -15247,10 +15264,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
-    back.addEventListener("click", (e) => {
-      if (e.target === back || e.target === vpEl)
-        close();
-    });
+    attachBackdropClose(back, vpEl, close);
     const listEl = back.querySelector(".fd-team-list");
     const render2 = (rows) => {
       if (!rows.length) {
@@ -15394,10 +15408,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
-    back.addEventListener("click", (e) => {
-      if (e.target === back || e.target === vpEl)
-        close();
-    });
+    attachBackdropClose(back, vpEl, close);
     const eventBox = back.querySelector(".fd-comp-event");
     back.querySelectorAll(".fd-comp-type-btn").forEach((btn) => btn.addEventListener("click", () => {
       postType = btn.dataset.type;
@@ -15652,10 +15663,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       back.remove();
     };
     const vpEl = back.querySelector(".fd-sheet-vp");
-    back.addEventListener("click", (e) => {
-      if (e.target === back || e.target === vpEl)
-        close();
-    });
+    attachBackdropClose(back, vpEl, close);
     const setPreview = (label, file) => {
       label.querySelector("img")?.remove();
       const img = document.createElement("img");
