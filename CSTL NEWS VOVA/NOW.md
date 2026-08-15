@@ -10,40 +10,39 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-15 09:29 UTC
+**Зріз на:** 2026-08-15 10:17 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-6v6car` |
-| останній коміт людини | `4f03b162` 15.08 09:29 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-0914` |
-| останній PR у `main` | #919 |
-| стендів на диску | 75 |
-| незакомічених файлів | 0 ✅ |
+| останній коміт людини | `8840cf42` 15.08 10:03 — Повернення на вкладку більше не блимає (Стрічка + Дошка) |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260815-1001` |
+| останній PR у `main` | #920 |
+| стендів на диску | 76 |
+| незакомічених файлів | 3 ⚠️ |
 | журнал за 2026-08-15 | є ✅ |
 | потік `/byyou` | done — 15.08 — «Свіжа документація на переході: новий чат / другий акаунт» |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-15.md`
 - `bundle.js`
+- `src/core/list-patch.js`
+- `src/tabs/board.js`
 - `src/tabs/feed.js`
 - `sw.js`
-- `tests/comment-sheet-close.mjs`
-- `tests/tools/click-target-probe.mjs`
-- `tests/tools/pd-scroll-probe.mjs`
+- `tests/tab-return-repaint.mjs`
+- `tests/tools/tab-return-flash.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `4f03b162` 15.08 09:29 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
-- `35ff00cb` 15.08 09:22 — docs(now): пульс під фікс листа коментарів
-- `8d6f15d3` 15.08 09:21 — docs(now): пульс під останній коміт
-- `54753e82` 15.08 09:21 — docs: стендів 75 — сторож docs-refs упіймав відставання після нового стенда
-- `1b645f97` 15.08 09:18 — Лист коментарів більше не згортається від тапу по кнопці
+- `8840cf42` 15.08 10:03 — Повернення на вкладку більше не блимає (Стрічка + Дошка)
+- `c45fc94e` 15.08 09:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-6v6car
+- `5651d68c` 15.08 09:44 — Аудит блимання при поверненні на вкладку: заміряно 5 кадрів без фотографій
+- `784d8561` 15.08 09:31 — Лист коментарів більше не згортається від тапу по кнопці (аудит модалки + два рубежі) (#920)
+- `5a3692f5` 15.08 09:30 — docs(now): пульс ущільнено під стелю 16 KB — сторож упіймав 16.1
 
 <!-- AUTO:END -->---
 
