@@ -1,0 +1,211 @@
+// tests/docs-fresh.mjs — СТОРОЖ СВІЖОСТІ ВХОДУ. Заведено 15.08.2026.
+//
+// 🔴 НАВІЩО. Вова: «працюю на двох акаунтах… інший акаунт Claude не розуміє до
+// кінця, що вже зроблено… ніби щось у репозиторії відстає». Заміряно — **git не
+// відстає**: робота другого акаунта була в `main`, різниця лише в автогенерованих
+// файлах парсерів. Відставали ДОКУМЕНТИ, і причин виявилось дві.
+//
+// 🔑 ПРИЧИНА ПЕРША, ГОЛОВНА: обовʼязкове читання переросло вікно контексту.
+// `/startuem` Крок 2 наказував прочитати вісім файлів — **1193 KB ≈ 407 тис.
+// токенів при вікні 200 тис., тобто 203% від можливого**. Це не «відставання»,
+// це фізично невиконанна інструкція: новий чат читає верхівки, решту тихо губить.
+// Найважчий сам по собі — `SESSION_STATE_VOVA.md` (807 KB, 7197 рядків): читалка
+// бере перші 2000 рядків = 27% файлу, і це вже ~38% вікна ще до початку роботи.
+// 🛑 Ніщо цього не міряло. Документ може рости роками, і день, коли він переріс
+// вікно, не помічає НІХТО — бо симптом виглядає як «Claude чомусь не в курсі».
+//
+// 🔑 ПРИЧИНА ДРУГА: три копії «поточного стану» в трьох документах, з датами
+// 11.08 / 12.08 / 13.08 при сьогоднішньому 15.08. Це той самий корінь, що вже
+// описаний у шапці `tests/docs-refs.mjs` — «копії розходяться завжди». Там його
+// зловили для списків файлів; для СТАНУ не ловив ніхто.
+//
+// ЩО МІРЯЄМО. Пʼять речей, кожну числом:
+//   1. пульс (`NOW.md`) існує, має авто-блок і НЕ переріс власну стелю;
+//   2. усі розділи пульсу заповнені — жодної заглушки з шаблону;
+//   3. 🔴 обовʼязкове читання вкладається в БЮДЖЕТ вікна;
+//   4. авто-блок пульсу не розійшовся з git (`now_update.mjs --check`);
+//   5. пульс не відстав від роботи (скільки людських комітів пройшло повз нього).
+//
+// 🛑 ЧОГО НЕ МІРЯЄМО. Літопис — `SESSION_STATE_VOVA.md`, `_session-log/`,
+// `_archive/`, `BYYOU_ARCHIVE_*`. Він МУСИТЬ рости, і його розмір — не вада.
+// Межа та сама, що в `docs-refs.mjs`: стережемо те, за чим новий чат орієнтується
+// СЬОГОДНІ, а не запис минулого.
+
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const VOVA = join(ROOT, 'CSTL NEWS VOVA');
+const NOW = join(VOVA, 'NOW.md');
+
+let passed = 0, total = 0;
+const fails = [];
+const check = (ok, label, detail = '') => {
+  total++;
+  if (ok) { passed++; console.log(`✅ ${label}${detail ? `  — ${detail}` : ''}`); }
+  else { fails.push(`${label}${detail ? `  — ${detail}` : ''}`); }
+};
+
+// ── Стелі ────────────────────────────────────────────────────────────────────
+// 🔑 Числа не з голови. Пульс має читатись ПЕРШИМ і не з'їдати вікно: 200 рядків
+// ≈ 16 KB ≈ 5 тис. токенів ≈ 2.5% вікна — вартість, яку можна платити щоразу.
+// Живий пульс на день заведення — 110 рядків / 8.1 KB, тобто стеля має запас удвічі.
+const NOW_MAX_LINES = 200;
+const NOW_MAX_BYTES = 16 * 1024;
+
+// 🔴 БЮДЖЕТ ОБОВʼЯЗКОВОГО ЧИТАННЯ. 60 тис. токенів ≈ 30% вікна.
+// Чому саме стільки: після читання має лишитись місце на РОБОТУ — код, стенди,
+// діалог. Вада, від якої цей сторож, була 407 тис. (203%); 60 тис. лишає 70%
+// вікна на власне роботу і при цьому вміщує пульс + правила + карту файлів.
+const READ_BUDGET_TOKENS = 60_000;
+const BYTES_PER_TOKEN = 3;   // та сама груба формула, що в `.claude/hooks/context-warning.sh`
+
+// ── 1. Пульс існує і не переріс стелю ────────────────────────────────────────
+const nowExists = existsSync(NOW);
+check(nowExists, 'пульс `NOW.md` існує', nowExists ? '' : 'створи: node scripts/now_update.mjs');
+
+const nowText = nowExists ? readFileSync(NOW, 'utf8') : '';
+const nowLines = nowText ? nowText.split('\n').length : 0;
+const nowBytes = Buffer.byteLength(nowText);
+
+check(nowExists && nowLines <= NOW_MAX_LINES,
+  `пульс у межах ${NOW_MAX_LINES} рядків`, `${nowLines}`);
+check(nowExists && nowBytes <= NOW_MAX_BYTES,
+  `пульс у межах ${Math.round(NOW_MAX_BYTES / 1024)} KB`, `${(nowBytes / 1024).toFixed(1)} KB`);
+check(nowText.includes('<!-- AUTO:START -->') && nowText.includes('<!-- AUTO:END -->'),
+  'пульс має авто-блок');
+
+// ── 2. Розділи заповнені, а не лишились шаблоном ─────────────────────────────
+// 🔑 Порожній розділ гірший за відсутній: він виглядає як відповідь. Заглушки в
+// шаблоні `now_update.mjs` навмисно мають вигляд `_(підказка)_` — ловимо саме їх.
+const SECTIONS = ['ЗАРАЗ', 'ЗРОБЛЕНО В ЦІЙ СЕСІЇ', 'НЕ ДОРОБЛЕНО',
+                  'ВІДКРИТІ ПИТАННЯ ДО ВОВИ', 'ДАЛІ', 'НЕ ЧІПАТИ'];
+for (const s of SECTIONS) {
+  const re = new RegExp(`##[^\\n]*${s}\\s*\\n+([\\s\\S]*?)(?=\\n## |$)`);
+  const m = nowText.match(re);
+  const body = m ? m[1].trim() : '';
+  const isStub = !body || /^_\(.*\)_$/s.test(body);
+  check(!!m && !isStub, `розділ «${s}» заповнений`,
+        !m ? 'розділу немає' : isStub ? 'лишилась заглушка з шаблону' : `${body.split('\n').length} р.`);
+}
+
+// ── 3. 🔴 БЮДЖЕТ ОБОВʼЯЗКОВОГО ЧИТАННЯ ───────────────────────────────────────
+// Читаємо список рівно там, де його бачить новий чат — у `/startuem`.
+//
+// 🔴 УРОК ПРО САМУ МІРКУ (15.08, спіймано на першому ж прогоні після правки).
+// Спершу я шукав список «усередині секції Крок 2» — регуляркою до наступного
+// `##`. Але підзаголовок `### 📚 Решта — СИТУАТИВНО` теж лежить у цій секції, і
+// мірка захопила ще й таблицю файлів, які читати НЕ треба. Сторож показав
+// «205% вікна» після того, як ваду вже виправили, — тобто **брехав**.
+// 🔑 Висновок той самий, що вже двічі коштував часу: при розбіжності першою
+// підозрюваною роби ПЕРЕВІРКУ, а не код. Лікування — однозначні маркери в
+// документі замість вгадування за заголовком.
+// Запасний шлях (по «Крок 2») лишено навмисно: на СТАРИХ ревізіях маркерів
+// немає, і без нього не можна довести сторожа падінням на тій ваді, від якої він.
+function mandatoryReading() {
+  const cmd = join(ROOT, '.claude', 'commands', 'startuem.md');
+  if (!existsSync(cmd)) return null;
+  const text = readFileSync(cmd, 'utf8');
+  const marked = text.match(/<!--\s*MANDATORY:START[\s\S]*?-->([\s\S]*?)<!--\s*MANDATORY:END\s*-->/);
+  const m = marked || text.match(/##\s*Крок 2[^\n]*\n([\s\S]*?)(?=\n##\s|$)/);
+  if (!m) return null;
+  const paths = [...m[1].matchAll(/`([^`\n]+\.md)`/g)].map(x => x[1].trim());
+  const seen = new Set();
+  const out = [];
+  for (const p of paths) {
+    const full = existsSync(join(ROOT, p)) ? join(ROOT, p)
+               : existsSync(join(VOVA, p)) ? join(VOVA, p) : null;
+    if (!full || seen.has(full)) continue;
+    seen.add(full);
+    out.push({ p, bytes: Buffer.byteLength(readFileSync(full)) });
+  }
+  return out;
+}
+
+const mand = mandatoryReading();
+if (mand === null) {
+  check(false, 'у `/startuem` знайдено секцію «Крок 2» зі списком читання');
+} else {
+  const bytes = mand.reduce((a, f) => a + f.bytes, 0);
+  const tokens = Math.round(bytes / BYTES_PER_TOKEN);
+  const pct = Math.round(tokens / 2000);   // % від вікна 200 тис.
+  console.log(`\n── обовʼязкове читання /startuem (${mand.length} файлів) ──`);
+  for (const f of [...mand].sort((a, b) => b.bytes - a.bytes)) {
+    console.log(`   ${String(Math.round(f.bytes / 1024)).padStart(5)} KB  ≈${String(Math.round(f.bytes / BYTES_PER_TOKEN)).padStart(7)} ток.  ${f.p}`);
+  }
+  console.log(`   ─────  РАЗОМ ≈ ${tokens} токенів = ${pct}% вікна\n`);
+
+  check(tokens <= READ_BUDGET_TOKENS,
+    `обовʼязкове читання вкладається в бюджет ${READ_BUDGET_TOKENS / 1000}K токенів`,
+    `${tokens} ток. = ${pct}% вікна`);
+
+  // 🔑 Окремо ловимо ОДИН завеликий файл. Сума може влізти в бюджет, а всередині
+  // сидіти документ, який сам по собі не дочитується (Read віддає 2000 рядків).
+  const HEAVY = 40 * 1024;
+  const heavy = mand.filter(f => f.bytes > HEAVY);
+  check(heavy.length === 0, `жоден обовʼязковий файл не важчий за ${HEAVY / 1024} KB`,
+    heavy.map(f => `${f.p} = ${Math.round(f.bytes / 1024)} KB`).join(' · ') || 'усі легкі');
+
+  check(mand.some(f => /NOW\.md$/.test(f.p)), 'пульс `NOW.md` є в обовʼязковому читанні');
+}
+
+// ── 4. Авто-блок не розійшовся з git ─────────────────────────────────────────
+let genOk = false, genMsg = '';
+try {
+  execFileSync(process.execPath, [join(ROOT, 'scripts', 'now_update.mjs'), '--check'],
+    { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
+  genOk = true;
+} catch (e) {
+  genMsg = String(e.stderr || e.stdout || '').trim().split('\n').pop() || 'генератор повернув помилку';
+}
+check(genOk, 'авто-блок пульсу збігається з git', genOk ? '' : genMsg);
+
+// ── 5. Пульс не відстав від роботи ───────────────────────────────────────────
+// 🔑 Поріг НЕ нульовий і це навмисно. Усередині сесії пульс завжди трохи позаду —
+// сторож, який кричить на кожен коміт, перестають читати. Ловимо справжнє
+// відставання: багато зробленої роботи, повз яку пульс не оновлювали жодного разу.
+// Строгу нульову перевірку робить `/onovy` перед передачею в новий чат.
+const STALE_AFTER = 8;
+function git(...a) {
+  try {
+    return execFileSync('git', ['-c', 'core.quotepath=false', ...a],
+      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch (_) { return ''; }
+}
+const lastNowCommit = git('log', '-1', '--format=%H', '--', 'CSTL NEWS VOVA/NOW.md');
+if (!lastNowCommit) {
+  // Пульс ще не в git — це нормально в сесії, де його щойно завели.
+  check(true, 'пульс щойно заведено (ще не в git) — відставання не міряємо');
+} else {
+  const since = git('log', '--format=%s', `${lastNowCommit}..HEAD`)
+    .split('\n').filter(s => s && !/^auto\(/.test(s));
+  check(since.length <= STALE_AFTER, `пульс не відстав більше ніж на ${STALE_AFTER} кроків`,
+    `${since.length} людських комітів після останнього оновлення пульсу`);
+}
+
+// ── Контроль мірки ───────────────────────────────────────────────────────────
+// 🛑 Перевірку перевіряємо так само, як код. 06.08 сторож `docs-refs` показав
+// зелене на завідомо битому шляху — діра була не в стороже, а в КОНТРОЛІ.
+check(mandatoryReading.toString().includes('Крок 2'), 'КОНТРОЛЬ: список читання шукається саме в «Крок 2»');
+check(Math.round(1193 * 1024 / BYTES_PER_TOKEN) > READ_BUDGET_TOKENS,
+  'КОНТРОЛЬ: вада, від якої заведено сторожа (1193 KB), бюджет НЕ проходить');
+check(/^_\(.*\)_$/s.test('_(один абзац: над чим працюємо)_'),
+  'КОНТРОЛЬ: заглушка з шаблону розпізнається як незаповнений розділ');
+
+// ── Підсумок ─────────────────────────────────────────────────────────────────
+if (fails.length) {
+  console.log('\n❌ ПРОВАЛЕНО:');
+  for (const f of fails) console.log(`❌   ${f}`);
+  console.log('\n🔑 Що робити:');
+  console.log('   • пульс відстав     → node scripts/now_update.mjs');
+  console.log('   • розділ порожній   → дописати руками (git цього не знає)');
+  console.log('   • бюджет перевищено → прибрати файл з обовʼязкового читання');
+  console.log('     у `/startuem` Крок 2 і перенести його в ситуативне читання.');
+  console.log('     🛑 НЕ піднімати стелю: вікно контексту від цього не росте.');
+} else {
+  console.log('\n✅ вхід у новий чат свіжий і вкладається у вікно');
+}
+console.log(`\n${fails.length ? '❌' : '✅'} ${passed}/${total} перевірок пройдено`);
+process.exit(fails.length ? 1 : 0);
