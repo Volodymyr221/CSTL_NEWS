@@ -20,6 +20,7 @@ import { initProfileCardTaps } from './core/profile-card.js';   // картка 
 import { attachSheetDismiss } from './core/sheet-motion.js';    // спільний свайп-закриття аркушів (15.08 — модалка статті теж на ньому)
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
+import { markSplashGone } from './core/splash.js';              // сигнал «заставка зійшла» для deep-link'ів (15.08)
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -455,14 +456,16 @@ async function init() {
   // ніколи б не залогувався.
   logEvent(currentUserId() || getAnonId(), 'tab_view', { tab: currentTab, meta: { device: _analyticsDevice } });
 
-  // Splash screen — прибираємо після завантаження
+  // Splash screen — прибираємо після завантаження.
+  // 🔴 15.08 — `markSplashGone()` НЕ косметика: на нього чекає показова частина
+  // deep-link'ів (розмова зі сповіщення, підсвітка коментаря). Без сигналу вони
+  // спрацьовували ПІД заставкою — див. `src/core/splash.js`.
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    if (splash) {
-      splash.style.opacity = '0';
-      splash.style.transition = 'opacity 0.4s';
-      setTimeout(() => splash.remove(), 600);
-    }
+    if (!splash) { markSplashGone(); return; }
+    splash.style.opacity = '0';
+    splash.style.transition = 'opacity 0.4s';
+    setTimeout(() => { splash.remove(); markSplashGone(); }, 600);
   }, 3500);
 }
 if (document.readyState === 'loading') {
