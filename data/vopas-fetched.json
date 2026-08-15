@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-15T17:26:14.173466+03:00",
+  "fetched_at": "2026-08-15T17:50:14.185978+03:00",
   "date": "15.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5007,8 +5007,8 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5022,9 +5022,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -5037,8 +5037,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5052,8 +5052,8 @@
       "carrier": "Зінюк Л.Л. заїзд",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5067,9 +5067,9 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -5082,8 +5082,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "Баз  А  079.09",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5097,8 +5097,8 @@
       "carrier": "ТОВ РОЛАНД-ТРАНС",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5112,9 +5112,9 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -5127,8 +5127,8 @@
       "carrier": "",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
