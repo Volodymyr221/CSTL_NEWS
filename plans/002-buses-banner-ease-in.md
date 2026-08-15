@@ -1,6 +1,6 @@
 # 002 — Прибрати `ease-in` із закриття банера автобусів
 
-- **Status**: TODO
+- **Status**: ✅ DONE (15.08.2026, гілка `claude/startuem-s3yr33`)
 - **Commit**: 34143baf
 - **Severity**: HIGH
 - **Category**: 2 (Easing & duration) + 7 (Cohesion & tokens)

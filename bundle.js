@@ -10215,12 +10215,12 @@
       }, { passive: true });
       const _onBannerRelease = (dy) => {
         if (dy > 40) {
-          banner.style.transition = "transform 0.25s cubic-bezier(0.4,0,1,1)";
+          banner.style.transition = `transform 250ms ${SHEET_EASE}`;
           banner.style.transform = `translateX(-50%) translateY(${dy + 80}px) scale(0.85)`;
           setTimeout(() => {
             banner.style.transition = "";
             hideBanner();
-          }, 260);
+          }, 250);
         } else {
           banner.style.transition = "transform 0.3s cubic-bezier(0.22,1,0.36,1)";
           banner.style.transform = "";
