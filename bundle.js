@@ -6417,7 +6417,6 @@
     if (!thread)
       return;
     await whenSplashGone();
-    window.switchTab?.("board");
     if (!document.querySelector(".pm-screen"))
       openThreadsList();
     const conv = groupConversations(threads, me).find((c) => c.threads.some((t) => t.id === thread.id));
