@@ -1,6 +1,6 @@
 # 003 — Закрити рух на `:hover` від дотику (фальшивий hover залишає картку збільшеною)
 
-- **Status**: TODO
+- **Status**: ✅ DONE (15.08.2026, гілка `claude/startuem-s3yr33`)
 - **Commit**: 34143baf
 - **Severity**: MEDIUM
 - **Category**: 6 (Accessibility)
