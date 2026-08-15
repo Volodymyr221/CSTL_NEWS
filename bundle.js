@@ -3937,7 +3937,6 @@
     if (el)
       _painted.delete(el);
   }
-<<<<<<< HEAD
   function adoptLoadedImages(oldNode, freshNode) {
     const old = [...oldNode.querySelectorAll("img")].filter((i) => i.complete && i.naturalWidth > 0);
     if (!old.length)
@@ -3986,8 +3985,6 @@
     });
     return { mode: changed ? "patch" : "none", changed };
   }
-=======
->>>>>>> origin/main
 
   // src/tabs/board-discussions.js
   var _getPosts = () => [];
@@ -13997,12 +13994,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       paintIfChanged(listEl, `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`);
       return;
     }
-<<<<<<< HEAD
     const res = patchList(listEl, posts, (p) => p.id, (p) => postCardHtml(p), "data-post");
     if (res.mode === "none")
-=======
-    if (!paintIfChanged(listEl, posts.map((p) => postCardHtml(p)).join("")))
->>>>>>> origin/main
       return;
     wireGalleries(listEl);
     wireClamps(listEl);

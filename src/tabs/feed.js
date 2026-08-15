@@ -28,11 +28,7 @@ import { openLayer, closeLayer } from '../core/layers.js'; // повноекра
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 // Спільна з Дошкою механіка «оновити список, не смикнувши екран» (див. core/list-patch.js).
 import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS,
-<<<<<<< HEAD
          paintIfChanged, forgetPaint, patchList }
-=======
-         paintIfChanged, forgetPaint }
->>>>>>> origin/main
   from '../core/list-patch.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
@@ -794,7 +790,6 @@ function renderFeed() {
   // мовчки став би прапорцем `onPage` — позначка «Закріплено» вилізла б у ГОЛОВНІЙ
   // стрічці на всіх картках, крім першої (у неї індекс 0). А головна стрічка про
   // закріплення знати не повинна взагалі — пряма вимога Вови.
-<<<<<<< HEAD
   //
   // 🔴 15.08, ДРУГИЙ ЗАХІД (Вова: «контент на долі секунди зникає і зʼявляється
   // знову, так ніби обновилась сторінка»). Порівняння списку ЦІЛКОМ виявилось
@@ -806,9 +801,6 @@ function renderFeed() {
   // Обробники дротуємо на те, що справді перестворене: при 'full' — весь список,
   // при 'patch' — вистачає всього списку теж (вузлів мало, а пропустити свіжу
   // картку означало б мертву карусель саме на ній).
-=======
-  if (!paintIfChanged(listEl, posts.map(p => postCardHtml(p)).join(''))) return;
->>>>>>> origin/main
   wireGalleries(listEl);
   wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
