@@ -1410,6 +1410,37 @@ export async function savePushSubscription(payload) {
   return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
+// 🔴 16.08 — ПЕРЕНОС ПІДПИСОК НА НОВУ АДРЕСУ (ротація push-підписки браузером).
+// Обидві таблиці, що зберігають `endpoint`, лікуються ОДНИМ місцем: автобусні
+// рейси (`push_subscriptions`) і пристрої для чату/коментарів/сторінок
+// (`user_push_devices`). Без цього стара адреса лишалась у базі мертвою, сервер
+// отримував 410 і видаляв рядок — людина тихо переставала отримувати сповіщення.
+// ⚠️ На `push_subscriptions` стоїть унікальність `(endpoint, route_id, track_date)`.
+// Якщо рядок під НОВОЮ адресою вже створений (напр. людина встигла відстежити
+// рейс наново), UPDATE впаде у 23505 — тоді старий рядок просто видаляємо, бо
+// свіжий уже є і він правдивіший. Ковтати помилку мовчки не можна: це саме той
+// клас тихих збоїв, від якого вся ця робота.
+export async function migratePushEndpoint(uid, oldEndpoint, sub) {
+  if (!supa || !uid || !oldEndpoint || !sub?.endpoint) return { ok: false, error: 'bad-args' };
+  if (oldEndpoint === sub.endpoint) return { ok: true, moved: 0 };
+  const fields = { endpoint: sub.endpoint, p256dh: sub.p256dh, auth_key: sub.auth_key };
+
+  const routes = await netCall(() => supa.from('push_subscriptions')
+    .update(fields).eq('user_uuid', uid).eq('endpoint', oldEndpoint));
+  if (!routes.ok && routes.rawError?.code === '23505') {
+    await netCall(() => supa.from('push_subscriptions')
+      .delete().eq('user_uuid', uid).eq('endpoint', oldEndpoint));
+  }
+
+  const devices = await netCall(() => supa.from('user_push_devices')
+    .update(fields).eq('uid', uid).eq('endpoint', oldEndpoint));
+  if (!devices.ok && devices.rawError?.code === '23505') {
+    await netCall(() => supa.from('user_push_devices')
+      .delete().eq('uid', uid).eq('endpoint', oldEndpoint));
+  }
+  return { ok: true };
+}
+
 // Знімає підписку на рейс (при знятті відстеження).
 //
 // 🔴 16.08 — ФІЛЬТР БУВ ПО `endpoint`, СТАВ ПО `user_uuid`.

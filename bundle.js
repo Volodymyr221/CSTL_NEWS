@@ -1532,17 +1532,38 @@
   async function savePushSubscription(payload) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const r = await netCall(() => supa.from("push_subscriptions").insert(payload));
-    if (r.ok)
-      return { ok: true };
-    if (r.rawError?.code === "23505")
-      return { ok: true };
-    return { ok: false, error: r.error };
+    const row = {
+      ...payload,
+      notified_dep: false,
+      notified_warning: false,
+      notified_canc: false,
+      notified_start: false
+    };
+    const r = await netCall(() => supa.from("push_subscriptions").upsert(row, { onConflict: "endpoint,route_id,track_date" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  async function deletePushSubscription(endpoint, routeId, trackDate) {
+  async function migratePushEndpoint(uid, oldEndpoint, sub) {
+    if (!supa || !uid || !oldEndpoint || !sub?.endpoint)
+      return { ok: false, error: "bad-args" };
+    if (oldEndpoint === sub.endpoint)
+      return { ok: true, moved: 0 };
+    const fields = { endpoint: sub.endpoint, p256dh: sub.p256dh, auth_key: sub.auth_key };
+    const routes = await netCall(() => supa.from("push_subscriptions").update(fields).eq("user_uuid", uid).eq("endpoint", oldEndpoint));
+    if (!routes.ok && routes.rawError?.code === "23505") {
+      await netCall(() => supa.from("push_subscriptions").delete().eq("user_uuid", uid).eq("endpoint", oldEndpoint));
+    }
+    const devices = await netCall(() => supa.from("user_push_devices").update(fields).eq("uid", uid).eq("endpoint", oldEndpoint));
+    if (!devices.ok && devices.rawError?.code === "23505") {
+      await netCall(() => supa.from("user_push_devices").delete().eq("uid", uid).eq("endpoint", oldEndpoint));
+    }
+    return { ok: true };
+  }
+  async function deletePushSubscription(uid, routeId, trackDate) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const r = await netCall(() => supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate));
+    if (!uid)
+      return { ok: false, error: "no-uid" };
+    const r = await netCall(() => supa.from("push_subscriptions").delete().eq("user_uuid", uid).eq("route_id", routeId).eq("track_date", trackDate));
     return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   function subscribeReactions(onChange) {
@@ -4841,6 +4862,46 @@
       console.warn("[push] ensurePushSubscription:", e && e.message);
       return null;
     }
+  }
+  var ENDPOINT_KEY = "cstl_push_endpoint";
+  async function healPushEndpoint(uid, migrate) {
+    if (!uid || !isPushCapable() || Notification.permission !== "granted")
+      return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub)
+        return;
+      const now = sub.endpoint;
+      const was = localStorage.getItem(ENDPOINT_KEY);
+      if (was && was !== now) {
+        const j = sub.toJSON();
+        await migrate(uid, was, { endpoint: now, p256dh: j.keys?.p256dh, auth_key: j.keys?.auth });
+      }
+      if (was !== now)
+        localStorage.setItem(ENDPOINT_KEY, now);
+    } catch (e) {
+      console.warn("[push] healPushEndpoint:", e && e.message);
+    }
+  }
+  function onPushEndpointChanged(uid, migrate) {
+    if (!("serviceWorker" in navigator))
+      return;
+    navigator.serviceWorker.addEventListener("message", async (e) => {
+      const d = e.data;
+      if (!d || d.__cstl !== "push-endpoint-changed")
+        return;
+      const id = uid();
+      if (!id || !d.endpoint)
+        return;
+      if (d.oldEndpoint && d.oldEndpoint !== d.endpoint) {
+        await migrate(id, d.oldEndpoint, { endpoint: d.endpoint, p256dh: d.p256dh, auth_key: d.auth_key });
+      }
+      try {
+        localStorage.setItem(ENDPOINT_KEY, d.endpoint);
+      } catch (_) {
+      }
+    });
   }
 
   // src/core/splash.js
@@ -8708,7 +8769,30 @@
     } catch {
     }
   }
-  async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+  var _pushOpQueue = /* @__PURE__ */ new Map();
+  function queuePushOp(key, fn) {
+    const prev = _pushOpQueue.get(key) || Promise.resolve();
+    const next = prev.then(fn, fn).catch((e) => {
+      console.warn("[push] op:", e && e.message);
+    });
+    _pushOpQueue.set(key, next);
+    next.finally(() => {
+      if (_pushOpQueue.get(key) === next)
+        _pushOpQueue.delete(key);
+    });
+    return next;
+  }
+  var pushOpKey = (routeId, trackDate) => `${routeId}|${trackDate}`;
+  function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+    return queuePushOp(
+      pushOpKey(routeId, trackDate),
+      () => subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime)
+    );
+  }
+  function unsubscribeFromPush(routeId, trackDate) {
+    return queuePushOp(pushOpKey(routeId, trackDate), () => unsubscribeFromPushNow(routeId, trackDate));
+  }
+  async function subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
     if (trackDate < getTodayISO())
       return;
     try {
@@ -8738,43 +8822,39 @@
         console.warn("[push] \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0443:", res.error);
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437");
       } else {
-        removePendingUnsub(subJson.endpoint, routeId, trackDate);
+        removePendingUnsub(payload.user_uuid, routeId, trackDate);
       }
     } catch (err) {
       console.warn("[push] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0438:", err);
       showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F");
     }
   }
-  async function unsubscribeFromPush(routeId, trackDate) {
+  async function unsubscribeFromPushNow(routeId, trackDate) {
     if (trackDate < getTodayISO())
       return;
-    let endpoint = null;
+    const uid = currentUserId();
+    if (!uid)
+      return;
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub)
-        return;
-      endpoint = sub.endpoint;
-      let res = await deletePushSubscription(endpoint, routeId, trackDate);
+      let res = await deletePushSubscription(uid, routeId, trackDate);
       if (!res.ok) {
         await new Promise((r) => setTimeout(r, 1500));
-        res = await deletePushSubscription(endpoint, routeId, trackDate);
+        res = await deletePushSubscription(uid, routeId, trackDate);
       }
       if (res.ok) {
-        removePendingUnsub(endpoint, routeId, trackDate);
+        removePendingUnsub(uid, routeId, trackDate);
       } else {
-        addPendingUnsub(endpoint, routeId, trackDate);
+        addPendingUnsub(uid, routeId, trackDate);
       }
     } catch (err) {
       console.warn("[push] unsubscribe error:", err);
-      if (endpoint)
-        addPendingUnsub(endpoint, routeId, trackDate);
+      addPendingUnsub(uid, routeId, trackDate);
     }
   }
   function loadPendingUnsub() {
     try {
       const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
-      return Array.isArray(d) ? d : [];
+      return Array.isArray(d) ? d.filter((p) => p && p.uid) : [];
     } catch {
       return [];
     }
@@ -8785,15 +8865,17 @@
     else
       localStorage.removeItem(PENDING_UNSUB_KEY);
   }
-  function addPendingUnsub(endpoint, routeId, trackDate) {
+  function addPendingUnsub(uid, routeId, trackDate) {
+    if (!uid)
+      return;
     const list = loadPendingUnsub();
-    if (!list.some((p) => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
-      list.push({ endpoint, routeId, trackDate });
+    if (!list.some((p) => p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)) {
+      list.push({ uid, routeId, trackDate });
       savePendingUnsub(list);
     }
   }
-  function removePendingUnsub(endpoint, routeId, trackDate) {
-    savePendingUnsub(loadPendingUnsub().filter((p) => !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+  function removePendingUnsub(uid, routeId, trackDate) {
+    savePendingUnsub(loadPendingUnsub().filter((p) => !(p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)));
   }
   async function flushPendingUnsub() {
     const today = getTodayISO();
@@ -8807,7 +8889,7 @@
       const reTracked = trackedRoutes.some((t) => t.routeId === p.routeId && t.trackDate === p.trackDate);
       if (reTracked)
         continue;
-      const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+      const res = await deletePushSubscription(p.uid, p.routeId, p.trackDate);
       if (!res.ok)
         remaining.push(p);
     }
@@ -17932,6 +18014,8 @@ END:VEVENT`
     initProfileCardTaps();
     initRefreshOnReturn();
     onReturn("", () => refreshOwnProfile());
+    onPushEndpointChanged(() => currentUserId(), migratePushEndpoint);
+    healPushEndpoint(currentUserId(), migratePushEndpoint);
     initAdminShortcut();
     initKbDebugShortcut();
     handleInviteHash();

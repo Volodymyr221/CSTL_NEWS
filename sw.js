@@ -196,6 +196,52 @@ self.addEventListener('push', e => {
   );
 });
 
+// ── Ротація push-підписки (16.08) ────────────────────────────────────────────
+//
+// 🔴 ЩО ЛІКУЄ. Браузер періодично перевипускає push-підписку (оновлення застосунку,
+// чистка даних, службова ротація). Старий `endpoint` після цього мертвий: сервер
+// отримає `410` і видалить рядок — а людина далі бачить увімкнений дзвіночок і
+// **не отримує ЖОДНОГО сповіщення**. Мовчазна відмова, яку помічають на зупинці.
+//
+// 🔑 Тут ми лише ПЕРЕОФОРМЛЯЄМО підписку і будимо застосунок. Записати новий
+// endpoint у базу Service Worker НЕ може: рядки захищені RLS (`user_uuid =
+// auth.uid()`), а в SW немає сесії людини — тільки публічний ключ. Тому перенос
+// робить сам застосунок під своєю сесією (`healPushEndpoint()` у `core/push.js`),
+// а ми передаємо йому обидві адреси.
+// ⚠️ Якщо жодної вкладки не відкрито, повідомлення нікому не дійде — тому
+// `healPushEndpoint()` НЕ покладається на нього, а ще й звіряє адресу при кожному
+// старті. Ця подія лише прискорює лікування, коли застосунок відкритий.
+const SW_VAPID_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
+
+function swUrlBase64ToUint8Array(b64) {
+  const pad  = '='.repeat((4 - b64.length % 4) % 4);
+  const base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw  = atob(base);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+self.addEventListener('pushsubscriptionchange', e => {
+  const oldEndpoint = e.oldSubscription?.endpoint || null;
+  e.waitUntil((async () => {
+    try {
+      const sub = e.newSubscription || await self.registration.pushManager.subscribe({
+        userVisibleOnly:      true,
+        applicationServerKey: swUrlBase64ToUint8Array(SW_VAPID_KEY),
+      });
+      if (!sub) return;
+      const j = sub.toJSON();
+      const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      list.forEach(c => { try { c.postMessage({
+        __cstl: 'push-endpoint-changed',
+        oldEndpoint,
+        endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth_key: j.keys?.auth,
+      }); } catch (_) {} });
+    } catch (err) {
+      console.warn('[sw] pushsubscriptionchange:', err && err.message);
+    }
+  })());
+});
+
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const { threadId, groupId, url } = e.notification.data || {};

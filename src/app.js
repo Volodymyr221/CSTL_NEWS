@@ -21,6 +21,8 @@ import { attachSheetDismiss } from './core/sheet-motion.js';    // спільн�
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 import { markSplashGone } from './core/splash.js';              // сигнал «заставка зійшла» для deep-link'ів (15.08)
+import { healPushEndpoint, onPushEndpointChanged } from './core/push.js';   // ротація push-підписки (16.08)
+import { migratePushEndpoint } from './core/supabase.js';                   // перенос підписок на нову адресу
 import { guardAppRoot } from './core/layers.js';                // «назад» з кореня не вивалює в порожню вкладку (15.08)
 
 // Поточна активна вкладка
@@ -426,6 +428,13 @@ async function init() {
   initRefreshOnReturn();
   // Власний профіль — окремий кеш в `auth.js`, тож окрема підписка.
   onReturn('', () => refreshOwnProfile());
+  // 🔴 16.08 — АДРЕСА PUSH-ПІДПИСКИ САМОЛІКУЄТЬСЯ. Браузер час від часу
+  // перевипускає підписку; стара адреса мертва, і сповіщення тихо перестають
+  // приходити при увімкненому дзвіночку. Два рубежі: сигнал від `sw.js` (миттєво,
+  // якщо застосунок відкритий) і звірка при старті (ловить ротацію, що сталась,
+  // поки застосунок був закритий). Деталі — `core/push.js`.
+  onPushEndpointChanged(() => currentUserId(), migratePushEndpoint);
+  healPushEndpoint(currentUserId(), migratePushEndpoint);
   initAdminShortcut();     // 5 тапів по лічильнику версії → адмінка
   initKbDebugShortcut();   // 5 тапів по назві «CSTL LIFE» → діагностика клавіатури
   handleInviteHash();                            // вступ за посиланням при відкритті
