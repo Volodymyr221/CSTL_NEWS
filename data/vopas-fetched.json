@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-16T20:46:58.610292+03:00",
+  "fetched_at": "2026-08-16T21:33:12.451780+03:00",
   "date": "16.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5937,8 +5937,8 @@
       "carrier": "КОВЕЛЬ АТП 10706",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
