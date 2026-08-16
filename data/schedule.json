@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "15.08.2026",
-  "updatedTime": "23:50",
+  "updatedAt": "16.08.2026",
+  "updatedTime": "08:01",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -9672,7 +9672,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -9764,7 +9764,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -9856,7 +9856,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:50",
           "arrival_time": "09:00",
           "duration_min": 70,
@@ -10512,8 +10512,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -11265,8 +11265,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=16.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "23:50"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "08:01"
     },
     "2026-08-17": {
       "routes": [
@@ -12871,8 +12871,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=17.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "08:01"
     },
     "2026-08-18": {
       "routes": [
@@ -14477,8 +14477,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=18.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-19": {
       "routes": [
@@ -16083,8 +16083,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=19.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-20": {
       "routes": [
@@ -17689,8 +17689,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=20.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-21": {
       "routes": [
@@ -19295,8 +19295,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=21.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-22": {
       "routes": [
@@ -20901,8 +20901,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=22.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-23": {
       "routes": [
@@ -22507,8 +22507,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.08.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.08.2026",
-      "fetchedTime": "00:31"
+      "fetchedAt": "16.08.2026",
+      "fetchedTime": "00:24"
     },
     "2026-08-24": {
       "routes": [
