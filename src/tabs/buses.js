@@ -315,17 +315,56 @@ function removeTrackedEntry(entry) {
   saveTrackedRoute();
 }
 
-function findTrackedEntry(routeId, boardingStop, alightingStop, date) {
-  const day = date || busDay;
-  return trackedRoutes.find(t =>
-    t.routeId === routeId &&
-    t.trackDate === day &&
-    (t.boardingStop || null) === (boardingStop || null) &&
-    (t.alightingStop || null) === (alightingStop || null)
-  );
+// 🔴 16.08 — ПОРОЖНЄ «КУДИ» ОЗНАЧАЄ КІНЦЕВУ ЗУПИНКУ, А НЕ «НІЧОГО».
+//
+// Скарга Вови: «вибираю Дерно → Рівне — закладку підсвічує; вибираю просто Дерно,
+// а кінцеву не чіпаю — той самий рейс уже НЕ підсвічує. Це ж один і той самий
+// маршрут».
+//
+// 🔑 Корінь: у запис відстеження писалось `toStop || null`, тобто САМЕ ТЕ, що
+// людина натиснула, а не те, що це означає. Порожнє «Куди» насправді означає
+// «до кінця маршруту» — і сам застосунок це вже знає (`getEffectiveTo()` підставляє
+// останню зупинку при розрахунку часу). Виходило, що «Дерно → (порожньо)» і
+// «Дерно → Рівне» — два РІЗНІ рядки для порівняння, хоч це один сегмент.
+//
+// ✅ Лікуємо в одному місці: обидві сторони порівняння зводимо до ФАКТИЧНИХ
+// зупинок маршруту. Тоді збіг не залежить від того, чи людина потрудилась
+// вибрати кінцеву, — а старі записи з `null` теж починають знаходитись, бо
+// нормалізація застосовується і до них.
+// ⚠️ Порівнюємо через `normalizeStopName` — у даних трапляються варіанти
+//    написання («Хорлупи пов.»), і рівність рядків тут була б крихкою.
+function routeById(rid) {
+  return (getDayData().routes || []).find(r => r.id === rid) || null;
 }
 
-// Повертає true тільки якщо відстежується САМЕ цей маршрут + САМЕ ці зупинки сегменту
+function normSegment(route, from, to) {
+  const stops = route && route.stops;
+  if (!stops || !stops.length) return { from: from || null, to: to || null };
+  const byName = (name) => {
+    const m = stops.find(s => normalizeStopName(s.name) === normalizeStopName(name));
+    return m ? m.name : name;
+  };
+  return {
+    from: from ? byName(from) : stops[0].name,
+    to:   to   ? byName(to)   : stops[stops.length - 1].name,
+  };
+}
+
+const sameStop = (a, b) => normalizeStopName(a || '') === normalizeStopName(b || '');
+
+function findTrackedEntry(routeId, boardingStop, alightingStop, date) {
+  const day = date || busDay;
+  const route = routeById(routeId);
+  const want = normSegment(route, boardingStop, alightingStop);
+  return trackedRoutes.find(t => {
+    if (t.routeId !== routeId || t.trackDate !== day) return false;
+    const got = normSegment(route, t.boardingStop, t.alightingStop);
+    return sameStop(got.from, want.from) && sameStop(got.to, want.to);
+  });
+}
+
+// Повертає true, якщо відстежується цей рейс на цьому ж сегменті. Порожні поля
+// фільтра означають кінці маршруту — див. пояснення вище.
 function isRouteSegmentTracked(routeId) {
   return !!findTrackedEntry(routeId, fromStop || null, toStop || null);
 }
@@ -1678,8 +1717,17 @@ function renderRouteList() {
         // Дані рейсу денормалізуємо у запис → модалка «Збережені» малюється будь-де
         // (на будь-якій вкладці), без доступу до даних розкладу.
         const route   = (getDayData().routes || []).find(r => r.id === rid);
-        const segFrom = fromStop || null;
-        const segTo   = toStop   || null;
+        // 🔴 16.08 — ЗБЕРІГАЄМО ФАКТИЧНІ ЗУПИНКИ, А НЕ ТЕ, ЩО ЛЮДИНА НАТИСНУЛА.
+        // Порожнє «Куди» означає «до кінця маршруту», і застосунок це вже знає
+        // (`getEffectiveTo`). Якщо писати `null`, то «Дерно → (порожньо)» і
+        // «Дерно → Рівне» стають різними записами, і закладка перестає
+        // підсвічуватись при іншому наборі фільтра — саме на це скаржився Вова.
+        // ⚠️ Заразом це чесніші дані для сервера: `send-bus-push` визначає
+        //    «посадка на початковій зупинці?» за НАЗВОЮ, тож `null` змушував його
+        //    здогадуватись.
+        const seg     = normSegment(route, fromStop || null, toStop || null);
+        const segFrom = seg.from;
+        const segTo   = seg.to;
         const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
         const arrTime = route ? getStopHHMM(route, getEffectiveTo(route))   : null;
         const [rA, rB] = parseRouteEndpoints(route?.name || '');
