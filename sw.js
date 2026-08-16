@@ -40,17 +40,30 @@ const STATIC_ASSETS = [
 ];
 
 // Встановлення: кешуємо статичні файли
+// 🔴 16.08 — `Promise.all` → `allSettled`. Один недоступний файл зі списку валив
+// установку кешу ЦІЛКОМ: офлайн не працював зовсім, і дізнатись про це не було як
+// (помилка тонула всередині `waitUntil`). Тепер кожен файл відповідає лише за себе,
+// а те, що не доїхало, чесно називається в консолі. Кеш із 21 файлу кращий за
+// відсутній кеш через 22-й.
+// ⚠️ `skipWaiting()` лишається безумовним — новий Service Worker має ставати
+//    активним навіть коли якийсь файл не закешувався: код застосунку однаково
+//    береться network-first.
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => Promise.all(
+      .then(cache => Promise.allSettled(
         STATIC_ASSETS.map(url =>
           fetch(url, { cache: 'reload' }).then(r => {
             if (!r.ok) throw new Error(url + ' ' + r.status);
             return cache.put(url, r);
           })
         )
-      ))
+      ).then(results => {
+        const failed = results
+          .map((r, i) => (r.status === 'rejected' ? STATIC_ASSETS[i] : null))
+          .filter(Boolean);
+        if (failed.length) console.warn('[sw] не закешовано:', failed.join(', '));
+      }))
       .then(() => self.skipWaiting())
   );
 });

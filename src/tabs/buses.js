@@ -1095,7 +1095,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
   // наступна зупинка/відлік, шкала прогресу
   return `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}">
-      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.webp" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
       <span class="bhv4-dots-nav">${dotsHtml}${heroTrackBtnHtml}</span>
@@ -1150,7 +1150,7 @@ function emptyHeroMessage() {
 function buildEmptyHeroCard(msg) {
   return `
     <div class="bhv4 bhv4--empty">
-      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.webp" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
       <div class="bhv4-content bhv4-empty-content">
         <svg class="bhv4-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
