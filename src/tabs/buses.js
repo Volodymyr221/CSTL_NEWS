@@ -4,7 +4,7 @@ import {
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
-import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
+import { freshUserId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { ICONS } from '../core/icons.js';
@@ -134,10 +134,21 @@ async function subscribeToPushNow(routeId, routeName, boardingStop, alightingSto
     const sub = await ensurePushSubscription();
     if (!sub) return;
 
+    // 🔴 16.08 — UID БЕРЕМО З ЖИВОЇ СЕСІЇ (розбір — `core/supabase.js` →
+    // `freshUserId`). Було `currentUserId() || getAnonId()`: перше — кеш у памʼяті,
+    // друге — анонімний id, який НІКОЛИ не дорівнює `auth.uid()`. Обидва давали
+    // «new row violates row-level security policy», щойно токен протухав, — а
+    // людина бачила лише «Не вдалося увімкнути сповіщення».
+    const uid = await freshUserId();
+    if (!uid) {
+      showToast('Сесія входу застаріла — увійдіть ще раз, щоб отримувати сповіщення', 4500, 'error');
+      return { ok: false };
+    }
+
     const subJson = sub.toJSON();
     const payload = {
-      // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.
-      user_uuid:      currentUserId() || getAnonId(),
+      // Значення тут МУСИТЬ збігатися з `auth.uid()` запиту — цього вимагає RLS.
+      user_uuid:      uid,
       endpoint:       subJson.endpoint,
       p256dh:         subJson.keys.p256dh,
       auth_key:       subJson.keys.auth,
@@ -158,15 +169,17 @@ async function subscribeToPushNow(routeId, routeName, boardingStop, alightingSto
     }
     if (!res.ok) {
       console.warn('[push] не вдалося зберегти підписку:', res.error);
-      showToast('Не вдалося увімкнути сповіщення — спробуйте ще раз');
-    } else {
-      // Знову відстежуємо цей рейс → скасовуємо застаріле «незавершене скасування»,
-      // інакше flushPendingUnsub згодом зняв би цю свіжу підписку.
-      removePendingUnsub(payload.user_uuid, routeId, trackDate);
+      showToast('Не вдалося увімкнути сповіщення — спробуйте ще раз', 4000, 'error');
+      return { ok: false };
     }
+    // Знову відстежуємо цей рейс → скасовуємо застаріле «незавершене скасування»,
+    // інакше flushPendingUnsub згодом зняв би цю свіжу підписку.
+    removePendingUnsub(payload.user_uuid, routeId, trackDate);
+    return { ok: true };
   } catch (err) {
     console.warn('[push] помилка підписки:', err);
-    showToast('Не вдалося увімкнути сповіщення');
+    showToast('Не вдалося увімкнути сповіщення', 4000, 'error');
+    return { ok: false };
   }
 }
 
@@ -1701,12 +1714,31 @@ function renderRouteList() {
           notifiedFuture:  false,
         });
         saveTrackedRoute();
-        // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
-        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime, true);   // свідома підписка
         // §5.3 — чесний зворотний зв'язок: якщо push завідомо недоступний, кажемо одразу
         const blocked = pushBlockedMsg();
         if (blocked) showToast(`Збережено. ${blocked}`);
-        checkTrackNotifications(true);
+
+        // 🔴 16.08 — БАНЕР «АКТИВОВАНО» ЧЕКАЄ НА ВІДПОВІДЬ СЕРВЕРА.
+        // Скарга Вови (знімок 10:12): зверху тост «Не вдалося увімкнути
+        // сповіщення», а внизу одночасно банер «СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО».
+        // Два повідомлення про одну дію суперечили одне одному, і жодне не було
+        // правдою наполовину: підписка НЕ збереглась, а інтерфейс святкував.
+        // 🔑 Причина була в порядку: банер малювався одразу, бо локальний запис
+        // уже додано, а мережева частина йшла паралельно й мовчки падала.
+        // ⚠️ Локальний запис лишаємо (рейс справді збережений у «Збережених»), але
+        //    ЗНІМАЄМО дзвіночок: `notify: false` чесно каже «нагадування вимкнені»
+        //    замість обіцянки, якої система не виконає.
+        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime, true)
+          .then(res => {
+            if (res && res.ok === false) {
+              const entry = findTrackedEntry(rid, segFrom, segTo, busDay);
+              if (entry) { entry.notify = false; saveTrackedRoute(); }
+              renderSmartRow();
+              renderRouteList();
+              return;
+            }
+            checkTrackNotifications(true);   // банер лише коли сервер підтвердив
+          });
       }
       renderSmartRow();
       renderRouteList();
@@ -2029,7 +2061,13 @@ function toggleRouteReminders(rid, date, from, to) {
   if (entry.notify === false && !isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   entry.notify = entry.notify === false;   // off→on / on→off
   if (entry.notify) {
-    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true);
+    // ⚠️ 16.08 — дзвіночок не має лишатись увімкненим, якщо сервер підписку не
+    // прийняв (та сама вада, що з банером «активовано»: інтерфейс обіцяє те,
+    // чого не буде). Помилку людині вже пояснив `subscribeToPush` тостом.
+    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true)
+      .then(res => {
+        if (res && res.ok === false) { entry.notify = false; saveTrackedRoute(); }
+      });
   } else {
     unsubscribeFromPush(rid, date);
   }
