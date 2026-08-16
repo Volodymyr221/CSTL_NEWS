@@ -157,6 +157,26 @@ check('дзвіночок гасне, якщо сервер підписку н�
   /res\.ok === false\) \{ entry\.notify = false/.test(buses),
   'дзвіночок лишається увімкненим при провалі — інтерфейс обіцяє те, чого не буде');
 
+console.log('\n── Запис підписки в базу ──');
+
+// 🔴 16.08 — ВАДА, ЧЕРЕЗ ЯКУ СПОВІЩЕННЯ НЕ ВМИКАЛИСЬ ЖОДНОГО РАЗУ.
+// Клієнт пише через `upsert`, тобто `INSERT ... ON CONFLICT DO UPDATE`. Postgres
+// для гілки DO UPDATE мусить ПРОЧИТАТИ конфліктний рядок — а SELECT-політики для
+// `authenticated` не було. Падало з `42501 new row violates row-level security
+// policy`, тобто повідомлення вказувало на INSERT і вело розслідування не туди.
+// ✅ Доведено експериментом: INSERT — OK, той самий рядок через ON CONFLICT — 42501.
+// 🛑 Правило ширше за цю таблицю: пишеш із клієнта через `upsert` — заведи
+//    SELECT-політику на власні рядки, інакше вада повториться слово в слово.
+const selectOwnSql = read('scripts/supabase_push_select_own.sql');
+check('SELECT-політика на власні підписки задокументована',
+  /create policy "push_select_own"/.test(selectOwnSql) &&
+  /for select/.test(selectOwnSql) && /to authenticated/.test(selectOwnSql),
+  'немає файлу міграції — наступна сесія не знатиме, чому upsert падав');
+
+check('запис підписки йде саме через upsert з onConflict',
+  /\.upsert\(row, \{ onConflict: 'endpoint,route_id,track_date' \}\)/.test(supabase),
+  'спосіб запису змінився — звір, чи потрібна SELECT-політика в новій формі');
+
 console.log('\n── Рішення власника, які легко скасувати «на краще» ──');
 
 // 🛑 ЦЯ ПЕРЕВІРКА СТЕРЕЖЕ НЕ КОД, А РІШЕННЯ. Заборона масштабування виглядає як
