@@ -81,3 +81,52 @@ export async function ensurePushSubscription() {
     return null;
   }
 }
+
+// ── САМОЛІКУВАННЯ АДРЕСИ ПІДПИСКИ (16.08) ────────────────────────────────────
+//
+// 🔴 ВАДА, ВІД ЯКОЇ ЗАВЕДЕНО. Браузер час від часу перевипускає push-підписку.
+// Стара адреса (`endpoint`) стає мертвою: сервер при відправленні отримує `410`
+// і ВИДАЛЯЄ рядок — а в застосунку дзвіночок далі показує «увімкнено». Людина
+// впевнена, що її попередять про автобус, і не отримує НІЧОГО. Мовчазна відмова.
+//
+// 🔑 ДВА РУБЕЖІ, і потрібні обидва:
+//   (1) подія `pushsubscriptionchange` у `sw.js` — спрацьовує ТОЧНО в момент
+//       ротації, але лише якщо є кому її прийняти (відкрита вкладка);
+//   (2) ця звірка при кожному старті — ловить те, що сталось, поки застосунок
+//       був закритий. Саме тоді ротація і відбувається найчастіше.
+// ⚠️ Памʼятаємо адресу в `localStorage`, бо порівнювати нема з чим інакше:
+//    браузер не каже «я змінив підписку», він просто віддає іншу.
+const ENDPOINT_KEY = 'cstl_push_endpoint';
+
+export async function healPushEndpoint(uid, migrate) {
+  if (!uid || !isPushCapable() || Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;                       // підписки нема — лікувати нічого
+    const now = sub.endpoint;
+    const was = localStorage.getItem(ENDPOINT_KEY);
+    if (was && was !== now) {
+      const j = sub.toJSON();
+      await migrate(uid, was, { endpoint: now, p256dh: j.keys?.p256dh, auth_key: j.keys?.auth });
+    }
+    if (was !== now) localStorage.setItem(ENDPOINT_KEY, now);
+  } catch (e) {
+    console.warn('[push] healPushEndpoint:', e && e.message);
+  }
+}
+
+// Приймає сигнал ротації від Service Worker (миттєвий шлях, рубіж 1).
+export function onPushEndpointChanged(uid, migrate) {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', async e => {
+    const d = e.data;
+    if (!d || d.__cstl !== 'push-endpoint-changed') return;
+    const id = uid();
+    if (!id || !d.endpoint) return;
+    if (d.oldEndpoint && d.oldEndpoint !== d.endpoint) {
+      await migrate(id, d.oldEndpoint, { endpoint: d.endpoint, p256dh: d.p256dh, auth_key: d.auth_key });
+    }
+    try { localStorage.setItem(ENDPOINT_KEY, d.endpoint); } catch (_) {}
+  });
+}

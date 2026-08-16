@@ -776,7 +776,10 @@ export async function focusFeedPost(id, commentId = null) {
     }
     if (++tries < 8) { requestAnimationFrame(tryFocus); return; }
     const post = posts.find(p => p.id === id);   // не в стрічці → відкрити сторінку каналу
-    if (post) openPageScreen(post.page_id);
+    if (post) { openPageScreen(post.page_id); return; }
+    // 🔴 16.08 — ДОПИСУ БІЛЬШЕ НЕМА: раніше тут просто нічого не відбувалось, і тап
+    // по сповіщенню виглядав як «застосунок мене проігнорував». Кажемо чесно.
+    showToast('Цей допис більше недоступний — можливо, його видалили', 3500);
   };
   requestAnimationFrame(tryFocus);
 }
@@ -1220,19 +1223,37 @@ function planCollapsedPad(el) {
 // але тоді треба окремо вирішити, як не стрибала justify-content і .is-fit.
 
 // ── Лайк (тільки авторизованим) ─────────────────────────────────────────────
-async function toggleLike(postId) {
+// 🔴 16.08 — ЛАЙКИ ОДНОГО ПОСТА ВИКОНУЮТЬСЯ ПО ЧЕРЗІ.
+// Було: кожен тап одразу пускав свій запит. Подвійний тап (звичайна річ — люди
+// тицяють сердечко двічі) відправляв `on=true` і `on=false` без гарантії порядку,
+// тож у базі могло лишитись протилежне до того, що показує екран: лайк «зникав»
+// після перезавантаження. Плюс відкат при збої повертав стан, захоплений на початку
+// ПЕРШОГО виклику, тобто затирав результат другого.
+// 🔑 Черга на ПОСТ, а не глобальна: лайки різних постів не мають чекати один одного.
+// Оптимістичний малюнок лишається миттєвим — у чергу стає лише похід у мережу.
+const _likeQueue = new Map();
+function toggleLike(postId) {
   if (!isLoggedIn()) { requireAuth('вподобати пост', () => {}); return; }  // гейт входу
   const uid = currentUserId();
   const rx = reactionMap.get(postId) || { count: 0, my: false };
   const on = !rx.my;
-  // Оптимістично
+  // Оптимістично — одразу, ще до черги: екран не має чекати на мережу.
   reactionMap.set(postId, { count: Math.max(0, rx.count + (on ? 1 : -1)), my: on });
   patchLike(postId);
-  const res = await setPageReaction(postId, uid, on);
-  if (!res.ok) {  // відкат
-    reactionMap.set(postId, rx);
-    patchLike(postId);
-  }
+
+  const prev = _likeQueue.get(postId) || Promise.resolve();
+  const next = prev.then(async () => {
+    const res = await setPageReaction(postId, uid, on);
+    if (!res.ok) {
+      // Відкат рахуємо від ПОТОЧНОГО стану, а не від зліпка на момент тапу:
+      // поки запит ішов, стан могла змінити і черга, і realtime сусіда.
+      const cur = reactionMap.get(postId) || { count: 0, my: on };
+      reactionMap.set(postId, { count: Math.max(0, cur.count + (on ? -1 : 1)), my: !on });
+      patchLike(postId);
+    }
+  }).catch(e => { console.warn('[feed] like:', e && e.message); });
+  _likeQueue.set(postId, next);
+  next.finally(() => { if (_likeQueue.get(postId) === next) _likeQueue.delete(postId); });
 }
 
 // Realtime: лайк/зняття ІНШОГО користувача → оновити лічильник наживо.
@@ -2311,8 +2332,16 @@ async function openPageScreen(pageId, reopen = false) {
   // навмисно: iOS однаково малює свою анімацію переходу, і два рухи накладались.
   // close — миттєве прибирання (систему вже відпрацювала анімацію);
   // animateOut — плавне зникнення для натискання КНОПКИ «назад», де анімації нема.
+  // 🔴 16.08 — ЗАКРИТТЯ ЕКРАНА ПРИБИРАЄ І ЙОГО СЛУХАЧІ.
+  // Було: `openPageScreen()` вішав `window.addEventListener('resize', …)` анонімною
+  // функцією і не знімав НІКОЛИ. Кожне відкриття сторінки каналу лишало ще один
+  // постійний слухач, який на кожен `resize` читає розкладку (`measure()`). На iOS
+  // `resize` сипле від клавіатури й адресного рядка, тобто це не теоретичний витік:
+  // десять відкриттів = десять переобчислень на кожен рух клавіатури.
+  // 🔑 Взірець узято з `board-chat.js` (`api._cleanup`) — не вигадуємо нового.
+  const screenCleanup = [];
   const layer = openLayer(
-    () => screen.remove(),
+    () => { screen.remove(); screenCleanup.forEach(fn => { try { fn(); } catch (_) {} }); },
     {
       reuseEntry: reopen,
       animateOut: () => screen.classList.remove('open'),
@@ -2473,7 +2502,12 @@ async function openPageScreen(pageId, reopen = false) {
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
     screen.addEventListener('scroll', onTitle, { passive: true });
-    window.addEventListener('resize', () => { measure(); onTitle(); });
+    // ⚠️ Іменована функція + запис у `screenCleanup` — інакше зняти її нічим
+    //    (анонімну `removeEventListener` не бачить). Слухач `scroll` знімати не
+    //    треба: він на самому `screen`, який іде з DOM разом із екраном.
+    const onResize = () => { measure(); onTitle(); };
+    window.addEventListener('resize', onResize);
+    screenCleanup.push(() => window.removeEventListener('resize', onResize));
     requestAnimationFrame(() => { measure(); applyTitle(); });
     // 🔑 Віддаємо перемір назовні. Саме через нього збереження сторінки раніше вимагало
     // перебудови всього екрана: масштаб липкого заголовка рахується ОДИН раз під конкретну

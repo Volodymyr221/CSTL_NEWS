@@ -21,6 +21,8 @@ import { attachSheetDismiss } from './core/sheet-motion.js';    // спільн�
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
 import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 import { markSplashGone } from './core/splash.js';              // сигнал «заставка зійшла» для deep-link'ів (15.08)
+import { healPushEndpoint, onPushEndpointChanged } from './core/push.js';   // ротація push-підписки (16.08)
+import { migratePushEndpoint } from './core/supabase.js';                   // перенос підписок на нову адресу
 import { guardAppRoot } from './core/layers.js';                // «назад» з кореня не вивалює в порожню вкладку (15.08)
 
 // Поточна активна вкладка
@@ -381,6 +383,50 @@ function handlePostHash() {
   else if (source === 'news')              openArticleById(n);
 }
 
+// ── ЗАСТАВКА: ЗНИКАЄ, КОЛИ ЕКРАН ГОТОВИЙ, А НЕ ЗА РОЗКЛАДОМ (16.08) ──────────
+//
+// 🔴 БУЛО: `setTimeout(…, 3500)` + 600мс на згасання = **4.1 секунди БЕЗУМОВНО**,
+// на кожному відкритті застосунку, кожного дня. Час не залежав ні від чого: дані
+// могли приїхати за 200мс — людина однаково дивилась на логотип. Це найдорожча
+// пауза в продукті, і вона була найпомітнішою саме для тих, хто заходить часто.
+//
+// 🔑 ЧОМУ ЦЕ БЕЗПЕЧНО ДЛЯ DEEP-LINK'ІВ (полагоджених 15.08). Вони чекають не на
+// число 3500, а на СИГНАЛ `markSplashGone()` (`core/splash.js`). Тобто підсвітка
+// коментаря і відкриття розмови однаково відбудуться ПІСЛЯ заставки — просто вона
+// тепер зійде раніше. Правило «показова частина чекає заставку» не змінилось.
+//
+// ⏱ ДВІ МЕЖІ, і обидві потрібні:
+//   MIN — інакше заставка блимне (з'явилась і зникла за 200мс = смикання, гірше
+//         за саме очікування);
+//   MAX — запобіжник: якщо перший кадр із якоїсь причини не настав, людина не
+//         має лишитись перед логотипом назавжди. Це та сама стеля, що була.
+// 🔑 Готовність міряємо ПОДВІЙНИМ `requestAnimationFrame`: перший кадр — коли
+//    браузер прийняв побудований DOM, другий — коли він його справді намалював.
+const SPLASH_MIN_MS = 700;
+const SPLASH_MAX_MS = 3500;
+
+function hideSplashWhenReady() {
+  const splash = document.getElementById('splash');
+  if (!splash) { markSplashGone(); return; }
+
+  let done = false;
+  const t0 = performance.now();
+  const hide = () => {
+    if (done) return;
+    done = true;
+    splash.style.transition = 'opacity 0.4s';
+    splash.style.opacity = '0';
+    setTimeout(() => { splash.remove(); markSplashGone(); }, 420);
+  };
+
+  const whenPainted = () => {
+    const left = Math.max(0, SPLASH_MIN_MS - (performance.now() - t0));
+    setTimeout(hide, left);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(whenPainted));
+  setTimeout(hide, SPLASH_MAX_MS);   // запобіжник, не основний шлях
+}
+
 // Ініціалізація при завантаженні сторінки
 async function init() {
   bootApp();
@@ -426,6 +472,13 @@ async function init() {
   initRefreshOnReturn();
   // Власний профіль — окремий кеш в `auth.js`, тож окрема підписка.
   onReturn('', () => refreshOwnProfile());
+  // 🔴 16.08 — АДРЕСА PUSH-ПІДПИСКИ САМОЛІКУЄТЬСЯ. Браузер час від часу
+  // перевипускає підписку; стара адреса мертва, і сповіщення тихо перестають
+  // приходити при увімкненому дзвіночку. Два рубежі: сигнал від `sw.js` (миттєво,
+  // якщо застосунок відкритий) і звірка при старті (ловить ротацію, що сталась,
+  // поки застосунок був закритий). Деталі — `core/push.js`.
+  onPushEndpointChanged(() => currentUserId(), migratePushEndpoint);
+  healPushEndpoint(currentUserId(), migratePushEndpoint);
   initAdminShortcut();     // 5 тапів по лічильнику версії → адмінка
   initKbDebugShortcut();   // 5 тапів по назві «CSTL LIFE» → діагностика клавіатури
   handleInviteHash();                            // вступ за посиланням при відкритті
@@ -470,13 +523,7 @@ async function init() {
   // 🔴 15.08 — `markSplashGone()` НЕ косметика: на нього чекає показова частина
   // deep-link'ів (розмова зі сповіщення, підсвітка коментаря). Без сигналу вони
   // спрацьовували ПІД заставкою — див. `src/core/splash.js`.
-  setTimeout(() => {
-    const splash = document.getElementById('splash');
-    if (!splash) { markSplashGone(); return; }
-    splash.style.opacity = '0';
-    splash.style.transition = 'opacity 0.4s';
-    setTimeout(() => { splash.remove(); markSplashGone(); }, 600);
-  }, 3500);
+  hideSplashWhenReady();
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);

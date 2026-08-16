@@ -2,7 +2,17 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- 🔴 16.08 — ЗАБОРОНУ МАСШТАБУВАННЯ ЗНЯТО (`maximum-scale=1.0, user-scalable=no`).
+       Вона позбавляла людину єдиного способу збільшити дрібний текст — а у
+       ВСТАНОВЛЕНОМУ додатку (основний сценарій) iOS цю заборону поважає, на
+       відміну від Safari-вкладки. Це прямо суперечить WCAG 1.4.4 і б'є саме по
+       тих, кому важко читати: слабкий зір, сонце на екрані, дешевший телефон.
+       ⚠️ Заборона стояла НЕ просто так — вона гасила автозум iOS при фокусі в
+       поле зі шрифтом < 16px. Тому спершу прибрано ПРИЧИНУ: три поля
+       (`.bs-search-input` 14px, `.disc-compose-input` і `.gr-input` 15px)
+       піднято до 16px; перевірено, що полів дрібніших за 16px не лишилось.
+       Той самий фікс уже стояв у Дошці з 28.07 — прийом у проєкті не новий. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#4A121C">
   <meta name="description" content="CSTL LIFE — локальна медіа-платформа Олики та Волині">
   <meta name="apple-mobile-web-app-capable" content="yes">

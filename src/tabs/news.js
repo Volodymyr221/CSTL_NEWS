@@ -214,12 +214,21 @@ export async function getArticlesByIds(ids) {
 }
 
 // Deep-link (6b): відкрити статтю за id — перемкнути на «Новини» + дочекатись даних.
+// 🔴 16.08 — deep-link на статтю, якої вже немає в `articles.json` (стрічка новин
+// має ротацію за віком), більше не мовчить. `openArticle()` при ненайденій статті
+// робить `return`, і тап по сповіщенню виглядав як «нічого не сталось».
 export async function openArticleById(id) {
   // Новини живуть блоком «Табло новин» у Громаді (окремої вкладки Новин нема).
   // 'news' у switchTab перенаправляється на 'shotam' (Стрічку) — тому фон deep-link
   // виходив Стрічкою. Вова: фон має бути Громада (де блок новин), а стаття — модалкою зверху.
   window.switchTab?.('community');
   await ensureNewsLoaded();
+  if (!allArticles.some(a => a.id === id)) {
+    showToast(newsLoadFailed()
+      ? 'Не вдалось завантажити новини — перевір інтернет'
+      : 'Цієї новини більше немає у стрічці', 3500);
+    return;
+  }
   openArticle(id);
 }
 

@@ -22,7 +22,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const VAPID_PRIVATE_KEY         = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_PUBLIC_KEY          = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 const VAPID_EMAIL               = 'mailto:illiabogdanets041@gmail.com';
-const SCHEDULE_URL              = 'https://volodymyr221.github.io/CSTL_NEWS/data/schedule.json';
+// 🔴 16.08 — АДРЕСА РОЗКЛАДУ ПЕРЕВЕДЕНА НА БОЙОВИЙ ДОМЕН.
+// Було старе дзеркало `volodymyr221.github.io/CSTL_NEWS/…`, тоді як сайт живе на
+// `castlelife.org` (файл `CNAME`). Дзеркало ще працює, але це крихкість: воно ніде
+// не гарантоване, а від цього файлу залежить визначення СКАСОВАНИХ рейсів.
+const SCHEDULE_URL              = 'https://castlelife.org/data/schedule.json';
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -39,6 +43,17 @@ function todayKyiv(): string {
 function timeToMins(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
+}
+
+// 🔴 16.08 — ТЕГ СПОВІЩЕННЯ МУСИТЬ РОЗРІЗНЯТИ ПІДПИСКИ, А НЕ ЛИШЕ МАРШРУТИ.
+// Було `bus-warn-${route_id}`: у Web Push однаковий `tag` означає «заміни попереднє
+// сповіщення». Тобто дві підписки на ОДИН маршрут (різні сегменти або сьогодні +
+// завтра) затирали одна одну — людина бачила лише останнє і не дізнавалась про
+// свій другий рейс. Дата і зупинки роблять тег унікальним рівно там, де підписка
+// унікальна.
+function busTag(kind: string, sub: any): string {
+  const seg = `${sub.boarding_stop || ''}-${sub.alighting_stop || ''}`;
+  return `bus-${kind}-${sub.route_id}-${sub.track_date}-${seg}`;
 }
 
 // 🔴 12.08 — АВТЕНТИФІКАЦІЯ ВИКЛИКУ (безпековий аудит, клас «неперевірені вебхуки»).
@@ -106,13 +121,21 @@ serve(async (req) => {
   }
 
   // Завантажуємо schedule.json один раз
+  // ⚠️ 16.08 — ЗБІЙ ЗАВАНТАЖЕННЯ ТЕПЕР ГУЧНИЙ. Раніше `catch` писав рядок у лог і
+  // функція йшла далі з ПОРОЖНІМ розкладом. Наслідок нікому не видно: скасовані
+  // рейси не виявляються взагалі (пункт 1 нижче спирається на `routeData.status`),
+  // тобто людина їде на зупинку до автобуса, якого не буде. Тепер видно і в лозі
+  // (`❌`), і у відповіді функції (`scheduleOk`), тож збій можна помітити.
   let scheduleRoutes: any[] = [];
+  let scheduleOk = false;
   try {
     const res = await fetch(`${SCHEDULE_URL}?v=${Date.now()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     scheduleRoutes = json.days?.[today]?.routes || [];
+    scheduleOk = true;
   } catch (e) {
-    console.warn('schedule.json fetch failed:', e);
+    console.error('❌ schedule.json НЕ завантажено — скасовані рейси НЕ виявляться:', e);
   }
 
   let sent = 0;
@@ -147,7 +170,7 @@ serve(async (req) => {
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
         body:  `Рейс скасовано · ${sub.dep_time}`,
-        tag:   `bus-canc-${sub.route_id}`,
+        tag:   busTag('canc', sub),
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_canc: true }).eq('id', sub.id);
       continue;
@@ -163,8 +186,21 @@ serve(async (req) => {
     const isOriginBoarding = !sub.boarding_stop ||
       (firstStopName && firstStopName.toLowerCase() === sub.boarding_stop.toLowerCase());
 
-    // ── 3. Попередження: T-15 хв до зупинки посадки (вікно 13-17 хв) ──────
-    if (!sub.notified_warning && minsLeft >= 13 && minsLeft <= 17) {
+    // ── 3. Попередження перед посадкою ───────────────────────────────────
+    //
+    // 🔴 16.08 — БУЛО ВІКНО `13..17`, СТАЛО `2..17`. Це не новий інтервал, а
+    // виправлення дірки, яку заміряв аудит: хто вмикав відстеження ЗА 10 ХВИЛИН
+    // до відправлення, не отримував **нічого** — вікно T-15 уже минуло, і перше
+    // (воно ж єдине) сповіщення приходило аж у момент відправлення, коли бігти
+    // на зупинку пізно. Тобто чим потрібніше було попередження, тим певніше воно
+    // не приходило.
+    // 🔑 Правило тепер просте і передбачуване: **перше попередження надсилаємо,
+    //    щойно до відправлення лишилось 17 хвилин або менше** — і кажемо
+    //    ФАКТИЧНЕ число хвилин. Підписався за 15 → «через 15 хв», за 8 → «через
+    //    8 хв», за 3 → «через 3 хв». Одне на рейс (прапорець `notified_warning`).
+    // ⚠️ Нижня межа 2 (а не 0) — щоб попередження не наклалось на T-0 нижче:
+    //    інакше за одну хвилину прилетіли б два сповіщення поспіль.
+    if (!sub.notified_warning && minsLeft >= 2 && minsLeft <= 17) {
       // Початкова зупинка → «відправляється»; проміжна → «буде на зупинці X».
       const warnBody = isOriginBoarding
         ? `Автобус відправляється через ${minsLeft} хв · ${sub.dep_time}`
@@ -172,7 +208,7 @@ serve(async (req) => {
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
         body:  warnBody,
-        tag:   `bus-warn-${sub.route_id}`,
+        tag:   busTag('warn', sub),
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_warning: true }).eq('id', sub.id);
     }
@@ -189,7 +225,7 @@ serve(async (req) => {
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
         body,
-        tag:   `bus-dep-${sub.route_id}`,
+        tag:   busTag('dep', sub),
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_dep: true }).eq('id', sub.id);
     }
@@ -200,7 +236,7 @@ serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ sent, checked: subs.length }),
+    JSON.stringify({ sent, checked: subs.length, scheduleOk }),
     { headers: { 'Content-Type': 'application/json' } }
   );
 });

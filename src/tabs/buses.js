@@ -91,7 +91,41 @@ function loadPrefs() {
 // pushBlockedMsg (чому сповіщення не дійдуть) переїхав у спільний core/push.js —
 // тим самим текстом тепер користується і дзвіночок сторінок «Стрічки» (24.07).
 
-async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+// ── ЧЕРГА ОПЕРАЦІЙ НА РЕЙС (16.08) ───────────────────────────────────────────
+// 🔴 Вада, яку це лікує: кнопка «Відстежувати» нічим не блокувалась, а підписка
+// асинхронна (дозвіл → `pushManager.subscribe` → запит у базу). Швидкий подвійний
+// тап «увімкнув-вимкнув» пускав ДВІ операції одночасно, і DELETE міг виконатись
+// РАНІШЕ, ніж дійде UPSERT. Наслідок: рядок лишався в базі після скасування —
+// сповіщення про рейс, який людина вже зняла.
+// 🔑 Черга стоїть на САМИХ ОПЕРАЦІЯХ, а не на обробнику кнопки: шляхів до них
+// пʼять (кнопка списку · hero-кнопка · дзвіночок банера · хаб «Збережені» ·
+// самолікування), і сторож у кожному був би пʼятою копією одного правила.
+// Ключ — рейс+дата: різні рейси не блокують один одного.
+// ⚠️ Помилку операції ковтаємо саме тут (`catch`), інакше одна невдача обірвала б
+// ланцюг і наступні операції по цьому рейсу не виконались би ніколи.
+const _pushOpQueue = new Map();
+function queuePushOp(key, fn) {
+  const prev = _pushOpQueue.get(key) || Promise.resolve();
+  const next = prev.then(fn, fn).catch(e => { console.warn('[push] op:', e && e.message); });
+  _pushOpQueue.set(key, next);
+  next.finally(() => { if (_pushOpQueue.get(key) === next) _pushOpQueue.delete(key); });
+  return next;
+}
+const pushOpKey = (routeId, trackDate) => `${routeId}|${trackDate}`;
+
+// `fresh` = людина СВІДОМО підписується наново (кнопка, дзвіночок) → прапорці
+// «вже надіслано» скидаються. Самолікування (`selfHealPushSubscriptions`) кличе
+// БЕЗ нього: інакше кожне відкриття вкладки Автобуси повертало б уже надіслане
+// попередження — див. пояснення в `core/supabase.js`.
+function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh = false) {
+  return queuePushOp(pushOpKey(routeId, trackDate),
+    () => subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh));
+}
+function unsubscribeFromPush(routeId, trackDate) {
+  return queuePushOp(pushOpKey(routeId, trackDate), () => unsubscribeFromPushNow(routeId, trackDate));
+}
+
+async function subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh = false) {
   // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
   // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
   // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
@@ -117,10 +151,10 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 
     // Зберігаємо з одним повтором: якщо запит обірвався (напр. під час
     // оновлення додатку) — пробуємо ще раз, а не лишаємо рейс без push мовчки.
-    let res = await savePushSubscription(payload);
+    let res = await savePushSubscription(payload, { resetNotified: fresh });
     if (!res.ok) {
       await new Promise(r => setTimeout(r, 1500));
-      res = await savePushSubscription(payload);
+      res = await savePushSubscription(payload, { resetNotified: fresh });
     }
     if (!res.ok) {
       console.warn('[push] не вдалося зберегти підписку:', res.error);
@@ -128,7 +162,7 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
     } else {
       // Знову відстежуємо цей рейс → скасовуємо застаріле «незавершене скасування»,
       // інакше flushPendingUnsub згодом зняв би цю свіжу підписку.
-      removePendingUnsub(subJson.endpoint, routeId, trackDate);
+      removePendingUnsub(payload.user_uuid, routeId, trackDate);
     }
   } catch (err) {
     console.warn('[push] помилка підписки:', err);
@@ -138,60 +172,65 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 
 // Видаляє підписку для конкретного маршруту з Supabase.
 // НЕ скасовує браузерну підписку — інші маршрути продовжують працювати.
-async function unsubscribeFromPush(routeId, trackDate) {
+async function unsubscribeFromPushNow(routeId, trackDate) {
   // Симетрично до subscribeToPush: знімаємо підписку і для майбутніх днів,
   // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
   // прибирає сам (track_date<today), тож для нього нічого не робимо.
   if (trackDate < getTodayISO()) return;
-  let endpoint = null;
+  // 🔴 16.08 — КЛЮЧ СКАСУВАННЯ ТЕПЕР `uid`, А НЕ `endpoint` ЦЬОГО БРАУЗЕРА.
+  // Стара версія починалась із `getSubscription()` і при `!sub` виходила МОВЧКИ —
+  // тобто якщо браузерна підписка зникла (перевстановлення PWA, чистка даних,
+  // ротація), серверний рядок лишався жити, і сповіщення приходили на рейс, який
+  // людина скасувала. Плюс скасування з другого пристрою не працювало зовсім
+  // (див. розбір у `core/supabase.js` → `deletePushSubscription`).
+  const uid = currentUserId();
+  if (!uid) return;                     // гість не має власних підписок
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    // Немає браузерної підписки → endpoint невідомий. Якщо серверний рядок висить
-    // під старим endpoint — сервер прибере його за track_date<today або за 410
-    // (мертвий endpoint) при спробі відправлення. Тут більше нічого не зробити.
-    if (!sub) return;
-    endpoint = sub.endpoint;
-
     // Повтор 1× (як у subscribeToPush): захист від разового обриву мережі.
-    let res = await deletePushSubscription(endpoint, routeId, trackDate);
+    let res = await deletePushSubscription(uid, routeId, trackDate);
     if (!res.ok) {
       await new Promise(r => setTimeout(r, 1500));
-      res = await deletePushSubscription(endpoint, routeId, trackDate);
+      res = await deletePushSubscription(uid, routeId, trackDate);
     }
     if (res.ok) {
-      removePendingUnsub(endpoint, routeId, trackDate);
+      removePendingUnsub(uid, routeId, trackDate);
     } else {
       // Не вдалося — запам'ятовуємо, доженемо при відкритті (flushPendingUnsub).
-      addPendingUnsub(endpoint, routeId, trackDate);
+      addPendingUnsub(uid, routeId, trackDate);
     }
   } catch (err) {
     console.warn('[push] unsubscribe error:', err);
-    if (endpoint) addPendingUnsub(endpoint, routeId, trackDate);
+    addPendingUnsub(uid, routeId, trackDate);
   }
 }
 
 // ── Черга незавершених скасувань (persist у localStorage) ─────────────
+// ⚠️ 16.08 — записи черги тепер ключуються `uid`, а не `endpoint` (разом зі зміною
+// самого скасування). Старі записи з полем `endpoint` відкидаємо ПРИ ЧИТАННІ:
+// доганяти ними вже нічого — вони описують фільтр, якого більше немає, а сервер
+// прибирає протерміноване сам (`track_date < today`). Без цього рядка вони лежали б
+// у localStorage вічно і кожен запуск давав би `no-uid`.
 function loadPendingUnsub() {
   try {
     const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
-    return Array.isArray(d) ? d : [];
+    return Array.isArray(d) ? d.filter(p => p && p.uid) : [];
   } catch { return []; }
 }
 function savePendingUnsub(list) {
   if (list.length) localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
   else localStorage.removeItem(PENDING_UNSUB_KEY);
 }
-function addPendingUnsub(endpoint, routeId, trackDate) {
+function addPendingUnsub(uid, routeId, trackDate) {
+  if (!uid) return;
   const list = loadPendingUnsub();
-  if (!list.some(p => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
-    list.push({ endpoint, routeId, trackDate });
+  if (!list.some(p => p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)) {
+    list.push({ uid, routeId, trackDate });
     savePendingUnsub(list);
   }
 }
-function removePendingUnsub(endpoint, routeId, trackDate) {
+function removePendingUnsub(uid, routeId, trackDate) {
   savePendingUnsub(loadPendingUnsub().filter(p =>
-    !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+    !(p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)));
 }
 
 // Доганяє незавершені скасування при відкритті вкладки. Пропускає рейси які
@@ -206,7 +245,7 @@ async function flushPendingUnsub() {
     if (p.trackDate < today) continue;                 // сервер прибере сам
     const reTracked = trackedRoutes.some(t => t.routeId === p.routeId && t.trackDate === p.trackDate);
     if (reTracked) continue;                            // знову відстежується — не чіпати
-    const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+    const res = await deletePushSubscription(p.uid, p.routeId, p.trackDate);
     if (!res.ok) remaining.push(p);                     // не вдалося — лишаємо на потім
   }
   savePendingUnsub(remaining);
@@ -1060,7 +1099,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
   // наступна зупинка/відлік, шкала прогресу
   return `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}">
-      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.webp" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
       <span class="bhv4-dots-nav">${dotsHtml}${heroTrackBtnHtml}</span>
@@ -1115,7 +1154,7 @@ function emptyHeroMessage() {
 function buildEmptyHeroCard(msg) {
   return `
     <div class="bhv4 bhv4--empty">
-      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.webp" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
       <div class="bhv4-content bhv4-empty-content">
         <svg class="bhv4-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1663,7 +1702,7 @@ function renderRouteList() {
         });
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
-        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime);
+        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime, true);   // свідома підписка
         // §5.3 — чесний зворотний зв'язок: якщо push завідомо недоступний, кажемо одразу
         const blocked = pushBlockedMsg();
         if (blocked) showToast(`Збережено. ${blocked}`);
@@ -1990,7 +2029,7 @@ function toggleRouteReminders(rid, date, from, to) {
   if (entry.notify === false && !isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   entry.notify = entry.notify === false;   // off→on / on→off
   if (entry.notify) {
-    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true);
   } else {
     unsubscribeFromPush(rid, date);
   }
@@ -2009,7 +2048,7 @@ async function requestPushForSavedRoute(rid, date, from, to) {
   const entry = findTrackedEntry(rid, from || null, to || null, date);
   if (!entry) return;
   // subscribeToPush сам запитає дозвіл (по жесту користувача) і збереже підписку.
-  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true);
   updateBannerBell();   // оновити стан дзвіночка на банері (⚠️ → 🔔 якщо дозвіл надано)
 }
 

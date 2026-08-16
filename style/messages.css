@@ -858,7 +858,8 @@
 .gr-input {
   width: 100%; box-sizing: border-box; padding: 11px 13px; border-radius: 12px;
   border: 1px solid var(--hairline, rgba(60,50,30,0.14)); background: #fff;
-  font-size: 15px; color: var(--ink, #2A2520); font-family: inherit; resize: none;
+  /* 16.08: 15 → 16px — нижче 16px iOS збільшує сторінку при фокусі (див. buses.css). */
+  font-size: 16px; color: var(--ink, #2A2520); font-family: inherit; resize: none;
 }
 .gr-emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .gr-emoji { width: 44px; height: 44px; border: 0; border-radius: 12px; background: rgba(0,0,0,0.05); font-size: 22px; cursor: pointer; }
