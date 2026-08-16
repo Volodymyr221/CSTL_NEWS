@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-16T19:29:36.541877+03:00",
+  "fetched_at": "2026-08-16T19:54:41.413704+03:00",
   "date": "16.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5652,8 +5652,8 @@
       "carrier": "Стельмах М.З.-",
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5667,8 +5667,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5682,8 +5682,8 @@
       "carrier": "під.Прибиш П.Я.",
       "bus": "ГАЛАЗ-3209.10",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5697,8 +5697,8 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": null,
-      "status": "з платформи",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5712,8 +5712,8 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "ПАЗ 32054",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5727,8 +5727,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5742,8 +5742,8 @@
       "carrier": "Гламазда В.В. Волинська обл.",
       "bus": "ІВЕКО ТУРБ DAІLV3510",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5757,8 +5757,8 @@
       "carrier": "ГОРОХІВ АТП 10764 45701",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
