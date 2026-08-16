@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-16T12:30:02.024623+03:00",
+  "fetched_at": "2026-08-16T12:54:02.610743+03:00",
   "date": "16.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -27,8 +27,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "Баз  А  079.17",
       "price": 188.1,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Луцьк",
       "to": "Личани"
@@ -2667,8 +2667,8 @@
       "carrier": "Кот Р.А.",
       "bus": "МЕРСЕДЕС-БЕНЦ  614",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2682,8 +2682,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2697,8 +2697,8 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2712,8 +2712,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2727,8 +2727,8 @@
       "carrier": "Веснянка В.М. 45605 с.Боратин",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2742,8 +2742,8 @@
       "carrier": "Тростіна Л.М.- Волинська обл.",
       "bus": "ПАЗ-4234",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -2757,8 +2757,8 @@
       "carrier": "Прибиш П.Я. заїзд",
       "bus": "ГАЛАЗ-3209.10",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
