@@ -8115,8 +8115,11 @@
       }
     }
     const post = allPosts.find((p) => p.id === postId);
-    if (!post)
+    if (!post) {
+      window.switchTab?.("board");
+      showToast("\u0426\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435 \u2014 \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0439\u043E\u0433\u043E \u0432\u0436\u0435 \u0437\u043D\u044F\u043B\u0438", 3500);
       return;
+    }
     if (post.type === "chat") {
       window.switchTab?.("discussions");
       openChatModal(post);
@@ -8439,6 +8442,10 @@
   async function openArticleById(id) {
     window.switchTab?.("community");
     await ensureNewsLoaded();
+    if (!allArticles.some((a) => a.id === id)) {
+      showToast(newsLoadFailed() ? "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438 \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442" : "\u0426\u0456\u0454\u0457 \u043D\u043E\u0432\u0438\u043D\u0438 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454 \u0443 \u0441\u0442\u0440\u0456\u0447\u0446\u0456", 3500);
+      return;
+    }
     openArticle(id);
   }
   var CATEGORY_DEFAULT = "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E";
@@ -14122,8 +14129,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       const post = posts.find((p) => p.id === id);
-      if (post)
+      if (post) {
         openPageScreen(post.page_id);
+        return;
+      }
+      showToast("\u0426\u0435\u0439 \u0434\u043E\u043F\u0438\u0441 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u2014 \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0439\u043E\u0433\u043E \u0432\u0438\u0434\u0430\u043B\u0438\u043B\u0438", 3500);
     };
     requestAnimationFrame(tryFocus);
   }

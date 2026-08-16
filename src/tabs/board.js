@@ -2766,7 +2766,16 @@ export async function openChatById(postId) {
 export async function openBoardItemById(postId) {
   if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
   const post = allPosts.find(p => p.id === postId);
-  if (!post) return;
+  // 🔴 16.08 — БУЛО МОВЧАЗНЕ `return`. Тап по сповіщенню про оголошення, якого вже
+  // немає (видалили, завершили, зняли з публікації), відкривав застосунок і НЕ робив
+  // нічого: ні екрана, ні пояснення. Людина лишалась на Громаді й не розуміла, чому
+  // сповіщення «не спрацювало». Тепер кажемо правду і ведемо у відповідну вкладку —
+  // там видно, що життя триває, просто цього запису більше немає.
+  if (!post) {
+    window.switchTab?.('board');
+    showToast('Це оголошення більше недоступне — можливо, його вже зняли', 3500);
+    return;
+  }
   if (post.type === 'chat') { window.switchTab?.('discussions'); openChatModal(post); }
   else                      { window.switchTab?.('board');       openAdModalStandalone(post); }
 }

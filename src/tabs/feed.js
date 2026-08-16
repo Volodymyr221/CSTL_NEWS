@@ -776,7 +776,10 @@ export async function focusFeedPost(id, commentId = null) {
     }
     if (++tries < 8) { requestAnimationFrame(tryFocus); return; }
     const post = posts.find(p => p.id === id);   // не в стрічці → відкрити сторінку каналу
-    if (post) openPageScreen(post.page_id);
+    if (post) { openPageScreen(post.page_id); return; }
+    // 🔴 16.08 — ДОПИСУ БІЛЬШЕ НЕМА: раніше тут просто нічого не відбувалось, і тап
+    // по сповіщенню виглядав як «застосунок мене проігнорував». Кажемо чесно.
+    showToast('Цей допис більше недоступний — можливо, його видалили', 3500);
   };
   requestAnimationFrame(tryFocus);
 }
