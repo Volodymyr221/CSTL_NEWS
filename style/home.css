@@ -63,6 +63,15 @@
   /* Тихий текст — 4.83:1 (див. шапку файлу) */
   --hm-quiet: #6E727A;
 
+  /* 🔴 АКЦЕНТ ЗБОРІВ — СВІТЛЕ БОРДО, І ЦЕ НЕ «ЩЕ ОДИН ВІДТІНОК БРЕНДУ».
+     Бренд `--red: #722F37` розрахований на світле тло: це колір ТЕКСТУ й тонких
+     іконок на білому. Картка збору темна (фото + затемнення), і тонкі речі на
+     ній — кільце 3px, смуга 6px — цим кольором просто зникають. Тон той самий
+     за відтінком (~352°), лише світліший, тож бренд впізнається, а лінію видно.
+     ⚠️ Для ПЛОЩИН тут як і всюди лишається `--brand-grad-sm` (кнопка, пігулка);
+     цей токен — тільки для тонких елементів на темному. */
+  --fund-accent: #D9697D;
+
   /* Тінь картки — ДВОШАРОВА. Один широкий шар при цій щільності дає сіру пляму,
      а не тінь (той самий висновок, що для шапки Дошки 28.07). */
   --hm-shadow: 0 1px 2px rgba(24, 20, 16, .04), 0 6px 16px rgba(24, 20, 16, .05);
@@ -808,7 +817,7 @@
    тобто порожню картку. Спіймано сторожем `tests/home.mjs`, а не оком. */
 .hm-card.hm-fund {
   position: relative; display: block; padding: 0; overflow: hidden;
-  min-height: 400px;
+  min-height: 470px;
   background: linear-gradient(160deg, #2A1A20 0%, #1B1315 55%, #140F11 100%);
   border-color: rgba(255, 255, 255, .10);
 }
@@ -828,17 +837,17 @@
 .hm-fund-scrim {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(to top,
-    rgba(18, 13, 14, .96) 0,
-    rgba(18, 13, 14, .93) 210px,
-    rgba(18, 13, 14, .62) 300px,
-    rgba(18, 13, 14, .16) 100%);
+    rgba(18, 13, 14, .95) 0,
+    rgba(18, 13, 14, .90) 250px,
+    rgba(18, 13, 14, .58) 345px,
+    rgba(18, 13, 14, .12) 100%);
 }
 /* Вміст — окремий шар над фото і затемненням. Категорія притиснута до верху,
    решта — до низу (`margin-top: auto` на `.hm-fund-main`), тобто знімок завжди
    лишається видимим угорі незалежно від довжини тексту. */
 .hm-fund-body {
   position: relative; z-index: 1;
-  display: flex; flex-direction: column; min-height: 400px;
+  display: flex; flex-direction: column; min-height: 470px;
   padding: var(--hm-s4);
 }
 .hm-fund-main { margin-top: auto; }
@@ -872,30 +881,50 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
-/* Скляна панель «Збирає / Ціль» — на макеті тут стояли «Зібрано / % / Ціль».
-   🔑 Хто збирає лишився ЛІВОРУЧ і першим навмисно: у зборі коштів найважливіше
-   не сума, а чи можна довіряти тому, хто просить. Ціль праворуч — єдине число,
-   яке не старіє, бо його ставлять один раз.
+/* ═══ СКЛЯНА ПАНЕЛЬ (макет 16.08) ═══
+   Одна поверхня замість двох: «Зібрано · % · Ціль», смуга поступу, збирач і ряд
+   статистики лежать в ОДНІЙ скляній панелі. До 16.08 панель і ряд фактів були
+   двома окремими прямокутниками — на фото два скла одне під одним читались як
+   недомальована сітка, а не як шар.
+
+   🔑 СКЛО, А НЕ БІЛА КАРТКА. Тло — темне з прозорістю плюс `backdrop-filter`,
+   тобто крізь панель видно знімок. Біла картка тут розрізала б фотографію
+   навпіл; сенс варіанта «2» саме в тому, що зображення лишається цілим.
+   ⚠️ Тон темний (`rgba(26,20,22,.46)`), а не білий: на світлому знімку біле скло
+   зливається з фоном і білий текст на ньому зникає. Заміряно на `olyka.day-2`.
    ⚠️ `will-change` не ставимо: у Safari разом із `backdrop-filter` дає застиглий
    blur (та сама пастка, що на шапці Дошки). */
 .hm-fund-panel {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hm-s3);
-  margin-top: var(--hm-s4); padding: 11px 14px;
-  border-radius: var(--hm-r-card);
-  background: rgba(255, 255, 255, .10);
-  border: 1px solid rgba(255, 255, 255, .14);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  margin-top: var(--hm-s4); padding: 12px 13px 11px;
+  border-radius: 20px;
+  background: rgba(26, 20, 22, .46);
+  border: 1px solid rgba(255, 255, 255, .17);
+  -webkit-backdrop-filter: blur(18px) saturate(120%); backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .24);
 }
-/* 🔴 `min-width: 0` + `flex: 1 1 auto` на лівій комірці і `0 0 auto` на правій.
-   Без цього довге імʼя збирача («CSTL NEWS (технічна перевірка)») розпихало
-   панель, ціль виїжджала за край і накладалась на текст — заміряно на першому ж
-   тестовому записі. Флекс за замовчуванням не дає елементу стиснутись менше за
-   вміст, тому `min-width: 0` тут обовʼязковий, а не «про всяк випадок». */
-.hm-fund-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.hm-fund-cell--goal { text-align: right; align-items: flex-end; flex: 0 0 auto; }
+
+/* Верхній ряд: сума ліворуч, кільце по центру, ціль праворуч.
+   🔴 `min-width: 0` на комірках обовʼязковий, а не «про всяк випадок»: флекс не
+   дає елементу стиснутись менше за вміст, і без цього довге імʼя збирача
+   («CSTL NEWS (технічна перевірка)») розпихало панель, а ціль виїжджала за край
+   і накладалась на текст — заміряно на першому ж тестовому записі. */
+.hm-fund-sums {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--hm-s2);
+}
+.hm-fund-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 0; }
+/* 🔴 ТІЛЬКИ `text-align`, БЕЗ `align-items: flex-end` — і це не стилістика, а
+   виправлення справжньої вади (заміряно на 320px 16.08). При `flex-end` дитина
+   в колонковому флексі отримує ширину `fit-content`, а `fit-content` для тексту
+   з `nowrap` дорівнює ПОВНІЙ ширині рядка. Тобто комірка «Ціль» переставала
+   слухатись власних 69px, вилазила ліворуч і «100 000 ₴» НАЛАЗИЛО на кільце
+   відсотка. Обрізка трикрапкою при цьому не спрацьовувала — обрізати не було
+   чого, бо коробка сама розтяглась. Зі `stretch` (за замовчуванням) ширина
+   дорівнює комірці, і `text-overflow` знову працює. */
+.hm-fund-cell--goal { text-align: right; }
 .hm-fund-k {
-  font: 400 11.5px/1.2 system-ui, -apple-system, sans-serif;
+  font: 400 11px/1.2 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .62);
+  white-space: nowrap;
 }
 /* Імʼя збирача — максимум 2 рядки. Довше означає, що в даних не назва, а речення;
    панель від цього перетворювалась на абзац і з'їдала знімок. */
@@ -903,73 +932,134 @@
   font: 700 14px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* 📐 КЕГЛЬ СУМ — `clamp`, А НЕ ЧИСЛО. Причина заміряна, а не теоретична: у
+   стрічці кількох зборів картка вужча (88% ширини), і три елементи в ряд —
+   «68 400 ₴» + кільце + «100 000 ₴» — при фіксованих 19px не влазять, ціль
+   налазить на кільце. `clamp` привʼязує кегль до ширини екрана: 19px на
+   широкому, 15px на 320px. Стеля перевіряється стендом `tests/home.mjs`, який
+   міряє, чи не вилізла панель за край картки. */
 .hm-fund-v--big {
-  font: 800 19px/1.15 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
-  white-space: nowrap;
+  font: 800 clamp(15px, 4.3vw, 19px)/1.15 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.01em; white-space: nowrap;
+  display: block; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Ряд фактів. Комірки рівні за шириною і розділені тонкими лініями — рівно як на
-   макеті. Малюються лише ті факти, що є в даних (див. `factsHtml`), тож ряд може
-   містити один, два або три елементи і не має «дірок». */
-.hm-fund-facts {
-  display: flex; align-items: stretch;
-  margin-top: var(--hm-s2); padding: 9px 4px;
-  border-radius: var(--hm-r-card);
-  background: rgba(255, 255, 255, .07);
-  border: 1px solid rgba(255, 255, 255, .11);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+/* Кільце відсотка. Тонке (3px) і невелике (40px) — воно ПІДСУМОВУЄ дві суми
+   поруч, а не змагається з ними за увагу. */
+.hm-fund-ring {
+  position: relative; flex: 0 0 auto; width: 40px; height: 40px;
 }
-.hm-fund-fact {
-  flex: 1 1 0; min-width: 0;
-  display: flex; align-items: center; gap: 7px; padding: 0 9px;
+/* 📐 НА ВУЗЬКИХ ЕКРАНАХ КІЛЬЦЯ НЕМАЄ — заміряно на 320px, а не вирішено на око.
+   Панель має всередині 194px. Кільце забирає 40px плюс два проміжки, на дві
+   суми лишається по 69px, а «100 000 ₴» при найменшому дозволеному кеглі займає
+   77px. Тобто на 320px не існує кегля, при якому вміщаються ОБИДВІ суми і
+   кільце: щось одне мусить піти.
+   ➡️ Іде кільце, бо воно ЄДИНЕ тут дублює інформацію: той самий відсоток показує
+   смуга поступу під сумами. Сума ж не дублюється нічим, а обрізане трикрапкою
+   число про гроші («68 40…») — гірше за відсутнє. */
+@media (max-width: 359px) {
+  .hm-fund-ring { display: none; }
 }
-.hm-fund-fact + .hm-fund-fact { border-left: 1px solid rgba(255, 255, 255, .13); }
-.hm-fund-fic { display: inline-flex; flex: 0 0 auto; color: rgba(255, 255, 255, .72); }
-.hm-fund-fic svg { width: 17px; height: 17px; }
-/* Ключ і значення один під одним: у ряд вони не влізли б на 390px, а перенос
-   всередині комірки дає рівний ритм без обрізки.
-   ⚠️ `overflow: hidden` — не «про всяк випадок»: без нього довге значення (назва
-   села, «останній день») вилазило за межі комірки і НАЛАЗИЛО на сусідню, бо
-   флекс не обрізає вміст сам. */
-.hm-fund-ftx {
-  min-width: 0; overflow: hidden;
-  font: 400 10.5px/1.25 system-ui, -apple-system, sans-serif;
-  color: rgba(255, 255, 255, .66);
-  white-space: nowrap; text-overflow: ellipsis;
+/* Та сама причина, але інша ВУЗЬКІСТЬ: у стрічці кількох зборів картка займає
+   88% ширини (283px на 390px екрана), і кегль, привʼязаний до ширини ЕКРАНА,
+   про це не знає — сума обрізалась трикрапкою («187 30…»). Тому кільце йде і
+   тут. Обрізане число про гроші — окремий клас вади, і стенд `tests/home.mjs`
+   тепер міряє саме його (`scrollWidth > clientWidth`), а не «схоже на правду». */
+.hm-ftrack .hm-fund-ring { display: none; }
+.hm-fund-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hm-fund-ring circle { fill: none; stroke-width: 3; }
+.hm-fund-ring-bg { stroke: rgba(255, 255, 255, .18); }
+/* 🔴 СВІТЛЕ БОРДО, А НЕ `--red`. Бренд `#722F37` — темний, і на темній картці
+   тонке кільце цим кольором просто зникає (перевірено оком на знімку). Тон той
+   самий за відтінком, лише світліший — бренд впізнається, лінія видно. */
+.hm-fund-ring-fg { stroke: var(--fund-accent); stroke-linecap: round; }
+.hm-fund-ring-n {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font: 800 12.5px/1 system-ui, -apple-system, sans-serif; color: #fff;
 }
-.hm-fund-ftx b {
-  display: block; overflow: hidden; text-overflow: ellipsis;
-  font: 700 11.5px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+.hm-fund-ring-n i { font: inherit; font-size: 8.5px; font-style: normal; opacity: .75; }
+
+/* Смуга поступу. Дублює кільце навмисно: кільце дає число, смуга — відчуття
+   «скільки лишилось» одним поглядом, і саме смугу видно краєм ока при гортанні.
+   ⚠️ Ширину задає інлайновий стиль із відсотка — це єдиний спосіб передати
+   число з даних у CSS без окремого класу на кожен відсоток. */
+.hm-fund-bar {
+  height: 6px; margin-top: 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, .16); overflow: hidden;
 }
+.hm-fund-bar > i {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, #A8455A 0%, var(--fund-accent) 100%);
+}
+.hm-fund-reached {
+  margin: 8px 0 0;
+  font: 700 12px/1.25 system-ui, -apple-system, sans-serif; color: var(--fund-accent);
+}
+
+/* Збирач окремим рядком під смугою. 🔑 Він лишився в панелі й не пішов у ряд
+   статистики навмисно: у зборі коштів найважливіше не сума, а чи можна
+   довіряти тому, хто просить. Дрібним сірим серед «124 донати» це б загубилось. */
+.hm-fund-org {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-top: 10px; padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+.hm-fund-org .hm-fund-v { font-size: 13px; -webkit-line-clamp: 1; }
+
+/* Ряд статистики. 🔴 ПЕРЕНОСИТЬСЯ, А НЕ ДІЛИТЬСЯ НА РІВНІ КОМІРКИ.
+   Попередня версія («факти») ділила ширину порівну — і на вужчій картці у
+   стрічці (249px) три комірки НАЛАЗИЛИ одна на одну, через що діяла стеля «два
+   факти». Ряд, що переноситься, зламатись так не може за побудовою: на вузькому
+   екрані елементи просто стають у два рядки. Тому стеля тут не потрібна. */
+.hm-fund-stats {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  margin-top: 9px;
+}
+.hm-fund-stat {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+  font: 500 11px/1.3 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .70);
+}
+/* Позначка «перевірено» — єдина яскрава в ряду. Решта статистики описує збір,
+   а ця каже, що його дивилась редакція; зрівняти їх кольором означало б
+   знецінити слово, заради якого позначка існує. */
+.hm-fund-stat.is-on { color: #fff; }
+.hm-fund-sic { display: inline-flex; flex: 0 0 auto; color: currentColor; }
+.hm-fund-sic svg { width: 14px; height: 14px; }
+.hm-fund-stat.is-on .hm-fund-sic { color: var(--fund-accent); }
 
 /* Кнопка — єдина клікабельна річ у картці, тому на всю ширину і 52px заввишки
    (норма Apple HIG — 44px). Три частини, як на макеті: іконка посилання, назва
    дії, шеврон. Назва каже, КУДИ веде тап, а не лише «Задонатити»: людина має
    розуміти, що зараз відкриється чужий сайт, ще до того як натисне. */
-/* 📐 ЗАМІРЯНО, А НЕ ПІДІБРАНО НА ОКО — і міряти довелось ДВІЧІ.
-   Один збір → картка 288px, під напис лишається 221px.
-   🔴 Кілька зборів → картка у стрічці лише 88% ширини, тобто **249px**, а під
-   напис — 249 − 22 (поля) − 33 (дві іконки) − 12 (проміжки) = **182px**.
-   Перша версія міряла тільки одинарну картку, підійшла — і зламалась рівно
-   тоді, коли зборів стало більше одного. Тому кегль підбирається під ВУЖЧИЙ
-   випадок, інакше напис ламається на два рядки посеред бордової плашки.
+/* 📐 НАПИС: «ПОСИЛАННЯ НА БАНКУ MONOBANK» — СЛОВО ВОВИ 16.08, І ВОНО ПЕРЕВАЖИЛО
+   МІЙ ЗАМІР. 05.08 я скоротив напис до «Банка Monobank» ось за такою міркою:
 
-   Ширина написів при 800-й насиченості, 13.5px:
-     «Посилання на банку Monobank» — 242px → не влазить навіть на широкій
-     «Відкрити банку Monobank»     — 206px → влазить на широкій, НЕ у стрічці
+     ширина при 800-й насиченості, 13.5px, під напис лишається 182px у стрічці
+     «Посилання на банку Monobank» — 242px → не влазить навіть на широкій картці
      «Банка Monobank»              — 131px → влазить скрізь, запас 51px ✅
 
-   Чому лишили бренд, а не дієслово («Задонатити», 92px): на зборі коштів довіру
-   дає ВПІЗНАВАНИЙ отримувач, а не заклик. Дію позначають іконка посилання
-   ліворуч і шеврон праворуч, а `aria-label` каже читачеві екрана повністю:
-   «Відкрити банку Monobank — <назва збору>». */
+   Мірка була правильна, а висновок — надто швидкий: я скоротив ТЕКСТ, хоча
+   вибір був не між «довгим написом» і «коротким», а між «довгим написом» і
+   «меншим кеглем». Напис тут несе роботу: він каже, що зараз відкриється ЧУЖИЙ
+   сайт, ще до того як людина натисне. Це саме та обіцянка, через яку картка
+   навмисно не є посиланням цілком.
+
+   ➡️ Тому кегль зменшено до `clamp(11px, 3.4vw, 13px)` і дозволено ПЕРЕНОС на
+   два рядки (`min-height: 52px` тримає висоту, вертикальні поля дають запас).
+   Перенос — не зрив верстки, а запасний вихід: напис лишається цілим і всередині
+   плашки на будь-якій ширині, включно з 320px. Стенд міряє наслідок — чи не
+   виліз текст за межі кнопки, — а не кількість рядків.
+   `aria-label` як і раніше каже читачеві екрана повну фразу з назвою збору. */
 .hm-fund-go {
-  display: flex; align-items: center; gap: 6px;
-  margin-top: var(--hm-s3); min-height: 52px; padding: 0 10px 0 12px;
+  display: flex; align-items: center; gap: 5px;
+  margin-top: var(--hm-s3); min-height: 52px; padding: 7px 8px 7px 10px;
   border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff; text-decoration: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .30);
-  font: 800 13.5px/1.15 system-ui, -apple-system, sans-serif; letter-spacing: 0;
+  font: 800 clamp(11px, 3.3vw, 12.5px)/1.2 system-ui, -apple-system, sans-serif;
+  letter-spacing: 0;
 }
 .hm-fund-go:active { background: var(--brand-grad-press); }
 .hm-fund-go-ic, .hm-fund-go-ch { display: inline-flex; flex: 0 0 auto; }
