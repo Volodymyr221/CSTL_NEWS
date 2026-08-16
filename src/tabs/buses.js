@@ -91,7 +91,37 @@ function loadPrefs() {
 // pushBlockedMsg (чому сповіщення не дійдуть) переїхав у спільний core/push.js —
 // тим самим текстом тепер користується і дзвіночок сторінок «Стрічки» (24.07).
 
-async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+// ── ЧЕРГА ОПЕРАЦІЙ НА РЕЙС (16.08) ───────────────────────────────────────────
+// 🔴 Вада, яку це лікує: кнопка «Відстежувати» нічим не блокувалась, а підписка
+// асинхронна (дозвіл → `pushManager.subscribe` → запит у базу). Швидкий подвійний
+// тап «увімкнув-вимкнув» пускав ДВІ операції одночасно, і DELETE міг виконатись
+// РАНІШЕ, ніж дійде UPSERT. Наслідок: рядок лишався в базі після скасування —
+// сповіщення про рейс, який людина вже зняла.
+// 🔑 Черга стоїть на САМИХ ОПЕРАЦІЯХ, а не на обробнику кнопки: шляхів до них
+// пʼять (кнопка списку · hero-кнопка · дзвіночок банера · хаб «Збережені» ·
+// самолікування), і сторож у кожному був би пʼятою копією одного правила.
+// Ключ — рейс+дата: різні рейси не блокують один одного.
+// ⚠️ Помилку операції ковтаємо саме тут (`catch`), інакше одна невдача обірвала б
+// ланцюг і наступні операції по цьому рейсу не виконались би ніколи.
+const _pushOpQueue = new Map();
+function queuePushOp(key, fn) {
+  const prev = _pushOpQueue.get(key) || Promise.resolve();
+  const next = prev.then(fn, fn).catch(e => { console.warn('[push] op:', e && e.message); });
+  _pushOpQueue.set(key, next);
+  next.finally(() => { if (_pushOpQueue.get(key) === next) _pushOpQueue.delete(key); });
+  return next;
+}
+const pushOpKey = (routeId, trackDate) => `${routeId}|${trackDate}`;
+
+function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+  return queuePushOp(pushOpKey(routeId, trackDate),
+    () => subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime));
+}
+function unsubscribeFromPush(routeId, trackDate) {
+  return queuePushOp(pushOpKey(routeId, trackDate), () => unsubscribeFromPushNow(routeId, trackDate));
+}
+
+async function subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
   // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
   // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
   // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
@@ -138,7 +168,7 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 
 // Видаляє підписку для конкретного маршруту з Supabase.
 // НЕ скасовує браузерну підписку — інші маршрути продовжують працювати.
-async function unsubscribeFromPush(routeId, trackDate) {
+async function unsubscribeFromPushNow(routeId, trackDate) {
   // Симетрично до subscribeToPush: знімаємо підписку і для майбутніх днів,
   // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
   // прибирає сам (track_date<today), тож для нього нічого не робимо.
