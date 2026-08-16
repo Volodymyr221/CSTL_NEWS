@@ -113,15 +113,19 @@ function queuePushOp(key, fn) {
 }
 const pushOpKey = (routeId, trackDate) => `${routeId}|${trackDate}`;
 
-function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+// `fresh` = людина СВІДОМО підписується наново (кнопка, дзвіночок) → прапорці
+// «вже надіслано» скидаються. Самолікування (`selfHealPushSubscriptions`) кличе
+// БЕЗ нього: інакше кожне відкриття вкладки Автобуси повертало б уже надіслане
+// попередження — див. пояснення в `core/supabase.js`.
+function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh = false) {
   return queuePushOp(pushOpKey(routeId, trackDate),
-    () => subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime));
+    () => subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh));
 }
 function unsubscribeFromPush(routeId, trackDate) {
   return queuePushOp(pushOpKey(routeId, trackDate), () => unsubscribeFromPushNow(routeId, trackDate));
 }
 
-async function subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+async function subscribeToPushNow(routeId, routeName, boardingStop, alightingStop, trackDate, depTime, fresh = false) {
   // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
   // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
   // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
@@ -147,10 +151,10 @@ async function subscribeToPushNow(routeId, routeName, boardingStop, alightingSto
 
     // Зберігаємо з одним повтором: якщо запит обірвався (напр. під час
     // оновлення додатку) — пробуємо ще раз, а не лишаємо рейс без push мовчки.
-    let res = await savePushSubscription(payload);
+    let res = await savePushSubscription(payload, { resetNotified: fresh });
     if (!res.ok) {
       await new Promise(r => setTimeout(r, 1500));
-      res = await savePushSubscription(payload);
+      res = await savePushSubscription(payload, { resetNotified: fresh });
     }
     if (!res.ok) {
       console.warn('[push] не вдалося зберегти підписку:', res.error);
@@ -1698,7 +1702,7 @@ function renderRouteList() {
         });
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
-        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime);
+        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime, true);   // свідома підписка
         // §5.3 — чесний зворотний зв'язок: якщо push завідомо недоступний, кажемо одразу
         const blocked = pushBlockedMsg();
         if (blocked) showToast(`Збережено. ${blocked}`);
@@ -2025,7 +2029,7 @@ function toggleRouteReminders(rid, date, from, to) {
   if (entry.notify === false && !isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   entry.notify = entry.notify === false;   // off→on / on→off
   if (entry.notify) {
-    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true);
   } else {
     unsubscribeFromPush(rid, date);
   }
@@ -2044,7 +2048,7 @@ async function requestPushForSavedRoute(rid, date, from, to) {
   const entry = findTrackedEntry(rid, from || null, to || null, date);
   if (!entry) return;
   // subscribeToPush сам запитає дозвіл (по жесту користувача) і збереже підписку.
-  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null, true);
   updateBannerBell();   // оновити стан дзвіночка на банері (⚠️ → 🔔 якщо дозвіл надано)
 }
 

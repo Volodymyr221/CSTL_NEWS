@@ -1396,15 +1396,22 @@ export async function fetchTrackedRoutesFromDB(uid, todayISO) {
 //    PostgREST оновлює лише передані колонки, тож без цього рядка вони б лишились.
 // Чому це важливо: обрив саме тут = людина бачить увімкнений дзвіночок, а сервер
 // про рейс не знає, і сповіщення не прийде. Тихий збій, який помічають надто пізно.
-export async function savePushSubscription(payload) {
+export async function savePushSubscription(payload, { resetNotified = false } = {}) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const row = {
-    ...payload,
-    notified_dep:     false,
-    notified_warning: false,
-    notified_canc:    false,
-    notified_start:   false,
-  };
+  // ⚠️ `resetNotified` НЕ можна тримати завжди увімкненим — і це не дрібниця.
+  // Ту саму функцію кличе `selfHealPushSubscriptions()` при КОЖНОМУ відкритті
+  // вкладки Автобуси. Якби скидання йшло безумовно, вийшло б так: людині прийшло
+  // «автобус через 15 хв», вона відкрила застосунок подивитись — прапорці
+  // обнулились, і наступної хвилини те саме попередження прилетіло ЗНОВУ, і так
+  // до кінця вікна. Скидання доречне лише там, де людина СВІДОМО підписується
+  // наново (кнопка «Відстежувати», дзвіночок), бо це нова домовленість.
+  const row = { ...payload };
+  if (resetNotified) {
+    row.notified_dep     = false;
+    row.notified_warning = false;
+    row.notified_canc    = false;
+    row.notified_start   = false;
+  }
   const r = await netCall(() => supa.from('push_subscriptions')
     .upsert(row, { onConflict: 'endpoint,route_id,track_date' }));
   return r.ok ? { ok: true } : { ok: false, error: r.error };
