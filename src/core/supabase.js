@@ -1376,31 +1376,60 @@ export async function fetchTrackedRoutesFromDB(uid, todayISO) {
 
 // ── PUSH-ПІДПИСКИ (Level B — Web Push для Автобусів) ─────────────────────────
 
-// Зберігає push-підписку у Supabase. При повторному виклику — upsert оновлює.
+// Зберігає push-підписку у Supabase.
 // payload: { user_uuid, endpoint, p256dh, auth_key, route_id, route_name,
 //            boarding_stop, alighting_stop, track_date, dep_time }
-// Це ВСТАВКА, але повтор тут безпечний — і не через звірку, а через саму базу:
-// на рядок стоїть унікальність, тож друга спроба впаде у 23505, який ми й так
-// вважаємо успіхом. Тобто дубля підписки не буде за побудовою.
+//
+// 🔴 16.08 — БУЛО `insert`, СТАЛО `upsert`, І ЦЕ БУВ ТИХИЙ БАГ.
+// Старий код на 23505 (unique_violation) відповідав `{ ok: true }` і НІЧОГО не
+// оновлював. Унікальність тут — `(endpoint, route_id, track_date)`, тобто **без
+// зупинок** (звірено з живою базою: індекс `push_subs_unique`). Наслідок:
+//   відстежив ОЛИКА→ЛУЦЬК → отримав «за 15 хв» (`notified_warning = true`) →
+//   скасував → відстежив ТОЙ САМИЙ рейс того ж дня з іншої зупинки
+//   → у базі лишались СТАРІ зупинки і СТАРІ прапорці → попередження не приходило
+//   ВЗАГАЛІ, або називало чужу зупинку.
+// ⚠️ Сам файл схеми (`scripts/supabase_push_schema.sql:36`) уже обіцяв «upsert
+//    оновлює дані (dep_time, зупинки)» — тобто намір був записаний, а код його не
+//    виконував. Розходження документа з кодом і зробило ваду невидимою.
+// 🔑 Прапорці «вже надіслано» скидаємо ЯВНО: повторне відстеження — це нова
+//    домовленість із людиною, і всі сповіщення по ній мають прийти заново.
+//    PostgREST оновлює лише передані колонки, тож без цього рядка вони б лишились.
 // Чому це важливо: обрив саме тут = людина бачить увімкнений дзвіночок, а сервер
 // про рейс не знає, і сповіщення не прийде. Тихий збій, який помічають надто пізно.
 export async function savePushSubscription(payload) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const r = await netCall(() => supa.from('push_subscriptions').insert(payload));
-  if (r.ok) return { ok: true };
-  // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
-  if (r.rawError?.code === '23505') return { ok: true };
-  return { ok: false, error: r.error };
+  const row = {
+    ...payload,
+    notified_dep:     false,
+    notified_warning: false,
+    notified_canc:    false,
+    notified_start:   false,
+  };
+  const r = await netCall(() => supa.from('push_subscriptions')
+    .upsert(row, { onConflict: 'endpoint,route_id,track_date' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
-// Видаляє конкретний рядок підписки (при знятті відстеження рейсу).
-// Повертає { ok } симетрично до savePushSubscription — щоб виклик міг
-// зробити повтор і не лишити висячу серверну підписку при збої мережі.
-export async function deletePushSubscription(endpoint, routeId, trackDate) {
+// Знімає підписку на рейс (при знятті відстеження).
+//
+// 🔴 16.08 — ФІЛЬТР БУВ ПО `endpoint`, СТАВ ПО `user_uuid`.
+// `endpoint` — адреса push-підписки САМЕ ЦЬОГО браузера, а список відстежуваних
+// рейсів гідрується з бази **по акаунту** (`fetchTrackedRoutesFromDB`, фільтр
+// `user_uuid`). Через цю асиметрію жив відтворюваний сценарій:
+//   відстежив рейс на телефоні → відкрив застосунок на планшеті (рейс підтягнувся)
+//   → натиснув «скасувати» на планшеті → DELETE не зачіпав ЖОДНОГО рядка (endpoint
+//   інший), але повертав успіх → інтерфейс казав «скасовано», **push однаково
+//   прилітав на телефон**, а наступний вхід повертав рейс у список.
+// ✅ RLS це дозволяє і не послаблюється: політика `push_delete` вимагає
+//    `user_uuid = auth.uid()::text`, тобто стерти можна лише СВОЇ рядки — просто
+//    тепер усі свої, на всіх пристроях. Так і має бути: «скасувати відстеження» —
+//    це рішення людини про РЕЙС, а не про конкретний браузер.
+export async function deletePushSubscription(uid, routeId, trackDate) {
   if (!supa) return { ok: false, error: 'no-supa' };
+  if (!uid)  return { ok: false, error: 'no-uid' };
   const r = await netCall(() => supa.from('push_subscriptions')
     .delete()
-    .eq('endpoint', endpoint)
+    .eq('user_uuid', uid)
     .eq('route_id', routeId)
     .eq('track_date', trackDate));
   return r.ok ? { ok: true } : { ok: false, error: r.error };

@@ -128,7 +128,7 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
     } else {
       // Знову відстежуємо цей рейс → скасовуємо застаріле «незавершене скасування»,
       // інакше flushPendingUnsub згодом зняв би цю свіжу підписку.
-      removePendingUnsub(subJson.endpoint, routeId, trackDate);
+      removePendingUnsub(payload.user_uuid, routeId, trackDate);
     }
   } catch (err) {
     console.warn('[push] помилка підписки:', err);
@@ -143,55 +143,60 @@ async function unsubscribeFromPush(routeId, trackDate) {
   // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
   // прибирає сам (track_date<today), тож для нього нічого не робимо.
   if (trackDate < getTodayISO()) return;
-  let endpoint = null;
+  // 🔴 16.08 — КЛЮЧ СКАСУВАННЯ ТЕПЕР `uid`, А НЕ `endpoint` ЦЬОГО БРАУЗЕРА.
+  // Стара версія починалась із `getSubscription()` і при `!sub` виходила МОВЧКИ —
+  // тобто якщо браузерна підписка зникла (перевстановлення PWA, чистка даних,
+  // ротація), серверний рядок лишався жити, і сповіщення приходили на рейс, який
+  // людина скасувала. Плюс скасування з другого пристрою не працювало зовсім
+  // (див. розбір у `core/supabase.js` → `deletePushSubscription`).
+  const uid = currentUserId();
+  if (!uid) return;                     // гість не має власних підписок
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    // Немає браузерної підписки → endpoint невідомий. Якщо серверний рядок висить
-    // під старим endpoint — сервер прибере його за track_date<today або за 410
-    // (мертвий endpoint) при спробі відправлення. Тут більше нічого не зробити.
-    if (!sub) return;
-    endpoint = sub.endpoint;
-
     // Повтор 1× (як у subscribeToPush): захист від разового обриву мережі.
-    let res = await deletePushSubscription(endpoint, routeId, trackDate);
+    let res = await deletePushSubscription(uid, routeId, trackDate);
     if (!res.ok) {
       await new Promise(r => setTimeout(r, 1500));
-      res = await deletePushSubscription(endpoint, routeId, trackDate);
+      res = await deletePushSubscription(uid, routeId, trackDate);
     }
     if (res.ok) {
-      removePendingUnsub(endpoint, routeId, trackDate);
+      removePendingUnsub(uid, routeId, trackDate);
     } else {
       // Не вдалося — запам'ятовуємо, доженемо при відкритті (flushPendingUnsub).
-      addPendingUnsub(endpoint, routeId, trackDate);
+      addPendingUnsub(uid, routeId, trackDate);
     }
   } catch (err) {
     console.warn('[push] unsubscribe error:', err);
-    if (endpoint) addPendingUnsub(endpoint, routeId, trackDate);
+    addPendingUnsub(uid, routeId, trackDate);
   }
 }
 
 // ── Черга незавершених скасувань (persist у localStorage) ─────────────
+// ⚠️ 16.08 — записи черги тепер ключуються `uid`, а не `endpoint` (разом зі зміною
+// самого скасування). Старі записи з полем `endpoint` відкидаємо ПРИ ЧИТАННІ:
+// доганяти ними вже нічого — вони описують фільтр, якого більше немає, а сервер
+// прибирає протерміноване сам (`track_date < today`). Без цього рядка вони лежали б
+// у localStorage вічно і кожен запуск давав би `no-uid`.
 function loadPendingUnsub() {
   try {
     const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
-    return Array.isArray(d) ? d : [];
+    return Array.isArray(d) ? d.filter(p => p && p.uid) : [];
   } catch { return []; }
 }
 function savePendingUnsub(list) {
   if (list.length) localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
   else localStorage.removeItem(PENDING_UNSUB_KEY);
 }
-function addPendingUnsub(endpoint, routeId, trackDate) {
+function addPendingUnsub(uid, routeId, trackDate) {
+  if (!uid) return;
   const list = loadPendingUnsub();
-  if (!list.some(p => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
-    list.push({ endpoint, routeId, trackDate });
+  if (!list.some(p => p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)) {
+    list.push({ uid, routeId, trackDate });
     savePendingUnsub(list);
   }
 }
-function removePendingUnsub(endpoint, routeId, trackDate) {
+function removePendingUnsub(uid, routeId, trackDate) {
   savePendingUnsub(loadPendingUnsub().filter(p =>
-    !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+    !(p.uid === uid && p.routeId === routeId && p.trackDate === trackDate)));
 }
 
 // Доганяє незавершені скасування при відкритті вкладки. Пропускає рейси які
@@ -206,7 +211,7 @@ async function flushPendingUnsub() {
     if (p.trackDate < today) continue;                 // сервер прибере сам
     const reTracked = trackedRoutes.some(t => t.routeId === p.routeId && t.trackDate === p.trackDate);
     if (reTracked) continue;                            // знову відстежується — не чіпати
-    const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+    const res = await deletePushSubscription(p.uid, p.routeId, p.trackDate);
     if (!res.ok) remaining.push(p);                     // не вдалося — лишаємо на потім
   }
   savePendingUnsub(remaining);
