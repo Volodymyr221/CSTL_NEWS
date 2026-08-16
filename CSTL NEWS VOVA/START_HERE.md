@@ -117,7 +117,7 @@
 > Знімки збережено в `_ai-tools/_archive/START_HERE_попередні-стани.md`.
 
 **Прод станом на 15.08.2026:** `CACHE_NAME = cstl-20260815-1928`, деплой **#4337**,
-останній PR **#931**. `npm test` — **80 стендів**, 1375 перевірок
+останній PR **#931**. `npm test` — **81 стенд**, 1394 перевірки
 (15.08 додано `notif-backstack.mjs`, `notif-thread-coldstart.mjs`, `fab-visible.mjs`,
 `tab-return-repaint.mjs`, `comment-sheet-close.mjs`, `docs-fresh.mjs`).
 ⚠️ **Число тут застаріває — живе значення дає сам прогін**, останній рядок.
