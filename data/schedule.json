@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "16.08.2026",
-  "updatedTime": "13:26",
+  "updatedTime": "13:50",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -10384,7 +10384,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:30",
           "arrival_time": "14:42",
           "duration_min": 72,
@@ -11266,7 +11266,7 @@
         }
       ],
       "fetchedAt": "16.08.2026",
-      "fetchedTime": "13:26"
+      "fetchedTime": "13:50"
     },
     "2026-08-17": {
       "routes": [
@@ -12872,7 +12872,7 @@
         }
       ],
       "fetchedAt": "16.08.2026",
-      "fetchedTime": "13:26"
+      "fetchedTime": "13:50"
     },
     "2026-08-18": {
       "routes": [
