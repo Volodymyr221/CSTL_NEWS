@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-17 17:22 UTC
+**Зріз на:** 2026-08-17 18:21 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/startuem-tt38jj` |
-| останній коміт людини | `f8f00a6c` 17.08 17:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-tt38jj |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260817-1710` |
-| останній PR у `main` | #945 |
+| гілка | `claude/startuem-f07n62` |
+| останній коміт людини | `8b1fcb8a` 17.08 18:21 — docs: капсула ПОВІДОМЛЕННЯ і шкала важливості — літопис, пульс, CLAUDE.md |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260817-1807` |
+| останній PR у `main` | #946 |
 | стендів на диску | 83 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-17 | є ✅ |
@@ -25,18 +25,24 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/BACKLOG_VOVA_2026-08.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-08-17.md`
+- `_session-log/vova-2026-08-17b.md`
+- `bundle.js`
+- `src/core/supabase.js`
+- `src/tabs/board-chat.js`
+- `src/tabs/home-caps.js`
+- `sw.js`
+- `tests/home-caps.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `f8f00a6c` 17.08 17:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-tt38jj
-- `89553f72` 17.08 17:21 — docs: строга звірка пульсу після коміту передачі
-- `d75afd33` 17.08 17:21 — docs: передача в новий чат — 17.08.2026
+- `8b1fcb8a` 17.08 18:21 — docs: капсула ПОВІДОМЛЕННЯ і шкала важливості — літопис, пульс, CLAUDE.md
+- `4092704c` 17.08 18:18 — feat(home): капсула ПОВІДОМЛЕННЯ + ранжування капсул балами
+- `44a582c8` 17.08 17:26 — docs(session-log): журнал сесії 17.08 (B) — старт /startuem
+- `7d464d47` 17.08 17:23 — docs: передача в новий чат — 17.08.2026 (#946)
 - `fb6baaf5` 17.08 16:33 — fix(home): капсула ЗАРАЗ рахує рейс від СВОЄЇ зупинки, а не від Луцька (#945)
-- `79cb1659` 17.08 15:22 — docs: оновлено авто-блок пульсу після мерджу
 
 <!-- AUTO:END -->---
 
