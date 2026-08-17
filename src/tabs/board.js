@@ -41,7 +41,7 @@ import { keepScroll, paintIfChanged } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
-  cardTitleText,
+  cardTitleText, markBoardSeen,
 } from '../core/board-shared.js';
 import {
   initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs, answersCount,
@@ -3010,6 +3010,15 @@ export function initBoard() {
   // ⚠️ Свідомо `refreshBoardKeepingPlace`, а не `renderBoard`: людина повертається
   // у ТУ САМУ точку списку, і перебудова вкладки кинула б її на початок.
   onReturn('board', () => refreshBoardKeepingPlace());
+
+  // 🔴 17.08 — ПОЗНАЧКА «ЛЮДИНА БУЛА НА ДОШЦІ» для капсули «НОВЕ» на Громаді.
+  // ⚠️ Навмисно на `cstl-tab-changed`, а НЕ в `renderBoard()`: `initBoard()`
+  // працює на СТАРТІ застосунку, і позначка з рендера гасила б лічильник
+  // людині, яка Дошку навіть не відкривала. Капсула тоді не показала б нічого
+  // ніколи — і зрозуміти це з екрана було б неможливо.
+  window.addEventListener('cstl-tab-changed', () => {
+    if (document.querySelector('.app-main')?.dataset.tab === 'board') markBoardSeen();
+  });
 
   // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────
   // Досі підписки на `posts` не було: нове оголошення сусіда зʼявлялось лише після

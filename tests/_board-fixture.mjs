@@ -79,6 +79,13 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       window.__cstlQueries = window.__cstlQueries || {};
       const q = (table) => {
         const умови = [];
+        // 🔴 17.08 — .single()/.maybeSingle() ТЕПЕР ВІДДАЮТЬ ОДИН РЯДОК, а не масив.
+        // Було: обидва — порожні заглушки, тобто на .maybeSingle() приходив
+        // МАСИВ. Справжня supabase-js віддає обʼєкт (або null), і код, який
+        // пише data.settlement, мовчки читав undefined у полі масиву. Найшло це
+        // не читання коду, а стенд капсул: село з анкети не доїжджало ніколи, і
+        // винен був не застосунок, а заглушка. Та сама хвороба, що з .eq 07.08.
+        let один = false;
         const self = {
           then(res) {
             window.__cstlQueries[table] = (window.__cstlQueries[table] || 0) + 1;
@@ -86,7 +93,7 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             for (const c of умови) {
               рядки = рядки.filter(r => c.не ? r[c.поле] !== c.значення : r[c.поле] === c.значення);
             }
-            const payload = { data: рядки, error: null };
+            const payload = { data: один ? (рядки[0] || null) : рядки, error: null };
             const ms = SLOW[table] || 0;
             const pr = ms
               ? new Promise(r => setTimeout(() => r(payload), ms))
@@ -101,10 +108,11 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         // ⚠️ 07.08: доданий 'not' — без нього fetchUnreadByThread падав із
         // «.not is not a function», ланцюг рвався і розмови не приїжджали ЗОВСІМ.
         // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
-        for (const m of ['select','in','is','not','order','limit','range','single','maybeSingle',
+        for (const m of ['select','in','is','not','order','limit','range',
                          'filter','or','gt','lt','gte','lte','like','ilike','contains',
                          'insert','upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
+        self.single = self.maybeSingle = () => { один = true; return self; };
         // Ці два справді звужують набір (див. пояснення вище).
         self.eq  = (поле, значення) => { умови.push({ поле, значення, не: false }); return self; };
         self.neq = (поле, значення) => { умови.push({ поле, значення, не: true  }); return self; };

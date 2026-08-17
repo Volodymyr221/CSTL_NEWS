@@ -652,16 +652,38 @@ function getOrderedStops(route) {
   return firstMatchesOrigin ? stops : [...stops].reverse();
 }
 
-function matchesSearch(route) {
-  if (!fromStop && !toStop) return true;
-  const stops = route.stops;
-  const fStop = fromStop ? stops.find(s => normalizeStopName(s.name) === normalizeStopName(fromStop)) : null;
-  const tStop = toStop   ? stops.find(s => normalizeStopName(s.name) === normalizeStopName(toStop))   : null;
-  if (fromStop && !fStop) return false;
-  if (toStop   && !tStop) return false;
-  // Напрямок: fromStop повинен бути географічно ДО toStop (за км)
-  if (fromStop && toStop && fStop.km > tStop.km) return false;
+// Знайти зупинку на маршруті за назвою, стійко до «пов.» у кінці.
+// 🔑 Винесено з `matchesSearch` 17.08: тим самим правилом тепер користується
+// капсула «ЗАРАЗ» на Громаді (`home-caps.js`). Правило про напрямок і назви
+// зупинок мусить жити в ОДНОМУ місці — інакше головна і Розклад із часом почнуть
+// вважати різні рейси придатними, і ніхто не помітить, який із двох бреше.
+export function findStopOnRoute(route, name) {
+  if (!name || !route || !route.stops) return null;
+  return route.stops.find(s => normalizeStopName(s.name) === normalizeStopName(name)) || null;
+}
+
+// Чи придатний рейс для пари «звідки → куди». Порожні значення = без обмеження.
+export function routeCoversStops(route, from, to) {
+  if (!from && !to) return true;
+  const fStop = from ? findStopOnRoute(route, from) : null;
+  const tStop = to   ? findStopOnRoute(route, to)   : null;
+  if (from && !fStop) return false;
+  if (to   && !tStop) return false;
+  // Напрямок: from повинен бути географічно ДО to (за км)
+  if (from && to && fStop.km > tStop.km) return false;
   return true;
+}
+
+// Збережена пара зупинок людини (`bus_prefs_v2`). Читає капсула «ЗАРАЗ».
+export function getBusPrefs() {
+  // ⚠️ Капсула малюється РАНІШЕ за `initBuses()` (Громада стартує перша), тож
+  // на порожньому стані добираємо з памʼяті пристрою самі. `loadPrefs` ідемпотентна.
+  if (!fromStop && !toStop) loadPrefs();
+  return { from: fromStop, to: toStop };
+}
+
+function matchesSearch(route) {
+  return routeCoversStops(route, fromStop, toStop);
 }
 
 // «Past» = рейс завершився (прибув на кінцеву). Рейс у дорозі тепер НЕ past.
