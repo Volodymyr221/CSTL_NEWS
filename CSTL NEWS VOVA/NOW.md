@@ -10,33 +10,46 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-17 05:06 UTC
+**Зріз на:** 2026-08-17 05:07 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-tt38jj` |
-| останній коміт людини | `483b712b` 17.08 04:53 — feat(admin): розділ «Збори» — заявки жителів і керування зборами на головній |
+| останній коміт людини | `2baf0275` 17.08 05:07 — docs(now): пульс |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260817-0745` |
 | останній PR у `main` | #940 |
 | стендів на диску | 82 |
-| незакомічених файлів | 14 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-17 | є ✅ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `_session-log/vova-2026-08-17.md`
 - `admin.html`
 - `bundle.js`
 - `scripts/supabase_fundraisers.sql`
+- `src/core/icons.js`
+- `src/core/sidebar.js`
 - `src/core/supabase.js`
+- `src/tabs/fund-screen.js`
 - `src/tabs/home-fund.js`
+- `style.css`
+- `style/fund-screen.css`
 - `sw.js`
 - `tests/docs-refs.mjs`
+- `tests/fund-screen.mjs`
 - `tests/home.mjs`
 - `tests/tools/fund-shot.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `2baf0275` 17.08 05:07 — docs(now): пульс
+- `17a41929` 17.08 05:07 — feat(fund): розділ «Збори» в меню — екран громади + заявка від жителя
 - `483b712b` 17.08 04:53 — feat(admin): розділ «Збори» — заявки жителів і керування зборами на головній
 - `1265b9d2` 17.08 04:46 — feat(fund): збори переїхали з файлу в Supabase — фундамент під адмінку і заявки
 - `59469cd3` 16.08 21:00 — feat(home): віджет «Актуальні збори» за макетом — скляна панель, без зібраної суми (#940)
