@@ -57,7 +57,7 @@ import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/aut
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, clampChars, boardSeenTs, markBoardSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { getRouteTimings, getStopMins, nowMinutes } from '../core/bus-schedule.js';
+import { getStopMins, nowMinutes } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
   getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops,
@@ -80,6 +80,11 @@ const MAX_CAPS = 3;
 // ⚠️ На ВІДСТЕЖУВАНИЙ рейс стеля не діє: людина сама його позначила, і ховати
 // його до останніх двох годин означало б проігнорувати її явну дію.
 const SOON_MAX_MIN = 120;
+
+// Зупинка посадки за замовчуванням. 🔑 Не «перша зупинка рейсу»: у живому
+// розкладі жоден рейс в Олиці не починається (23 з Луцька, 2 з Ківерців), тож
+// «перша зупинка» — це чужий населений пункт за 50-99 хвилин звідси.
+const HOME_STOP = 'Олика';
 
 // ── Дрібні помічники ─────────────────────────────────────────────────────────
 
@@ -162,11 +167,31 @@ async function myCapsule() {
 // найзагальнішого, і кожен щабель має пояснення:
 //   1. **відстежуваний рейс** — людина натиснула «відстежувати», це її явна дія;
 //   2. **збережена пара зупинок** — вона обрала «звідки/куди», і вибір лишився;
-//   3. **найближчий рейс узагалі** — те, що бачить гість і новачок.
+//   3. **найближчий рейс ЧЕРЕЗ ЇЇ СЕЛО** — те, що бачить гість і новачок.
 // ⚠️ Щаблі 2 і 3 НЕ підстраховують один одного, і це навмисно: якщо людина
 // обрала «Олика → Луцьк», а такого рейсу найближчим часом немає, показати їй
 // замість цього випадковий автобус на Ківерці — не допомога, а шум. Порожньо
 // тут означає порожньо.
+//
+// 🔴 17.08, ВЕЧІР — ПЕРЕПИСАНО ПІСЛЯ ЖИВОГО ЗНІМКА ВОВИ. ЩО БУЛО НЕ ТАК.
+// Капсула показала «Рівне · через 37 хв». Заміряно на живому розкладі: це рейс
+// «Луцьк Рівне» 17:30 зі зупинками Луцьк · Дерно · Клевань · Зоря · Рівне —
+// **Олики в ньому немає взагалі**. Тобто людині в Олиці показали автобус, на
+// який вона фізично не могла сісти, а відлік ішов до виїзду з ЛУЦЬКА.
+//
+// 🔑 Корінь: щабель 3 брав найближчий рейс з УСЬОГО розкладу і рахував час від
+// його ПЕРШОЇ зупинки. Заміряно по живих даних: **жоден із 25 рейсів дня не
+// починається в Олиці** — 23 стартують у Луцьку, 2 в Ківерцях, а через Олику
+// проходять на 50-99 хвилин пізніше за виїзд.
+//
+// 🛑 І це та сама вада, яку цей же файл оголошував полагодженою: відлік до
+// СВОЄЇ зупинки працював лише для того, хто вручну обрав «звідки». Для всіх
+// інших лишався старий шлях. ⚠️ Сторож цього не бачив, бо у фікстурі маршрут
+// починався в Олиці — заглушка не відтворювала форму живих даних (той самий
+// урок, що з полем `carrier` того ж дня).
+//
+// ✅ Тепер зупинка посадки Є ЗАВЖДИ: село з анкети, інакше Олика. Рейс без цієї
+// зупинки в капсулу не потрапляє зовсім, а відлік іде до проходу через неї.
 async function nowCapsule() {
   const todayISO = new Date().toISOString().slice(0, 10);
   let routes = [];
@@ -180,26 +205,43 @@ async function nowCapsule() {
   const live = routes.filter(r => r.status !== 'cancelled');
   const nowMin = nowMinutes();
 
-  // Скільки хвилин до посадки САМЕ НА СВОЇЙ зупинці, а не до виїзду з початкової.
-  // ⚠️ Це не дрібниця: рейс «Ківерці — Луцьк» виїжджає о 06:50, а через Олику
-  // йде о 07:20. Людині з Олики потрібне друге число, і показати їй перше
-  // означало б відправити її на зупинку на пів години раніше.
+  // Скільки хвилин до посадки САМЕ НА ЦІЙ зупинці, а не до виїзду з початкової.
+  // Рейс «Луцьк — Жорнище» виїжджає о 10:05, а через Олику йде о 11:44: різниця
+  // 99 хвилин, і показати перше число означало б відправити людину на зупинку
+  // на півтори години раніше.
   const minsToBoard = (r, from) => {
-    const stop = from ? findStopOnRoute(r, from) : null;
-    const m = stop ? getStopMins(r, stop.name) : getRouteTimings(r, nowMin).fromMin;
+    const stop = findStopOnRoute(r, from);
+    if (!stop) return null;
+    const m = getStopMins(r, stop.name);
     return m == null ? null : m - nowMin;
+  };
+
+  // 🛑 Кінцева зупинка НЕ є зупинкою посадки: на рейсі «Луцьк — Олика» сісти в
+  // Олиці нікуди — він там закінчується. Без цієї умови капсула пропонувала б
+  // автобус, що приїжджає, як автобус, що везе.
+  const boardable = (r, from) => {
+    const stop = findStopOnRoute(r, from);
+    if (!stop) return false;
+    const last = r.stops[r.stops.length - 1];
+    return !!last && stop.name !== last.name;
   };
 
   const pickFor = (from, to) => {
     let best = null;
     for (const r of live) {
+      if (!boardable(r, from)) continue;
       if (!routeCoversStops(r, from, to)) continue;
       const left = minsToBoard(r, from);
       if (left == null || left < 0) continue;
-      if (!best || left < best.left) best = { r, left, from: from || '', to: to || '' };
+      if (!best || left < best.left) best = { r, left, from, to: to || '' };
     }
     return best;
   };
+
+  // Зупинка посадки за замовчуванням: село з анкети, інакше Олика.
+  // ⚠️ Гість і людина з незаповненою анкетою отримують Олику — застосунок
+  // зроблено для неї, і це чесніше за «найближчий рейс хоч звідки».
+  const myStop = (await mySettlement()) || HOME_STOP;
 
   // 1. Відстежуваний рейс на сьогодні — стелі часу нема.
   let hit = null;
@@ -207,15 +249,19 @@ async function nowCapsule() {
     if (t.trackDate !== todayISO) continue;
     const r = live.find(x => x.id === t.routeId);
     if (!r) continue;
-    const left = minsToBoard(r, t.from);
+    const from = t.from || myStop;
+    const left = minsToBoard(r, from);
     if (left == null || left < 0) continue;
-    if (!hit || left < hit.left) hit = { r, left, from: t.from || '', to: t.to || '' };
+    if (!hit || left < hit.left) hit = { r, left, from, to: t.to || '' };
   }
 
-  // 2. Збережена пара зупинок. 3. Найближчий рейс узагалі. Обидва — під стелею.
+  // 2. Збережена пара зупинок. 3. Рейс через своє село; якщо через нього сьогодні
+  //    нічого не йде — через Олику (вона хаб громади). Обидва — під стелею.
   if (!hit) {
     const { from, to } = getBusPrefs();
-    const b = (from || to) ? pickFor(from, to) : pickFor('', '');
+    const b = (from || to)
+      ? pickFor(from || myStop, to)
+      : (pickFor(myStop, '') || (myStop !== HOME_STOP ? pickFor(HOME_STOP, '') : null));
     if (b && b.left <= SOON_MAX_MIN) hit = b;
   }
   if (!hit) return null;
@@ -227,7 +273,13 @@ async function nowCapsule() {
     : `через ${Math.floor(hit.left / 60)} год ${hit.left % 60} хв`;
 
   return {
-    key: 'now', role: 'ЗАРАЗ', icon: ICONS.bus, value: `${dest} · ${when}`,
+    key: 'now', role: 'ЗАРАЗ', icon: ICONS.bus,
+    // 🔑 ОБИДВА КІНЦІ, а не сама назва напрямку. Вова зі знімка: «І чого пише
+    // "Рівне 37хв"? Що Рівне?» — саме́ «Рівне» не каже ні звідки їдеш, ні що це
+    // напрямок, а не місце відправлення. Стрілка знімає обидва питання.
+    // ⚠️ Свідомо БЕЗ відмінювання («до Рівного»): надійно відміняти довільні
+    // топоніми неможливо, а «до Ківерці» виглядало б безграмотно.
+    value: `${hit.from} → ${dest} · ${when}`,
     // 🔑 Тап веде в САМЕ ЦЕЙ рейс, а не «у розділ Автобуси»: інакше людина
     // мусить шукати в списку те, що їй щойно показали.
     tap: () => {
