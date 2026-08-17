@@ -1384,10 +1384,26 @@ export async function fetchUnreadByThread(uid) {
 export async function fetchThreadPairs(uid) {
   if (!supa || !uid) return [];
   const { data, error } = await supa.from('threads')
-    .select('id, author_uid, buyer_uid, last_message_text, last_message_at, author_name, buyer_name')
+    .select('id, post_id, author_uid, buyer_uid, last_message_text, last_message_at, author_name, buyer_name')
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
   if (error) { console.warn('[supabase] fetchThreadPairs:', error.message); return []; }
   return data || [];
+}
+
+// Коротко про оголошення: назва і стан. Для капсули «ПОВІДОМЛЕННЯ» на головній —
+// вона мусить сказати, ПРО ЯКЕ оголошення розмова (скарга Вови 17.08: «неясно, що
+// це за повідомлення, з якого оголошення»).
+// 🔑 Окремий легкий запит, а не join у `fetchThreadPairs`: той кличеться на кожне
+// повернення у вкладку (бейджі), а назва потрібна лише коли розмова РІВНО одна.
+// ⚠️ Може віддати `null` цілком законно: RLS пускає до чужого поста лише коли він
+// `published`. Якщо продавець ЗАВЕРШИВ своє оголошення, покупець назви вже не
+// побачить — капсула тоді просто не показує контекст, а не бреше вигаданим.
+export async function fetchPostBrief(postId) {
+  if (!supa || postId == null) return null;
+  const { data, error } = await supa.from('posts')
+    .select('id, title, text, status').eq('id', postId).maybeSingle();
+  if (error) { console.warn('[supabase] fetchPostBrief:', error.message); return null; }
+  return data || null;
 }
 
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).

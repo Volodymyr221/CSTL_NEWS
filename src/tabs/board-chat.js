@@ -1105,6 +1105,18 @@ export function openMyAds() {
       const cat = p.category ? `${escapeHtml(p.category)} · ` : '';
       const isPublished = p.status === 'published';
 
+      // 🔴 17.08 — ПРИЧИНА ВІДХИЛЕННЯ ТУТ, А НЕ ЛИШЕ В КАПСУЛІ НА ГОЛОВНІЙ.
+      // Капсула веде саме на цей екран, і якби причина була тільки в ній, людина
+      // прочитала б пояснення один раз, тапнула — і опинилась на екрані, де знову
+      // просто «відхилено». Тобто тап забирав би інформацію.
+      // ⚠️ Поле `reject_reason` може бути порожнім двома законними шляхами:
+      // міграцію (`scripts/supabase_reject_reason.sql`) ще не накатали або адмін
+      // причини не вписав. Тоді рядка просто немає — не «причина: —».
+      const reason = (p.status === 'rejected' && p.reject_reason || '').trim();
+      const reasonRow = reason
+        ? `<span class="pm-ad-reason">${escapeHtml(reason)}</span>`
+        : '';
+
       // Бейдж звернень + кнопка підняти — тільки для активних published
       let actionsRow = '';
       if (isPublished) {
@@ -1138,6 +1150,7 @@ export function openMyAds() {
               <div class="pm-ad-info">
                 <span class="pm-ad-title">${title}</span>
                 <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}"><span class="pm-ad-status-ic">${meta.icon}</span>${escapeHtml(meta.label)}</span></span>
+                ${reasonRow}
               </div>
               <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
             </div>
@@ -1654,6 +1667,9 @@ export async function refreshUnreadBadge() {
     if (_unreadTop && ts <= _unreadTop.ts) continue;
     _unreadTop = {
       threadId: t.id,
+      // Про яке оголошення розмова. Назву капсула тягне сама (fetchPostBrief) —
+      // тут лишається тільки посилання, щоб бейджі не платили за назву запитом.
+      postId: t.post_id ?? null,
       name: (uid === t.author_uid ? t.buyer_name : t.author_name) || 'Житель',
       text: (t.last_message_text || '').trim(),
       ts,

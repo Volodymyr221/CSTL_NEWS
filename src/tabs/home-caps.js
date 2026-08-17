@@ -68,12 +68,12 @@
 //     пропонує їй.
 // ═════════════════════════════════════════════════════════════════════════════
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, lineMetrics, fitLine } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { fetchPublishedPosts, fetchMyPosts, isSupabaseReady } from '../core/supabase.js';
+import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, isSupabaseReady } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
-import { cardTitleText, clampChars, boardSeenTs, markBoardSeen } from '../core/board-shared.js';
+import { cardTitleText, boardSeenTs, markBoardSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { getStopMins, nowMinutes } from '../core/bus-schedule.js';
 import {
@@ -201,12 +201,26 @@ async function myCapsule() {
   if (!pick) return null;
 
   const n = pick.list.length;
-  const value = n === 1
-    ? `${pick.word} · ${cardTitleText(pick.list[0]) || 'оголошення'}`
-    : `${pick.word} · ${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')}`;
+  const один = pick.list[0];
+  const назва = cardTitleText(один) || 'оголошення';
+  // Причина відхилення — `posts.reject_reason` (рішення Вови 17.08, варіант «Б»).
+  // ⚠️ Поле може бути порожнім двома різними шляхами, і обидва законні: міграція
+  // ще не накатана (`scripts/supabase_reject_reason.sql`) або адмін причини не
+  // вписав. Тому це НЕ обовʼязкова частина — рядок мусить лишатись осмисленим без неї.
+  const причина = (n === 1 && pick.word === 'Відхилено' && один.reject_reason
+    ? String(один.reject_reason).trim() : '');
 
   return {
-    key: 'mine', role: 'МОЄ', icon: ICONS.user, value,
+    key: 'mine', icon: ICONS.user,
+    // Стан — у мітку (він головний), назва оголошення — третьою частиною: на
+    // вузькому екрані `fitLine` викине саме її, а не стан.
+    labelParts: причина ? ['МОЄ', pick.word.toUpperCase(), назва.toUpperCase()]
+                        : ['МОЄ ОГОЛОШЕННЯ', pick.word.toUpperCase()],
+    // 🔑 Коли причина є — вона важливіша за назву: назва вже стоїть у мітці, а
+    // причина це єдине, що каже, ЩО РОБИТИ далі.
+    valueParts: n > 1
+      ? [`${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')}`]
+      : (причина ? [причина] : [назва]),
     rank: rejected.length ? RANK.AD_REJECTED : RANK.AD_PENDING,
     tap: () => openMyAds(),
   };
@@ -322,18 +336,34 @@ async function nowCapsule() {
     : hit.left < 60 ? `через ${hit.left} хв`
     : `через ${Math.floor(hit.left / 60)} год ${hit.left % 60} хв`;
 
+  // Час посадки на СВОЇЙ зупинці у вигляді годинника — те, чого капсулі бракувало:
+  // «через 40 хв» не дає спланувати, «о 21:15» дає.
+  const годинник = (() => {
+    const m = getStopMins(hit.r, findStopOnRoute(hit.r, hit.from)?.name);
+    if (m == null) return '';
+    const хв = ((m % 1440) + 1440) % 1440;
+    return `о ${String(Math.floor(хв / 60)).padStart(2, '0')}:${String(хв % 60).padStart(2, '0')}`;
+  })();
+
   return {
-    key: 'now', role: 'ЗАРАЗ', icon: ICONS.bus,
+    key: 'now', icon: ICONS.bus,
     // Бал росте, коли рейс близько: за 10 хв цей рядок важливіший за все інше на
     // екрані, за дві години — найменш важливий. Відстежуваний рейс поза стелею
     // отримує нижній щабель: людина про нього й так знає, вона його позначила.
     rank: hit.left <= 15 ? RANK.BUS_NOW : hit.left <= 45 ? RANK.BUS_SOON : RANK.BUS_LATER,
+    // 🔴 ВІДЛІК ПЕРЕЇХАВ У МІТКУ, і це не косметика. Заміряно: рядок значення
+    // тримає 25 символів на 390pt і лише 17 на 320pt, а «Олика → Жорнище · через
+    // 40 хв» це 28 — тобто на будь-якому телефоні щось обрізалось. Тепер стан
+    // (скільки лишилось) стоїть у мітці, а маршрут отримує весь рядок значення.
+    // 🔑 Саме такий розподіл витримує вузький екран: на 320pt лишаються «ЧЕРЕЗ 40
+    // ХВ» і «Олика → Жорнище», тобто обидві потрібні речі, а зникає лише годинник.
+    labelParts: ['ЗАРАЗ', when.toUpperCase()],
     // 🔑 ОБИДВА КІНЦІ, а не сама назва напрямку. Вова зі знімка: «І чого пише
     // "Рівне 37хв"? Що Рівне?» — саме́ «Рівне» не каже ні звідки їдеш, ні що це
     // напрямок, а не місце відправлення. Стрілка знімає обидва питання.
     // ⚠️ Свідомо БЕЗ відмінювання («до Рівного»): надійно відміняти довільні
     // топоніми неможливо, а «до Ківерці» виглядало б безграмотно.
-    value: `${hit.from} → ${dest} · ${when}`,
+    valueParts: [`${hit.from} → ${dest}`, годинник],
     // 🔑 Тап веде в САМЕ ЦЕЙ рейс, а не «у розділ Автобуси»: інакше людина
     // мусить шукати в списку те, що їй щойно показали.
     tap: () => {
@@ -397,8 +427,14 @@ async function newCapsule() {
   // інакше, ніж у своєму розділі.
   const q = unansweredQuestion(posts);
   if (q) return {
-    key: 'new', role: 'НОВЕ', icon: ICONS.message,
-    value: `Потрібна відповідь · ${clampChars((q.text || '').trim(), 40) || 'питання громади'}`,
+    key: 'new', icon: ICONS.message,
+    // 🔴 «Потрібна відповідь» переїхало з рядка значення в мітку. Було: «Потрібна
+    // відповідь · Коли вивозять сміття?» = 41 символ при бюджеті 25 — саме́ ПИТАННЯ
+    // обрізалось щоразу, тобто капсула просила допомогти й не казала з чим.
+    labelParts: ['ПИТАННЯ', 'ПОТРІБНА ВІДПОВІДЬ'],
+    // Тепер питання отримує весь рядок. Обрізка (якщо треба) — по межі слова
+    // всередині `fitLine`, а не грубим `clampChars` посеред слова.
+    valueParts: [(q.text || '').trim() || 'питання громади'],
     rank: RANK.QUESTION,
     tap: () => openChatModal(q),
   };
@@ -410,14 +446,16 @@ async function newCapsule() {
   if (place) ads = ads.filter(p => p.location === place || isCommunityWide(p.location));
   if (!ads.length) return null;
 
-  const де = place ? `${place} · ` : '';
   const n = ads.length;
-  const value = n === 1
-    ? `${де}${cardTitleText(ads[0]) || 'нове оголошення'}`
-    : `${де}${n} ${plural(n, 'нове оголошення', 'нові оголошення', 'нових оголошень')}`;
 
   return {
-    key: 'new', role: 'НОВЕ', icon: ICONS.clipboard, value, rank: RANK.ADS_NEW,
+    key: 'new', icon: ICONS.clipboard, rank: RANK.ADS_NEW,
+    // Село переїхало в мітку: це КОНТЕКСТ («де це нове»), а не сама новина.
+    // Заразом звільнився рядок значення — там тепер стоїть назва оголошення цілком.
+    labelParts: place ? ['НОВЕ НА ДОШЦІ', place.toUpperCase()] : ['НОВЕ НА ДОШЦІ'],
+    valueParts: [n === 1
+      ? (cardTitleText(ads[0]) || 'нове оголошення')
+      : `${n} ${plural(n, 'нове оголошення', 'нові оголошення', 'нових оголошень')}`],
     // Одне нове — відкриваємо саме його. Кілька — ведемо на Дошку, де вони
     // лежать зверху списку.
     tap: () => {
@@ -437,25 +475,65 @@ async function newCapsule() {
 // самим викликом, що малює бейджі. Тому вона синхронна за суттю, і якщо зліпка
 // ще немає (бейдж не встиг оновитись), капсула просто не малюється — а подія
 // `cstl-unread-changed` перемалює смугу, щойно число приїде.
-function msgCapsule() {
+// Про яке оголошення розмова. Кеш на 5 хв — рівно як у профілях (`supabase.js`):
+// назва майже не змінюється, але СТАТУС може (продавець завершив оголошення), тож
+// вічний кеш казав би неправду.
+// ⚠️ Порожньо тут — законний стан, а не збій: RLS пускає до чужого поста лише поки
+// він `published`. Покупець завершеного оголошення назви вже не бачить — і капсула
+// тоді просто не показує контексту, а не вигадує його.
+const BRIEF_TTL_MS = 5 * 60 * 1000;
+const _briefs = new Map();   // postId → { at, data }
+async function adBrief(postId) {
+  if (postId == null) return null;
+  const було = _briefs.get(postId);
+  if (було && Date.now() - було.at < BRIEF_TTL_MS) return було.data;
+  let data = null;
+  try { data = await fetchPostBrief(postId); } catch { data = null; }
+  _briefs.set(postId, { at: Date.now(), data });
+  return data;
+}
+
+async function msgCapsule() {
   if (!isLoggedIn()) return null;
   const top = unreadTopCached();
   if (!top || !top.people) return null;
 
-  // Одна розмова — називаємо людину і перші слова. Кілька — тільки скільки їх:
-  // показати «Іван» і повести в список, де ще двоє, означало б збрехати про те,
-  // куди веде тап.
-  const value = top.people === 1
-    ? `${top.name}${top.text ? ' · ' + clampChars(top.text, 34) : ''}`
-    : `${top.people} ${plural(top.people, 'нова розмова', 'нові розмови', 'нових розмов')}`;
-
   const свіже = top.ts > 0 && (Date.now() - top.ts) <= MSG_FRESH_MS;
-
-  return {
-    key: 'msg', role: 'ПОВІДОМЛЕННЯ', icon: ICONS.message, value,
+  const база = {
+    key: 'msg', icon: ICONS.message,
     rank: свіже ? RANK.MSG_FRESH : RANK.MSG,
     // Одна — відкриваємо САМУ розмову (а не список із одного рядка).
     tap: () => { if (top.people === 1 && top.threadId) openThreadById(top.threadId); else openThreadsList(); },
+  };
+
+  // Кілька розмов — контекст у них РІЗНИЙ, тому його немає взагалі: назвати одне
+  // оголошення і повести в список, де ще двоє, означало б збрехати про тап.
+  if (top.people > 1) {
+    return { ...база,
+      labelParts: ['ПОВІДОМЛЕННЯ'],
+      valueParts: [`${top.people} ${plural(top.people, 'нова розмова', 'нові розмови', 'нових розмов')}`],
+    };
+  }
+
+  // 🔴 ОДНА РОЗМОВА — і саме тут була скарга Вови: «неясно, що це за повідомлення,
+  // звідки, чи з якого оголошення». Лікується МІТКОЮ: у ній стоїть предмет розмови,
+  // а рядок значення лишається людським — хто написав і що.
+  const пост = await adBrief(top.postId);
+  const назва = пост ? (cardTitleText(пост) || '') : '';
+  const завершене = !!пост && пост.status === 'closed';
+  // 🛑 Випадку «оголошення видалили» тут НЕ буває, хоч він і здається очевидним:
+  // `threads.post_id … on delete cascade` — видалення оголошення забирає й саму
+  // розмову. Тому єдиний реальний стан предмета — «завершене».
+  const мітка = завершене ? ['ПОВІДОМЛЕННЯ', 'ЗАВЕРШЕНО']
+              : назва ? ['ПОВІДОМЛЕННЯ', назва.toUpperCase()]
+              : ['ПОВІДОМЛЕННЯ'];
+
+  return { ...база,
+    labelParts: мітка,
+    // Двокрапка, а не « · »: це пряма мова людини, і так її читають у будь-якому
+    // месенджері. Порожній текст буває лише у повідомленні з самим фото — тоді
+    // так і кажемо (той самий рядок, що в push-сповіщенні).
+    valueParts: [`${top.name}: ${top.text || '📷 Фото'}`],
   };
 }
 
@@ -467,10 +545,64 @@ function capHtml(c) {
     <button class="hm-cap2" type="button" data-cap="${escapeHtml(c.key)}">
       <span class="hm-cap2-ic" aria-hidden="true">${c.icon}</span>
       <span class="hm-cap2-tx">
-        <span class="hm-cap2-k">${escapeHtml(c.role)}</span>
+        <span class="hm-cap2-k">${escapeHtml(c.label)}</span>
         <span class="hm-cap2-v">${escapeHtml(c.value)}</span>
       </span>
     </button>`;
+}
+
+// ── СКІЛЬКИ МІСЦЯ Є НАСПРАВДІ ────────────────────────────────────────────────
+//
+// 🔴 Замовлення Вови 17.08: «в капсулу має влазити хоча б певна інформація, а не
+// обрізатися на половині». Щоб це виконати, треба знати ширину рядка ДО того, як
+// складено текст. Тому в смугу на мить ставиться невидима капсула-зразок, з неї
+// знімається геометрія обох рядків — і вона прибирається.
+//
+// 🔑 Чому зразок, а не готова капсула: інакше довелось би спершу намалювати текст,
+// потім переміряти і перемалювати — тобто два записи в DOM на кожен рендер, і той
+// самий «блим», який лікували 15.08 (`core/list-patch.js`).
+// ⚠️ Кеш по ШИРИНІ СМУГИ: поворот екрана або інший телефон дають інше число, а
+// в межах однієї ширини міряти щоразу нема сенсу.
+let _metricsFor = 0;
+let _metrics = null;
+function capMetrics(box) {
+  const ширина = box.clientWidth;
+  if (_metricsFor === ширина && _metrics) return _metrics;
+  const зразок = document.createElement('div');
+  // 🔴 ЗРАЗОК ЛЕЖИТЬ У ПОТОЦІ, А НЕ `position:absolute`, і текст у ньому НАВМИСНО
+  // задовгий. Перша редакція зробила навпаки — і це показовий випадок брехливої
+  // мірки: `.hm-cap2-v` це flex-елемент із `min-width: 0`, тобто його ширина
+  // дорівнює ВМІСТУ, поки вміст коротший за вільне місце. Зі зразком «X» вимір
+  // давав ≈8px, `fitLine` чесно вміщав у 8px рівно одну літеру, і КОЖНА капсула
+  // на екрані ставала «О…». Тобто зламався не рядок, а лінійка.
+  // ✅ Задовгий текст переростає доступне місце, і ширина зупиняється рівно на
+  // тому, що є (`overflow: hidden` + `nowrap` уже стоять у CSS).
+  // ⚠️ `height:0` + `overflow:hidden` — щоб зразок нічого не зсунув; він живе
+  // менше за кадр (додали → зміряли → прибрали в тому самому виклику).
+  зразок.style.cssText = 'visibility:hidden;height:0;overflow:hidden;pointer-events:none';
+  const довгий = 'Ш'.repeat(200);
+  зразок.innerHTML = capHtml({ key: 'probe', icon: '', label: довгий, value: довгий });
+  box.appendChild(зразок);
+  const m = {
+    label: lineMetrics(зразок.querySelector('.hm-cap2-k')),
+    value: lineMetrics(зразок.querySelector('.hm-cap2-v')),
+  };
+  зразок.remove();
+  // Нуль ширини (смуга ще прихована) — не кешуємо: наступний рендер зміряє знову.
+  if (!m.label && !m.value) return null;
+  _metricsFor = ширина; _metrics = m;
+  return m;
+}
+
+// Скласти обидва рядки капсули під живу геометрію.
+// 🛑 Мітка складається ТИМИ САМИМИ правилами, що значення: до 17.08 у ній стояло
+// одне слово і думати про ширину не було потреби, тепер вона несе контекст і
+// цілком може не вміститись.
+function fitCap(c, m) {
+  return { ...c,
+    label: fitLine(c.labelParts, m && m.label),
+    value: fitLine(c.valueParts, m && m.value),
+  };
 }
 
 // Перемальовування зі своїх приводів. Підписки ставимо ОДИН раз на модуль —
@@ -523,6 +655,10 @@ export async function renderHomeCaps() {
   if (!caps.length) { el.hidden = true; el.innerHTML = ''; _paint = ''; return; }
 
   el.hidden = false;
+  // Складаємо рядки під ЖИВУ ширину — після зняття `hidden`, інакше зразок міряв
+  // би приховану смугу і віддав нуль.
+  const m = capMetrics(el);
+  const готові = caps.map(c => fitCap(c, m));
   // ⚠️ Не перемальовуємо те, що не змінилось. Капсули тепер перечитуються на
   // КОЖНЕ повернення на Громаду, а безумовна заміна `innerHTML` — це той самий
   // клас вади, який ловили у Стрічці й на Дошці 15.08 («контент ніби блимає»).
@@ -530,7 +666,7 @@ export async function renderHomeCaps() {
   // картинка за визначенням, і забути поле неможливо (урок `core/list-patch.js`).
   // 🛑 І не звіряємось із `el.innerHTML` — браузер його нормалізує, рядки не
   // збіглися б ніколи, і запобіжник мовчки не працював би.
-  const розмітка = caps.map(capHtml).join('');
+  const розмітка = готові.map(capHtml).join('');
   if (розмітка !== _paint) { _paint = розмітка; el.innerHTML = розмітка; }
   el.classList.add('hm-appear');
 

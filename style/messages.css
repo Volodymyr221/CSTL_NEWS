@@ -421,6 +421,22 @@
   background: var(--gray-light, #f5f5f5); color: var(--gray, #666);
   display: inline-flex; align-items: center; gap: 4px;
 }
+/* 🔴 17.08 — ПРИЧИНА ВІДХИЛЕННЯ на картці «Мої оголошення».
+   Показується ЛИШЕ у відхилених і лише коли адмін її вписав.
+   🔑 Текст видно ПОВНІСТЮ (до 4 рядків, `-webkit-line-clamp`), а не одним рядком
+   із трикрапкою: тут людина вирішує, ЩО ВИПРАВИТИ, і обрізане пояснення нічим не
+   краще за відсутнє. Капсула на головній — інша річ, там рядок один за
+   визначенням, і вона лише кличе сюди.
+   ⚠️ Колір не червоний: це пояснення від модератора, а не помилка застосунку;
+   червоне на картці власного оголошення читалось би як «щось зламалось». */
+.pm-ad-reason {
+  font-size: 12.5px; line-height: 1.35; color: var(--ink-soft, #5F5448);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding: 6px 9px; margin-top: 5px;
+  background: var(--gray-light, #f5f5f5); border-radius: 9px;
+  border-left: 3px solid var(--red, #722F37);
+}
 /* Векторні іконки на картці замість емодзі (статус / бейдж звернень / підняти / thumb) */
 .pm-ad-status-ic { display: inline-flex; }
 .pm-ad-status-ic svg { width: 13px; height: 13px; display: block; }
