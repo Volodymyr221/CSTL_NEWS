@@ -10,13 +10,13 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-17 21:45 UTC
+**Зріз на:** 2026-08-17 21:58 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-f07n62` |
-| останній коміт людини | `d5d7ca06` 17.08 21:45 — docs: пульс стиснуто під бюджет 16 KB (сторож docs-fresh) |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260817-2104` |
+| останній коміт людини | `0b5973b3` 17.08 21:57 — merge: origin/main (squash PR #947) — код і документи з гілки, дані парсерів з main |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260817-2151` |
 | останній PR у `main` | #947 |
 | стендів на диску | 83 |
 | незакомічених файлів | 0 ✅ |
@@ -31,6 +31,7 @@
 - `_session-log/vova-2026-08-17b.md`
 - `admin.html`
 - `bundle.js`
+- `scripts/supabase_board_edit_rejected.sql`
 - `scripts/supabase_reject_reason.sql`
 - `src/core/supabase.js`
 - `src/core/utils.js`
@@ -39,15 +40,16 @@
 - `style/home.css`
 - `style/messages.css`
 - `sw.js`
+- `tests/board-owner.mjs`
 - `tests/home-caps.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `0b5973b3` 17.08 21:57 — merge: origin/main (squash PR #947) — код і документи з гілки, дані парсерів з main
+- `087af224` 17.08 21:53 — feat(board): відхилене оголошення можна виправити і подати знову
+- `afb25ea1` 17.08 21:46 — docs: авто-блок пульсу після стиснення
 - `d5d7ca06` 17.08 21:45 — docs: пульс стиснуто під бюджет 16 KB (сторож docs-fresh)
 - `97d5b925` 17.08 21:25 — docs: пульс, літопис і CLAUDE.md — контекст у капсулах, fitLine, міграція причини
-- `139d0d68` 17.08 21:06 — feat(home): контекст у капсулах + рядок, що не обрізається на половині
-- `c30af3b6` 17.08 19:00 — docs: пульс і журнал — капсула ПОВІДОМЛЕННЯ, ранжування, повний прогін 1504/1505
-- `e8231b3b` 17.08 18:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-f07n62
 
 <!-- AUTO:END -->---
 
