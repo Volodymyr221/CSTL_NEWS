@@ -1533,6 +1533,30 @@ export function paintTabDots() {
 // розходились (B-27) — саме тому тут немає жодної арифметики.
 export function unreadChatsCount() { return isLoggedIn() ? _unreadChats : 0; }
 
+// 🆕 17.08 — НАЙСВІЖІША НЕПРОЧИТАНА РОЗМОВА: { threadId, name, text, ts, people }.
+// Потрібна капсулі «ПОВІДОМЛЕННЯ» на головній, щоб сказати ВІД КОГО і ПРО ЩО, а не
+// саме число (число вже стоїть на FAB, у меню і на кнопці кабінету).
+// 🔑 Рахується в тому самому виклику, що й бейдж, із тих самих двох вибірок —
+// додаткового походу в мережу немає, і другого джерела правди про непрочитане теж
+// (саме розбіжність двох лічильників дала B-27). Капсула лише ЧИТАЄ цей зліпок.
+let _unreadTop = null;
+export function unreadTopCached() { return isLoggedIn() ? _unreadTop : null; }
+
+// Сказати застосунку, що зліпок непрочитаного змінився. Подія, а не прямий виклик
+// капсул: інакше `board-chat.js` мусив би імпортувати `home-caps.js`, а той уже
+// імпортує звідси — вийшло б коло імпортів (той самий привід, що в
+// `cstl-threads-changed` нижче).
+// ⚠️ Шлемо ЛИШЕ при справжній зміні: `refreshUnreadBadge` кличеться на кожне
+// повернення у вкладку, і безумовна подія давала б перемальовку капсул кілька
+// разів на хвилину ні за що.
+let _unreadSig = '';
+function announceUnread() {
+  const sig = `${_unreadChats}|${_unreadTop ? _unreadTop.threadId + ':' + _unreadTop.ts : ''}`;
+  if (sig === _unreadSig) return;
+  _unreadSig = sig;
+  window.dispatchEvent(new CustomEvent('cstl-unread-changed'));
+}
+
 // Намалювати бейдж із уже відомого числа. Без мережі. Безпечно кликати на кожен рендер.
 export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
@@ -1604,7 +1628,10 @@ export function paintUnreadBadge() {
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
 export async function refreshUnreadBadge() {
-  if (!isLoggedIn()) { _unreadChats = 0; _hasThreads = false; paintUnreadBadge(); return; }
+  if (!isLoggedIn()) {
+    _unreadChats = 0; _hasThreads = false; _unreadTop = null;
+    paintUnreadBadge(); announceUnread(); return;
+  }
 
   // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
   // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
@@ -1616,9 +1643,29 @@ export async function refreshUnreadBadge() {
   const people = new Set();
   for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
   _unreadChats = people.size;
+
+  // Найсвіжіша з непрочитаних розмов — для капсули на головній.
+  // ⚠️ Ім'я беремо ДЕНОРМАЛІЗОВАНЕ з треда (`author_name`/`buyer_name`): `profiles`
+  // приватний, і другого шляху дізнатись, як звати співрозмовника, тут немає.
+  _unreadTop = null;
+  for (const t of pairs) {
+    if (!map.has(t.id)) continue;
+    const ts = t.last_message_at ? new Date(t.last_message_at).getTime() : 0;
+    if (_unreadTop && ts <= _unreadTop.ts) continue;
+    _unreadTop = {
+      threadId: t.id,
+      name: (uid === t.author_uid ? t.buyer_name : t.author_name) || 'Житель',
+      text: (t.last_message_text || '').trim(),
+      ts,
+      people: people.size,
+    };
+  }
+  if (_unreadTop) _unreadTop.people = people.size;
+
   const hadThreads = _hasThreads;
   _hasThreads = pairs.length > 0;
   paintUnreadBadge();
+  announceUnread();
   // 🔴 Кнопка «Повідомлення» на Дошці малюється за `canSeeMessages()`, а та питає
   // `hasThreadsCached()`. Відповідь приходить АСИНХРОННО — на момент першого рендера
   // Дошки її ще немає. Без цієї події кнопка не зʼявилась би до наступного повного
