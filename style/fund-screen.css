@@ -1,0 +1,155 @@
+/* style/fund-screen.css — ПОВНОЕКРАННИЙ РОЗДІЛ «ЗБОРИ» (17.08).
+   Розмітку пише `src/tabs/fund-screen.js`. Причини рішень — у шапці того файлу.
+
+   Патерн екрана дзеркалить перевірений `.nh-screen` (хаб новин) і `.fd-screen`
+   («Стрічка»): fixed на весь екран, приїзд справа через `transform`, системний
+   жест «назад» закриває шар.
+   ⚠️ `transform` ОБОВʼЯЗКОВО на самому `.fs-screen`, а прокрутка — на
+   внутрішньому `.fs-body`. У Safari `transform` на прокручуваному контейнері з
+   `-webkit-overflow-scrolling: touch` РОЗРИВАЄ `position: sticky` у дітях — це
+   вже коштувало бага «шапка модалки відривається від верху» (30.07). */
+
+.fs-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;                 /* той самий рівень, що .nh-screen і .fd-screen */
+  display: flex;
+  flex-direction: column;        /* шапка сталої висоти, тіло забирає решту */
+  background: var(--app-bg);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, .28);
+  transform: translateX(100%);
+  transition: transform .24s var(--ease-drawer);
+}
+.fs-screen.open { transform: translateX(0); }
+
+/* Шапка. Статична (не sticky) і ПОЗА скролером — див. попередження вгорі. */
+.fs-bar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 4px;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 10px;
+  background: var(--brand-grad-sm); color: #fff;
+}
+.fs-back {
+  width: 44px; height: 44px; flex: 0 0 auto;   /* 44px — норма Apple HIG */
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: #fff; cursor: pointer;
+}
+.fs-back svg { width: 24px; height: 24px; }
+.fs-back:active { opacity: .6; }
+.fs-title {
+  margin: 0;
+  font: 800 19px/1.2 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.01em; color: #fff;
+}
+
+.fs-body {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px var(--hm-pad) calc(env(safe-area-inset-bottom) + 28px);
+}
+
+/* Пояснення вгорі. 🔴 Каже про МЕЖУ ВІДПОВІДАЛЬНОСТІ («гроші йдуть напряму на
+   банку організатора — застосунок їх не приймає») тим самим прийомом, що блок
+   безпеки Дошки. Це найважливіше речення екрана про гроші, тому воно перше. */
+.fs-lead {
+  margin: 0 0 16px;
+  font: 400 13.5px/1.5 system-ui, -apple-system, sans-serif;
+  color: var(--hm-quiet);
+}
+
+/* Список зборів. Картку малює `fundCardHtml` із home-fund.js — тут лише
+   проміжки між ними. 🛑 Власних правил для `.hm-fund*` НЕ заводимо: копія
+   опису картки в другому файлі розійшлась би з оригіналом при першій же правці
+   (у проєкті це вже ставалось із правилами картки новини, 31.07). */
+.fs-list { display: flex; flex-direction: column; gap: var(--hm-s4); }
+.fs-empty {
+  padding: 28px 16px; text-align: center;
+  font: 400 14px/1.5 system-ui, -apple-system, sans-serif;
+  color: var(--hm-quiet);
+}
+
+/* Кнопка дії. Стоїть ПІД списком навмисно (див. шапку JS): людина спершу бачить,
+   як виглядає збір, і аж тоді пропонує свій. */
+.fs-cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 52px; margin-top: var(--hm-s5);
+  border: 0; border-radius: var(--hm-r-card);
+  background: var(--brand-grad-sm); color: #fff;
+  font: 800 15px/1.2 system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+}
+.fs-cta:active { background: var(--brand-grad-press); }
+.fs-cta-ic { display: inline-flex; }
+.fs-cta-ic svg { width: 19px; height: 19px; }
+.fs-hint {
+  margin: 8px 0 0; text-align: center;
+  font: 400 12px/1.4 system-ui, -apple-system, sans-serif;
+  color: var(--hm-quiet);
+}
+
+/* Мої заявки — щоб звернення не зникало в порожнечу. */
+.fs-sub {
+  margin: var(--hm-s6) 0 var(--hm-s3);
+  font: 800 11px/1.2 system-ui, -apple-system, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--hm-quiet);
+}
+.fs-req {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; margin-bottom: 8px;
+  border-radius: var(--hm-r-card);
+  background: var(--board-card); border: 1px solid var(--board-line);
+}
+.fs-req-t {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 600 14px/1.3 system-ui, -apple-system, sans-serif; color: var(--black);
+}
+.fs-req-s {
+  flex: 0 0 auto; padding: 4px 9px; border-radius: var(--hm-r-pill);
+  font: 700 11px/1.2 system-ui, -apple-system, sans-serif;
+}
+/* Три стани — три кольори. 🔑 «На розгляді» НЕ сірий: сірий читається як
+   «нічого не сталося», а заявка саме що жива. */
+.fs-req-s--wait { background: #FFF1D6; color: #6B4A08; }
+.fs-req-s--ok   { background: #DFF3E4; color: #1D6B32; }
+.fs-req-s--no   { background: #F1F2F4; color: #5B6068; }
+
+/* ── ФОРМА ЗАЯВКИ (аркуш `core/modal.js`) ────────────────────────────────── */
+.fsf-lead {
+  margin: 0 0 14px;
+  font: 400 13.5px/1.5 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+.fsf-lead b { color: var(--black); }
+.fsf-l {
+  display: block; margin-bottom: 12px;
+  font: 600 12.5px/1.3 system-ui, -apple-system, sans-serif; color: #4A4F57;
+}
+.fsf-req { color: var(--red); margin-left: 2px; }
+/* 🔴 16px — НЕ СТИЛЬОВЕ ЧИСЛО. Нижче цього iOS сам зумить сторінку при фокусі
+   в поле, і застосунок зʼїжджає вбік (той самий клас вади, через який 16.08
+   повертали заборону масштабування). Міняти можна лише вгору. */
+.fsf-i {
+  display: block; width: 100%; margin-top: 5px;
+  padding: 11px 12px; border-radius: var(--hm-r-tile);
+  border: 1px solid var(--board-line); background: var(--white);
+  font: 400 16px/1.35 system-ui, -apple-system, sans-serif; color: var(--black);
+}
+.fsf-i:focus { outline: none; border-color: var(--red); }
+.fsf-ta { resize: vertical; min-height: 76px; }
+/* Два поля в ряд — але з `min-width: 0`, інакше довгий плейсхолдер розпихає
+   рядок і друге поле виїжджає за край (та сама пастка, що в панелі збору). */
+.fsf-row { display: flex; gap: 10px; }
+.fsf-row > .fsf-l { flex: 1 1 0; min-width: 0; }
+
+.fsf-agree {
+  display: flex; align-items: flex-start; gap: 9px; margin: 4px 0 16px;
+  font: 400 12.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  cursor: pointer;
+}
+.fsf-agree input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 1px; }
+.fsf-send {
+  width: 100%; min-height: 52px; border: 0; border-radius: var(--hm-r-card);
+  background: var(--brand-grad-sm); color: #fff;
+  font: 800 15px/1.2 system-ui, -apple-system, sans-serif; cursor: pointer;
+}
+.fsf-send:active { background: var(--brand-grad-press); }
+.fsf-send:disabled { opacity: .6; }

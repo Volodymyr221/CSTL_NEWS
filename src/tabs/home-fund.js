@@ -130,7 +130,11 @@ const CLOSED_DAYS = 7;
 
 const dayDiff = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 
-async function loadFundraisers() {
+// 🔑 Експортовані — їх бере ще й повноекранний екран «Збори» (`fund-screen.js`).
+// Копію картки НЕ робити: у проєкті вже двічі розходились дві копії того самого
+// (списки антиспаму, правила коментарів), і обидва рази симптом виглядав як
+// «на одному екрані працює, на іншому ні».
+export async function loadFundraisers() {
   try {
     // 🔴 ДЖЕРЕЛО — БАЗА, а не файл у git (переїзд 17.08, розбір у шапці й у
     // `core/supabase.js`). Правила нижче НЕ змінились ані на йоту: та сама
@@ -245,7 +249,7 @@ function panelHtml(it) {
           </div>`;
 }
 
-function fundCardHtml(it) {
+export function fundCardHtml(it) {
   const kind = KIND[it.kind] || KIND.community;
 
   // 🔑 ФОТО — ПІДКЛАДКА ВСІЄЇ КАРТКИ, а не смужка згори (варіант «2» з макета
