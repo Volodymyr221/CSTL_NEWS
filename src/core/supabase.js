@@ -240,6 +240,86 @@ export async function fetchPublishedAnnouncements() {
   return data;
 }
 
+// ── ЗБОРИ КОШТІВ ────────────────────────────────────────────────────────
+//
+// 🔴 ПЕРЕЇЗД 17.08: збори жили у файлі `data/fundraisers.json` у git, тепер — у
+// базі. Причина не «так сучасніше»: адмінка (`admin.html`) пише в Supabase і
+// НЕ МОЖЕ писати в git, бо для цього їй потрібен був би ключ запису в
+// репозиторій — а він лежав би у браузері, тобто у всіх на видноті. Без бази
+// збори лишились би тим, що вміє редагувати лише Вова через GitHub.
+//
+// ⚠️ ЦІНА ПЕРЕЇЗДУ, НАЗВАНА ЧЕСНО: файл лежав у кеші Service Worker, тобто блок
+// працював офлайн. Тепер без мережі зборів не буде — `null` і секція зникає.
+// Це прийнятно саме тут: збір це ДІЯ (перейти на банку), а дія однаково вимагає
+// мережі. Показувати кнопку, яка нікуди не веде, було б гірше.
+//
+// 🔑 Віддаємо `null` при збої і `[]` при порожній базі — це РІЗНІ речі, і
+// віджет поводиться з ними однаково лише випадково. Плутати їх не можна: колись
+// зʼявиться «не вдалося завантажити», і тоді різниця стане видимою.
+export async function fetchFundraisers() {
+  if (!supa) return null;
+  const { data, error } = await supa
+    .from('fundraisers')
+    .select('id, title, org, url, goal, photo, note, kind, until, place, verified, active, sort_order')
+    // `active` фільтрує і RLS-політика — тут це не дубль, а економія: без умови
+    // сервер однаково віддав би лише активні, але порахував би зайве.
+    .eq('active', true)
+    // Ручний порядок першим: адмін має могти підняти терміновий збір угору.
+    // Далі — за датою кінця (найтерміновіший перший), решту сортує сам віджет.
+    .order('sort_order', { ascending: false })
+    .order('until', { ascending: true, nullsLast: true })
+    .limit(20);
+  if (error) {
+    console.warn('[supabase] fetchFundraisers error:', error.message);
+    return null;
+  }
+  return data;
+}
+
+// Заявка від жителя. 🔴 Повертає МАШИННИЙ код помилки нагору, а не готовий
+// текст: «ви вже подали три заявки за добу» і «перевірте посилання» — різні
+// поради, і склеювати їх у «щось пішло не так» означає лишити людину без
+// підказки саме там, де вона намагається попросити про допомогу.
+export const FUND_REQ_ERRORS = {
+  freq_flood: 'Ви вже подали три заявки за добу. Ми відповімо на попередні — зачекайте, будь ласка.',
+  freq_url_https: 'Посилання на банку має починатися з https://',
+  freq_title_ok: 'Назва збору — від 3 до 120 символів.',
+  freq_org_ok: 'Вкажіть, хто збирає — від 2 до 80 символів.',
+  freq_phone_ok: 'Перевірте номер телефону.',
+  freq_name_ok: 'Вкажіть контактну особу.',
+  freq_goal_ok: 'Ціль має бути додатнім числом.',
+  freq_note_ok: 'Опис задовгий — до 400 символів.',
+};
+
+export async function submitFundraiserRequest(payload) {
+  if (!supa) return { ok: false, error: 'Немає звʼязку з сервером.' };
+  const uid = await freshUserId();
+  // 🔴 Гейт входу стоїть і тут, і в базі. Тут — щоб людина побачила зрозуміле
+  // «увійдіть», а не сирий текст політики доступу.
+  if (!uid) return { ok: false, error: 'Щоб подати збір, увійдіть у застосунок.' };
+
+  const r = await netCall(() => supa.from('fundraiser_requests').insert({ ...payload, author_uid: uid }));
+  if (r.ok) return { ok: true };
+  const hay = `${r.raw || ''} ${r.error || ''}`;
+  const code = Object.keys(FUND_REQ_ERRORS).find(k => hay.includes(k));
+  return { ok: false, error: code ? FUND_REQ_ERRORS[code] : r.error };
+}
+
+// Свої заявки — щоб людина бачила, що з її зверненням (RLS віддає лише свої).
+export async function fetchMyFundraiserRequests() {
+  if (!supa) return null;
+  const uid = await freshUserId();
+  if (!uid) return [];
+  const { data, error } = await supa
+    .from('fundraiser_requests')
+    .select('id, title, status, created_at')
+    .eq('author_uid', uid)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error) { console.warn('[supabase] fetchMyFundraiserRequests:', error.message); return null; }
+  return data;
+}
+
 // ── АНОНІМНИЙ ID для реакцій (поки немає auth у звичайних юзерів) ─────────
 const ANON_ID_KEY = 'cstl-anon-id';
 export function getAnonId() {

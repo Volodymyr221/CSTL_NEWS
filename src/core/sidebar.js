@@ -39,6 +39,7 @@ import { avatarCircle, escapeHtml } from './utils.js';
 // призначення. Циклу немає — `sidebar.js` імпортує лише `app.js`.
 import { openThreadsList, openMyAds, unreadChatsCount } from '../tabs/board-chat.js';
 import { openNewsHub } from '../tabs/news-hub.js';
+import { openFundScreen } from '../tabs/fund-screen.js';
 import { openSavedHub } from './saved-hub.js';
 
 // Пункти меню. kind: 'tab' → switchTab; 'account'/'cabinet' → своя дія; 'info' → модалка.
@@ -95,6 +96,12 @@ const SECTIONS = [
     { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
     // Повний екран новин, а не прокрутка до віджета на Громаді (як було).
     { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'screen', open: () => openNewsHub() },
+    // 🆕 17.08 — «Збори». 🔑 ОДИН пункт, а не два («Актуальні збори» + «Подати
+    // збір»): дія стоїть УСЕРЕДИНІ розділу, там, де людина вже бачить приклад
+    // збору й розуміє, що саме подає. Повний розбір — у шапці `fund-screen.js`.
+    // ⚠️ Місце теж не випадкове: це РОЗДІЛ (контент громади), а не «Моє» — до
+    // зборів приходять дивитись, а не керувати своїм.
+    { id: 'fund',        label: 'Збори',        icon: ICONS.heartHand, kind: 'screen', open: () => openFundScreen() },
   ] },
   // ── МОЄ ─────────────────────────────────────────────────────────────────────
   // Замовлення Вови: «можеш додати сюди розділ Повідомлення з дошки… якусь

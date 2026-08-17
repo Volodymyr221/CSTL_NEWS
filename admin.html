@@ -273,6 +273,15 @@
     .btn--delete:hover { background: #ffe9ed; }
     .btn--primary { background: #722F37; color: white; }
     .btn--primary:active { background: #5A2329; }
+    /* 🔴 17.08 — КЛАС ІСНУВАВ У КОДІ, АЛЕ НЕ В СТИЛЯХ.
+       `btn--ghost` уже стояв на невибраних чіпах фільтра «Скарг» і на другорядних
+       кнопках — тобто розмітка розрізняла вибране й невибране, а на екрані вони
+       виглядали ОДНАКОВО: людина не бачила, який фільтр увімкнений. Знайдено при
+       додаванні розділу «Збори» (я хотів узяти цей клас і перевірив, чи він
+       описаний). Виправлення потрібне обом розділам, тому стоїть тут, а не
+       локально: друга копія тієї самої кнопки розʼїхалась би при першій правці. */
+    .btn--ghost { background: transparent; color: #555; border: 1px solid #DADCE0; }
+    .btn--ghost:hover { background: #F1F3F5; }
 
     /* ── ADD FORM ─────────────────────────────────────────────────── */
     .add-form {
@@ -489,6 +498,14 @@ let ownerCounts    = {};      // page_id → кількість власникі
 let people         = [];
 let peopleQuery    = '';      // рядок пошуку; у змінній, бо renderApp() перемальовує розділ цілком
 let communityEdit  = null;    // page_id який зараз редагуємо (null = ніхто)
+// 🆕 17.08 — ЗБОРИ КОШТІВ. До цього дня вони жили у файлі `data/fundraisers.json`
+// у git, тобто редагувати їх міг лише Вова через GitHub. Схема — таблиці
+// `fundraisers` (те, що бачить людина) і `fundraiser_requests` (заявки жителів),
+// файл `scripts/supabase_fundraisers.sql`.
+let fundraisers    = [];      // усі збори, включно з прихованими (адмін бачить усе)
+let fundRequests   = [];      // заявки, нові зверху
+let fundDraft      = null;    // null = список; обʼєкт = форма створення/редагування
+let fundReqFilter  = 'new';   // фільтр списку заявок; у змінній — розділ перемальовується цілком
 
 // ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
 async function init() {
@@ -725,7 +742,7 @@ VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
 async function loadAll() {
   // Дошкові дані — лише адмінам (у редактора RLS їх однаково не віддасть).
   if (isAdmin) {
-    const [pending, published, ann, ad, com, pg, padm, rep] = await Promise.all([
+    const [pending, published, ann, ad, com, pg, padm, rep, fnd, freq] = await Promise.all([
       supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
       supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
       supa.from('announcements').select('*').order('created_at', { ascending: false }),
@@ -742,6 +759,14 @@ async function loadAll() {
       // Скарги на оголошення. RLS віддає їх ЛИШЕ адміну — редактор побачив би нуль
       // рядків, тому запит і стоїть у цій гілці.
       supa.from('ad_reports').select('*').order('created_at', { ascending: false }).limit(300),
+      // 🆕 17.08 — збори. ⚠️ БЕЗ `.eq('active', true)`: адмін мусить бачити і
+      // приховані збори, інакше сховану картку неможливо повернути — вона
+      // просто зникала б із адмінки назавжди. RLS це пропускає саме адміну.
+      supa.from('fundraisers').select('*')
+          .order('active', { ascending: false })
+          .order('sort_order', { ascending: false })
+          .order('created_at', { ascending: false }).limit(200),
+      supa.from('fundraiser_requests').select('*').order('created_at', { ascending: false }).limit(300),
     ]);
     pendingPosts   = pending.data   || [];
     publishedPosts = published.data || [];
@@ -753,7 +778,9 @@ async function loadAll() {
     (padm.data || []).forEach(r => { ownerCounts[r.page_id] = (ownerCounts[r.page_id] || 0) + 1; });
     // ⚠️ fail-soft: якщо міграцію ще не накатано, запит поверне помилку — адмінка
     // мусить відкритись і без скарг, а не впасти цілком.
-    adReports = rep.data || [];
+    adReports    = rep.data  || [];
+    fundraisers  = fnd.data  || [];
+    fundRequests = freq.data || [];
   }
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
@@ -776,6 +803,10 @@ const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/
 // Спільноти-канали «Стрічки» (кружечки-сторінки) — іконка «broadcast/канал».
 const ICO_COMMUNITY = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48 -.01a6 6 0 0 1 0 -8.49m11.31 -2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0 -14.14" /> </svg>';
 
+// Збори коштів — «сердечко в долоні»: допомога, а не фінанси. Гаманець чи монета
+// читались би як «витрати» (така іконка вже є в «Витрати AI»).
+const ICO_HEART_HAND = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 9.5l-.66 -.61a1.66 1.66 0 0 0 -2.35 0a1.75 1.75 0 0 0 0 2.44l3.01 2.67l3.01 -2.67a1.75 1.75 0 0 0 0 -2.44a1.66 1.66 0 0 0 -2.35 0l-.66 .61z" /> <path d="M3 13h2l3 3h4a1.5 1.5 0 0 1 0 3h-3" /> <path d="M5 16v5" /> <path d="M14 19l4 -1a2 2 0 0 1 2 2v0" /> </svg>';
+
 // ── APP VIEW: таби ────────────────────────────────────────────────────
 // Пункти меню — один список для сітки (головний екран) і для назви в шапці
 // розділу. icon/label/count — count як функція (рахує наживо, дані вже
@@ -788,6 +819,11 @@ function menuItems() {
     // Лічильник — лише НОВІ скарги: розглянуті не мусять світитись у сітці вічно.
     { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     count: () => adReports.filter(r => r.status === 'new').length },
     { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Оголошення',   show: isAdmin,     count: () => 0 },
+    // 🔑 Лічильник рахує НОВІ ЗАЯВКИ, а не кількість зборів. Кількість зборів на
+    // плитці нічого не підказує (вона просто є), а «скільки людей чекає на
+    // відповідь» — це саме те, заради чого сюди заходять. Той самий підхід, що
+    // у «Скаргах»: розглянуті не мусять світитись у сітці вічно.
+    { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: isAdmin,     count: () => fundRequests.filter(r => r.status === 'new').length },
     { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
     { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
     { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     count: () => communities.length },
@@ -855,6 +891,7 @@ function renderTabContent() {
   if (activeTab === 'communities')    return renderCommunities(el);
   if (activeTab === 'people')         return renderPeople(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
+  if (activeTab === 'fundraisers')    return renderFundraisers(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'spend')          return renderSpend(el);
   if (activeTab === 'analytics')      return renderAnalytics(el);
@@ -1706,6 +1743,323 @@ function renderAnnouncements(el) {
     if (!confirm('Видалити оголошення?')) return;
     const { error } = await supa.from('announcements').delete().eq('id', Number(b.dataset.deleteAnn));
     if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Видалено');
+    await loadAll(); renderApp();
+  }));
+}
+
+// ── TAB: Збори коштів ─────────────────────────────────────────────────
+//
+// 🔴 НАВІЩО ЦЕЙ РОЗДІЛ (замовлення Вови 17.08). До нього збори лежали у файлі
+// `data/fundraisers.json` у git: створити збір міг ЛИШЕ Вова і лише через
+// GitHub. Це працювало, поки збір був один, і ставало вузьким місцем далі —
+// зокрема тому, що передати цю роботу іншій людині було неможливо.
+//
+// 🔑 РОЗДІЛ РОБИТЬ ДВІ РІЗНІ РЕЧІ, І ВОНИ НАВМИСНО НА ОДНОМУ ЕКРАНІ:
+//   • ЗАЯВКИ  — те, що надіслали жителі. Тут ухвалюють рішення.
+//   • ЗБОРИ   — те, що вже видно на головній. Тут керують показом.
+// Розводити їх по двох розділах означало б розірвати один робочий процес
+// («прийшла заявка → подзвонив → схвалив → бачу збір») на два екрани.
+//
+// ⚠️ ЗАЯВКИ СТОЯТЬ ПЕРШИМИ. Вони єдине, що ЧЕКАЄ на людину; збори просто є.
+// Той самий принцип, що в «Скаргах»: угорі те, що вимагає дії.
+
+const FUND_KIND_LABEL = {
+  military:     'Для захисників',
+  humanitarian: 'Гуманітарний',
+  community:    'Для громади',
+};
+const FREQ_STATUS_LABEL = {
+  new:       'Нова',
+  contacted: 'Звʼязались',
+  approved:  'Схвалено',
+  rejected:  'Відхилено',
+};
+
+// Сума словами для списку. `toLocaleString` дає нерозривні пробіли між тисячами.
+const fundMoney = n => (Number.isFinite(Number(n)) && Number(n) > 0)
+  ? Number(n).toLocaleString('uk-UA') + ' ₴' : '—';
+
+// Фото збору. Той самий бакет, що в спільнот і оголошень — заводити окремий
+// заради одного розділу немає причини.
+async function uploadFundPhoto(file) {
+  const safe = (file.name || 'img').replace(/[^\w.\-]/g, '_');
+  const path = `fundraisers/${currentUser.id}/${Date.now()}_${safe}`;
+  const { error } = await supa.storage.from('community-photos').upload(path, file, { upsert: false });
+  if (error) { showToast('Не вдалося завантажити фото: ' + error.message, 4000); return null; }
+  const { data } = supa.storage.from('community-photos').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+// Людська мова замість тексту з бази. 🔑 Ловимо ІМЕНА ОБМЕЖЕНЬ, а не текст
+// помилки: текст Postgres міняє між версіями, назва `check` — ні.
+function fundErr(error) {
+  const m = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  if (m.includes('url_https'))  return 'Посилання на банку має починатися з https://';
+  if (m.includes('title_ok'))   return 'Назва — від 3 до 120 символів';
+  if (m.includes('org_ok'))     return 'Поле «Хто збирає» — від 2 до 80 символів';
+  if (m.includes('goal_ok'))    return 'Ціль має бути додатнім числом';
+  if (m.includes('kind_ok'))    return 'Невідома категорія';
+  if (m.includes('note_ok'))    return 'Опис задовгий — до 400 символів';
+  if (m.includes('row-level'))  return 'Немає прав. Збори створює лише адмін.';
+  return error?.message || 'Помилка';
+}
+
+// Форма створення / редагування. 🔑 ОДНА форма на обидві дії: різниця лише в
+// тому, чи є `fundDraft.id`. Дві окремі форми розійшлись би по полях — а тут
+// саме поля і є домовленістю з базою та заявкою (див. `fundraiser_field_parity`).
+function fundFormHtml() {
+  const d = fundDraft || {};
+  const редагуємо = !!d.id;
+  return `
+    <form class="add-form" id="fund-form">
+      <div class="add-form-title">${редагуємо ? '✎ Редагувати збір' : '+ Новий збір'}</div>
+      <input class="input" id="fund-title" type="text" maxlength="120" required
+             placeholder="Назва збору (наприклад: «FPV-дрони для 14 ОМБр»)" value="${escapeHtml(d.title || '')}">
+      <input class="input" id="fund-org" type="text" maxlength="80" required
+             placeholder="Хто збирає (обовʼязково — без цього збір не показується)" value="${escapeHtml(d.org || '')}">
+      <input class="input" id="fund-url" type="url" required
+             placeholder="https://send.monobank.ua/jar/..." value="${escapeHtml(d.url || '')}">
+      <textarea class="textarea" id="fund-note" maxlength="400"
+                placeholder="Короткий опис — на картці видно 2 рядки">${escapeHtml(d.note || '')}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="input" id="fund-goal" type="number" min="1" step="1" style="flex:1 1 140px"
+               placeholder="Ціль, ₴ (не обовʼязково)" value="${d.goal ?? ''}">
+        <select class="input" id="fund-kind" style="flex:1 1 160px">
+          ${Object.entries(FUND_KIND_LABEL).map(([k, v]) =>
+            `<option value="${k}"${(d.kind || 'community') === k ? ' selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="input" id="fund-until" type="date" style="flex:1 1 150px" value="${d.until || ''}">
+        <input class="input" id="fund-place" type="text" style="flex:1 1 150px" maxlength="60"
+               placeholder="Звідки збір (Олика)" value="${escapeHtml(d.place || '')}">
+      </div>
+      <div style="font-size:12px;color:#777;margin:-2px 0 2px">
+        Дата — до якої збір актуальний. Після неї збір ще 7 днів видно з написом
+        «Збір завершено», потім зникає сам. Порожньо = безстроково.
+      </div>
+      <label style="font-size:13px;color:#555">Фото (горизонтальне, 16:9)
+        <input class="input" id="fund-photo" type="file" accept="image/*">
+      </label>
+      <div id="fund-photo-prev">${d.photo ? `<img src="${escapeHtml(d.photo)}" style="height:90px;border-radius:8px;object-fit:cover;display:block;margin:6px 0">` : ''}</div>
+      <label style="font-size:13px;color:#555;display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="fund-verified" style="width:16px;height:16px"${d.verified ? ' checked' : ''}>
+        Позначка «перевірено» — ставити, лише якщо збір справді перевірено
+      </label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn--primary" type="submit">${редагуємо ? 'Зберегти' : 'Створити збір'}</button>
+        ${редагуємо ? '<button class="btn" type="button" id="fund-cancel">Скасувати</button>' : ''}
+      </div>
+    </form>`;
+}
+
+function renderFundraisers(el) {
+  const лічильники = {
+    new:       fundRequests.filter(r => r.status === 'new').length,
+    contacted: fundRequests.filter(r => r.status === 'contacted').length,
+    approved:  fundRequests.filter(r => r.status === 'approved').length,
+    rejected:  fundRequests.filter(r => r.status === 'rejected').length,
+  };
+  const заявки = fundRequests.filter(r => r.status === fundReqFilter);
+  const сьогодні = new Date().toISOString().slice(0, 10);
+
+  el.innerHTML = `
+    <div class="section-title">Заявки від жителів</div>
+    <!-- ⚠️ Фільтр зроблено ТИМИ САМИМИ класами, що у «Скаргах» (btn / btn--ghost),
+         а не власними: своя пара класів у розділі означала б, що дві однакові
+         на вигляд смужки живуть різним життям і розʼїдуться при першій же
+         правці стилів.
+         🛑 ЗВОРОТНІ ЛАПКИ В ЦЬОМУ КОМЕНТАРІ ЗАБОРОНЕНІ: він лежить УСЕРЕДИНІ
+         шаблонного рядка, і пара лапок навколо назви класу закрила б рядок —
+         решта розмітки стала б кодом. Саме так я тут і зламав адмінку 17.08:
+         сторінка застигала на «Завантаження…», а перевірка синтаксису мовчала.
+         Виправляючи це, я вжив лапки ще раз — у самому попередженні. -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${Object.entries(FREQ_STATUS_LABEL).map(([k, v]) =>
+        `<button class="btn${fundReqFilter === k ? '' : ' btn--ghost'}" data-freq-filter="${k}">${v} ${лічильники[k]}</button>`).join('')}
+    </div>
+    ${!fundRequests.length
+      ? '<div class="empty">Заявок ще немає. Кнопка «Запропонувати збір» у застосунку пише сюди.</div>'
+      : (!заявки.length ? '<div class="empty">У цій категорії порожньо</div>' : заявки.map(r => `
+      <article class="card">
+        <div class="card-meta">
+          <span class="badge">${FREQ_STATUS_LABEL[r.status] || r.status}</span>
+          <span class="badge">${FUND_KIND_LABEL[r.kind] || r.kind}</span>
+          <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(r.created_at))}</span>
+        </div>
+        <div style="font-weight:600;margin-bottom:4px">${escapeHtml(r.title)}</div>
+        <p class="card-text">${escapeHtml(r.note || '—')}</p>
+        <div style="font-size:13px;color:#444;line-height:1.6;margin:6px 0">
+          Збирає: <b>${escapeHtml(r.org)}</b><br>
+          Банка: <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url)}</a><br>
+          Ціль: ${fundMoney(r.goal)}${r.until ? ' · до ' + escapeHtml(r.until) : ''}${r.place ? ' · ' + escapeHtml(r.place) : ''}
+        </div>
+        <!-- 🔴 КОНТАКТ — ГОЛОВНЕ В ЗАЯВЦІ, тому окремою плашкою, а не рядком
+             у загальному тексті: збір публікується лише після живої розмови. -->
+        <div style="background:#F3F5F8;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6">
+          📞 <b>${escapeHtml(r.contact_name)}</b> · <a href="tel:${escapeHtml(r.contact_phone)}">${escapeHtml(r.contact_phone)}</a>
+          <br><span style="color:#777">акаунт: ${escapeHtml(r.author_name || '—')}</span>
+        </div>
+        ${r.admin_note ? `<p class="card-text" style="color:#777">Нотатка: ${escapeHtml(r.admin_note)}</p>` : ''}
+        <div class="card-actions">
+          ${r.status === 'approved'
+            ? `<span style="font-size:13px;color:#2a7">✓ Схвалено — збір #${r.fundraiser_id ?? '—'}</span>`
+            : `<button class="btn btn--primary" data-freq-approve="${r.id}">✓ Схвалити і створити збір</button>
+               ${r.status === 'new' ? `<button class="btn" data-freq-contacted="${r.id}">📞 Звʼязались</button>` : ''}
+               <button class="btn btn--delete" data-freq-reject="${r.id}">Відхилити</button>`}
+        </div>
+      </article>`).join(''))}
+
+    <div class="section-title" style="margin-top:22px">Збори на головній (${fundraisers.length})</div>
+    ${fundFormHtml()}
+    ${!fundraisers.length ? '<div class="empty">Жодного збору. Блок на головній не показується.</div>' : fundraisers.map(f => {
+      const завершено = f.until && f.until < сьогодні;
+      return `
+      <article class="card" style="${f.active ? '' : 'opacity:.6'}">
+        <div class="card-meta">
+          ${f.active ? '<span class="badge" style="background:#DFF3E4;color:#1d6b32">На головній</span>'
+                     : '<span class="badge">Приховано</span>'}
+          ${f.verified ? '<span class="badge" style="background:#E7EEFB;color:#24467e">Перевірено</span>' : ''}
+          ${завершено ? '<span class="badge" style="background:#FBE9E7;color:#8a3226">Завершено</span>' : ''}
+          <span class="badge">${FUND_KIND_LABEL[f.kind] || f.kind}</span>
+          <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(f.created_at))}</span>
+        </div>
+        <div style="display:flex;gap:10px">
+          ${f.photo ? `<img src="${escapeHtml(f.photo)}" style="width:72px;height:72px;border-radius:8px;object-fit:cover;flex:0 0 auto">` : ''}
+          <div style="min-width:0">
+            <div style="font-weight:600;margin-bottom:2px">${escapeHtml(f.title)}</div>
+            <div style="font-size:13px;color:#555">${escapeHtml(f.org)} · ціль ${fundMoney(f.goal)}${f.until ? ' · до ' + escapeHtml(f.until) : ''}</div>
+            <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener" style="font-size:12px;word-break:break-all">${escapeHtml(f.url)}</a>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn" data-fund-edit="${f.id}">✎ Редагувати</button>
+          <button class="btn" data-fund-toggle="${f.id}">${f.active ? 'Сховати' : 'Показати'}</button>
+          <button class="btn" data-fund-verify="${f.id}">${f.verified ? 'Зняти «перевірено»' : 'Позначити перевіреним'}</button>
+          <button class="btn" data-fund-up="${f.id}">↑ Підняти</button>
+          <button class="btn btn--delete" data-fund-delete="${f.id}">🗑 Видалити</button>
+        </div>
+      </article>`;
+    }).join('')}
+  `;
+
+  // ── Фільтр заявок ──
+  el.querySelectorAll('[data-freq-filter]').forEach(b => b.addEventListener('click', () => {
+    fundReqFilter = b.dataset.freqFilter; renderFundraisers(el);
+  }));
+
+  // ── Схвалення. 🔑 Через RPC, а не двома запитами: атомарно, і поля
+  //    копіюються НА СЕРВЕРІ — підмінити посилання на банку по дорозі не можна.
+  el.querySelectorAll('[data-freq-approve]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Схвалити заявку і створити збір?\n\nПозначку «перевірено» треба буде поставити окремо.')) return;
+    b.disabled = true;
+    const { data, error } = await supa.rpc('approve_fundraiser_request', { p_request_id: Number(b.dataset.freqApprove) });
+    if (error) { b.disabled = false; return showToast(fundErr(error), 4000); }
+    showToast('Збір створено ✓ (#' + data + ')');
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-freq-contacted]').forEach(b => b.addEventListener('click', async () => {
+    const { error } = await supa.from('fundraiser_requests')
+      .update({ status: 'contacted' }).eq('id', Number(b.dataset.freqContacted));
+    if (error) return showToast(fundErr(error), 4000);
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-freq-reject]').forEach(b => b.addEventListener('click', async () => {
+    const нотатка = prompt('Чому відхиляємо? (побачить лише команда)');
+    if (нотатка === null) return;
+    const { error } = await supa.from('fundraiser_requests')
+      .update({ status: 'rejected', admin_note: нотатка || null, reviewed_at: new Date().toISOString() })
+      .eq('id', Number(b.dataset.freqReject));
+    if (error) return showToast(fundErr(error), 4000);
+    await loadAll(); renderApp();
+  }));
+
+  // ── Форма збору ──
+  const photoInput = document.getElementById('fund-photo');
+  if (photoInput) photoInput.addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const prev = document.getElementById('fund-photo-prev');
+    if (prev) prev.textContent = 'Завантаження…';
+    const url = await uploadFundPhoto(file);
+    fundDraft = { ...(fundDraft || {}), photo: url };
+    if (prev) prev.innerHTML = url
+      ? `<img src="${url}" style="height:90px;border-radius:8px;object-fit:cover;display:block;margin:6px 0">`
+      : '<span style="color:#c33">Не вдалося</span>';
+  });
+
+  const cancel = document.getElementById('fund-cancel');
+  if (cancel) cancel.addEventListener('click', () => { fundDraft = null; renderFundraisers(el); });
+
+  document.getElementById('fund-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const v = id => (document.getElementById(id)?.value || '').trim();
+    const рядок = {
+      title: v('fund-title'),
+      org:   v('fund-org'),
+      url:   v('fund-url'),
+      note:  v('fund-note') || null,
+      goal:  v('fund-goal') ? Number(v('fund-goal')) : null,
+      kind:  v('fund-kind') || 'community',
+      until: v('fund-until') || null,
+      place: v('fund-place') || null,
+      photo: (fundDraft && fundDraft.photo) || null,
+      verified: !!document.getElementById('fund-verified')?.checked,
+    };
+    if (!рядок.title || !рядок.org || !рядок.url) return showToast('Назва, «хто збирає» і посилання обовʼязкові', 4000);
+    const { error } = fundDraft && fundDraft.id
+      ? await supa.from('fundraisers').update(рядок).eq('id', fundDraft.id)
+      : await supa.from('fundraisers').insert(рядок);
+    if (error) return showToast(fundErr(error), 4000);
+    showToast(fundDraft && fundDraft.id ? 'Збережено ✓' : 'Збір створено ✓');
+    fundDraft = null;
+    await loadAll(); renderApp();
+  });
+
+  // ── Дії над зборами ──
+  el.querySelectorAll('[data-fund-edit]').forEach(b => b.addEventListener('click', () => {
+    fundDraft = fundraisers.find(f => f.id === Number(b.dataset.fundEdit)) || null;
+    renderFundraisers(el);
+    document.getElementById('fund-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }));
+
+  el.querySelectorAll('[data-fund-toggle]').forEach(b => b.addEventListener('click', async () => {
+    const f = fundraisers.find(x => x.id === Number(b.dataset.fundToggle)); if (!f) return;
+    const { error } = await supa.from('fundraisers').update({ active: !f.active }).eq('id', f.id);
+    if (error) return showToast(fundErr(error), 4000);
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-fund-verify]').forEach(b => b.addEventListener('click', async () => {
+    const f = fundraisers.find(x => x.id === Number(b.dataset.fundVerify)); if (!f) return;
+    // 🛑 Окрема дія, а не галочка «за компанію» при схваленні: схвалив = «ми це
+    // пропустили», перевірив = «ми це перевірили». Позначка, яку клеять усім
+    // підряд, знецінює слово, заради якого існує.
+    if (!f.verified && !confirm('Позначити збір перевіреним?\n\nЦе означає, що ви особисто переконались у зборі й у людині.')) return;
+    const { error } = await supa.from('fundraisers').update({ verified: !f.verified }).eq('id', f.id);
+    if (error) return showToast(fundErr(error), 4000);
+    await loadAll(); renderApp();
+  }));
+
+  // Підняти вгору = стати вищим за найвищий. Числа в полі ніхто не редагує
+  // руками: «підняти» — це дія, а не значення.
+  el.querySelectorAll('[data-fund-up]').forEach(b => b.addEventListener('click', async () => {
+    const максимум = fundraisers.reduce((m, x) => Math.max(m, Number(x.sort_order) || 0), 0);
+    const { error } = await supa.from('fundraisers')
+      .update({ sort_order: максимум + 1 }).eq('id', Number(b.dataset.fundUp));
+    if (error) return showToast(fundErr(error), 4000);
+    showToast('Піднято вгору');
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-fund-delete]').forEach(b => b.addEventListener('click', async () => {
+    // ⚠️ Питаємо саме про НАСЛІДОК, а не «ви впевнені?»: у зборів є «Сховати»,
+    // і в дев'яти випадках із десяти людині потрібне саме воно.
+    if (!confirm('Видалити збір НАЗАВЖДИ?\n\nЩоб просто прибрати його з головної, є кнопка «Сховати».')) return;
+    const { error } = await supa.from('fundraisers').delete().eq('id', Number(b.dataset.fundDelete));
+    if (error) return showToast(fundErr(error), 4000);
     showToast('Видалено');
     await loadAll(); renderApp();
   }));
