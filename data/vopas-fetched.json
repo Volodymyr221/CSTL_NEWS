@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-17T21:54:57.641609+03:00",
+  "fetched_at": "2026-08-17T22:33:49.006061+03:00",
   "date": "17.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -6102,8 +6102,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6117,8 +6117,8 @@
       "carrier": "ТОВ \"САН САН БУС\"",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6132,8 +6132,8 @@
       "carrier": "ТОВ \"САН САН БУС\"",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6147,8 +6147,8 @@
       "carrier": "Конончук В.В.",
       "bus": "Сканія",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
