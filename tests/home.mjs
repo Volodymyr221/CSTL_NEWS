@@ -22,6 +22,26 @@ import { chromium } from 'playwright';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { chromiumPath, serve, ROOT } from './_lib.mjs';
+import { mockSupabase } from './_board-fixture.mjs';
+
+// Дані зборів для сцени. 🔑 Живуть ТУТ, а не в теці даних: після переїзду в базу
+// файла `data/fundraisers.json` більше немає, і читати з диска нема чого.
+// ⚠️ Запис заповнений повністю — саме на ньому міряються всі перевірки картки.
+const FUND_ROWS = [{
+  id: 1,
+  title: 'ТЕСТ — перевірка блока зборів',
+  org: 'CSTL NEWS',
+  url: 'https://send.monobank.ua/',
+  goal: 100000,
+  photo: './photos/olyka.day-2.jpg',
+  note: 'Технічна перевірка вигляду блока. Це не справжній збір.',
+  kind: 'community',
+  until: '2026-09-15',
+  place: 'Олика',
+  verified: true,
+  active: true,
+  sort_order: 0,
+}];
 const { url, stop } = await serve();
 const ep = chromiumPath();
 const b = await chromium.launch({ ...(ep?{executablePath:ep}:{}) });
@@ -30,7 +50,14 @@ const p = await ctx.newPage();
 const errs = [];
 p.on('pageerror', e => errs.push('pageerror: ' + e.message));
 p.on('console', m => { if (m.type()==='error' && !/favicon|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text().slice(0,120)); });
-await p.route('**://*.supabase.co/**', r => r.abort());
+// 🔴 17.08 — ЗБОРИ ПЕРЕЇХАЛИ З ФАЙЛУ В БАЗУ, і стенд мусив переїхати разом із
+// ними. Було: `abort()` на Supabase + читання `data/fundraisers.json` із диска.
+// Після переїзду це давало б «секція прихована» на цілком робочому коді — тобто
+// сторож звинувачував би застосунок у тому, що зламався він сам.
+// 🔑 Підміняємо ту саму дорогу, якою застосунок ходить НАСПРАВДІ (`mockSupabase`
+// віддає власну `window.supabase` замість бібліотеки з CDN) — рівно той урок,
+// заради якого фікстуру Дошки й заводили 05.08.
+await mockSupabase(p, { fundraisers: FUND_ROWS });
 // Nominatim віддає ДВІ різні форми, і плутати їх не можна:
 //   /reverse → обʼєкт із `address` (координати → назва, погода в шапці);
 //   /search  → МАСИВ знахідок (назва → координати, вибір населеного пункту 05.08).
@@ -241,8 +268,10 @@ ok('🔴 кнопки «Афіша», що вела у Стрічку, нема�
 // шість разів брехала перевірка (HOT_RULES: критерій має міряти наслідок).
 // Стало: читаємо той самий файл, що читає застосунок, і звіряємо ОБИДВІ
 // половини правила — порожньо ховає секцію, непорожньо її показує.
-const fundData = JSON.parse(await readFile(join(ROOT, 'data/fundraisers.json'), 'utf8'));
-const fundItems = (Array.isArray(fundData) ? fundData : fundData.items || [])
+// Очікування рахуємо з тієї самої фікстури, яку віддали застосунку, і за тим
+// самим правилом, що діє в `loadFundraisers()`. Так сторож міряє ПОВЕДІНКУ коду,
+// а не збіг двох списків, які хтось мусить тримати однаковими руками.
+const fundItems = FUND_ROWS
   .filter(it => it && it.active !== false && it.title && it.org && it.url);
 const fund = await p.evaluate(() => {
   const sec = document.getElementById('hm-fund');
@@ -251,7 +280,7 @@ const fund = await p.evaluate(() => {
 if (!fundItems.length) {
   ok('🔴 без даних секція зборів прихована', fund.прихована, `карток: ${fund.карток}`);
 } else {
-  ok('🔴 із даними секція зборів видима', !fund.прихована, `у файлі ${fundItems.length}`);
+  ok('🔴 із даними секція зборів видима', !fund.прихована, `у базі ${fundItems.length}`);
   // Стеля 6 — свідома: більше зборів на головній перетворюють допомогу на каталог.
   ok('🔴 карток стільки ж, скільки записів (стеля 6)',
      fund.карток === Math.min(fundItems.length, 6), `карток: ${fund.карток}`);
