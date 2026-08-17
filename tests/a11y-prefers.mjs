@@ -48,8 +48,22 @@ const ctx = await b.newContext({
   serviceWorkers: 'block',
 });
 const p = await ctx.newPage();
+// 🔴 17.08 — СЦЕНА БІЛЬШЕ НЕ ЗАЛЕЖИТЬ ВІД СЬОГОДНІШНЬОГО РОЗКЛАДУ АВТОБУСІВ.
+// Стенд міряє CSS-контракт на `.hm-cap2`, але вузол мусить існувати. Раніше він
+// брався з живих даних: капсула «ЗАРАЗ» малювалась, поки логіка обирала будь-який
+// найближчий рейс. Після виправлення 17.08 рейс мусить проходити через Олику і
+// бути ближчим за 2 години — тобто вночі й у «дірках» розкладу капсули законно
+// НЕМАЄ, і стенд червонів на цілком справному коді.
+// ✅ Тепер капсулу дає роль «НОВЕ»: одне нове оголошення + давня позначка
+// «востаннє був на Дошці». Це не залежить ні від годинника, ні від розкладу.
+// ⚠️ Позначку ставимо ДО завантаження: без ключа перший запуск навмисно віддає
+// нуль (той, хто щойно поставив застосунок, нічого не пропускав).
+await ctx.addInitScript(() => localStorage.setItem('cstl_board_seen_ts', '1'));
 await mockSupabase(p,
-  { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] },
+  { posts: [{ id: 1, type: 'board', status: 'published', owner_uid: 'u-hto',
+              title: 'Продам плуг', text: 'текст', location: 'Олика',
+              created_at: new Date().toISOString() }],
+    threads: [], messages: [], thread_user_state: [], announcements: [], comments: [] },
   { user: ME, profiles: [{ uid: 'u-me', name: 'Вова', avatar_url: '' }] });
 await p.route('**://api.open-meteo.com/**', r => r.abort());
 if (REV) {
