@@ -1369,15 +1369,22 @@ export async function fetchUnreadByThread(uid) {
   return map;
 }
 
-// Пари учасників по тредах → [{id, author_uid, buyer_uid}] БЕЗ join оголошень.
+// Пари учасників по тредах → [{id, author_uid, buyer_uid, …прев'ю}] БЕЗ join оголошень.
 // 🔴 29.07: бейдж непрочитаних має рахувати РОЗМОВИ (людей), а не треди — інакше одна
 // людина з двома оголошеннями давала б «2» на бейджі й ОДИН рядок у списку, тобто
 // число нікуди не вело. Окрема легка вибірка, бо `fetchMyThreads` тягне ще й пости,
 // а бейдж оновлюється часто (після кожного прочитання і кожного push).
+//
+// 🆕 17.08 — ДОДАНО ЧОТИРИ ПОЛЯ ТІЄЇ САМОЇ ТАБЛИЦІ (`last_message_text`,
+// `last_message_at`, `author_name`, `buyer_name`) під капсулу «ПОВІДОМЛЕННЯ» на
+// головній. 🔑 Саме сюди, а не другим запитом: капсулі потрібні рівно ті треди,
+// які цей виклик уже тягне, і другий похід у мережу дав би ДРУГЕ джерело правди
+// про непрочитане — те, що вже розходилось у B-27. Обіцянка «без join оголошень»
+// не порушена: усі чотири колонки лежать у самій `threads`, зайвої таблиці нема.
 export async function fetchThreadPairs(uid) {
   if (!supa || !uid) return [];
   const { data, error } = await supa.from('threads')
-    .select('id, author_uid, buyer_uid')
+    .select('id, author_uid, buyer_uid, last_message_text, last_message_at, author_name, buyer_name')
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
   if (error) { console.warn('[supabase] fetchThreadPairs:', error.message); return []; }
   return data || [];

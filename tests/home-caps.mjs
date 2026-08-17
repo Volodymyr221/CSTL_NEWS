@@ -19,8 +19,19 @@
 // власну `window.supabase` замість бібліотеки з CDN, розклад — через `p.route`
 // на `data/schedule.json`.
 import { chromium } from 'playwright';
-import { chromiumPath, serve, reporter } from './_lib.mjs';
+import { chromiumPath, serve, reporter, projectFile } from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
+
+// 🔴 КОНТРОЛЬ: `BUNDLE_REV=origin/main node tests/home-caps.mjs` — сторінці
+// підсовується `bundle.js` названої ревізії. На коді ДО роботи частина перевірок
+// МУСИТЬ упасти; зелений контроль означає, що стенд міряє не те.
+//
+// 🛑 ЗАВЕДЕНО 17.08 ПІСЛЯ ВЛАСНОЇ ПОМИЛКИ, і вона показова. Стенд писався без
+// підтримки `BUNDLE_REV` узагалі — змінна просто ігнорувалась. Я прогнав
+// «контроль», отримав 59/59 і мало не записав це як доказ. Насправді обидва
+// прогони йшли по ОДНОМУ Й ТОМУ САМОМУ свіжому коду. ➡️ Контроль, який не може
+// впасти, — не контроль; перевіряй, що підміна справді відбувається.
+const REV = process.env.BUNDLE_REV || '';
 
 const { ok, done } = reporter();
 const { url, stop } = await serve();
@@ -74,6 +85,13 @@ const РЕЙС_ПОВЗ = {
   departure_time: '09:05', arrival_time: '09:50', duration_min: 45,
   stops: [{ name: 'Луцьк', km: 0 }, { name: 'Дерно', km: 30 }, { name: 'Клевань', km: 60 }],
 };
+// Рейс, до якого лишились ХВИЛИНИ (виїзд 09:05, Олика на половині шляху → 09:10).
+// Потрібен ранжуванню: це єдиний кандидат, який просто зникає, якщо не встиг.
+const РЕЙС_ОСЬ_ОСЬ = {
+  id: 'r_now', name: 'Луцьк Ківерці', status: 'scheduled', carrier: 'test_carrier',
+  departure_time: '09:05', arrival_time: '09:15', duration_min: 10,
+  stops: [{ name: 'Луцьк', km: 0 }, { name: 'Олика', km: 60 }, { name: 'Ківерці', km: 120 }],
+};
 // Рейс, що в Олиці ЗАКІНЧУЄТЬСЯ — сісти на нього тут нікуди.
 const РЕЙС_ДО_ОЛИКИ = {
   id: 'r_end', name: 'Луцьк Олика', status: 'scheduled', carrier: 'test_carrier',
@@ -98,6 +116,24 @@ const відповідь = (id, postId) => ({
   created_at: '2026-08-17T08:45:00.000Z', deleted_at: null,
 });
 
+// Розмова приватного чату (таблиця `threads`). Імена в ній ДЕНОРМАЛІЗОВАНІ —
+// `profiles` приватний, і капсула бере імʼя саме звідси.
+// ⚠️ Фікстуру тредів даємо вже звужену під сцену: `.or()` у заглушці свідомо не
+// фільтрує (емулювати мову фільтрів PostgREST = писати другу базу).
+const розмова = (id, o = {}) => ({
+  id, author_uid: UID, buyer_uid: 'uid-ivan',
+  author_name: 'Вова', buyer_name: 'Іван',
+  last_message_text: 'Скільки за плуг?',
+  last_message_at: '2026-08-17T08:40:00.000Z',   // 20 хв тому — свіже
+  ...o,
+});
+// Непрочитане повідомлення від співрозмовника. `read_at: null` — ознака
+// непрочитаного; `.is()` у заглушці не фільтрує, тож прочитаних сюди не кладемо.
+const повідомлення = (id, threadId, o = {}) => ({
+  id, thread_id: threadId, sender_uid: 'uid-ivan', read_at: null,
+  created_at: '2026-08-17T08:40:00.000Z', ...o,
+});
+
 const оголошення = (id, o = {}) => ({
   id, type: 'board', status: 'published', owner_uid: 'uid-hto',
   title: o.title || `Оголошення ${id}`, text: 'текст',
@@ -114,9 +150,12 @@ const оголошення = (id, o = {}) => ({
  * @param profiles  таблиця `profiles` (село в анкеті)
  * @param seen      значення `cstl_board_seen_ts` (null = ключа немає взагалі)
  * @param tracked   відстежувані рейси у памʼяті пристрою
+ * @param threads   таблиця `threads` (розмови приватного чату)
+ * @param messages  таблиця `messages` — ЛИШЕ непрочитані чужі (див. `повідомлення`)
  */
 async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕКО], posts = [], user = null,
-                       profiles = [], seen = ВІЗИТ, tracked = null, comments = [] } = {}) {
+                       profiles = [], seen = ВІЗИТ, tracked = null, comments = [],
+                       threads = [], messages = [] } = {}) {
   const ctx = await b.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block',
   });
@@ -135,7 +174,8 @@ async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕ
     if (tracked) localStorage.setItem('bus_track_v2:' + uid, JSON.stringify({ routes: tracked }));
   }, [seen, tracked, UID]);
 
-  await mockSupabase(p, { posts, profiles, comments }, user ? { user } : {});
+  await mockSupabase(p, { posts, profiles, comments, threads, messages, thread_user_state: [] },
+                     user ? { user } : {});
   await p.route('**/data/schedule.json*', r => r.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ version: 2, updatedAt: '17.08.2026', updatedTime: '08:00',
@@ -143,6 +183,12 @@ async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕ
   }));
   await p.route('**://api.open-meteo.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await p.route('**://nominatim.openstreetmap.org/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  // Контрольний прогін: підміняємо КОД, а не сам стенд (урок стенда зборів 17.08 —
+  // `git stash` відкочував і перевірку теж, тобто стара перевірка міряла старий код).
+  if (REV) {
+    const body = projectFile('bundle.js', REV);
+    await p.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+  }
 
   await p.goto(url, { waitUntil: 'domcontentloaded' });
   // Годинник фіксований — час має ЙТИ далі від бази, інакше застосунок стоїть.
@@ -205,8 +251,12 @@ const капсули = p => p.evaluate(() => {
      c.тексти[1] === '3 нові оголошення', c.тексти[1]);
   ok('🔴 капсула «Новини» не дублює блок новин нижче',
      !c.ролі.includes('НОВИНИ') && !/публікац/i.test(c.тексти.join(' ')));
-  ok('🔴 лічильника непрочитаних повідомлень у капсулах немає (він уже на FAB)',
-     !/повідомл/i.test(c.тексти.join(' ')), c.тексти.join(' | '));
+  // ⚠️ ЦЕЙ РЯДОК ПЕРЕПИСАНО 17.08 РАЗОМ ІЗ РІШЕННЯМ. Тут стояло «лічильника
+  // непрочитаних у капсулах немає (він уже на FAB)» — заборона на саму роль.
+  // Роль «ПОВІДОМЛЕННЯ» тепер є (замовлення Вови), але вона про ЗМІСТ, а не про
+  // число, і гостю недоступна: розмов у нього немає за визначенням.
+  ok('🔴 гість капсули повідомлень не бачить',
+     !c.ролі.includes('ПОВІДОМЛЕННЯ'), c.ролі.join(','));
   ok('🔴 гостя не кличуть увійти прямо з капсули',
      !/увійд|увійти|зареєстр/i.test(c.тексти.join(' ')));
   ok('капсули лишились кнопками', c.кнопки === c.n);
@@ -409,6 +459,106 @@ const капсули = p => p.evaluate(() => {
      c.тексти[c.тексти.length - 1] === 'Продам плуг', c.тексти.join(' | '));
 
   ok('помилок у консолі немає (відповідь є)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 9: ПОВІДОМЛЕННЯ + РАНЖУВАННЯ БАЛАМИ (17.08, вечір) ────────────────
+// 🔴 Замовлення Вови зі знімка: «от мені надійшло повідомлення, чому немає
+// капсули про це? Треба зробити ранжування капсул по важливості».
+// Сцена навмисно ПЕРЕПОВНЕНА: кандидатів чотири, слотів три — тобто хтось мусить
+// не влізти, і саме бал вирішує хто. До ранжування порядок задавав `allSettled`,
+// і НОВЕ витіснило б повідомлення просто тому, що приїхало раніше.
+{
+  const s = await сцена({
+    user: USER,
+    profiles: [{ uid: UID, name: 'Вова', settlement: 'Олика' }],
+    posts: [
+      оголошення(70, { owner_uid: UID, status: 'rejected', title: 'Плуг МТЗ' }),  // 80
+      оголошення(71, { location: 'Олика' }),                                     // 20
+    ],
+    threads: [розмова('t1')],                                                    // 90
+    messages: [повідомлення('m1', 't1')],
+    // РЕЙС_БЛИЗЬКО = посадка через 40 хв → 60 балів.
+  });
+  const c = await капсули(s.p);
+
+  ok('🔴 капсула повідомлення зʼявилась', c.ролі.includes('ПОВІДОМЛЕННЯ'), c.ролі.join(','));
+  // 🔑 Головна перевірка ранжування: свіже повідомлення (90) вище за відхилене
+  // оголошення (80) і за рейс через 40 хв (60), а «нові оголошення» (20) не влізли.
+  ok('🔴 порядок за балом: ПОВІДОМЛЕННЯ → МОЄ → ЗАРАЗ',
+     c.ролі.join('→') === 'ПОВІДОМЛЕННЯ→МОЄ→ЗАРАЗ', c.ролі.join('→'));
+  ok('🔴 слотів усе ще три (четвертий кандидат витіснений, а не дописаний)',
+     c.n === 3, `${c.n} шт`);
+  ok('🔴 витіснили саме найдешевше — «нові оголошення»',
+     !c.ролі.includes('НОВЕ'), c.ролі.join(','));
+  // Капсула каже ВІД КОГО і ПРО ЩО — того не каже червона крапка на вкладці.
+  ok('🔴 капсула називає людину і перші слова',
+     c.тексти[0] === 'Іван · Скільки за плуг?', c.тексти[0]);
+  // 🛑 Число непрочитаних лишається на бейджах; у капсулі його немає свідомо.
+  ok('🔴 числа непрочитаних у капсулі немає (воно вже на трьох поверхнях)',
+     !/\d/.test(c.тексти[0] || ''), c.тексти[0]);
+
+  const єМсг = await s.p.evaluate(() => !!document.querySelector('.hm-cap2[data-cap="msg"]'));
+  if (єМсг) { await s.p.locator('.hm-cap2[data-cap="msg"]').click(); await s.p.waitForTimeout(1500); }
+  const розмоваНаЕкрані = !єМсг ? '' : await s.p.evaluate(() =>
+    document.querySelector('.pm-head--chat .pm-head-name')?.textContent.trim() || '');
+  ok('🔴 тап відкриває САМУ розмову, а не список', розмоваНаЕкрані === 'Іван',
+     розмоваНаЕкрані || 'екрана розмови немає');
+
+  ok('помилок у консолі немає (повідомлення)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 10: РЕЙС, ДО ЯКОГО ХВИЛИНИ, Б'Є НАВІТЬ СВІЖЕ ПОВІДОМЛЕННЯ ─────────
+// 🔑 Це і є перевірка САМОГО принципу шкали, а не порядку ролей: перемагає те,
+// що швидше втрачає сенс. Повідомлення можна прочитати за годину, автобус через
+// 5 хв — не можна. Той самий рейс у сцені 9 стояв ТРЕТІМ (там до нього 40 хв).
+{
+  const s = await сцена({
+    user: USER, routes: [РЕЙС_ОСЬ_ОСЬ],
+    profiles: [{ uid: UID, name: 'Вова', settlement: 'Олика' }],
+    posts: [],
+    threads: [розмова('t1')],
+    messages: [повідомлення('m1', 't1')],
+  });
+  const c = await капсули(s.p);
+
+  ok('🔴 рейс за 10 хв стоїть ВИЩЕ за свіже повідомлення',
+     c.ролі.join('→') === 'ЗАРАЗ→ПОВІДОМЛЕННЯ', c.ролі.join('→'));
+  // ⚠️ 10 хв, а не 5: виїзд 09:05, Олика на ПОЛОВИНІ шляху (60 із 120 км) при
+  // тривалості 10 хв → посадка 09:10. Перша редакція перевірки чекала «5 хв» —
+  // тобто міряла час до ВИЇЗДУ, рівно ту ваду, від якої заведено цей стенд.
+  ok('🔴 і це справді рейс за хвилини (поріг ≤15)',
+     /через 10 хв$/.test(c.тексти[0] || ''), c.тексти[0]);
+
+  ok('помилок у консолі немає (близький рейс)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 11: КІЛЬКА РОЗМОВ — НЕ ОБІЦЯЄМО ОДНУ ЛЮДИНУ ──────────────────────
+// Назвати «Іван», а повести в список, де ще двоє, означало б збрехати про те,
+// куди веде тап. Тому при кількох розмовах капсула каже лише скільки їх.
+{
+  const s = await сцена({
+    user: USER, posts: [],
+    threads: [розмова('t1'), розмова('t2', { buyer_uid: 'uid-olya', buyer_name: 'Оля',
+                                              last_message_text: 'Добрий вечір' })],
+    messages: [повідомлення('m1', 't1'), повідомлення('m2', 't2', { sender_uid: 'uid-olya' })],
+  });
+  const c = await капсули(s.p);
+
+  ok('🔴 дві розмови — капсула не називає одну людину',
+     (c.тексти.find((_, i) => c.ролі[i] === 'ПОВІДОМЛЕННЯ') || '') === '2 нові розмови',
+     c.тексти.join(' | '));
+
+  const єМсг2 = await s.p.evaluate(() => !!document.querySelector('.hm-cap2[data-cap="msg"]'));
+  if (єМсг2) { await s.p.locator('.hm-cap2[data-cap="msg"]').click(); await s.p.waitForTimeout(1500); }
+  const список = !єМсг2 ? '' : await s.p.evaluate(() =>
+    document.querySelector('.pm-screen, .pm-head')?.textContent.slice(0, 120) || '');
+  ok('🔴 тап веде у список «Повідомлення»', /повідомлення/i.test(список),
+     список ? список.replace(/\s+/g, ' ').slice(0, 60) : 'екрана немає');
+
+  ok('помилок у консолі немає (дві розмови)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
   await s.ctx.close();
 }
 
