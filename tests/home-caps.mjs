@@ -52,6 +52,23 @@ const РЕЙС_ДАЛЕКО = {
   stops: [{ name: 'Олика', km: 0 }, { name: 'Ківерці', km: 40 }],
 };
 
+// Питання громади = той самий `posts`, тип 'chat' (окремої таблиці немає).
+// ⚠️ Текст питання лежить у полі `text`, а НЕ `title`: форма створення має рівно
+// одне поле. Перша редакція фікстури клала його в `title` — і стенд перевіряв
+// поле, якого в живих питаннях немає.
+const питання = (id, o = {}) => ({
+  id, type: 'chat', status: 'published', owner_uid: 'uid-susid',
+  title: null, text: o.text || `Питання ${id}`, author: 'Сусід',
+  created_at: o.created_at || '2026-08-17T08:30:00.000Z',
+  ...o,
+});
+
+// Відповідь на питання — рядок таблиці `comments` (fetchAllComments).
+const відповідь = (id, postId) => ({
+  id, post_id: postId, text: 'відповідь', author_uid: 'uid-hto',
+  created_at: '2026-08-17T08:45:00.000Z', deleted_at: null,
+});
+
 const оголошення = (id, o = {}) => ({
   id, type: 'board', status: 'published', owner_uid: 'uid-hto',
   title: o.title || `Оголошення ${id}`, text: 'текст',
@@ -70,7 +87,7 @@ const оголошення = (id, o = {}) => ({
  * @param tracked   відстежувані рейси у памʼяті пристрою
  */
 async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕКО], posts = [], user = null,
-                       profiles = [], seen = ВІЗИТ, tracked = null } = {}) {
+                       profiles = [], seen = ВІЗИТ, tracked = null, comments = [] } = {}) {
   const ctx = await b.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block',
   });
@@ -89,7 +106,7 @@ async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕ
     if (tracked) localStorage.setItem('bus_track_v2:' + uid, JSON.stringify({ routes: tracked }));
   }, [seen, tracked, UID]);
 
-  await mockSupabase(p, { posts, profiles }, user ? { user } : {});
+  await mockSupabase(p, { posts, profiles, comments }, user ? { user } : {});
   await p.route('**/data/schedule.json*', r => r.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ version: 2, updatedAt: '17.08.2026', updatedTime: '08:00',
@@ -289,6 +306,71 @@ const капсули = p => p.evaluate(() => {
   ok('🔴 і саме до цього рейсу', вкладка.підсвічено === true);
 
   ok('помилок у консолі немає (відстеження)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 7: ПИТАННЯ БЕЗ ВІДПОВІДІ ВАЖЛИВІШЕ ЗА НОВЕ ОГОЛОШЕННЯ ─────────────
+// 🔑 Рішення Вови 17.08: Q&A повертається на головну — але як ЗАКЛИК, а не як
+// лічильник. Питання, на яке ніхто не відповів, — єдиний рядок на всій головній,
+// що просить чогось у людини.
+{
+  const s = await сцена({
+    posts: [
+      питання(50, { text: 'Коли вивозять сміття?' }),
+      питання(51, { text: 'Старе питання', created_at: '2026-08-12T09:00:00.000Z' }),
+      оголошення(52, { title: 'Продам плуг' }),
+    ],
+    comments: [],
+  });
+  const c = await капсули(s.p);
+
+  ok('🔴 НОВЕ віддає перевагу питанню без відповіді, а не оголошенню',
+     c.тексти[1] === 'Потрібна відповідь · Коли вивозять сміття?', c.тексти[1]);
+  // Вікно 3 доби: питання від 12.08 старше за межу і на головну не йде — інакше
+  // капсула роками показувала б той самий рядок і стала б меблями.
+  ok('🔴 питання старше за 3 доби на головну не виходить',
+     !/Старе питання/.test(c.тексти.join(' ')), c.тексти.join(' | '));
+
+  const єНове2 = await s.p.evaluate(() => !!document.querySelector('.hm-cap2[data-cap="new"]'));
+  if (єНове2) { await s.p.locator('.hm-cap2[data-cap="new"]').click(); await s.p.waitForTimeout(1200); }
+  // ⚠️ Беремо ВЕСЬ текст екрана, а не перші 300 символів: там спершу йде шапка
+  // («Питання»), а саме питання лежить нижче — обрізка ловила б лише заголовок
+  // розділу і перевірка червоніла б на цілком робочому коді.
+  const екранQA = !єНове2 ? '' : await s.p.evaluate(() => {
+    const el = document.querySelector('.qa-screen');
+    return el ? el.textContent : '';
+  });
+  ok('🔴 тап відкриває САМЕ це питання', /Коли вивозять сміття/.test(екранQA),
+     екранQA ? екранQA.replace(/\s+/g, ' ').trim().slice(0, 70) : 'екрана питання немає');
+
+  ok('помилок у консолі немає (питання)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 8: КАПСУЛА НЕ БРЕШЕ ПРО «БЕЗ ВІДПОВІДІ» ──────────────────────────
+// Два питання, і жодне не має права на капсулу: одне ВЖЕ має відповідь, друге —
+// моє власне (просити людину відповісти самій собі — докір, а не заклик).
+// НОВЕ мусить чесно відступити до оголошення.
+{
+  const s = await сцена({
+    user: USER,
+    posts: [
+      питання(60, { owner_uid: UID, text: 'Моє питання' }),
+      питання(61, { text: 'Сусідове питання' }),
+      оголошення(62, { title: 'Продам плуг' }),
+    ],
+    comments: [відповідь(1, 61)],
+  });
+  const c = await капсули(s.p);
+
+  ok('🔴 питання з відповіддю не видають за «без відповіді»',
+     !/Сусідове питання/.test(c.тексти.join(' ')), c.тексти.join(' | '));
+  ok('🔴 власне питання на головну не виносимо',
+     !/Моє питання/.test(c.тексти.join(' ')), c.тексти.join(' | '));
+  ok('🔴 НОВЕ чесно відступає до оголошення',
+     c.тексти[c.тексти.length - 1] === 'Продам плуг', c.тексти.join(' | '));
+
+  ok('помилок у консолі немає (відповідь є)', s.errs.length === 0, s.errs.slice(0, 2).join(' | '));
   await s.ctx.close();
 }
 
