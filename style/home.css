@@ -817,9 +817,17 @@
    Симптом був би підступний: з фото картка виглядає нормально (темряву дає
    знімок і затемнення), а збір БЕЗ фото показав би білий текст на білому тлі,
    тобто порожню картку. Спіймано сторожем `tests/home.mjs`, а не оком. */
+/* 🔴 17.08 — ВИСОТА 470px ЛИШЕ КОЛИ Є ФОТО (скарга Вови по знімку).
+   Було: `min-height: 470px` на ВСІХ картках. Наслідок побачив Вова на першому ж
+   справжньому зборі («Дрони для 14Об», без знімка): угорі лишалась велика
+   порожня темна зона, а назва з панеллю були притиснуті донизу — картка
+   читалась як недовантажена сторінка.
+   🔑 Моя недоробка з передбачуваною причиною: я міряв картку ТІЛЬКИ З ФОТО (у
+   тестовому зборі воно було) і жодного разу не подивився на неї без нього.
+   ➡️ Тепер висоту тримає клас `--photo`: є знімок — картка «постерна» (фото
+   мусить дихати), немає — стискається за вмістом. */
 .hm-card.hm-fund {
   position: relative; display: block; padding: 0; overflow: hidden;
-  min-height: 470px;
   background: linear-gradient(160deg, #2A1A20 0%, #1B1315 55%, #140F11 100%);
   border-color: rgba(255, 255, 255, .10);
 }
@@ -849,10 +857,19 @@
    лишається видимим угорі незалежно від довжини тексту. */
 .hm-fund-body {
   position: relative; z-index: 1;
-  display: flex; flex-direction: column; min-height: 470px;
+  display: flex; flex-direction: column;
   padding: var(--hm-s4);
 }
-.hm-fund-main { margin-top: auto; }
+/* Постерна висота — тільки з фото. Обидва правила разом: коробка картки і її
+   вміст, інакше тіло не розтягнеться на всю картку і знімок визиратиме знизу. */
+.hm-card.hm-fund--photo,
+.hm-fund--photo .hm-fund-body { min-height: 470px; }
+/* 🔴 `auto` ЛИШЕ З ФОТО. Без знімка картка стискається за вмістом, і тоді
+   `margin-top: auto` дорівнює НУЛЮ — заголовок ставав упритул до пігулки
+   категорії (видно на першому ж знімку без фото). З фото `auto` притискає весь
+   текст донизу, щоб знімок лишався видимим угорі — саме заради цього воно й є. */
+.hm-fund-main { margin-top: var(--hm-s5); }
+.hm-fund--photo .hm-fund-main { margin-top: auto; }
 
 /* Категорія — бордова пігулка, як на макеті. Раніше була тихим капсом на білому;
    на фото тихий капс просто не читався б — і саме пігулка дає ту «позначку»,
@@ -1520,3 +1537,105 @@ button.hm-card:active,
   .hm-appear { animation: none; }
   .hm-sk { animation: none; background: #E7E5E1; }
 }
+
+/* ── НАТЯК «ДЕТАЛЬНІШЕ» НА КАРТЦІ ЗБОРУ (17.08) ────────────────────────────
+   🔴 Тихий, а не кнопка. На картці вже є ВЕЛИКА бордова дія — «Посилання на
+   банку». Друга помітна кнопка поруч змагалася б із нею за увагу рівно там, де
+   людина вирішує про гроші. Тому цей рядок ледь видно: він потрібен тим, хто
+   шукає подробиці, і не заважає тим, хто вже вирішив. */
+.hm-fund-more {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 3px;
+  margin: 9px 0 0; padding: 6px 0;      /* вертикальні поля — під палець, не під око */
+  border: 0; background: transparent; cursor: pointer;
+  font: 600 12.5px/1.2 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .78);
+}
+.hm-fund-more:active { color: #fff; }
+.hm-fund-more-ch { display: inline-flex; }
+.hm-fund-more-ch svg { width: 14px; height: 14px; }
+
+/* ── МОДАЛКА ЗБОРУ ─────────────────────────────────────────────────────────
+   Аркуш `core/modal.js` — примітив уже вміє свайп-закриття, тап по фону і ✕.
+   🛑 Власного шару НЕ заводимо: у проєкті вже двічі коштувало роботи те, що
+   під фічу писали окремий свайп замість готового (модалка оголошення 02.08). */
+.app-modal--fund .fmod-ph {
+  margin: 0 0 14px; border-radius: var(--hm-r-card); overflow: hidden;
+  background: var(--board-press);
+}
+/* 16:9 через `aspect-ratio`, а не через відсотковий padding: висота відома до
+   завантаження знімка, тож вміст під ним не стрибає, коли фото приїде. */
+.app-modal--fund .fmod-ph img {
+  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+}
+.app-modal--fund .fmod-kind {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px 6px 9px; border-radius: var(--hm-r-pill);
+  background: var(--brand-grad-sm); color: #fff;
+  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.app-modal--fund .fmod-kind-ic { display: inline-flex; }
+.app-modal--fund .fmod-kind-ic svg { width: 14px; height: 14px; }
+.app-modal--fund .fmod-ttl {
+  margin: 10px 0 0;
+  font: 800 21px/1.22 system-ui, -apple-system, sans-serif;
+  letter-spacing: -.02em; color: var(--black);
+}
+/* 🔑 ОПИС БЕЗ ОБРІЗКИ — заради цього модалка й існує. На картці він у 2 рядки;
+   тут `-webkit-line-clamp` не ставимо НІ ЗА ЯКИХ УМОВ. */
+.app-modal--fund .fmod-note {
+  margin: 8px 0 0;
+  font: 400 14.5px/1.55 system-ui, -apple-system, sans-serif;
+  color: #3E434A; overflow-wrap: anywhere;
+}
+/* Рядки «ключ → значення». Список, а не сітка: значення бувають різної довжини
+   («Світлана Хамейко» проти «5 днів»), і колонки давали б рвані порожнечі. */
+.app-modal--fund .fmod-rows {
+  margin: 16px 0 0; border-radius: var(--hm-r-card);
+  background: var(--board-card); border: 1px solid var(--board-line);
+  overflow: hidden;
+}
+.app-modal--fund .fmod-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 11px 14px;
+}
+.app-modal--fund .fmod-row + .fmod-row { border-top: 1px solid var(--board-line); }
+.app-modal--fund .fmod-k {
+  flex: 0 0 auto;
+  font: 400 13px/1.35 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+.app-modal--fund .fmod-v {
+  min-width: 0; text-align: right; overflow-wrap: anywhere;
+  font: 700 14px/1.35 system-ui, -apple-system, sans-serif; color: var(--black);
+}
+.app-modal--fund .fmod-v--ok {
+  display: inline-flex; align-items: center; gap: 5px; color: #1D6B32;
+}
+.app-modal--fund .fmod-ok-ic { display: inline-flex; }
+.app-modal--fund .fmod-ok-ic svg { width: 15px; height: 15px; }
+
+/* Кнопка — єдина дія модалки, як і на картці. 52px = норма Apple HIG з запасом. */
+.app-modal--fund .fmod-go {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 18px 0 0; min-height: 52px; padding: 8px 14px;
+  border-radius: var(--hm-r-card);
+  background: var(--brand-grad-sm); color: #fff; text-decoration: none;
+  font: 800 clamp(12px, 3.6vw, 14.5px)/1.2 system-ui, -apple-system, sans-serif;
+  text-align: center;
+}
+.app-modal--fund .fmod-go:active { background: var(--brand-grad-press); }
+.app-modal--fund .fmod-go-ic { display: inline-flex; flex: 0 0 auto; }
+.app-modal--fund .fmod-go-ic svg { width: 18px; height: 18px; }
+.app-modal--fund .fmod-done {
+  margin: 18px 0 0; text-align: center;
+  font: 700 14px/1.4 system-ui, -apple-system, sans-serif; color: var(--black);
+}
+/* Межа відповідальності. Тихо, але повним реченням: це останній екран перед
+   тим, як людина віддасть гроші, і скорочувати тут нема чого. */
+.app-modal--fund .fmod-safe {
+  display: flex; align-items: flex-start; gap: 6px; margin: 12px 0 0;
+  font: 400 12px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+}
+.app-modal--fund .fmod-safe-ic { flex: 0 0 auto; display: inline-flex; margin-top: 1px; }
+.app-modal--fund .fmod-safe-ic svg { width: 13px; height: 13px; }

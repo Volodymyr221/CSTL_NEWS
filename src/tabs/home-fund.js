@@ -89,6 +89,7 @@
 import { escapeHtml } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 import { fetchFundraisers } from '../core/supabase.js';
+import { openModal } from '../core/modal.js';
 
 // Іконки категорій — ВЕКТОРНІ (правило Вови 05.08: емодзі в інтерфейсі не
 // лишаємо). Беремо з набору проєкту, нових не малюємо.
@@ -134,6 +135,13 @@ const dayDiff = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 864e5);
 // Копію картки НЕ робити: у проєкті вже двічі розходились дві копії того самого
 // (списки антиспаму, правила коментарів), і обидва рази симптом виглядав як
 // «на одному екрані працює, на іншому ні».
+// Останні завантажені збори за `id`. 🔑 Потрібен, щоб модалка малювалась із
+// ПОВНИХ даних, а не з того, що видно на картці: опис на картці обрізаний двома
+// рядками, і читати його назад із розмітки означало б показати ту саму обрізку.
+// ⚠️ `Map`, а не пошук по масиву: картку відкривають і з головної, і з екрана
+// «Збори», тобто список у двох місцях — спільний кеш тримає їх узгодженими.
+const _byId = new Map();
+
 export async function loadFundraisers() {
   try {
     // 🔴 ДЖЕРЕЛО — БАЗА, а не файл у git (переїзд 17.08, розбір у шапці й у
@@ -167,6 +175,8 @@ export async function loadFundraisers() {
     // правило за замовчуванням, але воно не знає контексту: коли громада збирає
     // на щось справді важливе, рішення «це зараз головне» приймає людина, а не
     // арифметика днів. За замовчуванням поле = 0, тобто правило 05.08 діє далі.
+    ok.forEach(it => _byId.set(String(it.id), it));
+
     return ok.sort((a, b) => {
       if (a.closed !== b.closed) return a.closed ? 1 : -1;
       const sa = Number(a.sort_order) || 0, sb = Number(b.sort_order) || 0;
@@ -262,7 +272,8 @@ export function fundCardHtml(it) {
   // фото, а не тло під літерами. У варіанті «1» такої вимоги не було — там
   // текст лежав на власній білій поверхні.
   return `
-    <article class="hm-card hm-fund${it.closed ? ' hm-fund--closed' : ''}">
+    <article class="hm-card hm-fund${it.photo ? ' hm-fund--photo' : ''}${it.closed ? ' hm-fund--closed' : ''}"
+             data-fund-id="${escapeHtml(String(it.id))}">
       ${it.photo ? `
       <img class="hm-fund-ph" src="${escapeHtml(it.photo)}" alt="" loading="lazy"
            onerror="this.remove()">` : ''}
@@ -275,6 +286,14 @@ export function fundCardHtml(it) {
         <div class="hm-fund-main">
           <h3 class="hm-fund-ttl">${escapeHtml(it.title)}</h3>
           ${it.note ? `<p class="hm-fund-note">${escapeHtml(it.note)}</p>` : ''}
+          <!-- 🔴 ЯВНИЙ НАТЯК, А НЕ «здогадайся сам». Картка відкривається тапом,
+               але без підпису про це ніхто не дізнається: на ній уже є ВЕЛИКА
+               помітна кнопка, і око читає її як єдину дію. Рядок дешевий, а
+               без нього подробиці збору лишились би недосяжними. -->
+          <button class="hm-fund-more" type="button">
+            Детальніше про збір
+            <span class="hm-fund-more-ch" aria-hidden="true">${ICONS.chevronRight}</span>
+          </button>
 
           ${panelHtml(it)}
           ${it.closed ? `
@@ -293,6 +312,111 @@ export function fundCardHtml(it) {
         </div>
       </div>
     </article>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// МОДАЛКА ЗБОРУ (17.08, замовлення Вови)
+//
+// 🔴 НАВІЩО. На картці опис обрізаний ДВОМА РЯДКАМИ, і людина не може дізнатись,
+// на що саме гроші, — а це головне питання перед донатом. Місця на картці немає:
+// вона стоїть на головній серед інших блоків. Модалка знімає обмеження, не
+// роздуваючи стрічку.
+//
+// ⚠️ ЧОМУ ЦЕ НЕ ПОРУШУЄ ПРАВИЛА «картка не є посиланням цілком» (05.08).
+// Те правило захищає від ВИПАДКОВОГО ТАПУ НА ПЛАТІЖНУ СТОРІНКУ: тап по картці
+// не має вести на чужу банку. Тут тап відкриває ПОДРОБИЦІ — сторінку, з якої
+// нікуди не списують гроші; на банку веде тільки бордова кнопка, і в модалці
+// теж вона одна. Тобто небезпечна дія лишилась рівно там, де була.
+//
+// 🔑 Дані беремо з `_byId`, а не з розмітки картки: у розмітці опис уже
+// обрізаний, і модалка показала б ту саму обрізку — тобто нічого не додала б.
+function fundModalHtml(it) {
+  const kind = KIND[it.kind] || KIND.community;
+  const goal = money(it.goal);
+  return `
+    ${it.photo ? `
+    <div class="fmod-ph">
+      <img src="${escapeHtml(it.photo)}" alt="" onerror="this.closest('.fmod-ph').remove()">
+    </div>` : ''}
+    <div class="fmod-kind">
+      <span class="fmod-kind-ic" aria-hidden="true">${kind.ic}</span>
+      ${escapeHtml(kind.label)}
+    </div>
+    <h3 class="fmod-ttl">${escapeHtml(it.title)}</h3>
+    ${it.note ? `<p class="fmod-note">${escapeHtml(it.note)}</p>` : ''}
+
+    <div class="fmod-rows">
+      <div class="fmod-row">
+        <span class="fmod-k">Збирає</span>
+        <span class="fmod-v">${escapeHtml(it.org)}</span>
+      </div>
+      ${goal ? `
+      <div class="fmod-row">
+        <span class="fmod-k">Ціль</span>
+        <span class="fmod-v">${goal}</span>
+      </div>` : ''}
+      ${it.place ? `
+      <div class="fmod-row">
+        <span class="fmod-k">Звідки збір</span>
+        <span class="fmod-v">${escapeHtml(it.place)}</span>
+      </div>` : ''}
+      ${!it.closed && it.left != null ? `
+      <div class="fmod-row">
+        <span class="fmod-k">До кінця</span>
+        <span class="fmod-v">${it.left === 0 ? 'останній день'
+          : `${it.left} ${plural(it.left, 'день', 'дні', 'днів')}`}</span>
+      </div>` : ''}
+      ${it.verified ? `
+      <div class="fmod-row">
+        <span class="fmod-k">Перевірка</span>
+        <span class="fmod-v fmod-v--ok">
+          <span class="fmod-ok-ic" aria-hidden="true">${ICONS.shieldCheck}</span>збір перевірено
+        </span>
+      </div>` : ''}
+    </div>
+
+    ${it.closed ? `
+    <p class="fmod-done">Збір завершено. Дякуємо всім, хто долучився.</p>` : `
+    <a class="fmod-go" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+      <span class="fmod-go-ic" aria-hidden="true">${ICONS.link}</span>
+      Посилання на банку Monobank
+    </a>`}
+    <!-- 🔴 Межа відповідальності — та сама мова, що на екрані «Збори» і в блоці
+         безпеки Дошки. Тут вона потрібна найбільше: це останній екран перед
+         тим, як людина віддасть гроші. -->
+    <p class="fmod-safe">
+      <span class="fmod-safe-ic" aria-hidden="true">${ICONS.lock}</span>
+      Кошти йдуть напряму на банку організатора. CSTL LIFE їх не приймає, не
+      зберігає і не є стороною збору.
+    </p>`;
+}
+
+export function openFundModal(id) {
+  const it = _byId.get(String(id));
+  // ⚠️ Немає в кеші — мовчимо. Це не «про всяк випадок»: збір міг зникнути між
+  // малюванням картки і тапом (адмін сховав), і показати порожню модалку про
+  // гроші гірше, ніж не показати нічого.
+  if (!it) return;
+  openModal({
+    title: 'Збір коштів',
+    className: 'app-modal--fund',
+    bodyHtml: fundModalHtml(it),
+  });
+}
+
+// Один делегат на контейнер. 🔑 Саме делегат, а не слухач на кожній картці:
+// список перемальовується цілком (`innerHTML`), і прямі слухачі злітали б.
+// ⚠️ Тап по КНОПЦІ БАНКИ сюди не доходить — `closest('.hm-fund-go')` відсікає
+// його першим. Інакше один тап і відкривав би модалку, і вів на платіжну
+// сторінку: рівно те, від чого застерігає правило 05.08.
+export function wireFundOpen(root) {
+  if (!root || root.dataset.fundWired) return;
+  root.dataset.fundWired = '1';
+  root.addEventListener('click', e => {
+    if (e.target.closest('.hm-fund-go')) return;
+    const card = e.target.closest('[data-fund-id]');
+    if (card) openFundModal(card.dataset.fundId);
+  });
 }
 
 export async function renderHomeFund() {
@@ -328,6 +452,7 @@ export async function renderHomeFund() {
   if (kicker) kicker.textContent = list.length > 1 ? 'Актуальні збори' : 'Актуальний збір';
 
   if (list.length > 1) wireFundDots(body);
+  wireFundOpen(body);
 }
 
 // Крапки під стрічкою — «скільки зборів і котрий зараз». На макеті вони є, і це
