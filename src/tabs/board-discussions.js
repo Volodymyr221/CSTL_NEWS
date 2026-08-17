@@ -68,9 +68,27 @@ let reactionsByPost = new Map();  // postId → { counts:{emoji:count}, my: emoj
 
 // Заповнення стану з renderBoard() (board.js). reactions опційний — fallback-шлях
 // (JSON без БД) скидає лише коментарі, як і до розділення файлів.
+// Чи приїхали відповіді. 🛑 Потрібно саме тому, що «0 відповідей» і «ще не
+// знаємо» — різні стани, а `answersCount()` віддає нуль на обидва.
+// ⚠️ Оголошено ДО споживача навмисно: у проєкті вже ловили TDZ на конст-імпортах
+// через наявний цикл board.js↔board-chat.js↔community-modal.js.
+let _dataReady = false;
+export function discussionsReady() { return _dataReady; }
+
 export function setDiscussionsData(comments, reactions) {
   if (comments)  commentsByPost  = comments;
   if (reactions) reactionsByPost = reactions;
+  if (comments) {
+    _dataReady = true;
+    // 🆕 17.08 — сигнал для капсули «НОВЕ» на Громаді: відповіді приїхали.
+    // 🔑 Навіщо подія, а не «спитати перед показом»: коментарі вантажить
+    // `renderBoard()` при старті застосунку, ПАРАЛЕЛЬНО з першим малюванням
+    // Громади. Тобто капсула питає «скільки відповідей» тоді, коли їх ще нема в
+    // памʼяті, і бачила б НУЛЬ у кожного питання — тобто оголосила б «без
+    // відповіді» геть усі. Тому вона не вгадує: поки даних нема, джерело питань
+    // мовчить, а ця подія кличе перемалювати.
+    window.dispatchEvent(new CustomEvent('cstl-discussions-data'));
+  }
 }
 
 function getLikeCount(postId) {

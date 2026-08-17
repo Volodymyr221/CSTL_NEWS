@@ -65,6 +65,29 @@ export function cardTitleText(p) {
   return clampChars((m ? m[0] : text).trim(), CARD_HEAD_MAX);
 }
 
+// ── «Востаннє відкривав Дошку» ───────────────────────────────────────────────
+// 🔴 17.08 — ключ для капсули «НОВЕ» на Громаді. Тримає ОДНЕ число: коли людина
+// востаннє заходила на вкладку Дошки. Нічого особистого, зникає з даними сайту.
+//
+// 🔑 Зроблено ТОЧНО ТАК САМО, як `cstl_news_seen_ts` у новинах, включно з
+// поведінкою першого запуску: **перший раз віддає 0, а не «17 нових»**. Людина,
+// яка щойно поставила застосунок, нічого не пропускала — для неї нове все, і
+// тривожне число за весь архів Дошки було б неправдою того самого ґатунку, що
+// «LIVE». Тому позначку ставимо одразу і мовчки.
+//
+// ⚠️ Живе в `core/`, а не в `tabs/board.js`, бо читає це Громада, а пише Дошка —
+// а `core` не має імпортувати з `tabs` (правило проти циклу, див. шапку файла).
+const BOARD_SEEN_KEY = 'cstl_board_seen_ts';
+
+export function boardSeenTs() {
+  const v = Number(localStorage.getItem(BOARD_SEEN_KEY) || 0);
+  return Number.isFinite(v) ? v : 0;
+}
+
+export function markBoardSeen() {
+  try { localStorage.setItem(BOARD_SEEN_KEY, String(Date.now())); } catch (_) {}
+}
+
 // ── Закладки: БД per-uid (saved_posts) — синхрон між пристроями ───────────────
 // savedIds тримаємо в пам'яті (заповнює renderBoard() через setSavedIds з
 // fetchSavedPostIds; вихід з акаунта скидає на порожній Set).

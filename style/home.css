@@ -756,30 +756,17 @@
   font: 700 9.5px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .11em; text-transform: uppercase; color: rgba(255, 255, 255, .82);
 }
-/* Рядок повідомлення. Саме він міняється в циклі, тому має власний перехід.
-   ⚠️ 200мс тут і `FADE_MS = 200` у home-caps.js мусять збігатися: скрипт
-   підміняє текст рівно на середині згасання, коли букв не видно. */
+/* Рядок повідомлення — ОДИН і СТАТИЧНИЙ.
+   🔴 17.08 — ЗВІДСИ ЗНЯТО ПЕРЕХІД І КРАПКИ ЦИКЛУ (рішення Вови).
+   Було: текст мінявся кожні 5.2 с (`.swap` + `FADE_MS` у скрипті), під ним
+   стояли крапки `.hm-cap2-dots` — скільки повідомлень у циклі і котре зараз.
+   Разом із циклом пішли обидва: анімувати нічого, рахувати теж.
+   ⚠️ `text-overflow: ellipsis` лишається і стає ВАЖЛИВІШИМ: у рядок тепер
+   потрапляє назва оголошення людини, і довга назва мусить обрізатись
+   трикрапкою, а не розпирати капсулу. */
 .hm-cap2-v {
   font: 600 15px/1.2 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: opacity 200ms var(--hm-ease), transform 200ms var(--hm-ease);
-}
-.hm-cap2-v.swap { opacity: 0; transform: translateY(-6px); }
-
-/* Крапки — скільки повідомлень у циклі і котре зараз. Активна витягується в
-   рисочку, а не просто світлішає: форму видно навіть краєм ока. */
-.hm-cap2-dots { display: flex; gap: 3px; margin-top: 5px; }
-.hm-cap2-dots i {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: rgba(255, 255, 255, .3);
-  transition: width 200ms var(--hm-ease), background 200ms var(--hm-ease), border-radius 200ms var(--hm-ease);
-}
-.hm-cap2-dots i.on { width: 10px; border-radius: 2px; background: rgba(255, 255, 255, .85); }
-
-/* Вимкнений рух — цикл не запускається взагалі (див. home-caps.js), а тут
-   знімаємо переходи, щоб нічого не «поїхало» навіть від зміни класу. */
-@media (prefers-reduced-motion: reduce) {
-  .hm-cap2-v, .hm-cap2-dots i { transition: none; }
 }
 
 /* ══ ЗБІР ═════════════════════════════════════════════════════════════════════
@@ -1058,10 +1045,11 @@
 .hm-ftrack::-webkit-scrollbar { display: none; }
 .hm-ftrack > .hm-fund { flex: 0 0 88%; scroll-snap-align: start; }
 
-/* Крапки — скільки зборів і котрий зараз. Форма та сама, що в капсул
-   (`.hm-cap2-dots`): активна ВИТЯГУЄТЬСЯ в рисочку, а не просто світлішає, —
-   форму видно навіть краєм ока. Копію правил не роблю навмисно: кольори тут
-   інші (крапки лежать на світлому тлі сторінки, а не на темній капсулі). */
+/* Крапки — скільки зборів і котрий зараз: активна ВИТЯГУЄТЬСЯ в рисочку, а не
+   просто світлішає, — форму видно навіть краєм ока.
+   ⚠️ Форму успадковано від крапок капсул (`.hm-cap2-dots`), яких із 17.08 уже
+   немає: капсули стали статичними, рахувати там нічого. Тут ротація лишилась
+   (збори гортаються пальцем), тому лишились і крапки. */
 .hm-fdots { display: flex; justify-content: center; gap: 5px; margin-top: var(--hm-s3); }
 .hm-fdots i {
   width: 5px; height: 5px; border-radius: 50%;
