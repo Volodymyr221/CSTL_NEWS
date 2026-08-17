@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-17T20:29:16.093378+03:00",
+  "fetched_at": "2026-08-17T20:57:53.356519+03:00",
   "date": "17.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5967,8 +5967,8 @@
       "carrier": "Володимир-Транс ТзОВ 43000",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5997,8 +5997,8 @@
       "carrier": "ТОВ \"Волиньекспрес\"",
       "bus": "Неоплан",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
