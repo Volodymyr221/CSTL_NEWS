@@ -1130,11 +1130,18 @@ export function openMyAds() {
       // Меню дій: «Редагувати» для активних/на модерації (Д-3); «Завершити» лише для
       // published; «Повернути» лише для closed; «Видалити» завжди.
       // Іконки — маленькі векторні (icons.js + локальний ICON_BACK), не емодзі.
-      const canEdit = p.status === 'published' || p.status === 'pending';
+      // 🔴 17.08 — ВІДХИЛЕНЕ ТЕПЕР ТЕЖ РЕДАГУЄТЬСЯ. Того ж дня житель уперше
+      // побачив ПРИЧИНУ відхилення — і одразу виявився глухий кут: продукт казав
+      // «ось що не так» і не давав це полагодити. Правка відхиленого відправляє
+      // оголошення на повторну модерацію (сторож у RPC — `update_board_post`).
+      // ⚠️ Дія називається інакше («Виправити і подати знову»), бо це ІНШИЙ намір:
+      // не «підправити дрібницю», а «відповісти на зауваження модератора».
+      const isRejected = p.status === 'rejected';
+      const canEdit = p.status === 'published' || p.status === 'pending' || isRejected;
       const mi = (act, icon, label, extra = '') =>
         `<button class="pm-ad-mi${extra}" type="button" data-act="${act}" data-id="${p.id}"><span class="pm-ad-mi-ic">${icon}</span>${label}</button>`;
       const menuItems = [
-        canEdit ? mi('edit', ICONS.pencil, 'Редагувати') : '',
+        canEdit ? mi('edit', ICONS.pencil, isRejected ? 'Виправити і подати знову' : 'Редагувати') : '',
         isPublished ? mi('close', ICONS.check, 'Завершити') : '',
         p.status === 'closed' ? mi('restore', ICON_BACK, 'Повернути в активні') : '',
         mi('delete', ICONS.trash, 'Видалити', ' pm-ad-mi--danger'),
