@@ -40,7 +40,7 @@ import { openLayer, closeLayer } from '../core/layers.js';
 import { openModal, closeModal } from '../core/modal.js';
 import { escapeHtml, showToast } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { loadFundraisers, fundCardHtml } from './home-fund.js';
+import { loadFundraisers, fundCardHtml, wireFundOpen } from './home-fund.js';
 import { submitFundraiserRequest, fetchMyFundraiserRequests } from '../core/supabase.js';
 import { isLoggedIn, requireAuth } from '../core/auth.js';
 
@@ -118,6 +118,9 @@ async function paintList(screen) {
     // Порожній стан ТУТ доречний, на відміну від головної: людина прийшла в
     // розділ навмисно, і «нічого немає» — це відповідь на її питання.
     : '<div class="fs-empty">Зараз активних зборів немає.</div>';
+  // Той самий делегат, що на головній — картка відкривається тапом і тут.
+  // 🛑 Другу копію обробника НЕ пишемо: одна поведінка картки на весь застосунок.
+  wireFundOpen(box);
 }
 
 // Мої заявки. 🔴 Людина мусить бачити, що сталося з її зверненням — інакше воно
