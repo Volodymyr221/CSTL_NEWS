@@ -692,3 +692,83 @@ export function isIOS() {
   return /iphone|ipad|ipod/i.test(ua)
       || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
 }
+
+
+// ── ОДИН РЯДОК, ЯКИЙ ГАРАНТОВАНО ВМІЩАЄТЬСЯ ─────────────────────────────────
+//
+// 🔴 17.08.2026, замовлення Вови: «в капсулу має влазити хоча б певна інформація,
+// а не обрізатися на половині». Заміряно на живому екрані (`.hm-cap2-v`,
+// `600 15px system-ui`): рядок капсули має **236px = 25 символів** звичайного
+// тексту на 390pt, **24** на 375pt і лише **17** на 320pt.
+//
+// 🛑 ЗВІДСИ ГОЛОВНЕ: стелю НЕ МОЖНА вписувати числом символів. Ті самі «40
+// символів» на великому телефоні лишать порожнє місце, а на малому обріжуть
+// половину слова. Міряти треба в ПІКСЕЛЯХ і живим шрифтом — тим, який реально
+// застосувався (кегль залежить ще й від масштабу шрифту в налаштуваннях iOS).
+//
+// 🔑 ПРИНЦИП: рядок не обрізається — він ВИБИРАЄ. Частини стоять у порядку
+// важливості; та, що не влазить, викидається ЦІЛКОМ. Обрізка по межі СЛОВА з «…»
+// — останній рубіж, і тільки для найважливішої частини. Різати посеред слова
+// дозволено лише коли одне слово саме довше за рядок (інакше вийшло б порожньо).
+//
+// ⚠️ Міряємо через `canvas.measureText`, а не вставкою у DOM: вставка змушує
+// браузер перерахувати розкладку на кожну пробу, а проб тут десятки на рендер.
+// Розрідження (`letter-spacing`) canvas НЕ враховує сам — додаємо руками, інакше
+// на КАПСОВІЙ мітці (розрідження 1.045px) промах був би до 30% ширини.
+
+let _measureCtx = null;
+function measureCtx() {
+  if (!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d');
+  return _measureCtx;
+}
+
+// Знімок шрифту вузла — усе, що потрібно, щоб міряти його текст без DOM.
+// Віддає null, якщо вузла немає або він ще не в документі (міряти нічого).
+export function lineMetrics(el) {
+  if (!el || !el.isConnected) return null;
+  const cs = getComputedStyle(el);
+  const width = el.getBoundingClientRect().width;
+  if (!width) return null;
+  return {
+    width,
+    font: `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} / ${cs.lineHeight} ${cs.fontFamily}`,
+    spacing: parseFloat(cs.letterSpacing) || 0,
+  };
+}
+
+// Ширина рядка в пікселях за знімком шрифту.
+export function textWidth(text, m) {
+  if (!text || !m) return 0;
+  const ctx = measureCtx();
+  ctx.font = m.font;
+  return ctx.measureText(text).width + m.spacing * text.length;
+}
+
+// Скласти рядок із частин так, щоб він УМІСТИВСЯ.
+//   parts — у порядку важливості: перша найпотрібніша, останню викидаємо першою.
+//   m     — знімок із `lineMetrics()`. Немає знімка → просто склеюємо все.
+// Повертає готовий рядок (може бути порожній, якщо частин немає).
+export function fitLine(parts, m, { sep = ' · ' } = {}) {
+  const list = (parts || []).map(p => String(p == null ? '' : p).trim()).filter(Boolean);
+  if (!list.length) return '';
+  if (!m) return list.join(sep);
+
+  // 1. Викидаємо найменш важливі частини, поки рядок не вміститься.
+  const кандидати = list.slice();
+  while (кандидати.length > 1 && textWidth(кандидати.join(sep), m) > m.width) кандидати.pop();
+  if (textWidth(кандидати.join(sep), m) <= m.width) return кандидати.join(sep);
+
+  // 2. Лишилась одна частина, і вона задовга — ріжемо ПО СЛОВАХ.
+  const слова = кандидати[0].split(/\s+/);
+  while (слова.length > 1) {
+    слова.pop();
+    const проба = слова.join(' ') + '…';
+    if (textWidth(проба, m) <= m.width) return проба;
+  }
+
+  // 3. Одне слово довше за рядок — тільки тут ріжемо символами.
+  //    Це не «здалися»: інакше капсула показала б порожнечу замість інформації.
+  let s = слова[0];
+  while (s.length > 1 && textWidth(s + '…', m) > m.width) s = s.slice(0, -1);
+  return s + '…';
+}

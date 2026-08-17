@@ -1071,10 +1071,11 @@ function renderAdReports(el) {
     const id = Number(b.dataset.repUnpublish);
     if (!confirm('Зняти це оголошення з публікації?')) return;
     b.disabled = true;
-    const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', id);
-    if (error) { b.disabled = false; return showToast('Помилка: ' + error.message, 4000); }
-    showToast('Оголошення знято з публікації');
-    await loadAll(); renderApp();
+    // Той самий шлях, що «Відхилити» в модерації — питає причину і пише її.
+    // ⚠️ Тут причина потрібна НАЙБІЛЬШЕ: оголошення вже було на Дошці, людина
+    // бачила його опублікованим, і зникнення без пояснення виглядає як збій.
+    await rejectPost(id, { запит: 'Чому знімаємо з публікації? Це побачить житель.\n\nМожна лишити порожнім.' });
+    b.disabled = false;
   }));
   el.querySelectorAll('[data-rep-delete]').forEach(b => {
     b.addEventListener('click', () => deletePost(Number(b.dataset.repDelete)));
@@ -1590,10 +1591,40 @@ async function approvePost(id) {
   await loadAll(); renderApp();
 }
 
-async function rejectPost(id) {
+// ── ВІДХИЛЕННЯ З ПРИЧИНОЮ — ОДНЕ МІСЦЕ ПРАВДИ (17.08.2026) ─────────────────
+//
+// 🔴 Навіщо: житель бачив у «Моїх оголошеннях» лише слово «Відхилено» і НЕ ЗНАВ
+// ЧОМУ — тобто не міг виправити й подати знову. Рішення Вови: варіант «Б» —
+// колонка `posts.reject_reason` + поле тут.
+//
+// 🔑 Чому одна функція на ТРИ кнопки («Відхилити» в модерації · «Зняти з
+// публікації» в опублікованих · те саме в картці поста): статус міняли три
+// окремі місця, і без спільної функції одне з них рано чи пізно лишилось би без
+// причини — а житель отримав би порожнє «відхилено» знову, тільки зрідка.
+//
+// ⚠️ ПРИЧИНА НЕ ОБОВʼЯЗКОВА. Порожній рядок = відхилити без пояснення: змусити
+// адміна писати текст означало б, що при поспіху модерація просто спиниться.
+// Скасування діалогу (Esc / «Скасувати») — це «нічого не роби», пост не чіпаємо.
+async function rejectPost(id, { запит = 'Чому відхиляємо? Це побачить житель у «Моїх оголошеннях».\n\nМожна лишити порожнім.' } = {}) {
+  const причина = prompt(запит, '');
+  if (причина === null) return;                      // скасував — не відхиляємо
+  const текст = причина.trim().slice(0, 300);        // стеля дзеркалить constraint у БД
+
+  // 🛑 ДВА КРОКИ, і це не надмірність: колонка `reject_reason` живе окремою
+  // міграцією (`scripts/supabase_reject_reason.sql`), і поки її не накатали,
+  // запит із цим полем падає ЦІЛКОМ — тобто модерація перестала б працювати
+  // взагалі. Тому спершу робимо головну дію, і лише потім, окремо, дописуємо
+  // причину; не вдалося — кажемо про це вголос, а не мовчимо.
   const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', id);
   if (error) return showToast('Помилка: ' + error.message, 4000);
-  showToast('Відхилено');
+
+  if (текст) {
+    const { error: e2 } = await supa.from('posts').update({ reject_reason: текст }).eq('id', id);
+    if (e2) showToast('Відхилено, але причину не збережено: ' + e2.message, 5000);
+    else showToast('Відхилено · причину збережено');
+  } else {
+    showToast('Відхилено');
+  }
   await loadAll(); renderApp();
 }
 
@@ -1636,10 +1667,9 @@ function renderPublished(el) {
 
   el.querySelectorAll('[data-unpublish]').forEach(b => b.addEventListener('click', async () => {
     if (!confirm('Зняти пост з публікації (зробити rejected)?')) return;
-    const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', Number(b.dataset.unpublish));
-    if (error) return showToast('Помилка: ' + error.message, 4000);
-    showToast('Знято з публікації');
-    await loadAll(); renderApp();
+    // Спільний шлях із «Відхилити» — інакше саме тут причина й губилась би.
+    await rejectPost(Number(b.dataset.unpublish),
+      { запит: 'Чому знімаємо з публікації? Це побачить житель.\n\nМожна лишити порожнім.' });
   }));
   el.querySelectorAll('[data-delete-pub]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePub))));
 }

@@ -1105,6 +1105,18 @@ export function openMyAds() {
       const cat = p.category ? `${escapeHtml(p.category)} · ` : '';
       const isPublished = p.status === 'published';
 
+      // 🔴 17.08 — ПРИЧИНА ВІДХИЛЕННЯ ТУТ, А НЕ ЛИШЕ В КАПСУЛІ НА ГОЛОВНІЙ.
+      // Капсула веде саме на цей екран, і якби причина була тільки в ній, людина
+      // прочитала б пояснення один раз, тапнула — і опинилась на екрані, де знову
+      // просто «відхилено». Тобто тап забирав би інформацію.
+      // ⚠️ Поле `reject_reason` може бути порожнім двома законними шляхами:
+      // міграцію (`scripts/supabase_reject_reason.sql`) ще не накатали або адмін
+      // причини не вписав. Тоді рядка просто немає — не «причина: —».
+      const reason = (p.status === 'rejected' && p.reject_reason || '').trim();
+      const reasonRow = reason
+        ? `<span class="pm-ad-reason">${escapeHtml(reason)}</span>`
+        : '';
+
       // Бейдж звернень + кнопка підняти — тільки для активних published
       let actionsRow = '';
       if (isPublished) {
@@ -1118,11 +1130,18 @@ export function openMyAds() {
       // Меню дій: «Редагувати» для активних/на модерації (Д-3); «Завершити» лише для
       // published; «Повернути» лише для closed; «Видалити» завжди.
       // Іконки — маленькі векторні (icons.js + локальний ICON_BACK), не емодзі.
-      const canEdit = p.status === 'published' || p.status === 'pending';
+      // 🔴 17.08 — ВІДХИЛЕНЕ ТЕПЕР ТЕЖ РЕДАГУЄТЬСЯ. Того ж дня житель уперше
+      // побачив ПРИЧИНУ відхилення — і одразу виявився глухий кут: продукт казав
+      // «ось що не так» і не давав це полагодити. Правка відхиленого відправляє
+      // оголошення на повторну модерацію (сторож у RPC — `update_board_post`).
+      // ⚠️ Дія називається інакше («Виправити і подати знову»), бо це ІНШИЙ намір:
+      // не «підправити дрібницю», а «відповісти на зауваження модератора».
+      const isRejected = p.status === 'rejected';
+      const canEdit = p.status === 'published' || p.status === 'pending' || isRejected;
       const mi = (act, icon, label, extra = '') =>
         `<button class="pm-ad-mi${extra}" type="button" data-act="${act}" data-id="${p.id}"><span class="pm-ad-mi-ic">${icon}</span>${label}</button>`;
       const menuItems = [
-        canEdit ? mi('edit', ICONS.pencil, 'Редагувати') : '',
+        canEdit ? mi('edit', ICONS.pencil, isRejected ? 'Виправити і подати знову' : 'Редагувати') : '',
         isPublished ? mi('close', ICONS.check, 'Завершити') : '',
         p.status === 'closed' ? mi('restore', ICON_BACK, 'Повернути в активні') : '',
         mi('delete', ICONS.trash, 'Видалити', ' pm-ad-mi--danger'),
@@ -1138,6 +1157,7 @@ export function openMyAds() {
               <div class="pm-ad-info">
                 <span class="pm-ad-title">${title}</span>
                 <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}"><span class="pm-ad-status-ic">${meta.icon}</span>${escapeHtml(meta.label)}</span></span>
+                ${reasonRow}
               </div>
               <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
             </div>
@@ -1654,6 +1674,9 @@ export async function refreshUnreadBadge() {
     if (_unreadTop && ts <= _unreadTop.ts) continue;
     _unreadTop = {
       threadId: t.id,
+      // Про яке оголошення розмова. Назву капсула тягне сама (fetchPostBrief) —
+      // тут лишається тільки посилання, щоб бейджі не платили за назву запитом.
+      postId: t.post_id ?? null,
       name: (uid === t.author_uid ? t.buyer_name : t.author_name) || 'Житель',
       text: (t.last_message_text || '').trim(),
       ts,
