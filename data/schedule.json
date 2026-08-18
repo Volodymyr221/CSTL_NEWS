@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "18.08.2026",
-  "updatedTime": "14:28",
+  "updatedTime": "14:53",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -3236,7 +3236,7 @@
         }
       ],
       "fetchedAt": "18.08.2026",
-      "fetchedTime": "14:28"
+      "fetchedTime": "14:53"
     },
     "2026-08-19": {
       "routes": [
@@ -4311,8 +4311,8 @@
           "carrier": "мохнюк_т_с_волинська_обл",
           "bus": "БОГДАН А0902",
           "days": "щодня",
-          "status": "cancelled",
-          "sale_active": false,
+          "status": "scheduled",
+          "sale_active": true,
           "departure_time": "16:40",
           "arrival_time": "18:30",
           "duration_min": 110,
@@ -4842,7 +4842,7 @@
         }
       ],
       "fetchedAt": "18.08.2026",
-      "fetchedTime": "14:28"
+      "fetchedTime": "14:53"
     },
     "2026-08-20": {
       "routes": [

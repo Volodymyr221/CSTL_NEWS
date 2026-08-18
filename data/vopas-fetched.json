@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-18T14:28:27.381442+03:00",
+  "fetched_at": "2026-08-18T14:53:56.390603+03:00",
   "date": "18.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -3507,8 +3507,8 @@
       "carrier": "Приходько Н.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ 303",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3522,8 +3522,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3537,8 +3537,8 @@
       "carrier": "Гламазда В.В. Волинська обл.",
       "bus": "ІВЕКО ТУРБ DAІLV3510",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3552,8 +3552,8 @@
       "carrier": "Процик О.Є.-",
       "bus": "МЕРСЕДЕС-БЕНЦ 413C",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3567,9 +3567,9 @@
       "carrier": "Потапчук В.І.-",
       "bus": "ПАЗ-4234",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -3582,8 +3582,8 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3597,8 +3597,8 @@
       "carrier": "Величко  М.П. 14",
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -3612,8 +3612,8 @@
       "carrier": "\"АВТО-ЕКСПЕРТ\"",
       "bus": "І-VAN A-07A -22",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -4452,9 +4452,9 @@
       "carrier": "під.Хайчевський О.В.",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
