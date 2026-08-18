@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "18.08.2026",
-  "updatedTime": "12:37",
+  "updatedTime": "13:31",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -2220,7 +2220,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -2312,7 +2312,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:05",
           "arrival_time": "14:30",
           "duration_min": 85,
@@ -2354,7 +2354,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:30",
           "arrival_time": "14:42",
           "duration_min": 72,
@@ -2705,8 +2705,8 @@
           "carrier": "мохнюк_т_с_волинська_обл",
           "bus": "БОГДАН А0902",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "16:40",
           "arrival_time": "18:30",
           "duration_min": 110,
@@ -3236,7 +3236,7 @@
         }
       ],
       "fetchedAt": "18.08.2026",
-      "fetchedTime": "12:37"
+      "fetchedTime": "13:31"
     },
     "2026-08-19": {
       "routes": [
@@ -4311,8 +4311,8 @@
           "carrier": "мохнюк_т_с_волинська_обл",
           "bus": "БОГДАН А0902",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "16:40",
           "arrival_time": "18:30",
           "duration_min": 110,
@@ -4842,7 +4842,7 @@
         }
       ],
       "fetchedAt": "18.08.2026",
-      "fetchedTime": "12:37"
+      "fetchedTime": "13:31"
     },
     "2026-08-20": {
       "routes": [
