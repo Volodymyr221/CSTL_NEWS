@@ -10,46 +10,34 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-17 21:58 UTC
+**Зріз на:** 2026-08-18 04:17 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-f07n62` |
-| останній коміт людини | `0b5973b3` 17.08 21:57 — merge: origin/main (squash PR #947) — код і документи з гілки, дані парсерів з main |
+| останній коміт людини | `e2e2830b` 18.08 04:17 — db: обидві міграції накатано на прод і доведено на живій базі |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260817-2151` |
-| останній PR у `main` | #947 |
+| останній PR у `main` | #948 |
 | стендів на диску | 83 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-08-17 | є ✅ |
+| журнал за 2026-08-18 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-17b.md`
-- `admin.html`
-- `bundle.js`
 - `scripts/supabase_board_edit_rejected.sql`
 - `scripts/supabase_reject_reason.sql`
-- `src/core/supabase.js`
-- `src/core/utils.js`
-- `src/tabs/board-chat.js`
-- `src/tabs/home-caps.js`
-- `style/home.css`
-- `style/messages.css`
-- `sw.js`
-- `tests/board-owner.mjs`
-- `tests/home-caps.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `e2e2830b` 18.08 04:17 — db: обидві міграції накатано на прод і доведено на живій базі
+- `e8dd75e4` 17.08 21:58 — docs: авто-блок пульсу після злиття з main
 - `0b5973b3` 17.08 21:57 — merge: origin/main (squash PR #947) — код і документи з гілки, дані парсерів з main
 - `087af224` 17.08 21:53 — feat(board): відхилене оголошення можна виправити і подати знову
 - `afb25ea1` 17.08 21:46 — docs: авто-блок пульсу після стиснення
-- `d5d7ca06` 17.08 21:45 — docs: пульс стиснуто під бюджет 16 KB (сторож docs-fresh)
-- `97d5b925` 17.08 21:25 — docs: пульс, літопис і CLAUDE.md — контекст у капсулах, fitLine, міграція причини
 
 <!-- AUTO:END -->---
 
