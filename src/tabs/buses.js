@@ -1082,12 +1082,25 @@ export function renderRouteMapV4(route, timings) {
     ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>`
     : '';
 
-  const dotsHtml = stops.map(s => {
-    const dotPct  = totalKm ? (s.km / totalKm) * 100 : 0;
+  // 🔴 18.08 — КРАПКИ ДІЛЯТЬСЯ НА ДВІ КУПИ, І ЦЕ НЕ КОСМЕТИКА РОЗМІТКИ.
+  // Скарга Вови: «кружечок накладений на шкалу, він прозорий трохи і видно що
+  // він накладений». Заміряно: прозора крапка поверх прозорої смуги давала
+  // всередині себе світлішу перемичку +29 пунктів яскравості.
+  // Лікує це `opacity` на ГРУПІ `.bhv4-rail` (докладно — у style/buses.css), а
+  // група працює лише тоді, коли її діти НЕПРОЗОРІ. Тому всередину групи йдуть
+  // тільки МАЙБУТНІ крапки (вони білі), а пройдені лишаються назовні: вони
+  // зелені й непрозорі, накладання їм не шкодить, а в групі вони б поблідли.
+  const майбутні = [];
+  const пройдені = [];
+  stops.forEach(s => {
+    const dotPct   = totalKm ? (s.km / totalKm) * 100 : 0;
     const isPassed = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
-    return `<span class="bhv4-dot${isPassed ? ' bhv4-dot--passed' : ''}"
+    const крапка = `<span class="bhv4-dot${isPassed ? ' bhv4-dot--passed' : ''}"
                   style="left:${dotPct.toFixed(1)}%"></span>`;
-  }).join('');
+    (isPassed ? пройдені : майбутні).push(крапка);
+  });
+  const railHtml = `<span class="bhv4-rail"><span class="bhv4-rail-line"></span>${майбутні.join('')}</span>`;
+  const dotsHtml = пройдені.join('');
 
   const labelsHtml =
     `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span>` +
@@ -1097,6 +1110,7 @@ export function renderRouteMapV4(route, timings) {
     <div class="bhv4-map" aria-hidden="true">
       <div class="bhv4-labels bhv4-dyn">${labelsHtml}</div>
       <div class="bhv4-track">
+        ${railHtml}
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
         ${movingDot}
@@ -1428,29 +1442,18 @@ function switchHeroCard() {
       nextEl.textContent = nextContent;
     }
 
-    // Мітки А і Б на прогрес-шкалі (завжди повний маршрут)
-    const labelsEl = card.querySelector('.bhv4-labels');
-    if (labelsEl) {
-      labelsEl.innerHTML =
-        `<span class="bhv4-label bhv4-label--a">${escapeHtml(routeA.toUpperCase())}</span>` +
-        `<span class="bhv4-label bhv4-label--b">${escapeHtml(routeB.toUpperCase())}</span>`;
-    }
-
-    // Шкала прогресу — трек (сіра лінія) статичний, міняємо тільки fill і крапки
+    // 🔴 18.08 — ШКАЛА ПЕРЕМАЛЬОВУЄТЬСЯ ОДНІЄЮ ФУНКЦІЄЮ, А НЕ ДРУГОЮ КОПІЄЮ.
+    // Тут лежала ВЛАСНА копія розмітки шкали і власна копія міток А/Б — тобто
+    // те саме будувалось у двох місцях. Спіймано 18.08 при лікуванні накладання
+    // крапок: `renderRouteMapV4` навчився класти смугу в групу `.bhv4-rail`, а
+    // ця копія про групу не знала — і після ПЕРШОГО ж тіку шкала не просто
+    // повернула б дефект, а лишилась би зовсім без смуги (фон `.bhv4-track`
+    // тепер прозорий, смугу малює `.bhv4-rail-line` усередині групи).
+    // 🔑 Це рівно та хвороба, від якої в проєкті вже застерігали двічі
+    // (списки антиспаму, правила Дошки): дві копії того самого мовчки
+    // розходяться. Тепер джерело розмітки одне.
     const mapOuter = card.querySelector('.bhv4-map-outer');
-    if (mapOuter) {
-      const pct = (timings.progress * 100).toFixed(1);
-      const totalKm = route.stops[route.stops.length - 1].km || 1;
-      const movingDot = timings.state === 'enroute'
-        ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : '';
-      const dotsHtml = route.stops.map(s => {
-        const dp = totalKm ? (s.km / totalKm) * 100 : 0;
-        const passed = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
-        return `<span class="bhv4-dot${passed ? ' bhv4-dot--passed' : ''}" style="left:${dp.toFixed(1)}%"></span>`;
-      }).join('');
-      const track = mapOuter.querySelector('.bhv4-track');
-      if (track) track.innerHTML = `<div class="bhv4-fill" style="width:${pct}%"></div>${dotsHtml}${movingDot}`;
-    }
+    if (mapOuter) mapOuter.innerHTML = renderRouteMapV4(route, timings);
 
     renderRouteList();
 
