@@ -1398,8 +1398,9 @@
         <span class="hm-wx-now" aria-hidden="true">${M.icon}</span>
         <div class="hm-wx-t">${y}°</div>
         <div class="hm-wx-txt">
-          <div class="hm-wx-desc">${p(M.text)}</div>
-          <div class="hm-wx-sub"><span class="hm-wx-when">Сьогодні · </span>${w}° / ${$}°</div>
+          <div class="hm-wx-when">Сьогодні</div>
+          <div class="hm-wx-sub"><span class="hm-wx-desc">${p(M.text)}</span><span
+            class="hm-wx-mm"> · ${w}°/${$}°</span></div>
         </div>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
