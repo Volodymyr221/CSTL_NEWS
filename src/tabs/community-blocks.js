@@ -297,8 +297,9 @@ export async function renderWeatherBlock() {
         <span class="hm-wx-now" aria-hidden="true">${info.icon}</span>
         <div class="hm-wx-t">${temp}°</div>
         <div class="hm-wx-txt">
-          <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
-          <div class="hm-wx-sub"><span class="hm-wx-when">Сьогодні · </span>${tMinToday}° / ${tMaxToday}°</div>
+          <div class="hm-wx-when">Сьогодні</div>
+          <div class="hm-wx-sub"><span class="hm-wx-desc">${escapeHtml(info.text)}</span><span
+            class="hm-wx-mm"> · ${tMinToday}°/${tMaxToday}°</span></div>
         </div>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
