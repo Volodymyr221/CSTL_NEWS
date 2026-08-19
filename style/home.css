@@ -494,7 +494,15 @@
 .hm-wx-desc { font: 400 13.5px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-wx-sub  { font: 400 13px/1.3 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .72); margin-top: 2px;
-              white-space: nowrap; }
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 🔴 19.08 — «СЬОГОДНІ» В КОМПАКТНОМУ РЯДКУ. Скарга Вови: «неясно, що за день,
+   яке число, це сьогодні, понеділок?». Дата в шапці була («ВІВТОРОК · 19 СЕРПНЯ»),
+   але вона тиха, стоїть над привітанням і аватаром і читається як дата
+   ЗАСТОСУНКУ, а не як день, про який ця погода.
+   📐 Ширини це не коштує: колонку задає найдовший опис («Мінлива хмарність»,
+   133px), а «Сьогодні · 14° / 24°» при 13px ≈ 118px — тобто новий рядок вужчий
+   за той, що вже є, і жодного пікселя не додає. */
+.hm-wx-when { font-weight: 600; color: rgba(255, 255, 255, .9); }
 
 /* 🔴 08.08 — АДАПТИВНА ПОГОДА. Заміряно по РЕАЛЬНИХ ширинах пристроїв, скільки
    вільного місця лишається в рядку «градуси · опис · капсула НП»:
@@ -752,11 +760,19 @@
    🔑 Тап по рядку працює як працював — `openWeatherDayModal(i)`, та сама модалка
    по годинах зі скрабером. Змінилась форма рядка, не його дія. */
 .hm-wx-days { display: flex; flex-direction: column; gap: 1px; }
+/* 🔴 19.08, друга редакція — КОЛОНКИ ПІД СМУЖКУ ДІАПАЗОНУ.
+   Перший варіант ставив у кінці рядка два числа поруч («24° 14°»), і Вова
+   справедливо спитав, чи це найкраще: сім таких рядків це 14 чисел стовпчиком,
+   які треба прочитати й порівняти в голові.
+   📐 Тепер порядок колонок читається як речення: КОЛИ · ЯКОГО ЧИСЛА · ЩО НА НЕБІ ·
+   ЧИ БУДЕ ДОЩ · ВІД скількох · [смужка] · ДО скількох.
+   ⚠️ Смужка бере `1fr` — усе, що лишилось; решта колонок мають свою природну
+   ширину, тож на вужчому екрані стискається саме смужка, а не числа. */
 .hm-wx-day {
   appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
   display: grid; align-items: center;
-  grid-template-columns: minmax(58px, auto) auto 26px 1fr auto;
-  gap: 8px; width: 100%; text-align: left;
+  grid-template-columns: minmax(52px, auto) auto 24px auto auto minmax(28px, 1fr) auto;
+  gap: 7px; width: 100%; text-align: left;
   padding: 7px 8px; border-radius: 10px; color: rgba(255, 255, 255, .8);
 }
 .hm-wx-day:active { background: rgba(255, 255, 255, .12); }
@@ -764,18 +780,41 @@
 .hm-wx-wd   { font: 600 13px/1.15 system-ui, -apple-system, sans-serif; }
 /* Дата тиха: вона уточнює підпис дня, а не змагається з ним. */
 .hm-wx-date { font: 400 12px/1.15 system-ui, -apple-system, sans-serif; opacity: .6; }
-/* Стан ховається на найвужчих екранах — він єдиний тут необовʼязковий
-   («якщо для нього достатньо місця» — слова замовлення). Числа і дата не
-   ховаються ніколи. */
-.hm-wx-state {
-  font: 400 12.5px/1.2 system-ui, -apple-system, sans-serif; opacity: .72;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+/* 🔄 19.08 — ТЕКСТОВОГО СТАНУ В РЯДКУ БІЛЬШЕ НЕМАЄ, і це свідомий обмін.
+   Слово «Мінлива хмарність» коштувало ~90px і повторювало те, що вже сказала
+   іконка поруч. На ті самі пікселі стали дві речі, яких іконка сказати не може:
+   ймовірність дощу числом і смужка діапазону.
+   🛑 Для читача екрана стан НЕ втрачено — він лишився в `aria-label` рядка
+   («Чт 20.08, Дощ, від 13 до 21 градусів, ймовірність опадів 55 відсотків»).
+   Тобто зникла ДУБЛЬОВАНА подача, а не сама інформація. */
+
+/* Ймовірність опадів. Порожній варіант зберігає колонку, щоб числа й смужки в
+   сусідніх рядках стояли одне під одним — інакше рядок без дощу «зʼїжджав» би. */
+.hm-wx-rain {
+  display: inline-flex; align-items: center; gap: 3px;
+  font: 600 11.5px/1 system-ui, -apple-system, sans-serif;
+  color: #cfe4ff; min-width: 38px;
 }
-@media (max-width: 359px) { .hm-wx-state { display: none; } }
-/* Макс і мін завжди в одній колонці справа, вирівняні по правому краю: так
-   стовпчик градусів читається згори вниз як стовпчик, а не як рвана межа. */
-.hm-wx-mm   { display: inline-flex; align-items: baseline; gap: 6px; justify-self: end; }
-.hm-wx-min  { font: 400 13px/1 system-ui, -apple-system, sans-serif; opacity: .6; }
+.hm-wx-rain svg { width: 13px; height: 13px; }
+.hm-wx-rain--none { min-width: 38px; }
+
+/* Смужка діапазону. Доріжка — тьмяна, заповнення — від мінімуму дня до його
+   максимуму на шкалі ТИЖНЯ. Позиція задається в JS через left/right у відсотках:
+   так один елемент показує і де день починається, і де закінчується. */
+.hm-wx-bar {
+  position: relative; height: 4px; border-radius: 2px;
+  background: rgba(255, 255, 255, .18);
+}
+.hm-wx-bar-fill {
+  position: absolute; top: 0; bottom: 0; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .55), #fff);
+  min-width: 3px;
+}
+/* Мінімум ліворуч від смужки, максимум праворуч — числа стоять там, де їх
+   показує сама смужка, а не збоку списком. Обидва вирівняні по правому краю
+   своєї колонки, тож згори вниз читаються як два рівні стовпчики. */
+.hm-wx-min  { font: 400 13px/1 system-ui, -apple-system, sans-serif; opacity: .6;
+              justify-self: end; min-width: 26px; text-align: right; }
 /* 🔴 08.08 — ІКОНКИ ДНІВ ПОБІЛЬШАЛИ 15 → 21px. Вова: «можна трішки їх зробити
    більшими, тому що їх погано видно… і можливо чіткішими».
    📐 Ціна порахована, а не вгадана: комірка дня це колонка
@@ -787,7 +826,8 @@
    Тобто «чіткість» тут купується РОЗМІРОМ, іншого важеля в цих іконках немає. */
 .hm-wx-icon { font-size: 24px; line-height: 0; display: inline-flex; }
 .hm-wx-icon .wx-ic, .hm-wx-icon img { width: 1em; height: 1em; display: block; }
-.hm-wx-max  { font: 700 15px/1 system-ui, -apple-system, sans-serif; }
+.hm-wx-max  { font: 700 15px/1 system-ui, -apple-system, sans-serif;
+              justify-self: end; min-width: 30px; text-align: right; }
 
 /* Скелет погоди — та сама висота, що готовий блок, інакше шапка сіпнеться,
    коли прийдуть дані. */
@@ -812,6 +852,17 @@
   .hm-wx-main { gap: 5px; }
   .hm-wx-place { padding: 6px 8px; }
   .hm-wx-toggle { width: 30px; height: 30px; }
+}
+
+/* 🔴 19.08 — НА ≤374px СЛОВО «СЬОГОДНІ» ХОВАЄТЬСЯ, ЧИСЛА ЛИШАЮТЬСЯ.
+   📐 Заміряно: на 320px колонці тексту дістається 82px, а «Сьогодні · 14° / 24°»
+   це ≈110px — обрізало САМЕ ХВІСТ, тобто максимальну температуру («Сьогодні ·
+   14° / 2…»). Втратити число гірше, ніж втратити слово: числа тут і є зміст, а
+   день на цих екранах лишається в шапці над віджетом.
+   🛑 Роздільник « · » живе ВСЕРЕДИНІ span-а навмисно — інакше, сховавши слово, ми
+   лишили б рядок, що починається з крапки. */
+@media (max-width: 374px) {
+  .hm-wx-when { display: none; }
 }
 
 /* 🔴 19.08 — НАЙВУЖЧІ ЕКРАНИ (≤374px, iPhone SE). Заміряно приладом: до цієї

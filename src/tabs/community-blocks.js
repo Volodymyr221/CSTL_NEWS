@@ -195,6 +195,11 @@ export async function renderWeatherBlock() {
     // ⚠️ Змінилась ЛИШЕ подача. Кеш `_wxData`, ряд 7 днів і перехід
     // `openWeatherDayModal(i)` — ті самі, тому модалка по годинах зі скрабером
     // працює як працювала. Саме тому id контейнера лишився `cm-weather-content`.
+    // Межі тижня — спільна шкала для всіх смужок. Саме тому смужки можна
+    // порівнювати між собою: у кожної однаковий нуль і однакова стеля.
+    const тижМін = Math.round(Math.min(...day.temperature_2m_min));
+    const тижМакс = Math.round(Math.max(...day.temperature_2m_max));
+
     const forecastHtml = day.time.map((dateStr, i) => {
       const d = new Date(dateStr + 'T00:00:00');
       // 🔴 08.08 — СЬОГОДНІШНІЙ ДЕНЬ ПІДПИСАНИЙ ТАК САМО, ЯК РЕШТА.
@@ -224,6 +229,27 @@ export async function renderWeatherBlock() {
       const dayInfo = weatherCodeInfo(кодДня);
       const tMax = Math.round(day.temperature_2m_max[i]);
       const tMin = Math.round(day.temperature_2m_min[i]);
+      // 🔴 19.08 — СМУЖКА ДІАПАЗОНУ. Скарга Вови на перший варіант списку по суті
+      // була про те, що це «14 чисел стовпчиком»: щоб зрозуміти, коли похолодає,
+      // доводиться прочитати їх усі й порівняти в голові. Смужка масштабована на
+      // мінімум і максимум ТИЖНЯ, тож «у пʼятницю тепліше» видно за формою, не
+      // читаючи. Око порівнює довжину швидше за цифри — тому так роблять і Apple,
+      // і Google.
+      // 📐 Рахується з тих самих чисел, що вже прийшли; жодного нового поля.
+      // ⚠️ Захист від ділення на нуль: якщо тиждень рівний (розмах 0), смужка
+      // малюється повною — це чесніше, ніж NaN у стилі.
+      const розмах = тижМакс - тижМін || 1;
+      const відс = v => Math.round(((v - тижМін) / розмах) * 100);
+      const лівий = відс(tMin);
+      const правий = відс(tMax);
+      // Ймовірність опадів дня — максимум серед годин цієї доби. Дані вже є в
+      // тій самій відповіді (`hourly.precipitation_probability`), ми їх просто не
+      // показували. 🛑 Нижче 30% не малюємо нічого: 10-20% це шум, а не прогноз,
+      // і рядок від нього лише рябіє.
+      const дощ = ймовірністьОпадівДня(data, dateStr);
+      const дощHtml = дощ >= 30
+        ? `<span class="hm-wx-rain">${ICONS.droplet}<span>${дощ}%</span></span>`
+        : '<span class="hm-wx-rain hm-wx-rain--none" aria-hidden="true"></span>';
       // 🔴 19.08 — «СЬОГОДНІ» СЛОВОМ, І ЦЕ НЕ ВІДКІТ РІШЕННЯ 08.08.
       // Тоді підпис скоротили до `Нд`, бо клітинки стояли РЯДОМ по горизонталі в
       // сімох вузьких колонках, і довге слово серед двобуквених читалось як
@@ -234,12 +260,16 @@ export async function renderWeatherBlock() {
       const дата = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
       return `
         <button type="button" class="hm-wx-day${i === 0 ? ' hm-wx-day--today' : ''}" data-wx-day="${i}"
-                aria-label="${escapeHtml(підпис)} ${дата}, ${escapeHtml(dayInfo.text)}, від ${tMin} до ${tMax} градусів">
+                aria-label="${escapeHtml(підпис)} ${дата}, ${escapeHtml(dayInfo.text)}, від ${tMin} до ${tMax} градусів${дощ >= 30 ? `, ймовірність опадів ${дощ} відсотків` : ''}">
           <span class="hm-wx-wd">${escapeHtml(підпис)}</span>
           <span class="hm-wx-date">${дата}</span>
           <span class="hm-wx-icon">${dayInfo.icon}</span>
-          <span class="hm-wx-state">${escapeHtml(dayInfo.text)}</span>
-          <span class="hm-wx-mm"><span class="hm-wx-max">${tMax}°</span><span class="hm-wx-min">${tMin}°</span></span>
+          ${дощHtml}
+          <span class="hm-wx-min">${tMin}°</span>
+          <span class="hm-wx-bar" aria-hidden="true">
+            <span class="hm-wx-bar-fill" style="left:${лівий}%;right:${100 - правий}%"></span>
+          </span>
+          <span class="hm-wx-max">${tMax}°</span>
         </button>
       `;
     }).join('');
@@ -268,7 +298,7 @@ export async function renderWeatherBlock() {
         <div class="hm-wx-t">${temp}°</div>
         <div class="hm-wx-txt">
           <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
-          <div class="hm-wx-sub">${tMinToday}° / ${tMaxToday}°</div>
+          <div class="hm-wx-sub"><span class="hm-wx-when">Сьогодні · </span>${tMinToday}° / ${tMaxToday}°</div>
         </div>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
@@ -307,6 +337,24 @@ export async function renderWeatherBlock() {
     el.classList.remove('hm-wx--loading');
     el.innerHTML = '<div class="hm-wx-err">Погода тимчасово недоступна</div>';
   }
+}
+
+// 🔴 ЙМОВІРНІСТЬ ОПАДІВ ЗА ДОБУ — максимум серед годин цього дня.
+// Чому максимум, а не середнє: людину цікавить «чи потрапляю під дощ», а не
+// «скільки в середньому по добі». Середнє від двох злив і двадцяти двох сухих
+// годин дало б спокійне число там, де дощ таки буде.
+// ⚠️ Повертає 0, якщо погодинних даних немає — тоді рядок просто не малює краплю,
+// а не вигадує «0%». Відсутність даних і «дощу не буде» — різні речі.
+function ймовірністьОпадівДня(data, dateStr) {
+  const h = data.hourly;
+  if (!h?.time || !h.precipitation_probability) return 0;
+  let best = 0;
+  for (let i = 0; i < h.time.length; i++) {
+    if (!h.time[i].startsWith(dateStr)) continue;
+    const v = h.precipitation_probability[i];
+    if (typeof v === 'number' && v > best) best = v;
+  }
+  return Math.round(best);
 }
 
 // ── РОЗГОРТАННЯ ПОГОДИ (19.08) ───────────────────────────────────────────────
