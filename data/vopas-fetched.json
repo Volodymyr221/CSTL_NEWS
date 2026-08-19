@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-19T20:53:43.856037+03:00",
+  "fetched_at": "2026-08-19T21:39:44.657607+03:00",
   "date": "19.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -6087,8 +6087,8 @@
       "carrier": "Володимир-Транс ТзОВ 43000",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6102,8 +6102,8 @@
       "carrier": "КОВЕЛЬ АТП 10706",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6117,8 +6117,8 @@
       "carrier": "Володимир-Транс ТзОВ 43000",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
