@@ -133,9 +133,26 @@ async function сцена({ погода, width = 390, day = 0, clock = null }) 
   await p.waitForTimeout(1200);
   await p.evaluate(() => document.querySelector('.consent-accept')?.click());
   await p.waitForSelector('[data-wx-day]', { timeout: 15000 });
+  // 🔴 19.08 — СПЕРШУ РОЗГОРНУТИ ПРОГНОЗ. Віджет погоди отримав два стани
+  // (замовлення Вови «зробити значно компактнішим»), і кнопки днів живуть у
+  // панелі, згорнутій за замовчуванням: у ній нульова висота, тож клік по дню
+  // перехоплював елемент, що лежить поверх. Сам перехід між станами стереже
+  // окремий стенд `weather-fold.mjs`; тут нас цікавить лише модалка дня.
+  await p.evaluate(() => {
+    const wx = document.querySelector('.hm-wx');
+    if (wx && !wx.classList.contains('hm-wx--open')) document.querySelector('.hm-wx-toggle')?.click();
+  });
+  await p.waitForTimeout(450);
   // Опис і підрядок капсули читаємо ДО відкриття модалки — для перевірок Т2 і Т5.
   const описКапсули = await p.evaluate(() => document.querySelector('.hm-wx-desc')?.textContent.trim() || '');
-  const підКапсули = await p.evaluate(() => document.querySelector('.hm-wx-sub')?.textContent.trim() || '');
+  // 🔄 19.08 — ПІДКАЗКА ПЕРЕЇХАЛА З КОМПАКТНОГО РЯДКА В ПАНЕЛЬ.
+  // У `.hm-wx-sub` тепер мін/макс дня (те, що Вова просив показувати завжди), а
+  // рядок «відчувається N°» / «дощ з 16:00» живе в `.hm-wx-note` всередині
+  // розгорнутої панелі. Інформація не зникла — вона перестала бути тим, що видно
+  // не питаючи. Перевірка ж стосується ЗМІСТУ підказки, тож читаємо її з нового
+  // місця; панель на цей момент уже розгорнута кроком вище.
+  const підКапсули = await p.evaluate(() =>
+    document.querySelector('.hm-wx-note')?.textContent.trim() || '');
   await p.locator(`[data-wx-day="${day}"]`).click();
   await p.waitForTimeout(500);
   return { p, ctx, падіння, описКапсули, підКапсули };
