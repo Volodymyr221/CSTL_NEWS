@@ -28,6 +28,8 @@
 // розходиться. Якщо закрити екран напряму, в історії лишиться «порожній» запис і
 // наступний жест «назад» з'їсть його вхолосту.
 
+import { createDragTracker, finishSwipe } from './sheet-motion.js';
+
 const stack = [];      // відкриті шари, останній = верхній
 let seq = 0;
 
@@ -75,11 +77,120 @@ export function openLayer(close, opts = {}) {
   if (opts.reuseEntry && top) {
     top.closed = true;
     stack[stack.length - 1] = layer;
+    if (opts.el) attachSwipeBack(opts.el, layer);
     return layer;
   }
   stack.push(layer);
   history.pushState({ cstlLayer: layer.id }, '');
+  // `el` — необовʼязковий: шар без нього поводиться рівно як раніше (закриття
+  // системним жестом від краю). Передали елемент — додається ще й свайп
+  // «звідки завгодно», див. пояснення нижче.
+  if (opts.el) attachSwipeBack(opts.el, layer);
   return layer;
+}
+
+// ── СВАЙП НАЗАД «ЗВІДКИ ЗАВГОДНО» (19.08) ────────────────────────────────────
+//
+// 🔴 СКАРГА ВОВИ: «коли я закриваю сторінки свайпом з лівої частини екрану, мені
+// треба палець ставити аж на самий край і звідти тягнути, важко дотягнутись».
+// Він має рацію, і причина не в нашому коді: досі цей жест ОБСЛУГОВУВАЛА iOS, а
+// ширину її зони (≈20pt від краю) задає Apple — з вебу вона не міняється.
+//
+// 🛑 ЧОМУ РАНІШЕ ВЛАСНОГО СВАЙПУ ТУТ НЕ БУЛО (і чому тепер можна).
+// 24.07 його прибрали після двох невдач (скріни IMG_3557 / IMG_3559): наш жест
+// жив у ТІЙ САМІЙ зоні, що системний, тож один рух пальця робив дві дії — ми
+// закривали екран, а iOS паралельно відкочувала історію й малювала СВОЮ
+// анімацію переходу. Помилка була не в самій ідеї власного жесту, а в тому, що
+// він накладався на системний.
+// ➡️ Тому тут зона починається ПІСЛЯ системної (`EDGE`): 0-28px лишаються iOS,
+//    від 28px і далі — наші. Один рух — одна дія, як і домовлялись.
+//
+// 🔑 ПЛАВНІСТЬ. Вова окремо просив, щоб «плавність була така як зараз є». Тому це
+// не спрацювання по відпусканню, а ІНТЕРАКТИВНЕ перетягування: екран іде за
+// пальцем, а рішення (закрити чи повернути) і доїзд рахує `finishSwipe` з
+// `core/sheet-motion.js` — той самий модуль і та сама крива, що в усіх аркушів
+// застосунку. Другої фізики не заводимо (HOT_RULES №8).
+const EDGE      = 28;    // px від лівого краю — власність системного жесту iOS
+const DECIDE    = 10;    // px — доки не пройшли стільки, напрям руху ще не ясний
+const DOMINANCE = 1.5;   // горизонталь має бути настільки більшою за вертикаль
+
+// Чи стоїть палець усередині чогось, що САМЕ прокручується вбік і ще має куди.
+// Приклад із життя: смуга категорій у Хабі новин і каруселі. Якщо там ще є що
+// гортати вправо — жест належить їй, а не закриттю екрана.
+function всерединіБічногоСкролера(node, root) {
+  for (let el = node; el && el !== root; el = el.parentElement) {
+    if (!(el instanceof Element)) continue;
+    const ox = getComputedStyle(el).overflowX;
+    if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1 && el.scrollLeft > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function attachSwipeBack(el, layer) {
+  let startX = null, startY = null, locked = false, dx = 0;
+  const tracker = createDragTracker();
+
+  el.addEventListener('touchstart', (e) => {
+    startX = null; locked = false; dx = 0;
+    if (e.touches.length !== 1) return;                       // мультитач — не наш
+    if (layer.closed || stack[stack.length - 1] !== layer) return;  // зверху інший шар
+    const t = e.touches[0];
+    if (t.clientX <= EDGE) return;                            // системна зона — віддаємо iOS
+    // 🛑 Місця, де горизонтальний рух УЖЕ щось означає (перемикання категорій у
+    // Хабі новин, відповідь на повідомлення в чаті, переміщення фото в кропері).
+    // Перелічені явно атрибутом, а не вгадані: вгадування тут коштувало б
+    // зламаного жесту, про який ніхто б не здогадався.
+    if (e.target.closest && e.target.closest('[data-swipe-own]')) return;
+    if (всерединіБічногоСкролера(e.target, el)) return;
+    startX = t.clientX; startY = t.clientY;
+    tracker.start(t.clientX);
+  }, { passive: true });
+
+  // ⚠️ НЕ `passive`: щойно ми впізнали свій жест, треба скасувати прокрутку
+  // сторінки, інакше екран поїде за пальцем І прокрутиться водночас.
+  el.addEventListener('touchmove', (e) => {
+    if (startX == null || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const рух  = t.clientX - startX;
+    const вбік = t.clientY - startY;
+
+    if (!locked) {
+      if (Math.abs(рух) < DECIDE && Math.abs(вбік) < DECIDE) return;  // ще не ясно
+      // Наш жест — тільки рух УПРАВО і тільки якщо горизонталь переважає.
+      // Діагональний рух лишається прокруткою: так само, як в `attachSwipe`.
+      if (рух <= 0 || Math.abs(рух) <= Math.abs(вбік) * DOMINANCE) { startX = null; return; }
+      locked = true;
+      el.style.transition = 'none';
+    }
+
+    e.preventDefault();
+    dx = Math.max(0, рух);
+    tracker.move(t.clientX);
+    el.style.transform = `translateX(${dx}px)`;
+  }, { passive: false });
+
+  const кінець = () => {
+    if (startX == null) { return; }
+    startX = null;
+    if (!locked) return;
+    locked = false;
+    finishSwipe({
+      panel: el,
+      dy: dx,                                   // тут це відстань УПРАВО
+      velocity: tracker.velocity,
+      remaining: Math.max((el.offsetWidth || window.innerWidth) - dx, 1),
+      dismissTransform: 'translateX(100%)',
+      restTransform: '',
+      // Закриваємо ПІСЛЯ доїзду: `closeLayer` знімає запис історії й прибирає
+      // екран з DOM, тож викликаний одразу він обірвав би анімацію на льоту.
+      onDismiss: (ms) => setTimeout(() => closeLayer(layer), ms),
+    });
+    dx = 0;
+  };
+  el.addEventListener('touchend', кінець, { passive: true });
+  el.addEventListener('touchcancel', кінець, { passive: true });
 }
 
 // Закриття з інтерфейсу (кнопка «назад», тап по фону). Йдемо через історію →

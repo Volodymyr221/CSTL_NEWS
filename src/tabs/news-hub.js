@@ -81,7 +81,7 @@ export async function openNewsHub(group) {
                 aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join('')}
     </div>
-    <div class="nh-list" data-nh-list>${skeletonHtml()}</div>`;
+    <div class="nh-list" data-nh-list data-swipe-own>${skeletonHtml()}</div>`;
   document.body.appendChild(screen);
   // Биті чужі фото → брендовий плейсхолдер 🏰 замість системної іконки «зламане
   // зображення». ⚠️ `error` НЕ спливає, тому слухаємо у фазі ЗАХОПЛЕННЯ (третій
@@ -112,7 +112,12 @@ export async function openNewsHub(group) {
       document.body.classList.remove('nh-open');
       _hub = null;
     },
-    { animateOut: () => screen.classList.remove('open') },
+    // 19.08 — свайп назад «звідки завгодно». ⚠️ Сам СПИСОК позначено
+    // `data-swipe-own`: там горизонтальний рух уже перемикає категорію
+    // (ГРОМАДА ↔ ВОЛИНЬ ↔ УКРАЇНА), і забрати його під закриття означало б
+    // зламати те, що працює. Закривається свайпом решта екрана — шапка,
+    // смуга вкладок, поля обабіч списку.
+    { el: screen, animateOut: () => screen.classList.remove('open') },
   );
   _hub = { screen, layer };
   screen.querySelector('.nh-back').addEventListener('click', () => closeLayer(layer, { animate: 240 }));

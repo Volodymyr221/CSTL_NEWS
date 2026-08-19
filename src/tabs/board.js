@@ -2333,6 +2333,7 @@ export function openAdModalStandalone(post) {
       document.body.classList.remove('cm-zoom-open');
     },
     {
+      el: modal,   // 19.08 — свайп назад «звідки завгодно» (див. `core/layers.js`)
       // Кнопку «←» система не анімує — анімацію виходу програємо самі.
       animateOut: () => { modal.classList.remove('visible'); backdrop.classList.remove('visible'); },
     },

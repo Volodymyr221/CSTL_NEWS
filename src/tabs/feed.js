@@ -2351,6 +2351,7 @@ async function openPageScreen(pageId, reopen = false) {
   const layer = openLayer(
     () => { screen.remove(); screenCleanup.forEach(fn => { try { fn(); } catch (_) {} }); },
     {
+      el: screen,   // 19.08 — свайп назад «звідки завгодно»
       reuseEntry: reopen,
       animateOut: () => screen.classList.remove('open'),
     },

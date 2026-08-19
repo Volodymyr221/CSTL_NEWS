@@ -48,6 +48,7 @@ export function buildScreen(innerHtml, extraClass = '') {
   // Жест «назад» обслуговує СИСТЕМА. Власний edge-свайп прибрано
   // 24.07: iOS малює свою анімацію переходу, і наше перетягування накладалось згори.
   api._layer = openLayer(() => closeScreen(api), {
+    el: screen,   // 19.08 — свайп назад «звідки завгодно» (див. `core/layers.js`)
     animateOut: () => { screen.classList.remove('visible'); backdrop.classList.remove('visible'); },
   });
   const close = () => closeLayer(api._layer, { animate: 240 });

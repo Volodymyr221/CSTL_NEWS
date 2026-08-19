@@ -89,7 +89,7 @@ export async function openFundScreen() {
   // `core/layers.js`).
   const layer = openLayer(
     () => { screen.remove(); document.body.classList.remove('fs-open'); _screen = null; },
-    { animateOut: () => screen.classList.remove('open') },
+    { el: screen, animateOut: () => screen.classList.remove('open') },   // 19.08 — свайп назад
   );
   _screen = { screen, layer };
   screen.querySelector('.fs-back').addEventListener('click', () => closeLayer(layer, { animate: 240 }));
