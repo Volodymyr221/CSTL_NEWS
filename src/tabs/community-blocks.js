@@ -223,12 +223,23 @@ export async function renderWeatherBlock() {
         : day.weather_code[i];
       const dayInfo = weatherCodeInfo(кодДня);
       const tMax = Math.round(day.temperature_2m_max[i]);
+      const tMin = Math.round(day.temperature_2m_min[i]);
+      // 🔴 19.08 — «СЬОГОДНІ» СЛОВОМ, І ЦЕ НЕ ВІДКІТ РІШЕННЯ 08.08.
+      // Тоді підпис скоротили до `Нд`, бо клітинки стояли РЯДОМ по горизонталі в
+      // сімох вузьких колонках, і довге слово серед двобуквених читалось як
+      // обрубок. Тепер дні йдуть СПИСКОМ згори вниз — колонка підпису одна на всіх
+      // і вільна, тож причини скорочувати більше немає, а «Сьогодні» читається
+      // швидше за «Вт» (не треба згадувати, який сьогодні день).
+      const підпис = i === 0 ? 'Сьогодні' : wd;
+      const дата = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
       return `
         <button type="button" class="hm-wx-day${i === 0 ? ' hm-wx-day--today' : ''}" data-wx-day="${i}"
-                aria-label="${escapeHtml(wd)}, до ${tMax} градусів">
-          <span class="hm-wx-wd">${escapeHtml(wd)}</span>
+                aria-label="${escapeHtml(підпис)} ${дата}, ${escapeHtml(dayInfo.text)}, від ${tMin} до ${tMax} градусів">
+          <span class="hm-wx-wd">${escapeHtml(підпис)}</span>
+          <span class="hm-wx-date">${дата}</span>
           <span class="hm-wx-icon">${dayInfo.icon}</span>
-          <span class="hm-wx-max">${tMax}°</span>
+          <span class="hm-wx-state">${escapeHtml(dayInfo.text)}</span>
+          <span class="hm-wx-mm"><span class="hm-wx-max">${tMax}°</span><span class="hm-wx-min">${tMin}°</span></span>
         </button>
       `;
     }).join('');
@@ -240,24 +251,43 @@ export async function renderWeatherBlock() {
     // «сьогодні дощ» — треба знати.
     const hint = weatherHint(data);
 
+    // 🔴 19.08 — ДВА СТАНИ ЗАМІСТЬ ОДНОГО (замовлення Вови).
+    // Було: температура + опис + капсула НП + ряд із 7 днів — усе завжди на екрані,
+    // 121px висоти в шапці, яку людина бачить першою.
+    // Стало: компактний рядок (іконка · температура · опис · мін/макс · стрілка), а
+    // прогноз на 7 днів — у панелі, що розгортається тапом по стрілці або свайпом.
+    // ⚠️ Дані НЕ чіпані: той самий один запит, той самий кеш `_wxData`, той самий
+    // перехід `openWeatherDayModal(i)` по тапу на день. Розгортання нічого не
+    // довантажує — панель уже в розмітці, змінюється лише її висота.
+    const tMaxToday = Math.round(day.temperature_2m_max[0]);
+    const tMinToday = Math.round(day.temperature_2m_min[0]);
     el.classList.remove('hm-wx--loading');
     el.innerHTML = `
-      <div class="hm-wx-main">
+      <div class="hm-wx-main" data-wx-head>
+        <span class="hm-wx-now" aria-hidden="true">${info.icon}</span>
         <div class="hm-wx-t">${temp}°</div>
         <div class="hm-wx-txt">
           <div class="hm-wx-desc">${escapeHtml(info.text)}</div>
-          <div class="hm-wx-sub">${escapeHtml(subLine(temp, feels, hint))}</div>
+          <div class="hm-wx-sub">${tMinToday}° / ${tMaxToday}°</div>
         </div>
-        <span class="hm-wx-now" aria-hidden="true">${info.icon}</span>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
           <span class="hm-wx-place-pin" aria-hidden="true">${ICONS.pin}</span>
           <span class="hm-wx-place-n">${escapeHtml(cityName || 'Олика')}</span>
           <span class="hm-wx-place-ch" aria-hidden="true">${ICONS.chevronDown}</span>
         </button>
+        <button class="hm-wx-toggle" type="button" data-wx-toggle
+                aria-expanded="false" aria-controls="hm-wx-panel"
+                aria-label="Показати прогноз на 7 днів">${ICONS.chevronDown}</button>
       </div>
-      <div class="hm-wx-days">${forecastHtml}</div>
+      <div class="hm-wx-panel" id="hm-wx-panel" data-wx-panel>
+        <div class="hm-wx-panel-in">
+          <div class="hm-wx-note">${escapeHtml(subLine(temp, feels, hint))}</div>
+          <div class="hm-wx-days">${forecastHtml}</div>
+        </div>
+      </div>
     `;
+    attachWeatherFold(el);
 
     // Клік на день → модалка «по годинах» (температура + опади).
     // ⚠️ НЕ ЗМІНЮВАЛОСЬ і навмисно: у пораді, яку приніс Вова, було «тап по дню
@@ -277,6 +307,85 @@ export async function renderWeatherBlock() {
     el.classList.remove('hm-wx--loading');
     el.innerHTML = '<div class="hm-wx-err">Погода тимчасово недоступна</div>';
   }
+}
+
+// ── РОЗГОРТАННЯ ПОГОДИ (19.08) ───────────────────────────────────────────────
+// Два способи керування, як просив Вова: тап по стрілці (гарантований) і свайп
+// по компактному рядку (швидкий).
+//
+// 🔴 ЧОМУ ВИСОТУ РУХАЄ JS, А НЕ САМИЙ CSS. `height: auto` не анімується — перехід
+// з 0 на auto браузер робить стрибком. Тому беремо `scrollHeight` (реальна висота
+// вмісту) і ведемо `height` числом; після відкриття віддаємо `auto` назад, щоб
+// панель пережила поворот екрана і зміну шрифту, не лишившись зі старим числом.
+//
+// 🛑 ЖЕСТ ЖИВЕ ТІЛЬКИ НА КОМПАКТНОМУ РЯДКУ, і в CSS цей рядок має `touch-action:
+// none`. Це не дрібниця, а суть вимоги «звичайний скрол не має випадково
+// відкривати погоду»: якби ми слухали свайп на всьому віджеті й не забирали жест
+// у браузера, кожна спроба прогорнути сторінку з-під погоди і гортала б сторінку,
+// і розгортала панель — одна дія, два наслідки. Тепер вертикальний рух, що
+// ПОЧАВСЯ на рядку погоди (≈52px заввишки), належить віджету; будь-де інше
+// сторінка гортається як завжди.
+// ⚠️ Ціна названа чесно: почавши тягнути палець рівно з рядка погоди, сторінку не
+// прогорнеш. Це та сама угода, що в будь-якої «ручки» аркуша, і саме тому зона
+// зроблена вузькою.
+const WX_ANIM_MS  = 300;   // у межах 250-350, як просив Вова
+const WX_SWIPE_MIN = 32;   // менший рух — це тремтіння пальця, а не намір
+
+function attachWeatherFold(root) {
+  const head   = root.querySelector('[data-wx-head]');
+  const toggle = root.querySelector('[data-wx-toggle]');
+  const panel  = root.querySelector('[data-wx-panel]');
+  if (!head || !toggle || !panel) return;
+
+  let open = false;
+  let timer = null;
+  // Повага до системного «зменшити рух»: там перемикаємось миттєво, без анімації.
+  const reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+  panel.style.height = '0px';
+
+  function setOpen(next) {
+    if (next === open) return;
+    open = next;
+    root.classList.toggle('hm-wx--open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Сховати прогноз на 7 днів' : 'Показати прогноз на 7 днів');
+
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (reduced) { panel.style.height = open ? 'auto' : '0px'; return; }
+
+    // Старт завжди з ЧИСЛА, інакше переходу нема з чого починати (тому й міряємо
+    // поточну висоту, а не покладаємось на те, що там стоїть).
+    panel.style.height = panel.getBoundingClientRect().height + 'px';
+    void panel.offsetHeight;                       // змусити браузер зафіксувати старт
+    panel.style.height = (open ? panel.scrollHeight : 0) + 'px';
+    timer = setTimeout(() => { if (open) panel.style.height = 'auto'; timer = null; }, WX_ANIM_MS);
+  }
+
+  toggle.addEventListener('click', e => { e.stopPropagation(); setOpen(!open); });
+  // Тап по самому рядку теж перемикає — стрілка лишається гарантованим способом,
+  // але поціляти в неї пальцем не обовʼязково. Капсула НП має власну дію, тому
+  // клік із неї сюди не доходить.
+  head.addEventListener('click', e => {
+    if (e.target.closest('[data-wx-place]') || e.target.closest('[data-wx-toggle]')) return;
+    setOpen(!open);
+  });
+
+  let sy = null, sx = null;
+  head.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { sy = null; return; }
+    sy = e.touches[0].clientY;
+    sx = e.touches[0].clientX;
+  }, { passive: true });
+  head.addEventListener('touchend', e => {
+    if (sy == null) return;
+    const dy = e.changedTouches[0].clientY - sy;
+    const dx = e.changedTouches[0].clientX - sx;
+    sy = null;
+    if (Math.abs(dy) < WX_SWIPE_MIN) return;          // не дотягнув — нічого не робимо
+    if (Math.abs(dy) <= Math.abs(dx) * 1.5) return;   // рух радше вбік, ніж угору/вниз
+    setOpen(dy < 0);                                  // вгору = розгорнути, вниз = стиснути
+  }, { passive: true });
 }
 
 // 🔴 ОДИН РЯДОК ПІД ТЕМПЕРАТУРОЮ, А НЕ ДВА ЗЧЕПЛЕНІ.
