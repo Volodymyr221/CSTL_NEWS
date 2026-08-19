@@ -114,7 +114,9 @@ for (const w of ШИРИНИ) {
       мінмакс: document.querySelector('.hm-wx-sub').textContent.replace(/\s+/g, ' ').trim(),
       числаОбрізано: (() => { const e = document.querySelector('.hm-wx-mm'); return e.scrollWidth > e.clientWidth; })(),
       стрілкаФон: getComputedStyle(document.querySelector('.hm-wx-toggle')).backgroundColor,
-      стрілкаЛінія: parseFloat(getComputedStyle(document.querySelector('.hm-wx-toggle')).borderLeftWidth),
+      стрілкаЛініяСправа: parseFloat(getComputedStyle(document.querySelector('.hm-wx-toggle')).borderRightWidth),
+      стрілкаЛініяЗліва: parseFloat(getComputedStyle(document.querySelector('.hm-wx-toggle')).borderLeftWidth),
+      порядок: [...document.querySelector('.hm-wx-main').children].map(e => e.className.split(' ')[0]),
       стрілкаЗона: Math.round(document.querySelector('.hm-wx-toggle').getBoundingClientRect().width),
       іконкаPx: Math.round(document.querySelector('.hm-wx-now img')?.getBoundingClientRect().width || 0),
       місце: document.querySelector('.hm-wx-place-n')?.textContent.trim() || '',
@@ -224,8 +226,17 @@ ok('🔴 числа не обрізаються НІ НА ЯКІЙ ширині,
 ok('🔴 стрілка більше не кружечок (немає заливки)',
    заміри.every(z => /rgba\(0, 0, 0, 0\)|transparent/.test(z.зг.стрілкаФон)),
    заміри[0].зг.стрілкаФон);
-ok('🔴 стрілку відділено лінією зліва',
-   заміри.every(z => z.зг.стрілкаЛінія >= 1), `${заміри[0].зг.стрілкаЛінія}px`);
+// 🔄 19.08, третя редакція — стрілка переїхала ДО ПОГОДИ, а лінія на її правий
+// бік. Вова: «перемістіть стрілочку на ліву сторону, там де градуси, хмарність і
+// сьогодні — там пише сама погода, а справа хай буде кнопка місцезнаходження».
+// Логіка його правки точна: стрілка керує ПРОГНОЗОМ, а стояла в правому краю і
+// весь час читалась як частина капсули локації.
+ok('🔴 стрілка стоїть при погоді, капсула локації — праворуч від неї',
+   заміри.every(z => z.зг.порядок.join(',') === 'hm-wx-now,hm-wx-t,hm-wx-txt,hm-wx-toggle,hm-wx-place'),
+   заміри[0].зг.порядок.join(' · '));
+ok('🔴 лінію перенесено на ПРАВИЙ бік стрілки',
+   заміри.every(z => z.зг.стрілкаЛініяСправа >= 1 && z.зг.стрілкаЛініяЗліва === 0),
+   `справа ${заміри[0].зг.стрілкаЛініяСправа}px, зліва ${заміри[0].зг.стрілкаЛініяЗліва}px`);
 ok('площа дотику стрілки лишилась пальцевою (≥30px)',
    заміри.every(z => z.зг.стрілкаЗона >= 30),
    заміри.map(z => `${z.w}:${z.зг.стрілкаЗона}`).join(' · '));
@@ -304,6 +315,37 @@ ok('🔴 розгортання НЕ робить нового запиту по
   // 🔴 Ключова вимога: жест працює ТІЛЬКИ на віджеті.
   await свайп(p, '#hm-caps, .hm-sec, main', -80).catch(() => {});
   ok('🔴 свайп ПОЗА віджетом його не відкриває', (await відкрито()) === false);
+
+  // 🔴 СТОРОЖ НА БАГ, ЯКИЙ ЗНАЙШОВ ВОВА (19.08): «я натискаю на стрілочку, вона
+  // розвертається, і рисочка за нею прив'язана і теж розвертається на інший бік».
+  // Причина була в тому, що лінія — це БОРДЮР САМОЇ КНОПКИ, а поворот на 180°
+  // застосовувався до кнопки цілком: разом зі значком оберталась і межа, тож
+  // `border-right` опинявся зліва.
+  // ➡️ Міряємо ОБИДВІ половини правила: кнопка НЕ обертається, значок обертається,
+  //    і лінія лишається справа в обох станах. Без першої перевірки латку можна
+  //    було б «полагодити» назад, лишивши поворот на кнопці.
+  const лінія = async () => p.evaluate(() => {
+    const tg = document.querySelector('.hm-wx-toggle');
+    const cs = getComputedStyle(tg);
+    return {
+      кнопка: cs.transform,
+      значок: getComputedStyle(document.querySelector('.hm-wx-toggle-ic')).transform,
+      справа: parseFloat(cs.borderRightWidth),
+      зліва: parseFloat(cs.borderLeftWidth),
+    };
+  });
+  const лЗакрито = await лінія();
+  await p.click('.hm-wx-toggle');
+  await p.waitForTimeout(450);
+  const лВідкрито = await лінія();
+  ok('🔴 при розгортанні лінія НЕ перестрибує на інший бік',
+     лВідкрито.справа === лЗакрито.справа && лВідкрито.зліва === лЗакрито.зліва,
+     `було справа ${лЗакрито.справа}/зліва ${лЗакрито.зліва}, стало справа ${лВідкрито.справа}/зліва ${лВідкрито.зліва}`);
+  ok('🔴 обертається значок, а не кнопка з лінією',
+     лВідкрито.кнопка === 'none' && лВідкрито.значок !== 'none' && лВідкрито.значок !== лЗакрито.значок,
+     `кнопка: ${лВідкрито.кнопка} · значок: ${лЗакрито.значок} → ${лВідкрито.значок}`);
+  await p.click('.hm-wx-toggle');
+  await p.waitForTimeout(450);
 
   // Тап по стрілці лишається гарантованим способом.
   await p.click('.hm-wx-toggle');
