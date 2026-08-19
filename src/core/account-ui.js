@@ -262,7 +262,8 @@ async function openAccount() {
   document.body.appendChild(cab);
   document.body.classList.add('modal-open');
   requestAnimationFrame(() => cab.classList.add('open'));
-  _cabLayer = openLayer(() => { _cabLayer = null; removeCabinet(); });
+  // 19.08 — свайп назад «звідки завгодно» (див. `core/layers.js`).
+  _cabLayer = openLayer(() => { _cabLayer = null; removeCabinet(); }, { el: cab });
 
   cab.querySelector('.acc-cab-back').addEventListener('click', closeCabinet);
 

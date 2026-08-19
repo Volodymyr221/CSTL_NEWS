@@ -627,6 +627,7 @@ export function openChatModal(post) {
   // шляхом (`closeLayer`), інакше в історії лишився б порожній запис і наступний
   // жест зʼїв би його вхолосту.
   _qaLayer = openLayer(() => finishCloseQuestion(), {
+    el: screen,   // 19.08 — свайп назад «звідки завгодно»
     animateOut: (done) => { screen.classList.remove('visible'); setTimeout(done, 220); },
   });
   screen.querySelector('.qa-back')?.addEventListener('click', () => closeLayer(_qaLayer, { animate: true }));
