@@ -10,28 +10,35 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-19 11:45 UTC
+**Зріз на:** 2026-08-19 11:56 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `bd2e9a2f` 19.08 11:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| останній коміт людини | `46107344` 19.08 11:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260818-2016` |
 | останній PR у `main` | #953 |
 | стендів на диску | 84 |
-| незакомічених файлів | 7 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-19 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- ✅ нічого. Уся робота гілки вже в `main`.
+- `.gitignore`
+- `CSTL NEWS VOVA/NOW.md`
+- `_session-log/vova-2026-08-18b.md`
+- `scripts/supabase_editor_invites.sql`
+- `tests/tools/_out/chat-1-один-контекст.png`
+- `tests/tools/_out/chat-2-два-контексти.png`
+- `tests/tools/_out/chat-3-три-контексти.png`
+- `tests/tools/_out/chat-4-список.png`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `46107344` 19.08 11:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `90ec87e9` 19.08 11:46 — fix(ПД): прибрано знімки чату з реальними даними і пошту редакторки зі скрипта запрошень
 - `bd2e9a2f` 19.08 11:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `098eaaee` 18.08 20:22 — feat(заслінка): другий код розробника + аудит репозиторію на ключі й персональні дані (#953)
-- `855ac575` 18.08 20:21 — docs: пульс і літопис перед фінішем — другий код заслінки, аудит репо на ключі й ПД
 
 <!-- AUTO:END -->
 
