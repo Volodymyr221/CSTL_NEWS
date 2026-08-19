@@ -1405,9 +1405,6 @@
           <div class="hm-wx-sub"><span class="hm-wx-desc">${p(M.text)}</span><span
             class="hm-wx-mm"> · ${w}°/${$}°</span></div>
         </div>
-        <button class="hm-wx-toggle" type="button" data-wx-toggle
-                aria-expanded="false" aria-controls="hm-wx-panel"
-                aria-label="Показати прогноз на 7 днів"><span class="hm-wx-toggle-ic">${T.chevronDown}</span></button>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
           <span class="hm-wx-place-pin" aria-hidden="true">${T.pin}</span>
