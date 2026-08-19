@@ -10,35 +10,39 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-19 11:56 UTC
+**Зріз на:** 2026-08-19 15:06 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `46107344` 19.08 11:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260818-2016` |
-| останній PR у `main` | #953 |
-| стендів на диску | 84 |
-| незакомічених файлів | 0 ✅ |
+| останній коміт людини | `53455ee2` 19.08 15:01 — feat(погода): компактний віджет із розгортанням на 7 днів + стенд weather-fold |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260819-1501` |
+| останній PR у `main` | #954 |
+| стендів на диску | 85 |
+| незакомічених файлів | 2 ⚠️ |
 | журнал за 2026-08-19 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.gitignore`
-- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-18b.md`
-- `scripts/supabase_editor_invites.sql`
-- `tests/tools/_out/chat-1-один-контекст.png`
-- `tests/tools/_out/chat-2-два-контексти.png`
-- `tests/tools/_out/chat-3-три-контексти.png`
-- `tests/tools/_out/chat-4-список.png`
+- `bundle.js`
+- `src/tabs/community-blocks.js`
+- `style/home.css`
+- `sw.js`
+- `tests/home.mjs`
+- `tests/weather-day.mjs`
+- `tests/weather-fold.mjs`
+- `tests/weather.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `53455ee2` 19.08 15:01 — feat(погода): компактний віджет із розгортанням на 7 днів + стенд weather-fold
+- `36d68672` 19.08 13:41 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `e4ba4e9e` 19.08 11:57 — fix(ПД): прибрано знімки чату з реальними даними і пошту редакторки зі скрипта запрошень (#954)
+- `9c05e7d1` 19.08 11:56 — docs: пульс перед фінішем
 - `46107344` 19.08 11:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `90ec87e9` 19.08 11:46 — fix(ПД): прибрано знімки чату з реальними даними і пошту редакторки зі скрипта запрошень
-- `bd2e9a2f` 19.08 11:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
 
 <!-- AUTO:END -->
 
