@@ -294,6 +294,9 @@ export async function renderWeatherBlock() {
     el.classList.remove('hm-wx--loading');
     el.innerHTML = `
       <div class="hm-wx-main" data-wx-head>
+        <button class="hm-wx-toggle" type="button" data-wx-toggle
+                aria-expanded="false" aria-controls="hm-wx-panel"
+                aria-label="Показати прогноз на 7 днів"><span class="hm-wx-toggle-ic">${ICONS.chevronDown}</span></button>
         <span class="hm-wx-now" aria-hidden="true">${info.icon}</span>
         <div class="hm-wx-t">${temp}°</div>
         <div class="hm-wx-txt">
@@ -301,9 +304,6 @@ export async function renderWeatherBlock() {
           <div class="hm-wx-sub"><span class="hm-wx-desc">${escapeHtml(info.text)}</span><span
             class="hm-wx-mm"> · ${tMinToday}°/${tMaxToday}°</span></div>
         </div>
-        <button class="hm-wx-toggle" type="button" data-wx-toggle
-                aria-expanded="false" aria-controls="hm-wx-panel"
-                aria-label="Показати прогноз на 7 днів"><span class="hm-wx-toggle-ic">${ICONS.chevronDown}</span></button>
         <button class="hm-wx-place" type="button" data-wx-place
                 aria-label="Вибрати населений пункт">
           <span class="hm-wx-place-pin" aria-hidden="true">${ICONS.pin}</span>
