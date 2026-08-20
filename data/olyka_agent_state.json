@@ -1,8 +1,10 @@
 {
   "done": [
-    "weather-compact"
+    "weather-compact",
+    "event:день-знань"
   ],
   "kinds": {
-    "weather-compact": "feature"
+    "weather-compact": "feature",
+    "event:день-знань": "brand"
   }
 }
