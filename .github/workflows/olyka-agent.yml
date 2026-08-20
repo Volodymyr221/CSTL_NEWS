@@ -1,0 +1,77 @@
+# ============================================================================
+# ШІ-АГЕНТ СПІЛЬНОТИ OLYKA CASTLE — пише пости у стрічку як ЧЕРНЕТКИ
+# ============================================================================
+# Рішення Вови 20.08: агент НЕ публікує сам. Він кладе чернетку в стрічку, і
+# Вова бачить її з позначкою «ЧЕРНЕТКА · її бачиш лише ти» та кнопкою
+# «Опублікувати». Читач до цього моменту тексту не бачить — так каже політика
+# читання бази, а не фільтр у клієнті.
+#
+# 📅 3-4 пости на тиждень (вибір Вови): пн, ср, пт, нд о 07:10 UTC = 10:10 за
+# Києвом. Один пост за прогін (`per_run: 1` у місії) — щоб черга з плану
+# витрачалась рівно, а не вилітала пачкою.
+# ⚠️ Якщо тем у плані немає — агент нічого не робить і каже про це в журналі.
+# Це нормальний стан, а не збій: план наповнюють люди.
+#
+# 💸 Витрати пишуться в `data/ai_spend.json` (той самий лічильник, що бачить
+# адмінка) з РЕАЛЬНОЮ ціною Opus 5 — 20.08 лічильник навчили розрізняти моделі,
+# доти він рахував усе за Sonnet і занизив би суму вдвічі.
+name: Olyka Castle — агент спільноти
+
+on:
+  schedule:
+    - cron: '10 7 * * 1,3,5,0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Тільки показати текст, нічого не зберігати'
+        type: boolean
+        default: false
+
+# Два прогони одночасно писали б у той самий файл памʼяті `data/olyka_agent_state.json`
+# і могли б видати одну тему двічі.
+concurrency:
+  group: olyka-agent
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # памʼять агента комітиться назад у репозиторій
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Залежностей немає навмисно: і Anthropic, і Supabase викликаються через
+      # стандартний `urllib` — той самий підхід, що в решті агентів проєкту.
+      # Один крок менше, який може впасти.
+      - name: Прогін агента
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python -m editor.run --mission olyka_castle --dry-run
+          else
+            python -m editor.run --mission olyka_castle
+          fi
+
+      # Памʼять («які теми вже написані») має пережити прогін, інакше наступного
+      # разу агент напише той самий пост удруге.
+      - name: Зберегти памʼять агента
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+          git config user.name  "CSTL bot"
+          git config user.email "bot@castlelife.org"
+          git add data/olyka_agent_state.json data/ai_spend.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Змін немає — тем у плані не було."
+          else
+            git commit -m "auto(olyka-agent): памʼять і витрати після прогону"
+            git push
+          fi

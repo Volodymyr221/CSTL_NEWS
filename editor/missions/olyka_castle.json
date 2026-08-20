@@ -1,0 +1,11 @@
+{
+  "name": "olyka_castle",
+  "description": "Пости спільноти OLYKA CASTLE у стрічку — чернетки на вичитку Вові",
+  "source": "plan",
+  "plan": "olyka_castle",
+  "per_run": 1,
+  "writer": "brand_writer",
+  "voice": "olyka_castle",
+  "image": "none",
+  "sink": "page_draft"
+}

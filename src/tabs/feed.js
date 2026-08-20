@@ -11,7 +11,7 @@ import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsPro
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
-  fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
+  fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
@@ -132,16 +132,21 @@ function orderPages(list) {
 
 // ── Завантаження даних ──────────────────────────────────────────────────────
 async function loadData() {
-  const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
+  // Чернетки ШІ-агента тягнемо ЛИШЕ для залогінених: база й так віддасть їх
+  // тільки редакторам сторінки, але зайвий запит для гостя — марна затримка на
+  // екрані, який він бачить першим.
+  const [pg, ps, dr, rx, cm, cr, mine, subs] = await Promise.all([
     fetchPages(),
     fetchPagePosts(null, 60),
+    isLoggedIn() ? fetchPageDrafts(20) : Promise.resolve([]),
     fetchPageReactions(currentUserId()),
     fetchPageCommentCounts(),
     fetchPageCommentReactions(currentUserId()),
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
   ]);
-  pages = orderPages(pg); posts = ps; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  // Чернетки — ПЕРШИМИ: це те, що чекає на дію, а не те, що читають.
+  pages = orderPages(pg); posts = [...dr, ...ps]; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
   // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
   // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
   commentMap = new Map(); commentPaging = new Map(); commentError = new Map();
@@ -696,8 +701,12 @@ function postCardHtml(post, onPage = false) {
   const author = authorName
     ? `<div class="fd-author"${nameUid(post.author_uid)}>— ${authorName}</div>` : '';
   const canEditPost = myPageIds.has(post.page_id);   // «⋯» лише для своїх сторінок
+  // 🔴 20.08 — ЧЕРНЕТКА ШІ-АГЕНТА. Її бачить лише редактор сторінки (це вирішує
+  // база). Позначка навмисно помітна: людина має одразу розуміти, що цього тексту
+  // ще ніхто, крім неї, не бачив — інакше легко вирішити, що пост уже вийшов.
+  const чернетка = post.status === 'draft';
   return `
-    <article class="fd-card" data-post="${post.id}">
+    <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
@@ -709,9 +718,14 @@ function postCardHtml(post, onPage = false) {
       </header>
       ${photo}
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
+        ${чернетка ? '<div class="fd-draft-badge">ЧЕРНЕТКА · її бачиш лише ти</div>' : ''}
         ${eventBadgeHtml(post)}
         <div class="fd-text">${escapeHtml(post.text)}</div>
         ${author}
+        ${чернетка ? `<div class="fd-draft-actions">
+          <button class="fd-draft-pub" data-publish="${post.id}" type="button">Опублікувати</button>
+          <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
+        </div>` : ''}
         <footer class="fd-actions">
           <button class="fd-like${rx.my ? ' fd-like--on' : ''}" data-like="${post.id}" type="button">
             <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ''}</span>
@@ -725,6 +739,28 @@ function postCardHtml(post, onPage = false) {
         </footer>
       </div>
     </article>`;
+}
+
+// ── ПУБЛІКАЦІЯ ЧЕРНЕТКИ ─────────────────────────────────────────────────────
+// 🛑 БЕЗ ПЕРЕПИТУВАННЯ, АЛЕ Й БЕЗ ПОВЕРНЕННЯ НАЗАД. Діалог «ви впевнені?» тут був
+// би зайвим: людина щойно прочитала текст і свідомо тиснула «Опублікувати».
+// Натомість кнопка одразу гасне — щоб подвійний тап не поставив пост двічі.
+async function publishDraft(postId, btn) {
+  if (!postId || (btn && btn.disabled)) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Публікую…'; }
+  const r = await publishPagePost(postId);
+  if (!r.ok) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Опублікувати'; }
+    showToast(r.error || 'Не вдалося опублікувати', 0, 'error');
+    return;
+  }
+  // Оновлюємо стан у памʼяті і перемальовуємо: пост має втратити позначку
+  // чернетки і поїхати вгору стрічки за новим часом.
+  const i = posts.findIndex(p => p.id === postId);
+  if (i >= 0) posts[i] = { ...posts[i], ...r.post };
+  posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  renderFeed();
+  showToast('Опубліковано — тепер це бачать усі', 0, 'ok');
 }
 
 // Поділитися постом: системне «Поділитись» (Web Share) або копіювання лінка.
@@ -3311,6 +3347,8 @@ function wireCards(root) {
   root.addEventListener('click', e => {
     const menuBtn = e.target.closest('[data-post-menu]');   // «⋯» поста — перед open-page
     if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
+    const pubBtn = e.target.closest('[data-publish]');   // чернетка → в ефір
+    if (pubBtn) { publishDraft(Number(pubBtn.dataset.publish), pubBtn); return; }
     const likeBtn = e.target.closest('[data-like]');
     if (likeBtn) { toggleLike(Number(likeBtn.dataset.like)); return; }
     const comBtn = e.target.closest('[data-comments]');
