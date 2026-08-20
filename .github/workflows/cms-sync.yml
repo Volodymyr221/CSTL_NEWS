@@ -70,6 +70,20 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # 🔴 20.08 — ПІДТВЕРДЖЕННЯ ОКРЕМИМ ТАКТОМ, І ЛИШЕ ПІСЛЯ ВДАЛОГО ПУША.
+      # Раніше `sync_cms.py` позначав рядки `published` ще під час збору — тобто
+      # ДО того, як стало відомо, чи стаття пройде ліміти і чи доїде коміт у main.
+      # Заміряно 20.08: 6 статей мали в базі `published` + `git_id`, а в
+      # `data/articles.json` не було жодної. База рапортувала про публікацію,
+      # якої не сталося.
+      # 🔑 Тепер позначку ставить той, хто бачив успіх. Не доїхало — рядки
+      # лишаються `ready` і поїдуть наступним прогоном самі.
+      - name: Confirm published (лише після успішного пуша)
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/sync_cms.py --confirm
+
       - name: Trigger deploy
         if: steps.commit.outputs.changed == 'true'
         run: gh workflow run deploy.yml --ref main

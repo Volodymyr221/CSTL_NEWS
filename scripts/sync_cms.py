@@ -23,6 +23,36 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supa
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 REST = SUPABASE_URL + "/rest/v1/cms_articles"
 EVENTS_PATH = Path("data/events.json")   # «Шо в селі» — свята/події
+# Наміри між тактами: що записано у файл, але ще не підтверджено пушем.
+# Живе в `data/`, бо саме цей каталог їде разом із комітом раннера.
+PENDING_PATH = Path("data/.cms_pending.json")
+
+# 🔴 20.08 — ВЛАСНИЙ ПРОСТІР НОМЕРІВ ДЛЯ СТАТЕЙ КАБІНЕТУ.
+#
+# Заміряно на живих даних: `git_id` 12409 у базі вказував на статтю «Сам викликав
+# евакуатор» (Волинь), а не на «Радзивіллівські землі навколо Олики». І це не
+# випадковість, а неминучість: `data/articles.json` пишуть ДВА процеси з різних
+# воркфловів (`rss-parser.yml` і `cms-sync.yml`), обидва рахують `max(наявних)+1`
+# кожен зі СВОГО знімка файлу. Два робочі процеси, що роздають номери з одного
+# лічильника, рано чи пізно видадуть один номер двічі — питання лише коли.
+#
+# 🔑 Тому номери РОЗВЕДЕНО: парсер лишається внизу (зараз ~12 тис.), кабінет бере
+# від мільйона. Збіг стає фізично неможливим, а не «малоймовірним», і читачам
+# застосунку міняти нічого не треба — id як був числом, так і лишився.
+# 🛑 Не «підняти базу, бо парсер колись доросте»: парсер росте на ~130 статей на
+# добу, тобто до мільйона йому ~20 років. Якщо колись дійде — це буде видно
+# заздалегідь, а не як тиха підміна.
+CMS_ID_BASE = 1_000_000
+
+
+def next_cms_id(existing: list) -> int:
+    """Наступний вільний номер У ПРОСТОРІ КАБІНЕТУ (від CMS_ID_BASE вгору).
+
+    Рахуємо максимум ЛИШЕ серед своїх номерів: якщо брати `max` по всьому файлу,
+    один чужий великий id підняв би лічильник кабінету назавжди."""
+    свої = [a["id"] for a in existing
+            if isinstance(a.get("id"), int) and a["id"] >= CMS_ID_BASE]
+    return (max(свої) if свої else CMS_ID_BASE - 1) + 1
 
 
 def _req(method, url, body=None):
@@ -180,6 +210,67 @@ def cms_to_article(row, next_id):
     }
 
 
+def позначити_доїхалі(наміри, merged):
+    """Відсіює наміри до тих статей, які СПРАВДІ лягли у файл, і відкладає їх
+    на підтвердження (див. `confirm()`).
+
+    🔴 20.08 — ЦЕ ГОЛОВНИЙ ФІКС ДНЯ, і він про ПОРЯДОК, а не про обчислення.
+    Було так: `mark_published()` викликався ВСЕРЕДИНІ циклу збору, а доля статті
+    вирішувалась ПІСЛЯ нього — `apply_daily_limits` могла її викинути,
+    `balance_ua_world` теж, `[:MAX_ARTICLES]` міг обрізати, а запис у файл міг
+    узагалі не доїхати до `main` (у CI пуш робиться з `git rebase`, і при
+    конфлікті цілого JSON перемагає той, хто запушив останнім).
+
+    Тобто статус у базі не «іноді помилявся» — він НЕ БУВ ПОВʼЯЗАНИЙ із
+    результатом узагалі. Заміряно 20.08: усі 6 статей зі станом `published`
+    мали `git_id`, і при цьому в `data/articles.json` не було ЖОДНОЇ
+    (`kind=editor` — нуль). База два місяці рапортувала про публікацію, якої не
+    сталося, а Вова відкривав застосунок і не знаходив свій текст.
+
+    🔑 Правило, яке з цього лишається: **позначку про успіх ставить лише той, хто
+    успіх бачив.** Тут ми звіряємось із підсумковим `merged` — тим самим списком,
+    що йде на диск. Статтю викинуло лімітом? Рядок лишається `ready` і поїде
+    наступним прогоном, а не зникне з позначкою «опубліковано».
+    ⚠️ І ЦЬОГО САМОГО ПО СОБІ ЗАМАЛО. Запис у файл — ще не публікація: далі CI
+    робить `git push` із `rebase`, і при конфлікті цілого JSON прогін падає, а
+    файл лишається лише на робочій машині раннера. Саме так 20.08 і сталося —
+    коміту синку в історії немає взагалі.
+
+    ➡️ Тому тут ми лише ЗАПИСУЄМО НАМІР у `data/.cms_pending.json`. Позначку в
+    базі ставить окремий прогін `--confirm`, який воркфлов кличе ПІСЛЯ вдалого
+    пуша. Не доїхало — рядки лишаються `ready` і поїдуть наступного разу.
+    """
+    у_файлі = {a.get("id") for a in merged}
+    доїхали = [(r, g) for r, g in наміри if g in у_файлі]
+    for row_id, git_id in наміри:
+        if git_id not in у_файлі:
+            print(f"↩ id={row_id}: не пройшла ліміти — лишається ready до наступного прогону")
+    PENDING_PATH.write_text(json.dumps(доїхали, ensure_ascii=False), encoding="utf-8")
+    return len(доїхали)
+
+
+def confirm():
+    """Другий такт: позначити в базі те, що СПРАВДІ доїхало в git.
+
+    🔑 Кличеться воркфловом лише після успішного `git push`. Тобто позначку про
+    успіх ставить той, хто успіх бачив, — а не той, хто його планував."""
+    if not PENDING_PATH.exists():
+        print("Намірів немає — підтверджувати нічого")
+        return
+    наміри = json.loads(PENDING_PATH.read_text(encoding="utf-8"))
+    ок = 0
+    for row_id, git_id in наміри:
+        try:
+            mark_published(row_id, git_id)
+            ок += 1
+        except Exception as e:
+            # Не позначилось — рядок лишається `ready`. Наступний прогін зробить
+            # це ще раз; дедуп за заголовком не дасть другій копії у файл.
+            print(f"⚠ не вдалося позначити published id={row_id}: {e}")
+    PENDING_PATH.unlink(missing_ok=True)
+    print(f"✓ підтверджено опублікованими: {ок} з {len(наміри)}")
+
+
 def main():
     if not SERVICE_KEY:
         print("✗ немає SUPABASE_SERVICE_ROLE_KEY — пропускаю синк")
@@ -201,7 +292,7 @@ def main():
         return
 
     existing = json.loads(pr.DATA_PATH.read_text(encoding="utf-8"))
-    next_id = max((a["id"] for a in existing if isinstance(a.get("id"), int)), default=0) + 1
+    next_id = next_cms_id(existing)     # 🔑 власний простір, див. CMS_ID_BASE
 
     # Дедуп за нечітким заголовком у межах розділу (як усюди).
     seen_by_section = {}
@@ -210,6 +301,7 @@ def main():
             pr.remember_title(pr.title_tokens(a["title"]), pr.section_of(a.get("geo", "")), seen_by_section)
 
     published, synced = [], 0
+    наміри = []          # (id рядка в базі, виданий номер) — до запису у файл це лише намір
     for row in ready:
         title = (row.get("title") or "").strip()
         if not title:
@@ -222,11 +314,9 @@ def main():
         art = cms_to_article(row, next_id)
         published.append(art)
         pr.remember_title(tokens, section, seen_by_section)
-        try:
-            mark_published(row["id"], next_id)
-            synced += 1
-        except Exception as e:
-            print(f"⚠ не вдалося позначити published id={row['id']}: {e}")
+        # 🛑 БАЗУ ТУТ НЕ ЧІПАЄМО — лише запамʼятовуємо намір. Див. пояснення в
+        # `позначити_доїхалі()` нижче: доля статті вирішується ПІСЛЯ цього циклу.
+        наміри.append((row["id"], next_id))
         next_id += 1
 
     if not published:
@@ -242,8 +332,12 @@ def main():
     merged = pr.balance_ua_world(merged)[: pr.MAX_ARTICLES]
 
     pr.DATA_PATH.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+    synced = позначити_доїхалі(наміри, merged)
     print(f"✓ синк: +{synced} статей кабінету у стрічку (усього {len(merged)})")
 
 
 if __name__ == "__main__":
-    main()
+    if "--confirm" in sys.argv:
+        confirm()
+    else:
+        main()
