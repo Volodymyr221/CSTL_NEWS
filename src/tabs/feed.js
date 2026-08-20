@@ -267,7 +267,21 @@ function wireClamps(root) {
     if (!card) return;
     const id = Number(card.dataset.post);
 
-    el.classList.remove('fd-text--clip', 'fd-text--anim');
+    // 🔴 20.08 — МІРЯТИ МОЖНА ЛИШЕ ВИДИМЕ, і це не те саме, що «в документі».
+    // Скарга Вови: «заходжу в стрічку — верхнє оголошення відразу розгорнуте,
+    // блимає і згортається». Заміряно на сцені: поки вкладка `display:none`,
+    // `scrollHeight` елемента дорівнює НУЛЮ, тож `contentFull` виходив −20 і
+    // умова «текст короткий» спрацьовувала на будь-якому тексті. Згортання не
+    // ставилось узагалі; людина заходила на вкладку і бачила 538px повного
+    // тексту, який складався аж при наступному вимірі (поворот екрана, новий
+    // рендер) — це і є «блимає».
+    // 🛑 Тому тут МОВЧКИ ВИХОДИМО, лишаючи `--preclip` на місці: згорнутий текст
+    // без кнопки гірший за правильний, але незрівнянно кращий за розгорнутий,
+    // який стрибне. Перемір прийде на `cstl-tab-changed`, коли вкладку відкриють.
+    // ⚠️ `isConnected` цього НЕ ловить: у прихованому піддереві він true.
+    if (!el.isConnected || !el.getClientRects().length) return;
+
+    el.classList.remove('fd-text--clip', 'fd-text--anim', 'fd-text--preclip');
     el.style.maxHeight = '';
     const stale = el.nextElementSibling;
     if (stale && stale.classList.contains('fd-more')) stale.remove();
@@ -280,7 +294,9 @@ function wireClamps(root) {
     // короткий» (`NaN <= NaN`) хибна, тому функція не виходила, а `max-height: NaNpx`
     // браузер мовчки ігнорував. Наслідок: текст лишався ПОВНИЙ, але кнопку домальовано.
     // Тепер міряти можна лише те, що справді в документі — інакше числа вигадані.
-    if (!el.isConnected) return;
+    // (Сама перевірка переїхала ВГОРУ, до зняття класів: знімати `--preclip` до
+    // того, як ми впевнились, що вимір можливий, означало б розгорнути текст і
+    // лишити його таким — рівно та вада, від якої лікувались 20.08.)
 
     // Метрики читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
     const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
@@ -726,7 +742,7 @@ function postCardHtml(post, onPage = false) {
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
         ${чернетка ? '<div class="fd-draft-badge">ЧЕРНЕТКА · її бачиш лише ти</div>' : ''}
         ${eventBadgeHtml(post)}
-        <div class="fd-text">${escapeHtml(post.text)}</div>
+        <div class="fd-text fd-text--preclip">${escapeHtml(post.text)}</div>
         ${author}
         ${чернетка && canEditPost ? `<div class="fd-draft-actions">
           <button class="fd-draft-pub" data-publish="${post.id}" type="button">Опублікувати</button>
@@ -3398,6 +3414,21 @@ export async function initFeed() {
     wireCards(root);            // делегування один раз на контейнер вкладки
     // Переміряти розкладку кружечків при зміні ширини екрана (поворот тощо).
     window.addEventListener('resize', layoutCircles);
+
+    // 🔴 20.08 — ПЕРЕМІР, КОЛИ ВКЛАДКУ ВІДКРИЛИ. Третя ланка того самого фікса:
+    // поки вкладка прихована, поміряти текст неможливо (`scrollHeight` = 0), і
+    // `wireClamps` навмисно виходить, лишаючи текст згорнутим наперед. Точний
+    // стан — з кнопкою, і без згортання там, де ховати нема чого, — можна
+    // порахувати ЛИШЕ коли вкладка справді на екрані.
+    // ⚠️ Слухаємо `cstl-tab-changed`, а не `resize`: перехід між вкладками не
+    // міняє розмірів вікна, тож старий слухач цієї миті не бачив зовсім.
+    window.addEventListener('cstl-tab-changed', () => {
+      const list = document.getElementById('feed-list');
+      if (list && list.getClientRects().length) wireClamps(list);
+      document.querySelectorAll('.fd-screen').forEach(scr => {
+        if (scr.getClientRects().length) wireClamps(scr);
+      });
+    });
 
     // Поворот екрана міняє кількість рядків у тексті — переміряти згортання,
     // інакше кнопка «Показати більше» лишиться там, де ховати вже нічого.
