@@ -10,50 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-20 15:49 UTC
+**Зріз на:** 2026-08-20 16:32 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `a68748ee6` 20.08 15:49 — fix(агент): заміна назви прибирає за собою надлишковий хвіст |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-1526` |
-| останній PR у `main` | #973 |
+| останній коміт людини | `c34d91b5b` 20.08 15:49 — docs: пульс NOW.md перед деплоєм |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-1631` |
+| останній PR у `main` | #974 |
 | стендів на диску | 92 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 5 ⚠️ |
 | журнал за 2026-08-20 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/BYYOU_PLAN_2026-08-20_адмінка-сутності-done.md`
-- `CSTL NEWS VOVA/docs/AI_AGENT_OLYKA_CASTLE.md`
-- `admin.html`
-- `editor/core/geo.py`
-- `editor/core/registry.py`
-- `editor/filters/geo_scale.py`
-- `editor/missions/holidays.json`
-- `editor/missions/olyka_castle.json`
-- `editor/voice/olyka_castle.md`
-- `editor/writers/ai_writer.py`
-- `editor/writers/brand_writer.py`
-- `style/base.css`
-- `style/home.css`
-- `style/tokens.css`
-- `sw.js`
-- `tests/_lib.mjs`
-- …ще 15
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `c34d91b5b` 20.08 15:49 — docs: пульс NOW.md перед деплоєм
 - `a68748ee6` 20.08 15:49 — fix(агент): заміна назви прибирає за собою надлишковий хвіст
 - `49a4a157d` 20.08 15:49 — fix(головна): скляна капсула стала островом, а не приклеєною до шапки
 - `6a8ab8eca` 20.08 15:49 — docs: 92 стенди в документах + повний опис ШІ-агента винесено з пульсу
 - `2d3682090` 20.08 15:49 — fix(адмінка): прибита шапка + кольори застосунку замість власної палітри
-- `c7dada3ee` 20.08 15:49 — feat(агент): масштаб і адреса поста — громада це не тільки Олика
 
 <!-- AUTO:END -->
 
