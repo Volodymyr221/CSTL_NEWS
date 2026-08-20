@@ -10,26 +10,26 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-20 06:25 UTC
+**Зріз на:** 2026-08-20 06:29 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `cf2fa2d8` 20.08 06:15 — docs: пульс у межах стелі після мерджу main |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-0624` |
-| останній PR у `main` | #962 |
+| останній коміт людини | `1596fdd8` 20.08 06:29 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-0629` |
+| останній PR у `main` | #963 |
 | стендів на диску | 89 |
-| незакомічених файлів | 9 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-20 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-08-18b.md`
 - `editor/core/spend.py`
+- `editor/missions/holidays.json`
+- `editor/missions/olyka_castle.json`
 - `editor/run.py`
 - `scripts/ai_news_agent.py`
 - `sw.js`
@@ -37,11 +37,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `1596fdd8` 20.08 06:29 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `d51c8d4a` 20.08 06:28 — feat(гроші): особиста кишеня кожному агенту — дорогий не морить голодом дешевого
+- `2cdf033e` 20.08 06:16 — feat(гроші): спільні стелі витрат на модель — $4/міс і $1.20/добу (#963)
 - `cf2fa2d8` 20.08 06:15 — docs: пульс у межах стелі після мерджу main
 - `484d5367` 20.08 06:14 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `8d639e24` 20.08 06:13 — feat(гроші): спільні стелі витрат на модель — $4/міс і $1.20/добу
-- `62b35a71` 20.08 06:02 — feat(агент): спільнота OLYKA CASTLE — чернетки постів у стрічку, Opus 5 (#962)
-- `7589c5af` 20.08 06:01 — docs: пульс — ключ у репозиторії вже є, перезаписувати не можна
 
 <!-- AUTO:END -->
 
