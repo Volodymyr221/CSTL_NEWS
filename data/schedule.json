@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "20.08.2026",
-  "updatedTime": "07:40",
+  "updatedTime": "08:34",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -5038,7 +5038,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:50",
           "arrival_time": "09:00",
           "duration_min": 70,
@@ -6448,7 +6448,7 @@
         }
       ],
       "fetchedAt": "20.08.2026",
-      "fetchedTime": "07:40"
+      "fetchedTime": "08:34"
     },
     "2026-08-21": {
       "routes": [
@@ -8054,7 +8054,7 @@
         }
       ],
       "fetchedAt": "20.08.2026",
-      "fetchedTime": "07:40"
+      "fetchedTime": "08:34"
     },
     "2026-08-22": {
       "routes": [
