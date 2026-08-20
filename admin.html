@@ -143,6 +143,36 @@
 
 
     /* ── ГОЛОВНИЙ ЕКРАН: сітка іконок (як робочий стіл iPhone) ──────────── */
+    /* ── ЧЕРГА ДІЙ ─────────────────────────────────────────────────────────
+       🔑 Рядки, а не плитки: у черзі важить ЧИСЛО і що воно означає, а плитка
+       48px такого не вміщає — на неї не влізе «оголошень на модерації».
+       ⚠️ Висота рядка 56px — не смак: це мінімальна зона впевненого дотику
+       (44pt Apple HIG) плюс запас, бо тиснуть на ходу і однією рукою. */
+    .queue { background: #fff; border-radius: 14px; padding: 12px 12px 6px; margin-bottom: 16px;
+             box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .queue-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+                   color: #8a8f98; margin-bottom: 8px; }
+    .queue-row { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px;
+                 background: none; border: 0; border-top: 1px solid #EEE; padding: 8px 2px;
+                 font: inherit; text-align: left; cursor: pointer; }
+    .queue-row:first-of-type { border-top: 0; }
+    .queue-row:active { background: #F4F5F7; }
+    /* Число веде рядок: око шукає «скільки», а не «що» — тому воно перше і найбільше. */
+    .queue-n { min-width: 38px; font-size: 24px; font-weight: 800; color: #722F37; line-height: 1; }
+    .queue-txt { flex: 1; font-size: 15px; color: #333; }
+    .queue-go { font-size: 22px; color: #C0C4CB; }
+    /* 🛑 Забутий доступ — єдиний рядок з іншим тоном. Він не «сьогоднішня робота»,
+       він накопичена загроза, і зрівняти його з рештою означало б сховати. */
+    .queue-row--warn .queue-n { color: #d97706; }
+    .queue--calm { text-align: center; padding: 22px 16px; }
+    .queue-ok { font-size: 17px; font-weight: 700; color: #2e7d32; }
+    .queue-sub { font-size: 13px; color: #777; margin-top: 4px; }
+
+    /* ── ГРУПИ РОЗДІЛІВ ───────────────────────────────────────────────────── */
+    .grp { margin-bottom: 14px; }
+    .grp-title { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+                 color: #9aa0a8; margin: 0 0 6px 2px; }
+
     .tile-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
@@ -828,6 +858,11 @@ const ICO_CHECK = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg
 const ICO_MESSAGE_CIRCLE = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /> </svg>';
 const ICO_USERS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /> </svg>';
 const ICO_FILE_TEXT = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M14 3v4a1 1 0 0 0 1 1h4" /> <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /> <path d="M9 9l1 0" /> <path d="M9 13l6 0" /> <path d="M9 17l6 0" /> </svg>';
+// 🔑 Ключ, а не другі «люди»: «Адміни» і «Доступи» стоять поруч в одній групі, і
+// з однаковою іконкою їх доводилось розрізняти ЧИТАННЯМ підпису — тобто іконка
+// не працювала взагалі. Ключ каже «тут про право входу», а не «тут про людей».
+const ICO_KEY = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" /> <path d="M15 9h.01" /> </svg>';
+
 const ICO_COIN = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1" /> <path d="M12 7v10" /> </svg>';
 const ICO_CHART_BAR = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6" /> <path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10" /> <path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14" /> <path d="M4 20h14" /> </svg>';
 const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg>';
@@ -845,24 +880,24 @@ const ICO_HEART_HAND = '<svg width="16" height="16" xmlns="http://www.w3.org/200
 function menuItems() {
   const canArticles = isAdmin || editorPerms.canCreate;
   return [
-    { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, count: () => articles.length },
-    { id: 'pending',       icon: ICO_CLIPBOARD_LIST, label: 'Модерація',    show: isAdmin,     count: () => pendingPosts.length },
+    { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, group: 'Контент',    count: () => articles.filter(a => a.status === 'draft').length },
+    { id: 'pending',       icon: ICO_CLIPBOARD_LIST, label: 'Модерація',    show: isAdmin,     group: 'Модерація',  count: () => pendingPosts.length },
     // Лічильник — лише НОВІ скарги: розглянуті не мусять світитись у сітці вічно.
-    { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     count: () => adReports.filter(r => r.status === 'new').length },
-    { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Оголошення',   show: isAdmin,     count: () => 0 },
+    { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     group: 'Модерація',  count: () => adReports.filter(r => r.status === 'new').length },
+    { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Анонси',       show: isAdmin,     group: 'Контент',    count: () => 0 },
     // 🔑 Лічильник рахує НОВІ ЗАЯВКИ, а не кількість зборів. Кількість зборів на
     // плитці нічого не підказує (вона просто є), а «скільки людей чекає на
     // відповідь» — це саме те, заради чого сюди заходять. Той самий підхід, що
     // у «Скаргах»: розглянуті не мусять світитись у сітці вічно.
-    { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: isAdmin,     count: () => fundRequests.filter(r => r.status === 'new').length },
-    { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
-    { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
-    { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     count: () => communities.length },
+    { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: isAdmin,     group: 'Громада',    count: () => fundRequests.filter(r => r.status === 'new').length },
+    { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     group: 'Модерація',  count: () => 0 },
+    { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     group: 'Модерація',  count: () => 0 },
+    { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     group: 'Громада',    count: () => 0 },
     // 🆕 09.08 — «Люди». Лічильник рахує ОФІЦІЙНИХ, а не всіх жителів: загальна
     // кількість профілів у плитці нічого не підказує (вона просто росте), а
     // «скільки людей із галочкою» — це саме те, що адмін звідси і робить.
-    { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: isAdmin,     count: () => people.filter(p => p.official).length },
-    { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     count: () => admins.length },
+    { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: isAdmin,     group: 'Громада',    count: () => 0 },
+    { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     group: 'Доступ',     count: () => 0 },
     // 🔴 20.08 — «ДОСТУПИ». Заведено після того, як людина, яка пішла з команди
     // півтора місяця тому, досі мала повні права публікувати від імені видання.
     // Прибрати вдалось лише SQL-запитом: списку тих, хто має доступ, не існувало
@@ -870,10 +905,10 @@ function menuItems() {
     // 🔑 Лічильник тримає той самий принцип, що й решта: не «скільки всього
     // редакторів» (це просто число), а СКІЛЬКИ ЗАБУТИХ — діючий доступ, яким не
     // користувались понад 30 днів. Саме він і був причиною діри.
-    { id: 'access',        icon: ICO_USERS,          label: 'Доступи',      show: isAdmin,     count: () => accessRows.filter(забутий).length },
-    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     count: () => 0 },
-    { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     count: () => 0 },
-    { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        count: () => 0 },
+    { id: 'access',        icon: ICO_KEY,            label: 'Доступи',      show: isAdmin,     group: 'Доступ',     count: () => accessRows.filter(забутий).length },
+    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     group: 'Система',    count: () => 0 },
+    { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     group: 'Система',    count: () => 0 },
+    { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        group: 'Система',    count: () => 0 },
   ].filter(m => m.show);
 }
 
@@ -898,17 +933,77 @@ function renderApp() {
 
 // Головний екран — сітка іконок (тап відкриває розділ, як застосунок на
 // робочому столі iPhone). Лічильник — бейдж у кутку плитки (0 не показуємо).
+// ── ГОЛОВНИЙ ЕКРАН: ЧЕРГА + ГРУПИ ───────────────────────────────────────────
+// 🔴 20.08 — ПЕРЕБУДОВА. Було: 14 РІВНОПРАВНИХ плиток однією сіткою. Тобто
+// «Налаштування», куди заходять раз на місяць, важили рівно стільки ж, скільки
+// «Скарги», де хтось чекає рішення просто зараз. Екран нічого не підказував —
+// його треба було читати цілком і згадувати, де що лежить.
+//
+// 🔑 ДВА РІВНІ ЗАМІСТЬ ОДНОГО:
+//   1. ЧЕРГА — що чекає МОЄЇ дії прямо зараз. Показуються ЛИШЕ ненульові рядки.
+//   2. Групи (Модерація · Контент · Громада · Доступ · Система) — усе інше, за
+//      змістом роботи, а не за типом сутності в базі.
+//
+// 🛑 ПОРОЖНЯ ЧЕРГА — ЦЕ ВІДПОВІДЬ, А НЕ ПОРОЖНЕЧА. «Усе розібрано» economить
+// найдорожче: людині не треба обходити чотирнадцять розділів, щоб переконатись,
+// що робити нічого. Саме заради цього екран і перебудовано.
+//
+// ⚠️ РОУТИНГ І САМІ РОЗДІЛИ НЕ ЗМІНЕНІ ЖОДНОГО РЯДКА. Перебудовано лише вхід —
+// тобто ризик обмежений тим, що видно на першому екрані. Це свідомий вибір:
+// у файлі на 2600 рядків одночасна правка навігації і вмісту дала б збій, який
+// нічим не відрізнити від збою верстки.
+function чергаДій() {
+  // 🔑 Порядок — за ЦІНОЮ ЗВОЛІКАННЯ, а не за розміром числа. Скарга висить на
+  // живому оголошенні; заявка на збір — це людина, яка чекає відповіді; забутий
+  // доступ мовчить роками, але коштує найдорожче, тому стоїть окремим тоном.
+  const q = [];
+  const n = (id) => (menuItems().find(m => m.id === id)?.count() || 0);
+  if (n('reports'))     q.push({ id: 'reports',     n: n('reports'),     txt: 'скарг на оголошення' });
+  if (n('pending'))     q.push({ id: 'pending',     n: n('pending'),     txt: 'оголошень на модерації' });
+  if (n('fundraisers')) q.push({ id: 'fundraisers', n: n('fundraisers'), txt: 'заявок на збір' });
+  if (n('articles'))    q.push({ id: 'articles',    n: n('articles'),    txt: 'чернеток статей' });
+  if (n('access'))      q.push({ id: 'access',      n: n('access'),      txt: 'забутих доступів', тривога: true });
+  return q;
+}
+
 function renderHomeGrid() {
-  const tiles = menuItems().map(m => {
-    const n = m.count();
-    return `<button class="tile" data-tab="${m.id}">
-      ${n ? `<span class="tile-badge">${n}</span>` : ''}
-      <span class="tile-ic">${m.icon}</span>
-      <span class="tile-label">${m.label}</span>
-    </button>`;
-  }).join('');
-  mainEl.innerHTML = `<div class="tile-grid">${tiles}</div>`;
-  document.querySelectorAll('.tile').forEach(btn => {
+  const пункти = menuItems();
+  const черга  = чергаДій();
+
+  const групи = ['Модерація', 'Контент', 'Громада', 'Доступ', 'Система']
+    .map(назва => {
+      const свої = пункти.filter(m => (m.group || 'Система') === назва);
+      if (!свої.length) return '';
+      const плитки = свої.map(m => {
+        const n = m.count();
+        return `<button class="tile" data-tab="${m.id}">
+          ${n ? `<span class="tile-badge">${n}</span>` : ''}
+          <span class="tile-ic">${m.icon}</span>
+          <span class="tile-label">${m.label}</span>
+        </button>`;
+      }).join('');
+      return `<div class="grp"><div class="grp-title">${назва}</div><div class="tile-grid">${плитки}</div></div>`;
+    }).join('');
+
+  mainEl.innerHTML = `
+    ${черга.length ? `
+      <div class="queue">
+        <div class="queue-title">Чекає вашої дії</div>
+        ${черга.map(r => `
+          <button class="queue-row${r.тривога ? ' queue-row--warn' : ''}" data-tab="${r.id}">
+            <span class="queue-n">${r.n}</span>
+            <span class="queue-txt">${r.txt}</span>
+            <span class="queue-go">›</span>
+          </button>`).join('')}
+      </div>`
+      : `<div class="queue queue--calm">
+           <div class="queue-ok">Усе розібрано</div>
+           <div class="queue-sub">Нічого не чекає рішення. Розділи нижче — коли знадобляться.</div>
+         </div>`}
+    ${групи}
+  `;
+
+  document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', async () => {
       activeTab = btn.dataset.tab;
       // P2: перезавантажити свіжі дані при вході у вкладку — інакше після синку
