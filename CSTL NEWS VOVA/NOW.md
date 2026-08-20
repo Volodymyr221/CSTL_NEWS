@@ -10,50 +10,35 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-19 20:43 UTC
+**Зріз на:** 2026-08-20 04:22 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `e38ddbc1` 19.08 20:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260819-2041` |
-| останній PR у `main` | #959 |
+| останній коміт людини | `044c75cd` 20.08 04:21 — fix(жести): зона свайпу назад — ліва половина екрана |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-0421` |
+| останній PR у `main` | #960 |
 | стендів на диску | 87 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-08-19 | **НЕМАЄ** ⚠️ |
+| журнал за 2026-08-20 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | done — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.nojekyll`
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-08-18b.md`
-- `build.js`
 - `bundle.js`
-- `docs/PLAY_TWA.md`
-- `manifest.json`
-- `privacy.html`
-- `scripts/gen_privacy.mjs`
-- `src/core/account-ui.js`
-- `src/core/chat-core.js`
 - `src/core/layers.js`
-- `src/tabs/board-discussions.js`
-- `src/tabs/board.js`
-- `src/tabs/feed.js`
-- `src/tabs/fund-screen.js`
-- `src/tabs/news-hub.js`
 - `sw.js`
-- …ще 2
+- `tests/swipe-back.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `044c75cd` 20.08 04:21 — fix(жести): зона свайпу назад — ліва половина екрана
+- `f494ee0f` 20.08 04:19 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `2abad662` 19.08 20:46 — feat: свайп назад «звідки завгодно» + підготовка до Google Play (#960)
+- `91ca0616` 19.08 20:45 — docs: пульс перед фінішем
 - `e38ddbc1` 19.08 20:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `2a50e17f` 19.08 20:42 — feat(жести): свайп назад звідки завгодно на 7 екранах + стенд
-- `194c0d68` 19.08 20:08 — feat(play): публічна політика з одного джерела, manifest id, .nojekyll, інструкція TWA + сторож
-- `abbf2c46` 19.08 19:40 — fix(погода): стрілка в лівий край рядка, перед іконкою погоди (#959)
-- `dced2f3f` 19.08 19:39 — fix(погода): прибрано дубль стрілки після злиття + пульс
 
 <!-- AUTO:END -->
 
