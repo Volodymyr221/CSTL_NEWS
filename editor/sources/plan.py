@@ -13,6 +13,7 @@
 (у цьому проєкті це вже коштувало розрізаної навпіл історії журналів 06.08).
 """
 import json
+from datetime import date as _date
 from pathlib import Path
 
 from editor.core.registry import register
@@ -21,6 +22,8 @@ from editor.sources.base import Source
 ROOT = Path(__file__).resolve().parent.parent.parent
 PLANS = ROOT / "editor" / "plans"
 STATE = ROOT / "data" / "olyka_agent_state.json"
+STORIES = ROOT / "data" / "olyka-stories.json"
+EVENTS = ROOT / "data" / "events.json"
 
 
 def load_state() -> dict:
@@ -80,6 +83,114 @@ def функція_дозволена(види: list, максимум: float) -
     return ""
 
 
+def _дата(s: str) -> _date:
+    р, м, д = (int(x) for x in s.split("-"))
+    return _date(р, м, д)
+
+
+def _мітка(назва: str, префікс: str) -> str:
+    """Стабільний id теми з її назви. Не за порядковим номером: переставили
+    записи у файлі — і агент написав би те саме вдруге."""
+    сухо = "".join(ch if ch.isalnum() or ch == " " else "" for ch in (назва or "").lower())
+    return f"{префікс}:" + "-".join(сухо.split()[:4])[:48]
+
+
+def _речення(текст: str, скільки: int) -> list:
+    вихід = []
+    for шматок in (текст or "").replace("\n", " ").split("."):
+        ш = шматок.strip()
+        if len(ш) > 25:
+            вихід.append(ш + ".")
+        if len(вихід) >= скільки:
+            break
+    return вихід
+
+
+def історії_олики(зроблено: set) -> list:
+    """Теми з `data/olyka-stories.json` — перевірених матеріалів про Олику, які
+    вже живуть у застосунку.
+
+    🔴 20.08, вимога Вови: «більше про громаду, Олику факти і різні пости».
+    Правило «агент не вигадує» лишається недоторканим саме тому, що факти беруться
+    ЗВІДСИ, а не з голови моделі: це вже вичитаний текст проєкту, а не переказ
+    того, що модель «пам'ятає» про Олику. Різниця критична — місцевий читач
+    помітить вигадану дату про замок швидше за будь-кого.
+
+    ⚠️ Це НЕ передрук статті. Агент отримує кілька речень як факти і пише з них
+    короткий пост стрічки; повний матеріал лишається там, де був."""
+    if not STORIES.exists():
+        return []
+    try:
+        сирі = json.loads(STORIES.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    теми = []
+    for іст in сирі if isinstance(сирі, list) else []:
+        назва = (іст.get("title") or "").strip()
+        if not назва:
+            continue
+        pid = _мітка(назва, "story")
+        if pid in зроблено:
+            continue
+        факти = [(іст.get("excerpt") or "").strip()] + _речення(іст.get("content", ""), 5)
+        факти = [ф for ф in факти if ф]
+        if not факти:
+            continue
+        теми.append({
+            "id": pid, "kind": "brand", "topic": назва, "facts": факти,
+            "note": ("Це пост про наше містечко, не про застосунок. Коротко, як розповідають "
+                     "своїм: одна думка, без переліку всього, що знаєш. Не переказуй усі факти — "
+                     "візьми те, що найбільше чіпляє."),
+        })
+    return теми
+
+
+# Наскільки наперед анонсуємо подію. Місяць — зарано (пост нічого не змінює
+# сьогодні), день — запізно. Два тижні: встигаєш спланувати і ще памʼятаєш.
+EVENT_WINDOW_DAYS = 14
+
+
+def найближчі_події(зроблено: set, сьогодні: str) -> list:
+    """Події громади, які ще НЕ минули. Дата з файлу — не з голови моделі.
+
+    ⚠️ Минулі події свідомо не беремо: пост «приходьте» про те, що вже відбулось,
+    гірший за відсутність поста."""
+    if not EVENTS.exists():
+        return []
+    try:
+        сирі = json.loads(EVENTS.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    теми = []
+    for под in сирі if isinstance(сирі, list) else []:
+        дата = (под.get("date") or "").strip()
+        назва = (под.get("title") or "").strip()
+        if not дата or not назва or дата < сьогодні:
+            continue
+        try:
+            за_скільки = (_дата(дата) - _дата(сьогодні)).days
+        except Exception:
+            continue
+        if за_скільки > EVENT_WINDOW_DAYS:
+            continue
+        pid = _мітка(назва, "event")
+        if pid in зроблено:
+            continue
+        факти = [f"Дата: {дата}."]
+        if под.get("time"):
+            факти.append(f"Початок: {под['time']}.")
+        if под.get("location"):
+            факти.append(f"Місце: {под['location']}.")
+        if под.get("description"):
+            факти.append(под["description"].strip())
+        теми.append({
+            "id": pid, "kind": "brand", "topic": f"Подія в громаді: {назва}",
+            "facts": факти,
+            "note": "Коротко: що, коли, де. Без «обовʼязково приходьте» і без окличних знаків.",
+        })
+    return теми
+
+
 @register("source", "plan")
 class PlanSource(Source):
     def fetch(self, cfg):
@@ -96,9 +207,22 @@ class PlanSource(Source):
         максимум = float(план.get("max_feature_share", cfg.get("max_feature_share", 0.34)))
         види = _види(стан, план)
 
+        # 🔑 ЧЕРГА З ТРЬОХ ДЖЕРЕЛ, І ПОРЯДОК НЕ ВИПАДКОВИЙ:
+        #   1. план Вови — те, що людина свідомо поставила в чергу, завжди перше;
+        #   2. події громади — вони спливають за датою, чекати не можуть;
+        #   3. історії Олики — лежать роками, тому останні.
+        # ⚠️ Пули 2-3 живуть у файлах, які веде НЕ агент: `data/events.json` і
+        # `data/olyka-stories.json`. Він звідти лише читає — тобто нових фактів
+        # у світі від нього не зʼявляється, що і є головним правилом цієї місії.
+        import time as _t
+        сьогодні = _t.strftime("%Y-%m-%d", _t.gmtime())
+        черга = (list(план.get("posts", []))
+                 + найближчі_події(зроблено, сьогодні)
+                 + історії_олики(зроблено))
+
         готові = []
         відкладені = []
-        for запис in план.get("posts", []):
+        for запис in черга:
             pid = (запис.get("id") or "").strip()
             if not pid or pid in зроблено:
                 continue
