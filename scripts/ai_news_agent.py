@@ -61,6 +61,11 @@ SUPA_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase
 # щойно прогін або місяць перетнув стелю. Стелі можна перекрити через env.
 MAX_RUN_COST_USD = float(os.environ.get("AI_MAX_RUN_USD", "1.20"))     # стеля на ОДИН прогін: вистачає на ~3 пакети (повне наповнення до 10); типовий долив = 1 пакет ≈ $0.3
 MAX_MONTH_COST_USD = float(os.environ.get("AI_MAX_MONTH_USD", "4.0"))  # стеля на МІСЯЦЬ (15→4 08.07: реально ~$5/міс, $15 не спиняла; тепер щільно над фактом)
+# 🔴 20.08 — ДОБОВА СТЕЛЯ. Місячної самої по собі мало: $4 технічно можна
+# витратити за одну добу, і баланс зникне до того, як хтось відкриє звіт (пряме
+# питання Вови: «щоб не зʼїло за один день»). $1.20 = рівно одне повне наповнення
+# кабінету, тобто нормальну роботу не ріже — ріже лише повторні наповнення підряд.
+MAX_DAY_COST_USD = float(os.environ.get("AI_MAX_DAY_USD", "1.20"))
 # Оцінка «підозра на списання» для перерваного мережею виклику: Anthropic міг списати
 # server-side, а клієнтський usage=0. Додаємо цю суму в run_cost щоб breaker бачив ризик.
 SUSPECT_CHARGE_USD = float(os.environ.get("AI_SUSPECT_USD", "0.30"))
@@ -202,6 +207,22 @@ def month_spend_usd() -> float:
         return float(load_spend().get("months", {}).get(month, {}).get("cost_usd", 0) or 0)
     except Exception:
         return 0.0
+
+
+def day_spend_usd() -> float:
+    """Скільки витрачено за останні 24 год — для добового запобіжника.
+
+    ⚠️ Рахуємо по журналу прогонів, а не по календарному дню: рухоме вікно не
+    дає обійти стелю, витративши все ввечері й одразу після півночі ще раз."""
+    поріг = time.time() - 24 * 3600
+    сума = 0.0
+    for r in load_spend().get("runs", []):
+        try:
+            if float(r.get("ts", 0)) / 1000 >= поріг:
+                сума += float(r.get("cost_usd", 0) or 0)
+        except Exception:
+            continue
+    return round(сума, 4)
 
 
 def recent_titles_for(existing: list, geos: list, limit: int = 40) -> list:
@@ -851,6 +872,10 @@ def main():
         spent_month = month_spend_usd()
         if spent_month >= MAX_MONTH_COST_USD:
             print(f"⛔ місячна стеля ${MAX_MONTH_COST_USD} досягнута (вже ${spent_month}) — прогін пропущено (блокер витрат)")
+            return
+        spent_day = day_spend_usd()
+        if spent_day >= MAX_DAY_COST_USD:
+            print(f"⛔ добова стеля ${MAX_DAY_COST_USD} досягнута (вже ${spent_day} за 24 год) — прогін пропущено (блокер витрат)")
             return
 
     found = []
