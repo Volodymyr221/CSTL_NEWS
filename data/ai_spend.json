@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1787210686844,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 426,
+      "output_tokens": 463,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
+      "ts": 1787210674295,
+      "mission": "holiday:🇺🇦 День Незалежності України",
+      "model": "claude-sonnet-5",
+      "input_tokens": 477,
+      "output_tokens": 469,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0085,
+      "note": ""
+    },
+    {
       "ts": 1787207779627,
       "mission": "olyka:weather-compact",
       "model": "claude-opus-5",
@@ -753,37 +779,11 @@
       "found": 1,
       "cost_usd": 0.0117,
       "note": ""
-    },
-    {
-      "ts": 1783540708377,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10244,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0309,
-      "note": ""
-    },
-    {
-      "ts": 1783540704680,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 8,
-      "output_tokens": 7285,
-      "cache_read": 71907,
-      "cache_write": 51188,
-      "web_searches": 5,
-      "found": 4,
-      "cost_usd": 0.3728,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.1324,
-    "runs": 79,
+    "cost_usd": 5.1491,
+    "runs": 81,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.0228,
-      "runs": 1,
+      "cost_usd": 0.0395,
+      "runs": 3,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787207779627
+  "updated_ts": 1787210686844
 }
