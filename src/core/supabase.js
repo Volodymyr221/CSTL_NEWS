@@ -1803,9 +1803,18 @@ export async function fetchPages() {
 // pages(name, avatar_url) — вкладений join за FK page_posts.page_id → pages.id.
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
+  // 🔴 20.08 — `status = 'published'`. З появою ШІ-агента спільноти пости мають
+  // стан: чернетку, яку Вова ще не вичитав, читач бачити не має.
+  // 🛑 Це ДРУГА лінія, а не єдина: головна стоїть у політиці читання самої бази
+  // (`scripts/supabase_page_post_drafts.sql`) — навіть якщо цей фільтр колись
+  // загубиться при правці, чужу чернетку база все одно не віддасть.
+  // ⚠️ У запасному запиті нижче фільтра НЕМАЄ навмисно: він існує на випадок, що
+  // міграція ще не накотилась, і `status` там ще не існує. Додати фільтр туди
+  // означало б поміняти «нема галочки» на «порожня Стрічка» — ціна незрівнянна.
   let q = supa.from('page_posts')
     .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (pageId != null) q = q.eq('page_id', pageId);
@@ -1825,6 +1834,44 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
     return legacy.data || [];
   }
   return data || [];
+}
+
+// ── ЧЕРНЕТКИ ШІ-АГЕНТА СПІЛЬНОТИ (20.08) ────────────────────────────────────
+// Агент пише пости зі `status = 'draft'`, і читач їх не бачить: так каже політика
+// читання бази. Ця функція дістає їх для того, хто МАЄ право їх вичитувати.
+// 🔑 Окремих перевірок «а чи він адмін» тут немає навмисно — їх робить сама база
+// (`can_edit_page`). Клієнт, який спитав чужі чернетки, отримає порожній список,
+// а не чужий текст. Перевіряти двічі означало б мати два джерела правди про
+// доступ, і рано чи пізно вони розійдуться.
+export async function fetchPageDrafts(limit = 20) {
+  if (!supa) return [];
+  const { data, error } = await supa.from('page_posts')
+    .select(POST_COLS)
+    .is('deleted_at', null)
+    .eq('status', 'draft')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) {
+    // Колонки ще немає (міграція не накотилась) — це не привід шуміти в консоль
+    // людині, яка просто відкрила Стрічку.
+    if (!/column .*status/i.test(error.message || '')) {
+      console.warn('[supabase] fetchPageDrafts:', error.message);
+    }
+    return [];
+  }
+  return data || [];
+}
+
+// Опублікувати чернетку. ⚠️ Разом зі станом оновлюємо `created_at`: пост має
+// стати вгорі стрічки в момент ПУБЛІКАЦІЇ, а не тоді, коли його написав агент.
+// Інакше текст, який пролежав чернеткою три дні, вийшов би одразу похованим під
+// свіжими постами — і виглядало б це як «опублікував, а його немає».
+export async function publishPagePost(postId) {
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const patch = { status: 'published', created_at: new Date().toISOString() };
+  const r = await netCall(() => supa.from('page_posts').update(patch).eq('id', postId).select(POST_COLS).single());
+  if (r.error) return { ok: false, error: r.error.message };
+  return { ok: true, post: r.data };
 }
 
 // Лайки постів → Map post_id → { count, my }. userKey = uid залогіненого або null.
@@ -2099,7 +2146,7 @@ export async function fetchMyEditablePageIds() {
 // false = суто від імені спільноти (вибір у композері, крок 6).
 // ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
 //    у будь-якому разі — людський текст. Поля `select` не міняв.
-const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)';
+const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
 
 export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };

@@ -1114,3 +1114,39 @@
   from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── ЧЕРНЕТКА ШІ-АГЕНТА СПІЛЬНОТИ (20.08) ───────────────────────────────────
+   Пост, який написав агент і якого ще ніхто, крім редактора сторінки, не бачив.
+   🔑 Виглядає НАВМИСНО інакше за звичайний пост: пунктирна рамка і жовта
+   позначка. Якби чернетка була схожа на опублікований пост, найлегша помилка
+   була б найдорожчою — вирішити, що текст уже вийшов до людей, і не вичитати
+   його. Тут різниця має битись в око. */
+.fd-card--draft {
+  border: 1px dashed rgba(180, 130, 20, .55);
+  background: #FFFDF6;
+}
+.fd-draft-badge {
+  display: inline-block; margin-bottom: 8px;
+  padding: 4px 9px; border-radius: 6px;
+  background: #FFF3CD; color: #7A5B00;
+  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.fd-draft-actions {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 10px 0 2px; padding-top: 10px;
+  border-top: 1px solid rgba(180, 130, 20, .25);
+}
+.fd-draft-pub {
+  appearance: none; -webkit-appearance: none; border: 0; cursor: pointer;
+  padding: 9px 16px; border-radius: var(--hm-r-pill, 999px);
+  background: var(--red, #4A121C); color: #fff;
+  font: 700 13.5px/1 system-ui, -apple-system, sans-serif;
+}
+.fd-draft-pub:active { opacity: .8; }
+.fd-draft-pub:disabled { opacity: .55; }
+/* Підказка тиха: вона потрібна один раз, поки людина не звикла до потоку. */
+.fd-draft-hint {
+  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif;
+  color: var(--hm-quiet, #6b6b6b); flex: 1 1 120px;
+}
