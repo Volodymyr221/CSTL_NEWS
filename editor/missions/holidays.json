@@ -8,5 +8,8 @@
   "sink": "cabinet",
   "month_budget_usd": 0.4,
   "spend_prefix": "holiday:",
-  "day_budget_usd": 0.15
+  "day_budget_usd": 0.15,
+  "filters": [
+    "geo_scale"
+  ]
 }

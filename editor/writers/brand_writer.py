@@ -26,6 +26,7 @@ from pathlib import Path
 
 from editor.core.registry import register
 from editor.core.models import Draft
+from editor.core import geo as гео
 from editor.core import spend
 from editor.writers.base import Writer
 
@@ -69,6 +70,11 @@ class BrandWriter(Writer):
             "Ти пишеш пост для стрічки застосунку громади від імені офіційної спільноти бренду.",
             "Нижче — ГОЛОС БРЕНДУ. Дотримуйся його як інструкції, а не як побажання.",
             "", "=== ГОЛОС ===", голос, "=== КІНЕЦЬ ГОЛОСУ ===", "",
+            # 🔴 20.08. Гео-довідка стоїть і тут, не лише у святкового
+            # письменника: пости про громаду — це рівно те місце, де «Олика» і
+            # «громада» плутаються найлегше. Джерело одне для обох —
+            # `scripts/hromada_config.json`, тож правда не роздвоюється.
+            гео.довідка(item.get("масштаб")), "",
             f"ТЕМА ПОСТА: {тема}",
             "", "ФАКТИ (єдине джерело правди):",
         ]

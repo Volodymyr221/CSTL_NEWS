@@ -13,6 +13,7 @@ import urllib.request
 
 from editor.core.registry import register
 from editor.core.models import Draft
+from editor.core import geo as гео
 from editor.core import spend
 from editor.writers.base import Writer
 
@@ -38,11 +39,21 @@ class AIWriter(Writer):
                          image=item.get("image"),   # поважаємо куроване фото з holidays.json
                          image_type=("illustration" if item.get("image") else "none"),
                          image_query=item.get("image_query") or title,
-                         meta={"no_ai": True, "days_until": item.get("days_until")})
+                         meta={"no_ai": True, "days_until": item.get("days_until"),
+                               "масштаб": гео.масштаб_свята(item),
+                               "kind_свята": item.get("kind", "")})
 
+        # 🔴 20.08. Тут стояло «редактор локального медіа МІСТЕЧКА ОЛИКА … для
+        # жителів ГРОМАДИ» — два різні масштаби в одному реченні і жодного
+        # правила, коли який. Агент обрав перший і написав на День Незалежності
+        # «Для нас, жителів Олики», виключивши 16 сіл із їхнього ж свята.
+        # Тепер масштаб визначається ДО письма, а гео-довідка приходить з
+        # `hromada_config.json` — того самого файлу, яким живе новинний агент.
+        м = гео.масштаб_свята(item)
         prompt = (
-            "Ти — редактор локального медіа містечка Олика (Волинь). Напиши коротку теплу "
-            "статтю про свято для стрічки «Шо в селі» — простою мовою для жителів громади.\n"
+            "Ти — редактор медіа Олицької громади (Волинь). Напиши коротку теплу "
+            "статтю про свято для стрічки «Шо в селі» — простою мовою.\n\n"
+            f"{гео.довідка(м)}\n\n"
             f"Назва: {title}\nДата: {date}\nДовідка: {desc}\n\n"
             "Поверни ЛИШЕ JSON-обʼєкт (без пояснень до/після):\n"
             '{"lead":"1-2 речення анонсу","content":"3-5 коротких абзаців",'
