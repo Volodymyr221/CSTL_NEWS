@@ -22,14 +22,14 @@ const { ok, done } = reporter();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Запускає `spend.budget_block()` у тимчасовій теці з підробленим журналом. */
-function запобіжник(журнал, env = {}) {
+function запобіжник(журнал, env = {}, prefix = '', ownCap = 0, ownDayCap = 0) {
   const дір = mkdtempSync(join(tmpdir(), 'cstl-budget-'));
   mkdirSync(join(дір, 'data'), { recursive: true });
   writeFileSync(join(дір, 'data', 'ai_spend.json'), JSON.stringify(журнал));
   const код = `
 import sys; sys.path.insert(0, ${JSON.stringify(ROOT)})
 from editor.core import spend
-print(spend.budget_block())`;
+print(spend.budget_block(${JSON.stringify(prefix)}, ${ownCap}, ${ownDayCap}))`;
   return execFileSync('python3', ['-c', код], {
     cwd: дір, encoding: 'utf-8', env: { ...process.env, ...env },
   }).trim();
@@ -84,9 +84,15 @@ const spendPy = readFileSync(join(ROOT, 'editor/core/spend.py'), 'utf-8');
 const newsPy = readFileSync(join(ROOT, 'scripts/ai_news_agent.py'), 'utf-8');
 ok('🔴 усі агенти рахують з ОДНОГО журналу (спільний кошик)',
    /data\/ai_spend\.json/.test(spendPy) && /data\/ai_spend\.json/.test(newsPy));
-ok('обидва читають ту саму змінну стелі (не розʼїдуться при зміні)',
-   /AI_MAX_MONTH_USD/.test(spendPy) && /AI_MAX_MONTH_USD/.test(newsPy)
-   && /AI_MAX_DAY_USD/.test(spendPy) && /AI_MAX_DAY_USD/.test(newsPy));
+ok('добова стеля — спільна змінна для обох (доба одна на всіх)',
+   /AI_MAX_DAY_USD/.test(spendPy) && /AI_MAX_DAY_USD/.test(newsPy));
+// 🛑 А ось місячні змінні мусять бути РІЗНІ. Спільна назва звела б їх до одного
+// числа при першій же спробі «підняти ліміт» — і резерв для стрічки зник би тихо.
+// ⚠️ Дивимось саме на ЧИТАННЯ змінної, а не на згадку: у коментарі поруч спільна
+// назва названа навмисно — щоб наступний не наступив на ті ж граблі.
+ok('🔴 місячна стеля новин — ОКРЕМА змінна, інакше резерв стрічки зникне',
+   /environ\.get\("AI_NEWS_MAX_MONTH_USD"/.test(newsPy)
+   && !/environ\.get\("AI_MAX_MONTH_USD"/.test(newsPy));
 
 // ── 7. ЗАПОБІЖНИК СТОЇТЬ ПЕРЕД РОБОТОЮ, А НЕ ПІСЛЯ ───────────────────────────
 const runPy = readFileSync(join(ROOT, 'editor/run.py'), 'utf-8');
@@ -94,7 +100,7 @@ ok('🔴 конвеєр редактора питає стелю ПЕРЕД за
    runPy.indexOf('budget_block()') < runPy.indexOf('Pipeline(mission).run'),
    `стеля на ${runPy.indexOf('budget_block()')}, робота на ${runPy.indexOf('Pipeline(mission).run')}`);
 ok('`--dry-run` стеля не глушить (він не витрачає грошей)',
-   /if not args\.dry_run:\s*\n\s*блок = spend\.budget_block\(\)/.test(runPy));
+   /if not args\.dry_run:[\s\S]{0,80}?spend\.budget_block\(/.test(runPy));
 
 // ── 7б. ДОБОВА СТЕЛЯ НОВИННОГО АГЕНТА ТЕЖ ЖИВА ───────────────────────────────
 // Він окремий скрипт зі своїм лічильником, тому перевіряємо його теж запуском,
@@ -116,6 +122,49 @@ print(m.day_spend_usd(), m.MAX_DAY_COST_USD)`], {
 ok('🔴 новинний агент теж має живу добову стелю (не лише місячну)',
    деньНовин[0] >= деньНовин[1] && деньНовин[1] > 0,
    `за добу $${деньНовин[0]} проти стелі $${деньНовин[1]}`);
+
+// ── 7в. РЕЗЕРВ: ДОРОГИЙ АГЕНТ НЕ ЗАЛИШАЄ ДЕШЕВОГО БЕЗ ГРОШЕЙ ─────────────────
+// 🔴 Пряме питання Вови: «якщо ці $5 за 4 дні використаються — як тоді пости в
+// стрічку писати?». Сценарій: новинний агент витратив СВОЮ стелю $3. Агент
+// стрічки коштує центи і мусить працювати далі — інакше найпотрібніше замовкає
+// першим. Перевіряємо саме цей стан, а не абстрактну арифметику.
+const новиниВибрали = {
+  runs: [{ ts: зараз - 20 * 3600e3, mission: 'Громада №1', cost_usd: 3.0 }],
+  totals: {}, months: { [місяць]: { cost_usd: 3.0, runs: 1 } },
+};
+const стрічкаПісляНовин = запобіжник(новиниВибрали, {}, 'olyka:', 0.60, 0.20);
+ok('🔴 новинний агент вибрав $3 за добу — стрічка все одно може писати',
+   стрічкаПісляНовин === '', стрічкаПісляНовин || 'вільно — правильно');
+
+// А ось СВОЮ кишеню стрічка перевищити не може — щоб і вона не пішла врознос.
+const стрічкаВибрала = запобіжник({
+  runs: [{ ts: зараз - 20 * 3600e3, mission: 'olyka:weather-compact', cost_usd: 0.7 }],
+  totals: {}, months: { [місяць]: { cost_usd: 0.7, runs: 1 } },
+}, {}, 'olyka:', 0.60, 0.20);
+ok('🔴 але й сама стрічка не може вийти за свою кишеню',
+   /власна місячна кишеня/.test(стрічкаВибрала), стрічкаВибрала || '— мовчить');
+
+// Чужі витрати в чужу кишеню не рахуються — інакше «резерв» був би на папері.
+const чужіВитрати = запобіжник({
+  runs: [{ ts: зараз - 20 * 3600e3, mission: 'Громада №1', cost_usd: 2.9 }],
+  totals: {}, months: { [місяць]: { cost_usd: 2.9, runs: 1 } },
+}, {}, 'olyka:', 0.60, 0.20);
+ok('🔴 витрати новин НЕ списуються з кишені стрічки',
+   чужіВитрати === '', чужіВитрати || 'вільно — правильно');
+
+const стрічкаЗаДобу = запобіжник({
+  runs: [{ ts: зараз - 2 * 3600e3, mission: 'olyka:swipe-back', cost_usd: 0.25 }],
+  totals: {}, months: { [місяць]: { cost_usd: 0.25, runs: 1 } },
+}, {}, 'olyka:', 0.60, 0.20);
+ok('у стрічки є і власна ДОБОВА кишеня (щоб не вилила місячну за раз)',
+   /власна добова кишеня/.test(стрічкаЗаДобу), стрічкаЗаДобу || '— мовчить');
+
+// Сума особистих кишень не має перевищувати спільну стелю — інакше стеля фіктивна.
+const місії = ['olyka_castle', 'holidays'].map(n =>
+  JSON.parse(readFileSync(join(ROOT, `editor/missions/${n}.json`), 'utf-8')));
+const сумаКишень = місії.reduce((s, m) => s + (m.month_budget_usd || 0), 0) + 3.0;  // +$3 новини
+ok('🔴 сума кишень не перевищує спільну стелю $4 (інакше стеля фіктивна)',
+   сумаКишень <= 4.0 + 1e-9, `$${сумаКишень.toFixed(2)} з $4.00`);
 
 // ── 8. ВХОЛОСТУ НЕ ХОДИМО ────────────────────────────────────────────────────
 // Друга вимога Вови. Ці пропуски вже були — стенд не дає їх випадково зняти.

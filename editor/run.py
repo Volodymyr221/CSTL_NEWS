@@ -30,7 +30,9 @@ def main():
     # ⚠️ `--dry-run` пропускаємо навмисно: він не звертається до моделі за
     # гроші, і глушити ним перевірку тексту було б безглуздо.
     if not args.dry_run:
-        блок = spend.budget_block()
+        блок = spend.budget_block(mission.get("spend_prefix", ""),
+                                  float(mission.get("month_budget_usd", 0) or 0),
+                                  float(mission.get("day_budget_usd", 0) or 0))
         if блок:
             print(f"⛔ {блок}")
             print("— прогін пропущено (запобіжник витрат, не помилка)")
