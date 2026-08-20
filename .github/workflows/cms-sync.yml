@@ -44,6 +44,14 @@ jobs:
           git config user.name  "CSTL CMS Bot"
           git config user.email "cms@cstl-news"
           git add data/articles.json data/events.json
+          # 🔑 Окремо дивимось, чи змінились САМЕ події. Прапорець `changed` для
+          # цього не годиться: він піднімається і на звичайних новинах, які
+          # приїжджають щогодини, — і агент спільноти палив би кишеню намарно.
+          if git diff --staged --name-only | grep -qx 'data/events.json'; then
+            echo "events=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "events=false" >> "$GITHUB_OUTPUT"
+          fi
           if git diff --staged --quiet; then
             echo "Нових статей/подій кабінету немає — деплой не потрібен"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -65,5 +73,23 @@ jobs:
       - name: Trigger deploy
         if: steps.commit.outputs.changed == 'true'
         run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 🔴 20.08 — СВЯТО З КАБІНЕТУ → ЧЕРНЕТКА ПОСТА У СТРІЧЦІ.
+      #
+      # Вова опублікував свято і не знайшов його ніде. Причина була не в синку:
+      # свята чесно доїжджали в `data/events.json`, але цей файл у застосунку не
+      # показується НІДЕ з 04.08, коли секцію «Події» прибрали за його ж рішенням
+      # («вести з неї не було куди»). Тобто кабінет два тижні публікував у нікуди.
+      #
+      # 🔑 Механізм доставки вже був — черга агента спільноти вміє брати теми з
+      # `events.json` (PR #966). Бракувало саме ШВИДКОСТІ: пост чекав би розкладу
+      # агента (пн/ср/пт/нд), тобто до двох діб після публікації.
+      # ⚠️ Тригеримо ЛИШЕ на зміну подій, не на кожен синк новин: інакше агент
+      # прокидався б щогодини і випалював добову кишеню ні за що.
+      - name: Свято/подія → чернетка поста у Стрічці
+        if: steps.commit.outputs.events == 'true'
+        run: gh workflow run olyka-agent.yml --ref main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
