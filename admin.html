@@ -146,11 +146,16 @@
     /* ── ЧІПИ-ФІЛЬТРИ ──────────────────────────────────────────────────────
        🔑 Статус — це ФІЛЬТР, а не окремий розділ меню. Чіпи стоять під шапкою
        розділу, тобто вибір видно завжди, а не памʼятається. */
-    .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; -webkit-overflow-scrolling: touch; }
-    .chips::-webkit-scrollbar { display: none; }
-    .chip { flex: 0 0 auto; min-height: 36px; padding: 7px 14px; border-radius: 999px;
-            border: 1px solid #DDD; background: #fff; color: #555;
-            font-size: 13.5px; font-weight: 600; cursor: pointer; }
+    /* ⚠️ Спершу ряд був прокруткою (`overflow-x: auto`) — і на 390pt третій чіп
+       «Відхилені» обрізало рівно по краю екрана, без жодного натяку, що там ще
+       щось є. Саме «Відхилені» до 20.08 не показувались узагалі, тож ховати їх
+       вдруге — та сама помилка іншим способом.
+       🔑 Станів рівно три і вони не ростуть, тому ряд — сегментний перемикач:
+       три рівні частини, усі видимі завжди, прокрутки немає. */
+    .chips { display: flex; gap: 6px; padding: 2px 0 12px; }
+    .chip { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 7px 10px; border-radius: 999px;
+            border: 1px solid #DDD; background: #fff; color: #555; text-align: center;
+            white-space: nowrap; font-size: 13px; font-weight: 600; cursor: pointer; }
     .chip--on { background: #722F37; border-color: #722F37; color: #fff; }
     .chip-n { opacity: .75; font-weight: 700; }
 
