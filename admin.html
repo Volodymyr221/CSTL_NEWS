@@ -484,6 +484,21 @@ let pendingPosts   = [];
 let publishedPosts = [];
 let announcements  = [];
 let admins         = [];
+// 🔑 Список ВСІХ, хто має доступ (адміни + редактори) — одним RPC `admin_list_access`.
+// Зводити їх на клієнті з двох запитів було б помилкою того ж роду, що дала
+// розбіжність двох лічильників одного й того самого (B-27).
+let accessRows     = [];
+
+// Скільки днів бездіяльності робить діючий доступ «забутим».
+// ⚠️ 30 — не кругле число заради краси: доступ Алли простояв 42 дні і його ніхто
+// не помітив, бо ніде не було видно ЖОДНОЇ дати. Місяць — межа, за якою «людина
+// просто у відпустці» перестає бути правдоподібним поясненням.
+const ЗАБУТИЙ_ДНІВ = 30;
+function забутий(r) {
+  if (r.вид !== 'editor' || r.disabled_at) return false;
+  if (!r.last_seen_at) return true;                 // жодного разу не заходив
+  return (Date.now() - new Date(r.last_seen_at).getTime()) > ЗАБУТИЙ_ДНІВ * 86400000;
+}
 let comments       = [];
 let adReports      = [];      // скарги на оголошення (ad_reports), нові зверху
 let articles       = [];      // чернетки/готове до публікації (cms_articles)
@@ -528,8 +543,16 @@ async function handleSession(session) {
   // Перевіряємо чи ця пошта є у whitelist admins
   const { data, error } = await supa.from('admins').select('email').eq('email', currentUser.email);
   isAdmin = !error && data && data.length > 0;
-  // Редакторські дозволи (окремо від admins — грануляція для Алли)
+  // Редакторські дозволи (окремо від admins — грануляція прав редактора)
   editorPerms = await fetchMyEditorPerms();
+
+  // 🔴 20.08 — ВІДМІТКА «БУВ ТУТ». Без неї розділ «Доступи» показував би дати
+  // входу в ЗАСТОСУНОК, а не користування ДОСТУПОМ, і це різні речі: людина може
+  // щодня заходити як житель і роками не відкривати кабінет. Саме такий доступ і
+  // забувають — що й сталось 20.08.
+  // ⚠️ Не чекаємо відповіді (`void`): відмітка не має права затримати вхід, а
+  // якщо запит не пройде — гірше, ніж було, не стане.
+  if (editorPerms.isEditor) supa.rpc('touch_editor_seen');
 
   emailEl.textContent = currentUser.email;
   userEl.style.display = 'flex';
@@ -781,6 +804,14 @@ async function loadAll() {
     adReports    = rep.data  || [];
     fundraisers  = fnd.data  || [];
     fundRequests = freq.data || [];
+
+    // 🔑 Список доступів вантажимо ТУТ, а не при вході в розділ — саме тому, що
+    // від нього залежить лічильник на плитці. Забутий доступ мусить бути видно
+    // ОДРАЗУ на головному екрані, інакше ми повторили б ту саму ваду: щоб
+    // побачити проблему, треба спершу здогадатись її пошукати.
+    // ⚠️ Ціна нульова: рядків тут одиниці (адміни + редактори), не сотні.
+    const { data: acc } = await supa.rpc('admin_list_access');
+    accessRows = acc || [];
   }
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
@@ -832,6 +863,14 @@ function menuItems() {
     // «скільки людей із галочкою» — це саме те, що адмін звідси і робить.
     { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: isAdmin,     count: () => people.filter(p => p.official).length },
     { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     count: () => admins.length },
+    // 🔴 20.08 — «ДОСТУПИ». Заведено після того, як людина, яка пішла з команди
+    // півтора місяця тому, досі мала повні права публікувати від імені видання.
+    // Прибрати вдалось лише SQL-запитом: списку тих, хто має доступ, не існувало
+    // в інтерфейсі ВЗАГАЛІ — адмінка читає права ЛИШЕ того, хто зайшов.
+    // 🔑 Лічильник тримає той самий принцип, що й решта: не «скільки всього
+    // редакторів» (це просто число), а СКІЛЬКИ ЗАБУТИХ — діючий доступ, яким не
+    // користувались понад 30 днів. Саме він і був причиною діри.
+    { id: 'access',        icon: ICO_USERS,          label: 'Доступи',      show: isAdmin,     count: () => accessRows.filter(забутий).length },
     { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     count: () => 0 },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     count: () => 0 },
     { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        count: () => 0 },
@@ -893,6 +932,7 @@ function renderTabContent() {
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'fundraisers')    return renderFundraisers(el);
   if (activeTab === 'admins')         return renderAdmins(el);
+  if (activeTab === 'access')         return renderAccess(el);
   if (activeTab === 'spend')          return renderSpend(el);
   if (activeTab === 'analytics')      return renderAnalytics(el);
   if (activeTab === 'settings')       return renderSettings(el);
@@ -2475,6 +2515,123 @@ async function renderCommunityEdit(el) {
     if (error) return showToast('Помилка: ' + error.message, 4000);
     showToast('Прибрано');
     renderApp();
+  }));
+}
+
+// ── TAB: Доступи ──────────────────────────────────────────────────────
+// 🔴 20.08 — ЗАВЕДЕНО ПІСЛЯ РЕАЛЬНОЇ ДІРИ, а не «щоб було». Людина, яка пішла з
+// команди 26.07, станом на 20.08 досі мала повні права публікувати від імені
+// видання. Вона зайшла в кабінет РІВНО ОДИН раз — 09.07, того ж дня, коли їй
+// видали доступ. Прибрати вдалось лише SQL-запитом.
+//
+// 🔑 ЧОМУ ЦЕ СТАЛОСЬ І ЩО САМЕ ЛІКУЄМО. Причина не в тому, що «немає екрана».
+// Причина в тому, що ПОКАЗУВАТИ НЕ БУЛО ЧОГО: у `editor_users` не існувало ні
+// `last_seen_at`, ні `disabled_at`. Тобто навіть якби екран був, він показав би
+// імена без жодної підказки, що з цим доступом щось не так. Спершу дані —
+// потім екран.
+//
+// 🛑 ВІДКЛИКАННЯ ДІЄ В БАЗІ, А НЕ ТУТ. `has_editor_perm()` і `is_team_member()`
+// перевіряють `disabled_at is null`, тож відкликаний редактор втрачає і права,
+// і сам вхід у кабінет. Ховати кнопки було б імітацією захисту — правило
+// проєкту, яке не обговорюється.
+//
+// ⚠️ ЖОДНОЇ ПРЯМОЇ ПРАВКИ ТАБЛИЦІ ЗВІДСИ. Усі зміни йдуть через RPC
+// (`admin_set_editor_perms`, `admin_set_editor_disabled`), бо саме вони пишуть
+// у журнал `admin_audit_log` тією ж транзакцією. Клієнт у журнал дописати не
+// може взагалі — журнал, у який пише той, чиї дії він фіксує, не журнал.
+function renderAccess(el) {
+  const адміни    = accessRows.filter(r => r.вид === 'admin');
+  const редактори = accessRows.filter(r => r.вид === 'editor');
+  const забутих   = accessRows.filter(забутий).length;
+
+  const коли = (d) => d ? formatDate(d) : 'ЖОДНОГО РАЗУ';
+  const днів = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : null;
+
+  const рядокРедактора = (r) => {
+    const n = днів(r.last_seen_at);
+    const тривога = забутий(r);
+    const права = [
+      r.can_create  ? 'створення' : null,
+      r.can_publish ? 'публікація' : null,
+      r.can_events  ? 'події' : null,
+    ].filter(Boolean).join(' · ') || 'жодних';
+    return `
+      <article class="card" style="${тривога ? 'border-left:4px solid #e0922a' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div style="font-weight:600">${escapeHtml(r.name || '—')}</div>
+            <div style="font-size:13px;color:#666">${escapeHtml(r.email || '')}</div>
+          </div>
+          ${r.disabled_at
+            ? '<span class="badge" style="background:#ddd;color:#555">доступ відкликано</span>'
+            : тривога
+              ? `<span class="badge" style="background:#e0922a;color:#fff">не заходив ${n === null ? 'жодного разу' : n + ' дн.'}</span>`
+              : '<span class="badge" style="background:#C5E1A5;color:#2e5e1f">діючий</span>'}
+        </div>
+        <div style="font-size:13px;color:#444;margin-top:8px">Права: ${escapeHtml(права)}</div>
+        <div style="font-size:11px;color:#999;margin-top:3px">
+          видано ${escapeHtml(коли(r.created_at))} · останній вхід у кабінет ${escapeHtml(коли(r.last_seen_at))}
+          ${r.disabled_at ? ` · відкликано ${escapeHtml(коли(r.disabled_at))}${r.disabled_by ? ' (' + escapeHtml(r.disabled_by) + ')' : ''}` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          ${r.disabled_at
+            ? `<button class="btn" data-access-on="${escapeHtml(r.uid)}">↩︎ Повернути доступ</button>`
+            : `<button class="btn btn--delete" data-access-off="${escapeHtml(r.uid)}">⛔ Відкликати доступ</button>`}
+        </div>
+      </article>`;
+  };
+
+  el.innerHTML = `
+    ${забутих ? `
+      <div class="card" style="background:#fff6e6;border-left:4px solid #e0922a">
+        <b>Забутих доступів: ${забутих}</b>
+        <div style="font-size:13px;color:#555;margin-top:4px">
+          Діючі права в людей, які не відкривали кабінет понад ${ЗАБУТИЙ_ДНІВ} днів.
+          Якщо людина більше не в команді — відклич доступ.
+        </div>
+      </div>` : ''}
+
+    <div class="section-title">Адміністратори (${адміни.length})</div>
+    <div style="font-size:13px;color:#666;margin:-6px 0 10px">
+      Бачать усе. Керуються в розділі «Адміни».
+    </div>
+    ${адміни.map(r => `
+      <article class="card">
+        <div style="font-weight:600">${escapeHtml(r.name || '—')}</div>
+        <div style="font-size:13px;color:#666">${escapeHtml(r.email || '')}</div>
+        <div style="font-size:11px;color:#999;margin-top:3px">
+          у команді з ${escapeHtml(коли(r.created_at))} · останній вхід ${escapeHtml(коли(r.last_seen_at))}
+        </div>
+      </article>`).join('')}
+
+    <div class="section-title">Редактори (${редактори.length})</div>
+    ${редактори.length
+      ? редактори.map(рядокРедактора).join('')
+      : '<div class="card" style="color:#666">Зараз доступу до кабінету не має ніхто, крім адміністраторів.</div>'}
+  `;
+
+  // 🛑 Відкликання — з підтвердженням. Це рівно та межа, яку тримає проєкт:
+  // підтверджуємо незворотне і публічне, не підтверджуємо перегляд і фільтр.
+  el.querySelectorAll('[data-access-off]').forEach(b => b.addEventListener('click', async () => {
+    const uid = b.dataset.accessOff;
+    const хто = accessRows.find(r => r.uid === uid);
+    if (!confirm(`Відкликати доступ у «${хто?.email || uid}»?\n\nЛюдина одразу втратить право публікувати і сам вхід у кабінет.`)) return;
+    b.disabled = true; b.textContent = 'Відкликаю…';
+    const { error } = await supa.rpc('admin_set_editor_disabled', { p_uid: uid, p_disabled: true });
+    // ⚠️ Стан НЕ міняємо оптимістично: «відкликано» на екрані при невдалому
+    // запиті — це найгірше, що може показати саме цей розділ.
+    if (error) { b.disabled = false; b.textContent = '⛔ Відкликати доступ'; showToast('Не вдалось: ' + error.message, 4000); return; }
+    showToast('Доступ відкликано ✓');
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-access-on]').forEach(b => b.addEventListener('click', async () => {
+    const uid = b.dataset.accessOn;
+    b.disabled = true; b.textContent = 'Повертаю…';
+    const { error } = await supa.rpc('admin_set_editor_disabled', { p_uid: uid, p_disabled: false });
+    if (error) { b.disabled = false; b.textContent = '↩︎ Повернути доступ'; showToast('Не вдалось: ' + error.message, 4000); return; }
+    showToast('Доступ повернено ✓');
+    await loadAll(); renderApp();
   }));
 }
 
