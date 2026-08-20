@@ -1,4 +1,8 @@
 {
-  "done": [],
-  "kinds": {}
+  "done": [
+    "weather-compact"
+  ],
+  "kinds": {
+    "weather-compact": "feature"
+  }
 }

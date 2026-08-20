@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787215931100,
+      "mission": "olyka:weather-compact",
+      "model": "claude-opus-5",
+      "input_tokens": 3392,
+      "output_tokens": 323,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.025,
+      "note": "Погода на головному екрані більше не займає пів екрана"
+    },
+    {
       "ts": 1787210686844,
       "mission": "holiday:🇺🇦 День знань",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0089,
       "note": ""
-    },
-    {
-      "ts": 1783591528269,
-      "mission": "holiday:🇺🇦 День Української Державно",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 702,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0117,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.1491,
-    "runs": 81,
+    "cost_usd": 5.1741,
+    "runs": 82,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.0395,
-      "runs": 3,
+      "cost_usd": 0.0645,
+      "runs": 4,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787210686844
+  "updated_ts": 1787215931100
 }
