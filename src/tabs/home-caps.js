@@ -112,6 +112,14 @@ const RANK = {
   QUESTION:      35,   // питання громади без відповіді — заклик, не борг
   BUS_LATER:     30,   // рейс 46-120 хв (і відстежуваний, хоч би коли він був)
   ADS_NEW:       20,   // нові оголошення на Дошці — полежать
+  // 🔴 20.08 — ДЕСЯТА ГРАДАЦІЯ, і стеля «девʼять» піднята СВІДОМО, а не забута.
+  // Правило вище вимагає відповіді на питання «а чому саме тут» — ось вона:
+  // завтрашній рейс не вимагає нічого зробити зараз, він лише відповідає на
+  // питання «а коли перший?». Тому нижче за все, що стосується сьогодні.
+  // ⚠️ Ця капсула зʼявляється тільки тоді, коли сьогоднішньої немає взагалі, тож
+  // із BUS_* вона не конкурує ніколи — конкурує лише з повідомленнями і Дошкою,
+  // і програє їм правильно.
+  BUS_TOMORROW:  10,   // перший рейс завтра — увечері й уночі, коли на сьогодні нічого
 };
 
 // Свіжим вважаємо повідомлення за останню годину: доки розмова «жива», відповіді
@@ -263,13 +271,18 @@ async function myCapsule() {
 // зупинки в капсулу не потрапляє зовсім, а відлік іде до проходу через неї.
 async function nowCapsule() {
   const todayISO = new Date().toISOString().slice(0, 10);
+  // 🔑 Завтра рахуємо від UTC-півночі, як і `todayISO`: змішати дві бази відліку
+  // означало б раз на добу показати «завтра» тоді, коли воно вже сьогодні.
+  const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   let routes = [];
+  let tomorrowRoutes = [];
   try {
     const res = await fetch('./data/schedule.json');
     const data = await res.json();
     routes = (data.days?.[todayISO]?.routes) || data.routes || [];
+    tomorrowRoutes = (data.days?.[tomorrowISO]?.routes) || [];
   } catch { return null; }
-  if (!routes.length) return null;
+  if (!routes.length && !tomorrowRoutes.length) return null;
 
   const live = routes.filter(r => r.status !== 'cancelled');
   const nowMin = nowMinutes();
@@ -333,7 +346,48 @@ async function nowCapsule() {
       : (pickFor(myStop, '') || (myStop !== HOME_STOP ? pickFor(HOME_STOP, '') : null));
     if (b && b.left <= SOON_MAX_MIN) hit = b;
   }
-  if (!hit) return null;
+  // 🌙 НІЧНА ГІЛКА (20.08, рішення Вови). Після останнього рейсу і всю ніч
+  // капсула автобуса зникала зовсім — це не 12-хвилинна щілина між рейсами, а
+  // порожнеча на 10 годин. Заміряно на живому розкладі 20.08: останній прохід
+  // через Олику о 21:15, наступний — о 07:40.
+  // 🔑 Показуємо ПЕРШИЙ завтрашній рейс, а не «немає рейсів»: людина ввечері
+  // питає саме «а коли перший?», і відповідь на це питання є у нас у файлі.
+  // ⚠️ Тільки коли на СЬОГОДНІ нічого не лишилось. Інакше «завтра о 07:40»
+  // перебивало б рейс, на який ще можна встигнути.
+  if (!hit) {
+    const { from: prefFrom, to: prefTo } = getBusPrefs();
+    const звідки = prefFrom || myStop;
+    let перший = null;
+    for (const r of tomorrowRoutes) {
+      if (r.status === 'cancelled') continue;
+      const stop = findStopOnRoute(r, звідки);
+      if (!stop) continue;
+      const last = r.stops?.[r.stops.length - 1];
+      if (!last || stop.name === last.name) continue;   // кінцева — не посадка
+      if (prefTo && !routeCoversStops(r, звідки, prefTo)) continue;
+      const m = getStopMins(r, stop.name);
+      if (m == null) continue;
+      if (!перший || m < перший.m) перший = { r, m, from: звідки };
+    }
+    if (!перший) return null;
+
+    const хв = ((перший.m % 1440) + 1440) % 1440;
+    const час = `${String(Math.floor(хв / 60)).padStart(2, '0')}:${String(хв % 60).padStart(2, '0')}`;
+    const [, кінець] = parseRouteEndpoints(перший.r.name || '');
+    const куди = prefTo || кінець || 'Найближчий';
+    return {
+      key: 'now', icon: ICONS.bus,
+      rank: RANK.BUS_TOMORROW,
+      // Та сама будова, що й у денної капсули: стан у мітці, маршрут у значенні —
+      // інакше на 320pt обрізало б саме маршрут (заміряно 17.08).
+      labelVariants: [`ЗАВТРА · О ${час}`, 'ЗАВТРА'],
+      valueVariants: [`${перший.from} → ${куди}`, куди],
+      tap: () => {
+        if (typeof window.switchTab === 'function') window.switchTab('buses');
+        openSavedRouteOnBuses(перший.r.id, tomorrowISO, перший.from, prefTo || '');
+      },
+    };
+  }
 
   const [, endName] = parseRouteEndpoints(hit.r.name || '');
   const dest = hit.to || endName || 'Найближчий';
