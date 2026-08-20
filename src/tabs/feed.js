@@ -704,6 +704,12 @@ function postCardHtml(post, onPage = false) {
   // 🔴 20.08 — ЧЕРНЕТКА ШІ-АГЕНТА. Її бачить лише редактор сторінки (це вирішує
   // база). Позначка навмисно помітна: людина має одразу розуміти, що цього тексту
   // ще ніхто, крім неї, не бачив — інакше легко вирішити, що пост уже вийшов.
+  // ⚠️ Кнопку публікації показуємо лише тому, хто має право писати в цю сторінку
+  // (`canEditPost` — це власник або МОДЕРАТОР із «Команди сторінки», те саме
+  // `page_admins`, що питає й політика бази). Сама база й так не віддасть чужу
+  // чернетку, але кнопка, яка впаде помилкою прав, — гірша за її відсутність.
+  // 🔑 Тобто вся команда сторінки бачить чернетки і публікує їх нарівні з власником:
+  // окремого механізму «тегу редактора» заводити не треба, він уже є.
   const чернетка = post.status === 'draft';
   return `
     <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
@@ -722,7 +728,7 @@ function postCardHtml(post, onPage = false) {
         ${eventBadgeHtml(post)}
         <div class="fd-text">${escapeHtml(post.text)}</div>
         ${author}
-        ${чернетка ? `<div class="fd-draft-actions">
+        ${чернетка && canEditPost ? `<div class="fd-draft-actions">
           <button class="fd-draft-pub" data-publish="${post.id}" type="button">Опублікувати</button>
           <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
         </div>` : ''}

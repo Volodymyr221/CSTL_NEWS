@@ -1680,7 +1680,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(m)
         ${Gb(t)}
         <div class="fd-text">${p(t.text)}</div>
         ${l}
-        ${u?`<div class="fd-draft-actions">
+        ${u&&d?`<div class="fd-draft-actions">
           <button class="fd-draft-pub" data-publish="${t.id}" type="button">Опублікувати</button>
           <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
         </div>`:""}
