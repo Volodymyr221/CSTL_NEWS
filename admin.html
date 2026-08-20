@@ -518,6 +518,20 @@ let admins         = [];
 // Зводити їх на клієнті з двох запитів було б помилкою того ж роду, що дала
 // розбіжність двох лічильників одного й того самого (B-27).
 let accessRows     = [];
+// 🔴 ПОСТИ — ЦЕ ДВІ РІЗНІ СУТНОСТІ В ОДНІЙ ТАБЛИЦІ, і саме звідси взялась скарга
+// Вови «Опубліковані — це і оголошення Дошки, і питання позначені як розмова».
+// У базі `posts.type` розрізняє їх, а адмінка показувала рядки таблиці як є.
+//   type='chat'  → ПИТАННЯ (вкладка «Питання» у застосунку, перейменована 11.08)
+//   решта        → ОГОЛОШЕННЯ Дошки
+// ⚠️ Заміряно 20.08: оголошень 8, питань 13, і ВСІ 72 коментарі — відповіді на
+// питання; на оголошеннях їх рівно 0. Тому «Коментарі» окремим розділом були
+// насправді «Відповідями», відірваними від питання, до якого належать.
+let allPosts       = [];
+const ЦЕ_ПИТАННЯ   = p => p.type === 'chat';
+const оголошення   = () => allPosts.filter(p => !ЦЕ_ПИТАННЯ(p));
+const питання      = () => allPosts.filter(ЦЕ_ПИТАННЯ);
+const відповідіДо  = (postId) => comments.filter(c => c.post_id === postId)
+                                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
 // Скільки днів бездіяльності робить діючий доступ «забутим».
 // ⚠️ 30 — не кругле число заради краси: доступ Алли простояв 42 дні і його ніхто
@@ -796,8 +810,13 @@ async function loadAll() {
   // Дошкові дані — лише адмінам (у редактора RLS їх однаково не віддасть).
   if (isAdmin) {
     const [pending, published, ann, ad, com, pg, padm, rep, fnd, freq] = await Promise.all([
-      supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
-      supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
+      // 🔴 20.08 — ОДИН ЗАПИТ ЗАМІСТЬ ДВОХ ЗА СТАТУСОМ. Було: окремо `pending`,
+      // окремо `published`, а «відхилені» не вантажились узагалі — тобто побачити
+      // відхилене оголошення в адмінці було НЕМОЖЛИВО. Статус тепер фільтр на
+      // екрані, а не спосіб зберігання, тож і запит один.
+      // ⚠️ Ціна нульова: постів у базі 23, ліміт 300 — це стеля на роки вперед.
+      supa.from('posts').select('*').order('created_at', { ascending: false }).limit(300),
+      Promise.resolve({ data: [] }),
       supa.from('announcements').select('*').order('created_at', { ascending: false }),
       supa.from('admins').select('*').order('created_at', { ascending: true }),
       supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
@@ -821,8 +840,10 @@ async function loadAll() {
           .order('created_at', { ascending: false }).limit(200),
       supa.from('fundraiser_requests').select('*').order('created_at', { ascending: false }).limit(300),
     ]);
-    pendingPosts   = pending.data   || [];
-    publishedPosts = published.data || [];
+    allPosts       = pending.data   || [];
+    // Похідні лишаються заради решти розділів, які на них спираються.
+    pendingPosts   = allPosts.filter(p => p.status === 'pending');
+    publishedPosts = allPosts.filter(p => p.status === 'published');
     announcements  = ann.data       || [];
     admins         = ad.data        || [];
     comments       = com.data       || [];
