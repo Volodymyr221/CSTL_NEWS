@@ -6,6 +6,7 @@
 """
 import argparse
 
+from editor.core import spend
 from editor.core.config import load_mission
 from editor.core.pipeline import Pipeline
 
@@ -22,6 +23,18 @@ def main():
     if args.days is not None:
         mission["days_before"] = args.days
     print(f"→ місія «{mission['name']}»: {mission.get('description', '')}")
+
+    # 🛑 СТЕЛЯ ВИТРАТ — ПЕРЕД роботою, а не після. Кошик спільний з новинним
+    # агентом (один журнал `data/ai_spend.json`), тож три агенти не можуть
+    # витратити втричі більше за одну стелю.
+    # ⚠️ `--dry-run` пропускаємо навмисно: він не звертається до моделі за
+    # гроші, і глушити ним перевірку тексту було б безглуздо.
+    if not args.dry_run:
+        блок = spend.budget_block()
+        if блок:
+            print(f"⛔ {блок}")
+            print("— прогін пропущено (запобіжник витрат, не помилка)")
+            return
     drafts = Pipeline(mission).run(dry_run=args.dry_run, sink_override=args.sink)
 
     for d in drafts:
