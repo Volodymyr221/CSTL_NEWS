@@ -5,5 +5,8 @@
   "days_before": 31,
   "writer": "ai_writer",
   "image": "wikimedia",
-  "sink": "cabinet"
+  "sink": "cabinet",
+  "month_budget_usd": 0.4,
+  "spend_prefix": "holiday:",
+  "day_budget_usd": 0.15
 }
