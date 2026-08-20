@@ -143,6 +143,37 @@
 
 
     /* ── ГОЛОВНИЙ ЕКРАН: сітка іконок (як робочий стіл iPhone) ──────────── */
+    /* ── ЧІПИ-ФІЛЬТРИ ──────────────────────────────────────────────────────
+       🔑 Статус — це ФІЛЬТР, а не окремий розділ меню. Чіпи стоять під шапкою
+       розділу, тобто вибір видно завжди, а не памʼятається. */
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; -webkit-overflow-scrolling: touch; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; min-height: 36px; padding: 7px 14px; border-radius: 999px;
+            border: 1px solid #DDD; background: #fff; color: #555;
+            font-size: 13.5px; font-weight: 600; cursor: pointer; }
+    .chip--on { background: #722F37; border-color: #722F37; color: #fff; }
+    .chip-n { opacity: .75; font-weight: 700; }
+
+    /* ── КАРТКА: РИТМ ЗАМІСТЬ ЛІНІЙ ────────────────────────────────────────
+       Заголовок веде, текст дихає, службові дані тихі. До 20.08 усе було одного
+       розміру й ваги, тож картка читалась як суцільна пляма. */
+    .card-title { font-size: 16px; font-weight: 700; color: #1d1f23; margin-bottom: 4px; line-height: 1.3; }
+    .card-when { font-size: 12px; color: #9aa0a8; margin-left: auto; }
+    .card-contact { font-size: 13.5px; color: #444; margin-bottom: 8px; }
+    .badge--warn { background: #FDECD2; color: #9a5b00; }
+    .btn--sm { padding: 5px 10px; font-size: 12.5px; }
+
+    /* ── ПИТАННЯ І ВІДПОВІДІ ───────────────────────────────────────────────
+       🔴 Відповіді ВСЕРЕДИНІ питання, а не окремою вкладкою. Вертикальна лінія
+       ліворуч робить вкладеність видимою без рамок і без другої поверхні:
+       відповідь належить питанню, а не лежить поруч із ним. */
+    .card--q .q-text { font-size: 16px; font-weight: 600; color: #1d1f23; line-height: 1.4; margin-bottom: 6px; }
+    .answers { margin: 10px 0 4px; padding-left: 12px; border-left: 2px solid #E7E4DE; }
+    .answer { padding: 8px 0; border-top: 1px solid #F0EEEA; }
+    .answer:first-child { border-top: 0; }
+    .answer-head { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: #444; }
+    .answer-text { font-size: 14.5px; color: #333; line-height: 1.45; margin: 3px 0 6px; }
+
     /* ── ЧЕРГА ДІЙ ─────────────────────────────────────────────────────────
        🔑 Рядки, а не плитки: у черзі важить ЧИСЛО і що воно означає, а плитка
        48px такого не вміщає — на неї не влізе «оголошень на модерації».
@@ -902,7 +933,13 @@ function menuItems() {
   const canArticles = isAdmin || editorPerms.canCreate;
   return [
     { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, group: 'Контент',    count: () => articles.filter(a => a.status === 'draft').length },
-    { id: 'pending',       icon: ICO_CLIPBOARD_LIST, label: 'Модерація',    show: isAdmin,     group: 'Модерація',  count: () => pendingPosts.length },
+    // 🔑 ОДНА СУТНІСТЬ — ОДИН РОЗДІЛ. Статус («на модерації / опубліковані /
+    // відхилені») став фільтром усередині, бо це СТАН одного й того ж об'єкта, а
+    // не різні речі. Лічильник рахує лише те, що чекає рішення.
+    { id: 'board',         icon: ICO_CLIPBOARD_LIST, label: 'Дошка',        show: isAdmin,     group: 'Модерація',  count: () => оголошення().filter(p => (p.status || 'pending') === 'pending').length },
+    // Питання разом зі своїми відповідями. Лічильник — питання БЕЗ відповіді:
+    // саме вони чекають дії громади, і саме їх варто побачити першими.
+    { id: 'questions',     icon: ICO_MESSAGE_CIRCLE, label: 'Питання',      show: isAdmin,     group: 'Модерація',  count: () => питання().filter(q => !відповідіДо(q.id).length).length },
     // Лічильник — лише НОВІ скарги: розглянуті не мусять світитись у сітці вічно.
     { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     group: 'Модерація',  count: () => adReports.filter(r => r.status === 'new').length },
     { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Анонси',       show: isAdmin,     group: 'Контент',    count: () => 0 },
@@ -911,8 +948,6 @@ function menuItems() {
     // відповідь» — це саме те, заради чого сюди заходять. Той самий підхід, що
     // у «Скаргах»: розглянуті не мусять світитись у сітці вічно.
     { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: isAdmin,     group: 'Громада',    count: () => fundRequests.filter(r => r.status === 'new').length },
-    { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     group: 'Модерація',  count: () => 0 },
-    { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     group: 'Модерація',  count: () => 0 },
     { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     group: 'Громада',    count: () => 0 },
     // 🆕 09.08 — «Люди». Лічильник рахує ОФІЦІЙНИХ, а не всіх жителів: загальна
     // кількість профілів у плитці нічого не підказує (вона просто росте), а
@@ -980,7 +1015,8 @@ function чергаДій() {
   const q = [];
   const n = (id) => (menuItems().find(m => m.id === id)?.count() || 0);
   if (n('reports'))     q.push({ id: 'reports',     n: n('reports'),     txt: 'скарг на оголошення' });
-  if (n('pending'))     q.push({ id: 'pending',     n: n('pending'),     txt: 'оголошень на модерації' });
+  if (n('board'))       q.push({ id: 'board',       n: n('board'),       txt: 'оголошень на модерації' });
+  if (n('questions'))   q.push({ id: 'questions',   n: n('questions'),   txt: 'питань без відповіді' });
   if (n('fundraisers')) q.push({ id: 'fundraisers', n: n('fundraisers'), txt: 'заявок на збір' });
   if (n('articles'))    q.push({ id: 'articles',    n: n('articles'),    txt: 'чернеток статей' });
   if (n('access'))      q.push({ id: 'access',      n: n('access'),      txt: 'забутих доступів', тривога: true });
@@ -1039,9 +1075,8 @@ function renderTabContent() {
   const el = document.getElementById('tab-content');
   if (!el) return;
   if (activeTab === 'articles')       return renderArticles(el);
-  if (activeTab === 'pending')        return renderPending(el);
-  if (activeTab === 'published')      return renderPublished(el);
-  if (activeTab === 'comments')       return renderCommentsModeration(el);
+  if (activeTab === 'board')          return renderBoard(el);
+  if (activeTab === 'questions')      return renderQuestions(el);
   if (activeTab === 'reports')        return renderAdReports(el);
   if (activeTab === 'communities')    return renderCommunities(el);
   if (activeTab === 'people')         return renderPeople(el);
@@ -1702,37 +1737,6 @@ function renderArticleForm(el) {
 }
 
 // ── TAB 1: модерація постів ───────────────────────────────────────────
-function renderPending(el) {
-  if (!pendingPosts.length) {
-    el.innerHTML = '<div class="empty">Усі пости перевірені ✓<br>Нових заявок на модерацію немає.</div>';
-    return;
-  }
-  el.innerHTML = pendingPosts.map(p => `
-    <article class="card">
-      <div class="card-meta">
-        <span class="badge badge--type">${escapeHtml(typeLabel(p.type))}</span>
-        ${p.category ? `<span class="badge badge--cat">${escapeHtml(p.category)}</span>` : ''}
-        ${p.location ? `<span class="badge badge--loc">📍 ${escapeHtml(p.location)}</span>` : ''}
-        <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(p.created_at))}</span>
-      </div>
-      ${p.title ? `<div style="font-weight:600;margin-bottom:4px">${escapeHtml(p.title)}</div>` : ''}
-      <p class="card-text">${escapeHtml(p.text)}</p>
-      ${(p.tags && p.tags.length) ? `<div style="margin-bottom:8px">${p.tags.map(t => `<span style="font-size:12px;color:#1a73e8;background:rgba(26,115,232,0.08);padding:2px 8px;border-radius:8px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-      ${p.contact ? `<div style="font-size:13px;color:#555;margin-bottom:8px">📞 ${escapeHtml(p.contact)}</div>` : ''}
-      <p class="card-author">— ${escapeHtml(p.author || 'анонімно')}</p>
-      <div class="card-actions">
-        <button class="btn btn--approve" data-approve="${p.id}">✓ Опублікувати</button>
-        <button class="btn btn--reject"  data-reject="${p.id}">⊘ Відхилити</button>
-        <button class="btn btn--delete"  data-delete-post="${p.id}">🗑 Видалити</button>
-      </div>
-    </article>
-  `).join('');
-
-  el.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approvePost(Number(b.dataset.approve))));
-  el.querySelectorAll('[data-reject]').forEach(b => b.addEventListener('click', () => rejectPost(Number(b.dataset.reject))));
-  el.querySelectorAll('[data-delete-post]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePost))));
-}
-
 function typeLabel(t) {
   return t === 'chat' ? '💬 розмова' : t === 'greeting' ? '🎉 вітання' : '🛒 оголошення';
 }
@@ -1793,89 +1797,157 @@ async function deletePost(id) {
 }
 
 // ── TAB: опубліковані пости (фільтр + delete для anti-spam) ───────────
-function renderPublished(el) {
-  if (!publishedPosts.length) {
-    el.innerHTML = '<div class="empty">Опублікованих постів ще немає.</div>';
-    return;
-  }
+
+// ── TAB: Дошка оголошень ──────────────────────────────────────────────────
+// 🔴 20.08 — БУЛО ДВА РОЗДІЛИ («Модерація» і «Опубліковані»), і в обох лежали
+// вперемішку оголошення та ПИТАННЯ, бо в базі це одна таблиця `posts`. Скарга
+// Вови дослівно: «оголошення дошки і ті що в питання але позначені як розмова».
+//
+// 🔑 СТАЛО: одна сутність — один розділ, а СТАТУС це фільтр. Так людина мислить
+// («покажи оголошення» → «які з них чекають рішення»), і так не буває стану,
+// коли той самий об'єкт лежить у двох різних місцях меню.
+// ⚠️ «Відхилені» з'явились уперше: раніше їх узагалі не вантажили, тобто
+// відхилене оголошення зникало з адмінки назавжди.
+let дошкаФільтр = 'pending';
+
+function renderBoard(el) {
+  const усі = оголошення();
+  const за = (s) => усі.filter(p => (p.status || 'pending') === s);
+  const набір = за(дошкаФільтр);
+
+  const чіп = (id, назва) => {
+    const n = за(id).length;
+    return `<button class="chip${дошкаФільтр === id ? ' chip--on' : ''}" data-bfilter="${id}">
+      ${назва}${n ? ` <span class="chip-n">${n}</span>` : ''}</button>`;
+  };
+
   el.innerHTML = `
-    <div class="section-title">Усього на дошці: ${publishedPosts.length}</div>
-    ${publishedPosts.map(p => `
-      <article class="card">
-        <div class="card-meta">
-          <span class="badge badge--type">${escapeHtml(typeLabel(p.type))}</span>
-          ${p.category ? `<span class="badge badge--cat">${escapeHtml(p.category)}</span>` : ''}
-          ${p.location ? `<span class="badge badge--loc">📍 ${escapeHtml(p.location)}</span>` : ''}
-          <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(p.published_at || p.created_at))}</span>
-        </div>
-        ${p.title ? `<div style="font-weight:600;margin-bottom:4px">${escapeHtml(p.title)}</div>` : ''}
-        <p class="card-text">${escapeHtml(p.text)}</p>
-        ${(p.tags && p.tags.length) ? `<div style="margin-bottom:8px">${p.tags.map(t => `<span style="font-size:12px;color:#1a73e8;background:rgba(26,115,232,0.08);padding:2px 8px;border-radius:8px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-        ${p.contact ? `<div style="font-size:13px;color:#555;margin-bottom:8px">📞 ${escapeHtml(p.contact)}</div>` : ''}
-        <p class="card-author">— ${escapeHtml(p.author || 'анонімно')}</p>
-        <div class="card-actions">
-          <button class="btn btn--reject"  data-unpublish="${p.id}">⊘ Зняти з публікації</button>
-          <button class="btn btn--delete"  data-delete-pub="${p.id}">🗑 Видалити</button>
-        </div>
-      </article>
-    `).join('')}
+    <div class="chips">
+      ${чіп('pending', 'На модерації')}
+      ${чіп('published', 'Опубліковані')}
+      ${чіп('rejected', 'Відхилені')}
+    </div>
+    ${набір.length ? набір.map(карткаОголошення).join('')
+      : `<div class="empty">${дошкаФільтр === 'pending'
+            ? 'Усе перевірено — нових оголошень на модерації немає.'
+            : 'Тут порожньо.'}</div>`}
   `;
 
-  el.querySelectorAll('[data-unpublish]').forEach(b => b.addEventListener('click', async () => {
-    if (!confirm('Зняти пост з публікації (зробити rejected)?')) return;
-    // Спільний шлях із «Відхилити» — інакше саме тут причина й губилась би.
-    await rejectPost(Number(b.dataset.unpublish),
-      { запит: 'Чому знімаємо з публікації? Це побачить житель.\n\nМожна лишити порожнім.' });
+  el.querySelectorAll('[data-bfilter]').forEach(b => b.addEventListener('click', () => {
+    дошкаФільтр = b.dataset.bfilter; renderBoard(el);
   }));
-  el.querySelectorAll('[data-delete-pub]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePub))));
+  вішатиДіїОголошення(el);
 }
 
-// ── TAB: модерація коментарів (видалити спам) ─────────────────────────
-function renderCommentsModeration(el) {
-  if (!comments.length) {
-    el.innerHTML = '<div class="empty">Коментарів ще немає.</div>';
-    return;
-  }
-  // Мапа postId → текст поста для контексту
-  const postMap = new Map();
-  [...publishedPosts, ...pendingPosts].forEach(p => postMap.set(p.id, p));
+// 🔑 ОДНА картка на всі три стани — різняться лише ДІЇ. Три майже однакові
+// шаблони (як було) розходяться при першій же правці: у проєкті це вже коштувало
+// розсинхрону двох копій антиспаму.
+function карткаОголошення(p) {
+  const s = p.status || 'pending';
+  const дії = s === 'pending'
+    ? `<button class="btn btn--approve" data-approve="${p.id}">Опублікувати</button>
+       <button class="btn btn--reject"  data-reject="${p.id}">Відхилити</button>`
+    : s === 'published'
+      ? `<button class="btn btn--reject" data-unpublish="${p.id}">Зняти з публікації</button>`
+      : `<button class="btn btn--approve" data-approve="${p.id}">Повернути в ефір</button>`;
+  return `
+    <article class="card">
+      <div class="card-meta">
+        <span class="badge badge--type">${escapeHtml(typeLabel(p.type))}</span>
+        ${p.category ? `<span class="badge badge--cat">${escapeHtml(p.category)}</span>` : ''}
+        ${p.location ? `<span class="badge badge--loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+        <span class="card-when">${escapeHtml(formatDate(p.published_at || p.created_at))}</span>
+      </div>
+      ${p.title ? `<div class="card-title">${escapeHtml(p.title)}</div>` : ''}
+      <p class="card-text">${escapeHtml(p.text)}</p>
+      ${p.contact ? `<div class="card-contact">📞 ${escapeHtml(p.contact)}</div>` : ''}
+      <p class="card-author">— ${escapeHtml(p.author || 'анонімно')}</p>
+      <div class="card-actions">
+        ${дії}
+        <button class="btn btn--delete" data-delete-post="${p.id}">Видалити</button>
+      </div>
+    </article>`;
+}
 
-  el.innerHTML = `
-    <div class="section-title">Усього коментарів: ${comments.length}</div>
-    ${comments.map(c => {
-      const parentPost = postMap.get(c.post_id);
-      const parentSnippet = parentPost
-        ? (parentPost.text || '').slice(0, 80) + ((parentPost.text || '').length > 80 ? '…' : '')
-        : `(пост #${c.post_id} не знайдено)`;
-      return `
-        <article class="card">
-          <div class="card-meta">
-            <span class="badge">пост #${c.post_id}</span>
-            ${parentPost ? `<span class="badge badge--type">${escapeHtml(typeLabel(parentPost.type))}</span>` : ''}
-            <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(c.created_at))}</span>
-          </div>
-          <div style="font-size:12px;color:#888;font-style:italic;margin-bottom:6px;border-left:3px solid #ddd;padding-left:8px">
-            ${escapeHtml(parentSnippet)}
-          </div>
-          <p class="card-text"><strong style="color:#722F37">${escapeHtml(c.author || 'анонімно')}:</strong> ${escapeHtml(c.text)}</p>
-          <div class="card-actions">
-            <button class="btn btn--delete" data-delete-comment="${c.id}">🗑 Видалити коментар</button>
-          </div>
-        </article>
-      `;
-    }).join('')}
-  `;
-
-  el.querySelectorAll('[data-delete-comment]').forEach(b => b.addEventListener('click', async () => {
-    if (!confirm('Видалити коментар назавжди?')) return;
-    const { error } = await supa.from('comments').delete().eq('id', Number(b.dataset.deleteComment));
+function вішатиДіїОголошення(el) {
+  el.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approvePost(Number(b.dataset.approve))));
+  el.querySelectorAll('[data-reject]').forEach(b => b.addEventListener('click', () => rejectPost(Number(b.dataset.reject))));
+  el.querySelectorAll('[data-delete-post]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePost))));
+  el.querySelectorAll('[data-unpublish]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Зняти оголошення з публікації?')) return;
+    const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', Number(b.dataset.unpublish));
     if (error) return showToast('Помилка: ' + error.message, 4000);
-    showToast('Коментар видалено');
+    showToast('Знято з публікації ✓');
     await loadAll(); renderApp();
   }));
 }
 
-// ── TAB 2: офіційні оголошення ────────────────────────────────────────
+// ── TAB: Питання громади ──────────────────────────────────────────────────
+// 🔴 20.08 — ЗАВЕДЕНО ЗАМІСТЬ ДВОХ РОЗДІЛІВ, які його розривали навпіл.
+// Було: питання лежали в «Опублікованих» упереміш з оголошеннями, а відповіді на
+// них — в окремій вкладці «Коментарі», без питання поруч. Скарга Вови: «коментарів
+// до питань нема, вони взагалі десь в іншій вкладці».
+//
+// 🔑 ЧОМУ ЦЕ БУЛА НЕ ДРІБНИЦЯ: заміряно 20.08 — усі 72 коментарі це відповіді на
+// питання, на оголошеннях їх РІВНО НУЛЬ. Тобто вкладка «Коментарі» ніколи не була
+// про коментарі взагалі; вона була «Відповідями», відірваними від свого питання.
+// Модерувати відповідь, не бачачи питання, — це вгадувати.
+//
+// ⚠️ Мітка «розмова» пішла разом із розділами: вкладку перейменували на «Питання»
+// 11.08, а адмінка про це не знала ще девʼять днів.
+function renderQuestions(el) {
+  const список = питання();
+  if (!список.length) return el.innerHTML = '<div class="empty">Питань ще немає.</div>';
+
+  el.innerHTML = список.map(q => {
+    const відп = відповідіДо(q.id);
+    return `
+      <article class="card card--q">
+        <div class="card-meta">
+          <span class="badge badge--type">Питання</span>
+          ${відп.length
+            ? `<span class="badge badge--cat">${відп.length} ${відмінок(відп.length, 'відповідь', 'відповіді', 'відповідей')}</span>`
+            : '<span class="badge badge--warn">без відповіді</span>'}
+          <span class="card-when">${escapeHtml(formatDate(q.created_at))}</span>
+        </div>
+        <div class="q-text">${escapeHtml(q.text || q.title || '')}</div>
+        <p class="card-author">— ${escapeHtml(q.author || 'анонімно')}</p>
+
+        ${відп.length ? `<div class="answers">
+          ${відп.map(c => `
+            <div class="answer">
+              <div class="answer-head">
+                <b>${escapeHtml(c.author || 'анонімно')}</b>
+                <span class="card-when">${escapeHtml(formatDate(c.created_at))}</span>
+              </div>
+              <div class="answer-text">${escapeHtml(c.text || '')}</div>
+              <button class="btn btn--delete btn--sm" data-del-answer="${c.id}">Видалити відповідь</button>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="card-actions">
+          <button class="btn btn--delete" data-delete-post="${q.id}">Видалити питання</button>
+        </div>
+      </article>`;
+  }).join('');
+
+  el.querySelectorAll('[data-delete-post]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePost))));
+  el.querySelectorAll('[data-del-answer]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Видалити цю відповідь?')) return;
+    const { error } = await supa.from('comments').delete().eq('id', Number(b.dataset.delAnswer));
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Відповідь видалено ✓');
+    await loadAll(); renderApp();
+  }));
+}
+
+// Українська плюралізація — щоб не писати «1 відповідей».
+function відмінок(n, одна, дві, багато) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return одна;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return дві;
+  return багато;
+}
 function renderAnnouncements(el) {
   el.innerHTML = `
     <form class="add-form" id="ann-form">
