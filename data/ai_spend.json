@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787228905966,
+      "mission": "olyka:event:день-знань",
+      "model": "claude-opus-5",
+      "input_tokens": 3287,
+      "output_tokens": 284,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0235,
+      "note": "Подія в громаді: 🇺🇦 День знань"
+    },
+    {
       "ts": 1787215931100,
       "mission": "olyka:weather-compact",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0088,
       "note": ""
-    },
-    {
-      "ts": 1783677698361,
-      "mission": "holiday:🇺🇦 День Української Державно",
-      "model": "claude-sonnet-5",
-      "input_tokens": 453,
-      "output_tokens": 500,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0089,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.1741,
-    "runs": 82,
+    "cost_usd": 5.1976,
+    "runs": 83,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.0645,
-      "runs": 4,
+      "cost_usd": 0.088,
+      "runs": 5,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787215931100
+  "updated_ts": 1787228905966
 }
