@@ -373,6 +373,66 @@ async function відкрото_безпечно(page) {
   return page.evaluate(() => document.querySelector('.hm-wx').classList.contains('hm-wx--open'));
 }
 
+// ── 5. 🔴 АВТОЗГОРТАННЯ ЗА КРАЄМ ЕКРАНА — БЕЗ СТРИБКА СТОРІНКИ (20.08) ──────
+// Замовлення Вови: «коли прогортую сторінку нижче і цей віджет ховається за
+// рамки трохи більше ніж треба — щоб він ховався. Але зроби це правильно
+// технічно, без дьоргання і щоб сторінка не стрибала при згортанні».
+//
+// 🛑 ГОЛОВНА НЕБЕЗПЕКА тут не «чи згорнеться», а ЧИ СТРИБНЕ ЕКРАН. Віджет стоїть
+// ВИЩЕ того місця, куди людина дивиться, тож зникнення 300px його висоти
+// підтягнуло б увесь вміст угору. Тому міряємо не стан класу, а ЗСУВ ЯКОРЯ —
+// елемента, на який людина дивиться в цю мить. Перевірка «згорнулось: так» була
+// б зеленою і на реалізації, що смикає екран на треть висоти.
+{
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  const p = await ctx.newPage();
+  await mockSupabase(p, { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] });
+  await p.route('**://api.open-meteo.com/**', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(ПОГОДА) }));
+  if (REV) {
+    const body = projectFile('bundle.js', REV);
+    await p.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+  }
+  await p.goto(url, { waitUntil: 'domcontentloaded' });
+  await p.waitForTimeout(2000);
+  await p.evaluate(() => document.querySelector('.consent-accept')?.click());
+  await p.waitForSelector('.hm-wx-toggle', { timeout: 15000 });
+  await p.waitForTimeout(400);
+
+  const r = await p.evaluate(async () => {
+    const сон = ms => new Promise(res => setTimeout(res, ms));
+    const скролер = document.querySelector('.app-main');
+    const wx = document.querySelector('.hm-wx');
+    const panel = document.querySelector('[data-wx-panel]');
+    document.querySelector('[data-wx-toggle]').click();
+    await сон(500);
+    const висотаПанелі = Math.round(panel.getBoundingClientRect().height);
+    const відкрилось = wx.classList.contains('hm-wx--open');
+
+    // Якір — те, на що людина дивиться, поки віджет уже за краєм.
+    const якір = document.querySelector('#cm-news-board');
+    скролер.scrollTop = 700;
+    await сон(60);
+    const до = Math.round(якір.getBoundingClientRect().top);
+    await сон(700);                       // час спостерігачеві спрацювати
+    const після = Math.round(якір.getBoundingClientRect().top);
+    return { висотаПанелі, відкрилось,
+             згорнулось: !wx.classList.contains('hm-wx--open'),
+             зсувЯкоря: після - до,
+             прокрутка: Math.round(скролер.scrollTop) };
+  });
+
+  ok('сцена: панель справді розгорнулась', r.відкрилось && r.висотаПанелі > 100, `${r.висотаПанелі}px`);
+  ok('🔴 віджет згортається сам, коли пішов за край екрана', r.згорнулось);
+  // 🔑 Це і є вимога «щоб сторінка не стрибала». Допуск 2px — округлення.
+  ok('🔴 екран не смикнувся: якір лишився на місці', Math.abs(r.зсувЯкоря) <= 2, `${r.зсувЯкоря}px`);
+  // Компенсація мусить дорівнювати саме зниклій висоті — «приблизно» тут
+  // означало б повільний дрейф сторінки при кожному згортанні.
+  ok('🔴 прокрутку зменшено рівно на висоту панелі',
+     Math.abs((700 - r.прокрутка) - r.висотаПанелі) <= 2,
+     `прокрутка 700 → ${r.прокрутка}, панель ${r.висотаПанелі}px`);
+  await ctx.close();
+}
+
 await b.close();
 await stop();
 done();
