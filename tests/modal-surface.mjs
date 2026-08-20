@@ -118,7 +118,12 @@ ok('заголовок модалки — системний sans', /-apple-syst
 
 // 🛑 Georgia в бренді ЛИШАЄТЬСЯ — це айдентика, а не службовий текст.
 // Перевірка тримає межу з обох боків: сериф пішов саме з модалки, а не звідусіль.
-const BASE = readFileSync(join(STYLE, 'base.css'), 'utf8');
+// ⚠️ 20.08: `--red` переїхав з `base.css` до `style/tokens.css` (спільних із
+// адмінкою), і контроль почервонів, хоч токен нікуди не дівся. Читаємо обидва —
+// питання ж не «в якому файлі», а «чи живий колір тексту».
+const BASE = ['base.css', 'tokens.css']
+  .map(ф => { try { return readFileSync(join(STYLE, ф), 'utf8'); } catch (_) { return ''; } })
+  .join('\n');
 ok('КОНТРОЛЬ: Georgia лишилась у логотипі (бренд не чіпали)',
    /\.header-logo\s*\{[^}]*Georgia/s.test(BASE));
 

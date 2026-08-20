@@ -233,11 +233,35 @@ export function zoneCss(rev = '') {
 // ⚠️ Беремо саме `:root { … }`, а не весь `base.css`: у ньому reset і розкладка
 // застосунку, які перекроїли б синтетичні сторінки стендів і зробили б їхні
 // заміри неспівставними з попередніми.
+// Базовий CSS для вклеювання у сцену стенда — ТОКЕНИ + BASE одним рядком.
+//
+// 🔴 20.08. Спільні токени бренду виділили в `style/tokens.css`, і `base.css`
+// тягне їх рядком `@import url('tokens.css')`. У браузері це працює, а от коли
+// стенд ВКЛЕЮЄ текст base.css у <style> сцени, відносний @import нема від чого
+// відраховувати — він тихо не виконується. Зовні це виглядало як зламаний
+// дизайн: `feed-edge` заміряв контраст 12.9 замість 1.40, бо кольори впали в
+// чорне й біле. Тому сцену збирає ця функція, а не конкатенація вручну.
+export function baseCss(rev = '') {
+  const токени = (() => { try { return projectFile('style/tokens.css', rev); } catch (_) { return ''; } })();
+  // @import прибираємо: у вклеєному тексті він і не спрацює, і засмітить консоль.
+  const база = projectFile('style/base.css', rev).replace(/^@import[^;]+;\s*/m, '');
+  return токени + '\n' + база;
+}
+
 export function rootTokens(rev = '') {
-  const css = projectFile('style/base.css', rev);
-  const m = css.match(/:root\s*\{([\s\S]*?)\n\}/);
-  if (!m) throw new Error('rootTokens: у style/base.css не знайдено блок :root');
-  return m[1];
+  // ⚠️ 20.08: читалось ЛИШЕ `style/base.css`, і коли спільні токени бренду
+  // виділили в `style/tokens.css` (їх читає ще й `admin.html`), стенд клавіатури
+  // чесно почервонів: `--ease-drawer` зник зі сцени, а `transition` з
+  // неоголошеним токеном браузер викидає цілком. Тобто мірка вказала на
+  // справжній наслідок переїзду — і мусить тепер знати про обидва файли.
+  const шматки = ['style/tokens.css', 'style/base.css'].map(ф => {
+    let css;
+    try { css = projectFile(ф, rev); } catch (_) { return ''; }   // старі ревізії без tokens.css
+    const m = css.match(/:root\s*\{([\s\S]*?)\n\}/);
+    return m ? m[1] : '';
+  }).filter(Boolean);
+  if (!шматки.length) throw new Error('rootTokens: не знайдено блок :root ні в tokens.css, ні в base.css');
+  return шматки.join('\n');
 }
 
 // Сторож проти повторення тієї самої історії: знаходить у ВИМІРЮВАНОМУ CSS

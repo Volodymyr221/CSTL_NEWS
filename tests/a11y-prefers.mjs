@@ -34,7 +34,7 @@
 //     CSS_REV=origin/main node tests/a11y-prefers.mjs
 // підсовує `style/base.css` ДО фіксу — усі 🔴-перевірки мусять УПАСТИ.
 import { chromium } from 'playwright';
-import { launch, serve, reporter, projectFile } from './_lib.mjs';
+import { launch, serve, reporter, projectFile, baseCss} from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
 
 const { ok, done } = reporter();
@@ -67,7 +67,7 @@ await mockSupabase(p,
   { user: ME, profiles: [{ uid: 'u-me', name: 'Вова', avatar_url: '' }] });
 await p.route('**://api.open-meteo.com/**', r => r.abort());
 if (REV) {
-  const body = projectFile('style/base.css', REV);
+  const body = baseCss(REV);
   await p.route('**/style/base.css', r => r.fulfill({ contentType: 'text/css; charset=utf-8', body }));
 }
 

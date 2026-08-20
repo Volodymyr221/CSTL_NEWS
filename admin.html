@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#722F37">
+  <meta name="theme-color" content="#4A121C">
   <meta name="description" content="Адмінка CSTL LIFE — модерація Дошки громади">
   <meta name="apple-mobile-web-app-title" content="CSTL Admin">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -18,26 +18,41 @@
     Поки порожньо — адмінка покаже повідомлення «не налаштовано».
   -->
 
+  <link rel="stylesheet" href="style/tokens.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #F4F1E6;
-      color: #1a1a1a;
+      /* 🔴 20.08 — фон і бренд узято з `style/tokens.css`, спільних із застосунком.
+         Тут стояв кремовий #F4F1E6 і плаский #722F37 у шапці, тобто адмінка
+         жила на кольорах, від яких застосунок відійшов. Вова: «навіть колір
+         багряний, а ми вже змінили його в додатку». */
+      background: var(--app-bg);
+      color: var(--ink);
       line-height: 1.5;
-      min-height: 100vh;
+      min-height: 100dvh;
       padding-bottom: 40px;
     }
 
-    /* ── HEADER ──────────────────────────────────────────────────────── */
+    /* ── ШАПКА: ПРИБИТА, ЯК У ЗАСТОСУНКУ ─────────────────────────────────
+       🔴 Скарга Вови 20.08: «я скролю сторінку — скролиться все, з кнопками,
+       з шапкою, це не по нашому стандарту». І це не дрібниця вигляду: разом
+       із шапкою їхали «На сайт» і «Вийти», тобто вихід з адмінки зникав
+       рівно тоді, коли ти внизу довгого списку і найбільше хочеш вийти.
+       Тепер шапка `sticky` з матовим склом — так само, як прибиті шапки
+       застосунку (`--app-glass`). */
     .header {
-      background: #722F37;
-      color: white;
-      padding: 14px 18px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--brand-grad);
+      color: #fff;
+      padding: 12px 18px;
+      padding-top: calc(12px + env(safe-area-inset-top));
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 6px 18px rgba(0,0,0,0.10);
     }
     .header-brand {
       display: flex;
@@ -114,11 +129,11 @@
       font-family: inherit;
       outline: none;
     }
-    .login-input:focus { border-color: #722F37; }
+    .login-input:focus { border-color: var(--red); }
     .login-btn {
       width: 100%;
       padding: 14px;
-      background: #722F37;
+      background: var(--brand-grad-sm);
       color: white;
       border: none;
       border-radius: 12px;
@@ -127,12 +142,12 @@
       cursor: pointer;
       font-family: inherit;
     }
-    .login-btn:active { background: #5A2329; }
+    .login-btn:active { background: var(--red-dark); }
     .login-btn:disabled { background: #999; cursor: wait; }
 
     .login-info {
       background: #f5f5f5;
-      border-left: 3px solid #722F37;
+      border-left: 3px solid var(--red);
       padding: 12px 14px;
       margin-top: 18px;
       border-radius: 0 8px 8px 0;
@@ -156,7 +171,7 @@
     .chip { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 7px 10px; border-radius: 999px;
             border: 1px solid #DDD; background: #fff; color: #555; text-align: center;
             white-space: nowrap; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .chip--on { background: #722F37; border-color: #722F37; color: #fff; }
+    .chip--on { background: var(--brand-grad-sm); border-color: transparent; color: #fff; }
     .chip-n { opacity: .75; font-weight: 700; }
 
     /* ── КАРТКА: РИТМ ЗАМІСТЬ ЛІНІЙ ────────────────────────────────────────
@@ -194,7 +209,7 @@
     .queue-row:first-of-type { border-top: 0; }
     .queue-row:active { background: #F4F5F7; }
     /* Число веде рядок: око шукає «скільки», а не «що» — тому воно перше і найбільше. */
-    .queue-n { min-width: 38px; font-size: 24px; font-weight: 800; color: #722F37; line-height: 1; }
+    .queue-n { min-width: 38px; font-size: 24px; font-weight: 800; color: var(--red); line-height: 1; }
     .queue-txt { flex: 1; font-size: 15px; color: #333; }
     .queue-go { font-size: 22px; color: #C0C4CB; }
     /* 🛑 Забутий доступ — єдиний рядок з іншим тоном. Він не «сьогоднішня робота»,
@@ -232,19 +247,19 @@
       -webkit-tap-highlight-color: transparent;
     }
     .tile:active { transform: scale(0.96); }
-    .tile-ic { color: #722F37; }
+    .tile-ic { color: var(--red); }
     .tile-ic svg { width: 26px; height: 26px; }
     .tile-label { font-size: 11.5px; font-weight: 600; color: #444; text-align: center; line-height: 1.25; }
     .tile-badge {
       position: absolute; top: 8px; right: 8px;
       min-width: 18px; height: 18px; padding: 0 5px;
-      background: #722F37; color: white; border-radius: 9px;
+      background: var(--brand-grad-sm); color: white; border-radius: 9px;
       font-size: 10.5px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
     }
     .back-bar { display: flex; align-items: center; margin-bottom: 14px; }
     .back-btn {
-      background: none; border: none; color: #722F37;
+      background: none; border: none; color: var(--red);
       font-size: 14px; font-weight: 600; cursor: pointer;
       padding: 6px 4px 6px 0; display: flex; align-items: center; gap: 4px;
       font-family: inherit;
@@ -269,13 +284,13 @@
     .spend-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 4px; }
     .spend-cards .card { margin-bottom: 0; }
     .spend-lbl { font-size: 12px; color: #888; }
-    .spend-big { font-size: 26px; font-weight: 700; color: #722F37; margin: 4px 0 2px; }
+    .spend-big { font-size: 26px; font-weight: 700; color: var(--red); margin: 4px 0 2px; }
     .spend-sub { font-size: 12px; color: #999; }
     .spend-log { background: white; border-radius: 14px; padding: 4px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
     .spend-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; flex-wrap: wrap; }
     .spend-row:last-child { border-bottom: none; }
     .spend-row-date { color: #555; min-width: 110px; }
-    .spend-row-cost { font-weight: 700; color: #722F37; min-width: 56px; }
+    .spend-row-cost { font-weight: 700; color: var(--red); min-width: 56px; }
     .spend-row-meta { color: #999; font-size: 12px; }
     .card-meta {
       display: flex;
@@ -302,7 +317,7 @@
     .card-text {
       font-size: 14px;
       line-height: 1.5;
-      color: #1a1a1a;
+      color: var(--ink);
       margin-bottom: 6px;
       word-wrap: break-word;
     }
@@ -337,8 +352,8 @@
     .btn--reject  { background: #FFE89C; color: #5C3F0E; }
     .btn--delete  { background: transparent; color: #C41E3A; border: 1px solid #ffd2d9; }
     .btn--delete:hover { background: #ffe9ed; }
-    .btn--primary { background: #722F37; color: white; }
-    .btn--primary:active { background: #5A2329; }
+    .btn--primary { background: var(--brand-grad-sm); color: white; }
+    .btn--primary:active { background: var(--brand-grad-press); }
     /* 🔴 17.08 — КЛАС ІСНУВАВ У КОДІ, АЛЕ НЕ В СТИЛЯХ.
        `btn--ghost` уже стояв на невибраних чіпах фільтра «Скарг» і на другорядних
        кнопках — тобто розмітка розрізняла вибране й невибране, а на екрані вони
@@ -363,7 +378,7 @@
     .add-form-title {
       font-size: 14px;
       font-weight: 700;
-      color: #722F37;
+      color: var(--red);
       margin-bottom: 4px;
     }
     .input, .textarea {
@@ -375,7 +390,7 @@
       font-family: inherit;
       outline: none;
     }
-    .input:focus, .textarea:focus { border-color: #722F37; }
+    .input:focus, .textarea:focus { border-color: var(--red); }
     .textarea { resize: vertical; min-height: 60px; }
 
     /* ── EMPTY / LOADING ──────────────────────────────────────────── */
@@ -447,7 +462,9 @@
     }
 
     /* ── АДАПТИВ (телефон) — прибирає горизонтальний вихід за екран і зум-аут ── */
-    html { background: #F4F1E6; }
+    /* ⚠️ Фон і на <html>: при «гумовому» відскоку iOS з-під сторінки визирає
+       саме він — без цього рядка там блиснув би старий кремовий. */
+    html { background: var(--app-bg); }
     body { overflow-x: hidden; }
     @media (max-width: 640px) {
       .main { padding: 14px 12px; }
@@ -466,7 +483,7 @@
       border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 600;
       cursor: pointer; font-family: inherit; white-space: nowrap;
     }
-    .art-chip.active { background: #722F37; color: #fff; border-color: #722F37; }
+    .art-chip.active { background: var(--brand-grad-sm); color: #fff; border-color: transparent; }
     .art-preview { border-top: 1px dashed #e0dccb; margin: 8px 0; padding-top: 8px; }
   </style>
 </head>
@@ -733,7 +750,7 @@ function renderLogin() {
         <button class="login-btn" id="login-btn" type="submit">Увійти</button>
       </form>
       <p style="text-align:center;margin-top:14px">
-        <a href="#" id="forgot-link" style="color:#722F37;font-size:13px;text-decoration:underline">Забув пароль?</a>
+        <a href="#" id="forgot-link" style="color:var(--red);font-size:13px;text-decoration:underline">Забув пароль?</a>
       </p>
     </div>
   `;
@@ -784,7 +801,7 @@ function renderForgotPassword() {
         <button class="login-btn" id="forgot-btn" type="submit">Надіслати посилання</button>
       </form>
       <p style="text-align:center;margin-top:14px">
-        <a href="#" id="back-to-login" style="color:#722F37;font-size:13px;text-decoration:underline">← Повернутись до входу</a>
+        <a href="#" id="back-to-login" style="color:var(--red);font-size:13px;text-decoration:underline">← Повернутись до входу</a>
       </p>
     </div>
   `;
@@ -1364,7 +1381,7 @@ function barRows(counts, labelMap) {
     <div class="spend-row">
       <span class="spend-row-date">${escapeHtml((labelMap && labelMap[k]) || k)}</span>
       <span class="spend-row-meta" style="flex:1;margin:0 10px">
-        <span style="display:block;height:8px;border-radius:4px;background:#722F37;opacity:.25;width:${Math.round(v / max * 100)}%"></span>
+        <span style="display:block;height:8px;border-radius:4px;background:var(--red);opacity:.25;width:${Math.round(v / max * 100)}%"></span>
       </span>
       <span class="spend-row-cost">${v}</span>
     </div>`).join('') + '</div>';

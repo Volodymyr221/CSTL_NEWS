@@ -24,7 +24,14 @@ const РОЗДІЛ  = (process.argv.find(a => a.startsWith('--tab=')) || '').sli
 const сервер = createServer((req, res) => {
   const шлях = join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'index.html');
   if (!existsSync(шлях)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'content-type': шлях.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/octet-stream' });
+  // ⚠️ 20.08: усе, крім .html, віддавалось як `application/octet-stream`, і
+  // браузер СПРАВЕДЛИВО відмовлявся застосовувати такий «стиль». Знімок вийшов
+  // геть без кольорів, і виглядало це як зламана верстка, а не як вада сервера.
+  const тип = шлях.endsWith('.html') ? 'text/html; charset=utf-8'
+            : шлях.endsWith('.css')  ? 'text/css; charset=utf-8'
+            : шлях.endsWith('.js')   ? 'text/javascript; charset=utf-8'
+            : 'application/octet-stream';
+  res.writeHead(200, { 'content-type': тип });
   res.end(readFileSync(шлях));
 });
 await new Promise(r => сервер.listen(0, r));

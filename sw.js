@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260820-1019';
+const CACHE_NAME = 'cstl-20260820-1449';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
+  './style/tokens.css',      // 🆕 20.08 — спільні токени бренду: їх читає і base.css, і admin.html
   './style/base.css',
   './style/filters.css',
   './style/news.css',

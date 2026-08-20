@@ -29,9 +29,9 @@
 // падіння гірше за відсутність перевірки. Чи натиск «відчувається так само» — може
 // сказати лише Вова на iPhone; підбір зроблено за контрастом (1.274 проти 1.271 було).
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter, zoneCss } from './_lib.mjs';
+import { launch, projectFile, reporter, zoneCss, baseCss} from './_lib.mjs';
 
-const BASE_CSS = projectFile('style/base.css');
+const BASE_CSS = baseCss();
 const COMM_CSS = zoneCss();
 const MSGS_CSS = projectFile('style/messages.css');
 

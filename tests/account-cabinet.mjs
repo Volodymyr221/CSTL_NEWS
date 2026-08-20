@@ -19,11 +19,11 @@
 // сцени мусить реально зустрічатись у `src/core/account-ui.js`.
 
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, baseCss} from './_lib.mjs';
 
 const { ok, done } = reporter();
 
-const BASE = projectFile('style/base.css');
+const BASE = baseCss();
 const ACC  = projectFile('style/account.css');
 const JS   = projectFile('src/core/account-ui.js');
 

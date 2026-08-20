@@ -19,9 +19,9 @@
 // ⚠️ ЧОГО ЦЕЙ СТЕНД НЕ ПЕРЕВІРЯЄ: чи це «гарно». Числа кажуть лише, що край видимий
 // і тримає ту саму міру, що на Дошці. Останнє слово — за оком Вови на iPhone.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, baseCss} from './_lib.mjs';
 
-const BASE_CSS = projectFile('style/base.css');
+const BASE_CSS = baseCss();
 const FEED_CSS = projectFile('style/feed.css');
 
 const { ok, done } = reporter();
