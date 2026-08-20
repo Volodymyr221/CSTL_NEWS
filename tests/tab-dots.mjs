@@ -18,9 +18,9 @@
 // ⚠️ ЧОГО СТЕНД НЕ ПОКРИВАЄ: чи крапка «легенька» на око і чи не тісно їй у таб-барі
 // на живому екрані — це вирішує Вова на iPhone. Стенд стежить лише за геометрією.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, baseCss} from './_lib.mjs';
 
-const BASE_CSS = projectFile('style/base.css');
+const BASE_CSS = baseCss();
 const TAB_CSS  = projectFile('style/tabbar.css');
 const COMM_CSS = projectFile('style/community.css');
 const INDEX    = projectFile('index.html');

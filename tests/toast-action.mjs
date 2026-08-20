@@ -11,9 +11,9 @@
 // ⚠️ Перевіряємо ще й ЗВОРОТНЕ: решта коробки тоста мусить лишитись прохідною —
 // інакше ми полагодили кнопку і зламали те, для чого `pointer-events: none` ставили.
 import { chromium } from 'playwright';
-import { launch, projectFile, reporter } from './_lib.mjs';
+import { launch, projectFile, reporter, baseCss} from './_lib.mjs';
 
-const BASE_CSS = projectFile('style/base.css');
+const BASE_CSS = baseCss();
 const UTILS_JS = projectFile('src/core/utils.js');
 
 const { ok, done } = reporter();

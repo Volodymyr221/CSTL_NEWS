@@ -10,5 +10,8 @@
   "sink": "page_draft",
   "month_budget_usd": 0.6,
   "spend_prefix": "olyka:",
-  "day_budget_usd": 0.2
+  "day_budget_usd": 0.2,
+  "filters": [
+    "geo_scale"
+  ]
 }

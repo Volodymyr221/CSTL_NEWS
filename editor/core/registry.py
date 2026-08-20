@@ -31,4 +31,5 @@ def load_plugins():
     from editor.writers import brand_writer        # noqa: F401
     from editor.sinks import queue, cabinet        # noqa: F401
     from editor.sinks import page_draft            # noqa: F401
-    # readers/filters підключимо коли мігруємо новинні місії
+    from editor.filters import geo_scale            # noqa: F401
+    # readers підключимо коли мігруємо новинні місії
