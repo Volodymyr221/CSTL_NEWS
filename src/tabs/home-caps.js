@@ -70,10 +70,10 @@
 
 import { escapeHtml, lineMetrics, fitLine, getCoords } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, isSupabaseReady } from '../core/supabase.js';
+import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, fetchAllComments, isSupabaseReady } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
-import { cardTitleText, boardSeenTs, markBoardSeen } from '../core/board-shared.js';
+import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { nearestSettlement, pickedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
@@ -112,6 +112,12 @@ const RANK = {
   BUS_CANCELLED: 110,
   BUS_NOW:      100,   // рейс ≤15 хв — єдине, що просто зникає, якщо не встиг
   MSG_FRESH:     90,   // повідомлення ≤1 год — на тому кінці людина чекає
+  // 🔴 21.08 — ВІДПОВІЛИ НА МОЄ ПИТАННЯ. Між свіжим повідомленням (90) і
+  // відхиленим оголошенням (80), і це місце обґрунтоване з обох боків: це
+  // РЕАКЦІЯ ЛЮДЕЙ НА МОЮ ДІЮ, тобто сильніше за «лежить на модерації», де ніхто
+  // нічого не зробив. Але слабше за приватне повідомлення: там людина чекає
+  // відповіді просто зараз, а відповідь під питанням нікуди не подінеться.
+  ANSWERS:       85,
   AD_REJECTED:   80,   // моє оголошення відхилене — чекає МОЄЇ дії
   MSG:           70,   // повідомлення старше години
   BUS_SOON:      60,   // рейс 16-45 хв — ще встигаєш зібратись
@@ -614,6 +620,84 @@ function unansweredQuestion(posts) {
   return best;
 }
 
+// ── РОЛЬ 5: ВІДПОВІЛИ НА МОЄ ПИТАННЯ (21.08) ────────────────────────────────
+//
+// 🔑 Замовлення Вови: «якщо користувач написав своє питання і йому декілька
+// людей дали відповідь — у капсулі має писати N нових відповідей на ваше
+// питання».
+//
+// 📐 ЧОМУ ЦЕ ПЕРШЕ З ТРЬОХ ДЖЕРЕЛ, А НЕ ДРУГЕ. Заміряно на живій базі: усі 8
+// питань написала ОДНА людина. Отже «нові питання, яких я не бачив» для неї не
+// існує як явище — усі питання її власні. А «мені відповіли» оживає з ПЕРШОЇ ж
+// людини ззовні. Порядок робіт визначили дані, а не краса схеми.
+//
+// 🛑 ЧИСЛО В КАПСУЛІ — ВИНЯТОК З ПРАВИЛА, І ВІН ОБҐРУНТОВАНИЙ. У проєкті діє
+// «капсула каже ЩО, бейджі кажуть СКІЛЬКИ» (заведено після того, як два
+// лічильники розійшлись). Тут число і Є інформація: «на твоє питання відповіли
+// тричі» — не той самий факт, що «десь є непрочитане», і другої поверхні, яка
+// це показує, у застосунку немає. Тобто ми не дублюємо лічильник, а кажемо те,
+// чого без нас не скаже ніхто.
+//
+// ⚠️ Свої відповіді не рахуємо: автор, що сам себе доповнив, не отримав
+// відповіді. Це не дрібниця — саме автор питання найчастіше і дописує.
+async function answersCapsule() {
+  const uid = currentUserId();
+  if (!uid || !isSupabaseReady()) return null;
+  const seen = chatSeenTs();
+  // Перший запуск: нічого не пропускали — ставимо позначку мовчки (те саме
+  // правило, що в Дошки й Новин).
+  if (!seen) { markChatSeen(); return null; }
+
+  let posts = [];
+  try { posts = (await fetchPublishedPosts()) || []; } catch { return null; }
+  const моїПитання = posts.filter(p => (p.type === 'chat') && p.owner_uid === uid);
+  if (!моїПитання.length) return null;
+
+  let мапа;
+  try { мапа = await fetchAllComments(); } catch { return null; }
+  if (!мапа || typeof мапа.get !== 'function') return null;
+
+  let найкраще = null;
+  for (const q of моїПитання) {
+    const нові = (мапа.get(q.id) || []).filter(c =>
+      !c.deleted_at && c.sender_uid !== uid && tsOf(c) > seen);
+    if (!нові.length) continue;
+    // Беремо питання з найбільшою кількістю нових відповідей; за рівності —
+    // те, де відповіли останнім. Показуємо ОДНЕ: п'ять відповідей це не п'ять
+    // капсул, а одна з числом.
+    const остання = Math.max(...нові.map(tsOf));
+    if (!найкраще || нові.length > найкраще.n
+        || (нові.length === найкраще.n && остання > найкраще.остання)) {
+      найкраще = { q, n: нові.length, остання };
+    }
+  }
+  if (!найкраще) return null;
+
+  const { q, n } = найкраще;
+  const слово = відмінокВідповіді(n);
+  const текст = (q.text || '').trim() || 'ваше питання';
+  return {
+    key: 'answers', icon: ICONS.message,
+    rank: RANK.ANSWERS,
+    // Стан у мітці, сам предмет — у значенні: той самий розподіл, що витримав
+    // вузький екран на автобусній капсулі (заміряно 17.08).
+    labelVariants: [`${n} ${слово.toUpperCase()} НА ВАШЕ ПИТАННЯ`, `${n} ${слово.toUpperCase()}`],
+    valueVariants: [текст],
+    aria: `${n} ${слово} на ваше питання: ${текст}`,
+    tap: () => openChatModal(q),
+  };
+}
+
+// «1 відповідь · 2 відповіді · 5 відповідей» — те саме правило, що в адмінці.
+// ⚠️ Без цього найчастіший випадок читався б як помилка: одна відповідь буває
+// частіше за п'ять.
+function відмінокВідповіді(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'нова відповідь';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'нові відповіді';
+  return 'нових відповідей';
+}
+
 // ── РОЛЬ 3: НОВЕ ─────────────────────────────────────────────────────────────
 // Що змінилось на Дошці з мого останнього візиту туди.
 //
@@ -891,7 +975,7 @@ export async function renderHomeCaps() {
   const gen = ++_gen;
 
   // allSettled, а не all: падіння однієї ролі не має забирати з екрана решту.
-  const результати = await Promise.allSettled([myCapsule(), nowCapsule(), newCapsule(), msgCapsule()]);
+  const результати = await Promise.allSettled([myCapsule(), nowCapsule(), newCapsule(), msgCapsule(), answersCapsule()]);
   if (gen !== _gen) return;
   const caps = результати
     .map(r => (r.status === 'fulfilled' ? r.value : null))
