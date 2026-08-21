@@ -7,7 +7,7 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, showToast } from '../core/utils.js';
-import { coordsOf, locationGroups, isKnownPlace, pickedPlace, WX_PLACE_KEY } from '../core/settlements-geo.js';
+import { coordsOf, locationGroups, isKnownPlace, pickedPlace, rememberDetectedPlace, WX_PLACE_KEY } from '../core/settlements-geo.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -166,6 +166,12 @@ export async function renderWeatherBlock() {
       `&forecast_days=7&timezone=auto`
     );
     const cityName = (await cityP) || 'Олика';
+    // 🔑 21.08 — ЗАПАМʼЯТОВУЄМО ВИЗНАЧЕНУ НАЗВУ для капсули автобуса.
+    // Досі вона тільки малювалась: людина бачила «Дерно» в шапці, а капсула
+    // пропонувала рейс з Олики, бо цієї відповіді їй ніхто не передавав.
+    // ⚠️ Пишемо лише коли назву дала ГЕОЛОКАЦІЯ (`!picked`): обране руками місто
+    // має власний ключ, і змішати їх означало б прикипіти до нього назавжди.
+    if (!picked) rememberDetectedPlace(cityName);
     const data = await weatherRes.json();
     // Open-Meteo на негодящий параметр відповідає 400 з `{error:true, reason:...}`,
     // а не порожнім тілом. Без цієї перевірки ми пішли б далі з `data.current ===

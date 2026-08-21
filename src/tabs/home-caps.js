@@ -75,7 +75,7 @@ import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/aut
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { nearestSettlement, pickedPlace } from '../core/settlements-geo.js';
+import { nearestSettlement, pickedPlace, detectedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
@@ -237,6 +237,13 @@ async function поточнеСело() {
   // Обране місце знаємо миттєво, без мережі й без дозволів — тому воно перше.
   const обране = pickedPlace();
   if (обране) return обране;
+  // 🔑 21.08 — ДРУГЕ: те, що застосунок ВИЗНАЧИВ сам і показує в шапці погоди.
+  // Слово Вови: «мене пише Луцьк; буду в Дерні — писатиме Дерно; зроби, щоб
+  // автобус вибивало з місця локації». Відповідь у застосунку вже була —
+  // зворотне геокодування для погоди дає назву села напряму, точніше за наше
+  // порівняння координат. Лишалось її не загубити.
+  const визначене = detectedPlace();
+  if (визначене) return визначене;
   if (_гдеЯ !== null) return _гдеЯ || null;
   if (!_гдеЯПошук) _гдеЯПошук = обчислитиСело();
   const швидко = await Promise.race([
