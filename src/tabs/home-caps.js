@@ -75,7 +75,7 @@ import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/aut
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { nearestSettlement, pickedPlace } from '../core/settlements-geo.js';
+import { nearestSettlement, pickedPlace, detectedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
@@ -237,6 +237,17 @@ async function поточнеСело() {
   // Обране місце знаємо миттєво, без мережі й без дозволів — тому воно перше.
   const обране = pickedPlace();
   if (обране) return обране;
+  // 🔴 ДАЛІ — КООРДИНАТИ, І ЛИШЕ ПОТІМ НАЗВА. Спершу я поставив навпаки, бо так
+  // було простіше; це неправильно, і різниця не косметична.
+  //
+  // Назва з геокодера відповідає на питання «як зветься це місце». Нам потрібна
+  // відповідь на інше: «З ЯКОЇ НАШОЇ ЗУПИНКИ ЛЮДИНА МОЖЕ СІСТИ». Це різні
+  // питання, і геокодер може дати назву, якої в розкладі немає взагалі, або
+  // назвати сусіднє село, куди автобус не заходить.
+  //
+  // ➡️ Тому порівняння з нашими зупинками йде першим: воно дає саме ту
+  // відповідь, яка потрібна, і дає її без мережі. Назва з погоди лишається
+  // запасним шляхом — коли координат зупинок ми ще не знаємо.
   if (_гдеЯ !== null) return _гдеЯ || null;
   if (!_гдеЯПошук) _гдеЯПошук = обчислитиСело();
   const швидко = await Promise.race([
@@ -255,6 +266,10 @@ async function обчислитиСело() {
     // Розрізняє їх поле `city`: у справжньої позиції воно порожнє.
     _гдеЯ = (c && c.city == null) ? ((await nearestSettlement(c)) || '') : '';
   } catch { _гдеЯ = ''; }
+  // Координати нічого не дали (немає їх для сіл, або людина поза громадою) —
+  // тоді довіряємо назві, яку показує погода. Вона гірша за координати, але
+  // краща за нічого: це те саме місце, що людина бачить на екрані.
+  if (!_гдеЯ) _гдеЯ = detectedPlace() || '';
   return _гдеЯ || null;
 }
 
