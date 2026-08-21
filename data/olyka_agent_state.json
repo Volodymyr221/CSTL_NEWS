@@ -2,11 +2,13 @@
   "done": [
     "weather-compact",
     "event:день-знань",
-    "story:олицький-замок-одна-з"
+    "story:олицький-замок-одна-з",
+    "story:сім-днів-коли-олика"
   ],
   "kinds": {
     "weather-compact": "feature",
     "event:день-знань": "brand",
-    "story:олицький-замок-одна-з": "brand"
+    "story:олицький-замок-одна-з": "brand",
+    "story:сім-днів-коли-олика": "brand"
   }
 }
