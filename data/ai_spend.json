@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787349359752,
+      "mission": "olyka:story:підземелля-олицького-замку-15",
+      "model": "claude-opus-5",
+      "input_tokens": 4680,
+      "output_tokens": 271,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0302,
+      "note": "Підземелля Олицького замку: 15 ходів по колу"
+    },
+    {
       "ts": 1787298812830,
       "mission": "olyka:story:сім-днів-коли-олика",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0092,
       "note": ""
-    },
-    {
-      "ts": 1783936552027,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 490,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0086,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.2833,
-    "runs": 87,
+    "cost_usd": 5.3135,
+    "runs": 88,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.1737,
-      "runs": 9,
+      "cost_usd": 0.2039,
+      "runs": 10,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787298812830
+  "updated_ts": 1787349359752
 }
