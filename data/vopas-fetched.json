@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-21T22:28:24.474863+03:00",
+  "fetched_at": "2026-08-21T22:50:08.208921+03:00",
   "date": "21.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -6237,8 +6237,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
