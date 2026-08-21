@@ -41,7 +41,7 @@ import { keepScroll, paintIfChanged } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
-  cardTitleText, markBoardSeen,
+  cardTitleText, markBoardSeen, markChatSeen,
 } from '../core/board-shared.js';
 import {
   initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs, answersCount,
@@ -3018,7 +3018,15 @@ export function initBoard() {
   // людині, яка Дошку навіть не відкривала. Капсула тоді не показала б нічого
   // ніколи — і зрозуміти це з екрана було б неможливо.
   window.addEventListener('cstl-tab-changed', () => {
-    if (document.querySelector('.app-main')?.dataset.tab === 'board') markBoardSeen();
+    const вкладка = document.querySelector('.app-main')?.dataset.tab;
+    if (вкладка === 'board') markBoardSeen();
+    // 🔴 21.08 — ТА САМА ПОЗНАЧКА ДЛЯ ПИТАНЬ. Потрібна капсулі «нові питання,
+    // яких я ще не бачив»: без неї «нове» означало б «усе, що є в базі», і
+    // людина зі стажем бачила б той самий рядок вічно.
+    // ⚠️ Тут же, а не в рендері Питань — з тієї самої причини, що описана вище
+    // для Дошки: рендер трапляється на старті застосунку і гасив би лічильник
+    // тому, хто вкладку навіть не відкривав.
+    if (вкладка === 'discussions') markChatSeen();
   });
 
   // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────
