@@ -79,7 +79,7 @@ import { nearestSettlement, pickedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
-  getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops,
+  getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops, normalizeStopName,
 } from './buses.js';
 import { openAdModalStandalone } from './board.js';
 import { openMyAds, openThreadsList, openThreadById, unreadTopCached } from './board-chat.js';
@@ -349,6 +349,34 @@ async function myCapsule() {
 //
 // ✅ Тепер зупинка посадки Є ЗАВЖДИ: село з анкети, інакше Олика. Рейс без цієї
 // зупинки в капсулу не потрапляє зовсім, а відлік іде до проходу через неї.
+// ── КУДИ ЇДЕ ЦЕЙ РЕЙС (21.08) ────────────────────────────────────────────────
+//
+// 🔴 Скарга Вови зі знімка іншого акаунта: «що це за автобус Олика → Олика?».
+//
+// 🔬 Корінь заміряно: НАЗВА рейсу і СПИСОК ЗУПИНОК — різні джерела, і вони
+// розходяться. Рейс зветься «Ківерці Олика», а зупинки йдуть Ківерці →
+// Носовичі. Посадку ми рахували зі зупинок, кінець — із назви, і в людини, що
+// сідає в Олиці, виходило «Олика → Олика».
+//
+// 📐 На живому розкладі: 4 рейси з 25 мають назву, що не збігається з реальною
+// кінцевою. І один випадок ГІРШИЙ за безглуздий: «Луцьк- Личани ч/з Покащів»
+// давав кінець «Покащів» — проміжне село з назви — хоча автобус їде до Личан.
+// Тобто капсула називала б не те місце, і це неможливо помітити оком.
+//
+// 🔑 Тому кінець беремо ЗВІДТИ Ж, ЗВІДКИ ПОСАДКУ — зі списку зупинок. Назва
+// лишається людським підписом рейсу, а не джерелом фактів.
+// ⚠️ Назва як запасний варіант лишена навмисно: якщо зупинок раптом немає,
+// краще людський підпис, ніж порожньо.
+function кудиЇде(route) {
+  const зуп = route?.stops;
+  if (Array.isArray(зуп) && зуп.length) {
+    const остання = зуп[зуп.length - 1]?.name;
+    if (остання) return остання;
+  }
+  const [, зНазви] = parseRouteEndpoints(route?.name || '');
+  return зНазви || '';
+}
+
 async function nowCapsule() {
   const todayISO = new Date().toISOString().slice(0, 10);
   // 🔑 Завтра рахуємо від UTC-півночі, як і `todayISO`: змішати дві бази відліку
@@ -385,7 +413,13 @@ async function nowCapsule() {
     const stop = findStopOnRoute(r, from);
     if (!stop) return false;
     const last = r.stops[r.stops.length - 1];
-    return !!last && stop.name !== last.name;
+    if (!last || stop.name === last.name) return false;
+    // 🛑 ДРУГИЙ ЗАПОБІЖНИК (21.08): куди рейс приїде за нашим власним
+    // обчисленням не має дорівнювати тому, звідки людина сідає. Перевірка
+    // вище дивиться на ОСТАННЮ зупинку, а `кудиЇде` має ще й запасний шлях
+    // через назву — і саме там колись народилось «Олика → Олика». Дешевше
+    // не показати один рейс, ніж показати рядок, що не означає нічого.
+    return normalizeStopName(кудиЇде(r)) !== normalizeStopName(from);
   };
 
   const pickFor = (from, to) => {
@@ -444,7 +478,7 @@ async function nowCapsule() {
       const наступний = запасний
         ? `наступний о ${чч(getStopMins(запасний.r, findStopOnRoute(запасний.r, звідки)?.name))}`
         : 'інших рейсів сьогодні немає';
-      const [, кінець] = parseRouteEndpoints(скасований.r.name || '');
+      const кінець = кудиЇде(скасований.r);
       return {
         key: 'now', icon: ICONS.bus,
         rank: RANK.BUS_CANCELLED,
@@ -507,7 +541,7 @@ async function nowCapsule() {
 
     const хв = ((перший.m % 1440) + 1440) % 1440;
     const час = `${String(Math.floor(хв / 60)).padStart(2, '0')}:${String(хв % 60).padStart(2, '0')}`;
-    const [, кінець] = parseRouteEndpoints(перший.r.name || '');
+    const кінець = кудиЇде(перший.r);
     const куди = prefTo || кінець || 'Найближчий';
     return {
       key: 'now', icon: ICONS.bus,
@@ -523,7 +557,7 @@ async function nowCapsule() {
     };
   }
 
-  const [, endName] = parseRouteEndpoints(hit.r.name || '');
+  const endName = кудиЇде(hit.r);
   const dest = hit.to || endName || 'Найближчий';
   const when = hit.left === 0 ? 'зараз'
     : hit.left < 60 ? `через ${hit.left} хв`
