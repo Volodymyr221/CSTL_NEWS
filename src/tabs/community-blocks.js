@@ -7,7 +7,7 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, showToast } from '../core/utils.js';
-import { coordsOf, locationGroups, isKnownPlace } from '../core/settlements-geo.js';
+import { coordsOf, locationGroups, isKnownPlace, pickedPlace, WX_PLACE_KEY } from '../core/settlements-geo.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -101,16 +101,12 @@ function setWeatherTitle(cityName) {
 //
 // 🔑 `null` = «за геолокацією» (те, як було завжди). Тобто вибір НЕ обовʼязковий:
 // хто нічого не чіпав, отримує рівно ту саму поведінку, що й до цієї зміни.
-const WX_PLACE_KEY = 'wx_place_v1';
-
-function loadWxPlace() {
-  try {
-    const v = localStorage.getItem(WX_PLACE_KEY);
-    // Перевіряємо, що назва досі «наша»: список НП може змінитись, і тоді
-    // старий запис у сховищі вказував би в нікуди.
-    return v && isKnownPlace(v) ? v : null;
-  } catch { return null; }
-}
+// 🔑 21.08 — ЧИТАННЯ ПЕРЕЇХАЛО В `core/settlements-geo.js`, бо це місце тепер
+// читає не лише погода: капсула автобуса бере з нього пункт А («показуй від
+// теперішнього місця користувача» — Вова, 21.08). Дві копії однієї відповіді на
+// питання «де людина» розійшлись би при першій же правці, і виглядало б це як
+// погода одного міста при автобусах з іншого.
+const loadWxPlace = pickedPlace;
 
 function saveWxPlace(name) {
   try {
