@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-21T02:52:31.400877+03:00",
+  "fetched_at": "2026-08-21T04:35:00.254416+03:00",
   "date": "21.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -102,8 +102,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -132,8 +132,8 @@
       "carrier": "ТОВ \"ЛЮКС-РЕЙЗЕН БІС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
