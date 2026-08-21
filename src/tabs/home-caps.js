@@ -68,14 +68,15 @@
 //     пропонує їй.
 // ═════════════════════════════════════════════════════════════════════════════
 
-import { escapeHtml, lineMetrics, fitLine } from '../core/utils.js';
+import { escapeHtml, lineMetrics, fitLine, getCoords } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, isSupabaseReady } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { getStopMins, nowMinutes } from '../core/bus-schedule.js';
+import { nearestSettlement } from '../core/settlements-geo.js';
+import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
   getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops,
@@ -103,6 +104,12 @@ const MAX_CAPS = 3;
 // ⚠️ Значення НАВМИСНО різні (жодної пари однакових): при збігу порядок вирішував
 // би випадок — те, у якому порядку `Promise.allSettled` віддав результати.
 const RANK = {
+  // 🔴 20.08 — ОДИНАДЦЯТА ГРАДАЦІЯ, І ВОНА ВИЩЕ ЗА ВСЕ. Скасування мого рейсу —
+  // єдиний рядок на головній, який каже НЕ РОБИТИ дію, а не зробити. Ціна
+  // невиконання тут не «пропустив автобус», а «поїхав не тим» або «стояв на
+  // зупинці марно». Тому воно перебиває навіть рейс через 10 хвилин: побачити
+  // «автобус є» замість «твого не буде» гірше, ніж не побачити нічого.
+  BUS_CANCELLED: 110,
   BUS_NOW:      100,   // рейс ≤15 хв — єдине, що просто зникає, якщо не встиг
   MSG_FRESH:     90,   // повідомлення ≤1 год — на тому кінці людина чекає
   AD_REJECTED:   80,   // моє оголошення відхилене — чекає МОЄЇ дії
@@ -181,6 +188,40 @@ async function mySettlement() {
     _placeFor = uid;
   } catch { return null; }
   return _place;
+}
+
+// ── ДЕ Я ЗАРАЗ (20.08) ───────────────────────────────────────────────────────
+//
+// 🔴 Замовлення Вови: «додаток не тільки про Олику, а про громаду — треба
+// відображати автобус від локації користувача». Заміряно, чому це терміново:
+// поле `settlement` в анкеті заповнене в ОДНОГО профілю з дванадцяти. Тобто
+// персоналізація, побудована лише на анкеті, мовчки не працювала б для 92% —
+// і виглядало б це не як вада, а як «капсул чомусь немає».
+//
+// 🛑 ПОРЯДОК ВАЖЛИВІШИЙ ЗА САМЕ ОБЧИСЛЕННЯ:
+//   1. де я ЗАРАЗ — якщо я в межах громади;
+//   2. де я ЖИВУ — анкета;
+//   3. Олика — хаб громади, чесний спільний знаменник.
+let _гдеЯ = null;          // зліпок на сесію: одне обчислення на відкриття
+async function поточнеСело() {
+  if (_гдеЯ !== null) return _гдеЯ || null;
+  try {
+    const c = await getCoords();
+    // 🔴 ЗАПАСНІ КООРДИНАТИ — НЕ МІСЦЕ ЛЮДИНИ. Спіймано стендом 20.08.
+    // `getCoords()` за відмови в дозволі (або за таймаутом 4с) віддає координати
+    // ОЛИКИ — правильно для погоди, але тут означало б «ти в Олиці» для кожного,
+    // хто дозволу не дав: житель Метельного із заповненою анкетою отримував би
+    // чужі автобуси, і виглядало б це як справна робота.
+    // 🔑 Розрізняє їх наявне поле `city`: у справжньої позиції воно порожнє, у
+    // запасної — назва. Контракт для цього вже існував, я його не читав.
+    _гдеЯ = (c && c.city == null) ? ((await nearestSettlement(c)) || '') : '';
+  } catch { _гдеЯ = ''; }
+  return _гдеЯ || null;
+}
+
+// Зупинка посадки: де я зараз → де я живу → Олика.
+async function мояЗупинка() {
+  return (await поточнеСело()) || (await mySettlement()) || HOME_STOP;
 }
 
 // ── РОЛЬ 1: МОЄ ──────────────────────────────────────────────────────────────
@@ -320,10 +361,10 @@ async function nowCapsule() {
     return best;
   };
 
-  // Зупинка посадки за замовчуванням: село з анкети, інакше Олика.
-  // ⚠️ Гість і людина з незаповненою анкетою отримують Олику — застосунок
-  // зроблено для неї, і це чесніше за «найближчий рейс хоч звідки».
-  const myStop = (await mySettlement()) || HOME_STOP;
+  // Зупинка посадки: де я ЗАРАЗ → де я ЖИВУ → Олика (див. `мояЗупинка`).
+  // ⚠️ Гість теж отримує геолокацію: вона не потребує входу, і людині з
+  // Метельного корисно бачити свої рейси ще до реєстрації.
+  const myStop = await мояЗупинка();
 
   // 1. Відстежуваний рейс на сьогодні — стелі часу нема.
   let hit = null;
