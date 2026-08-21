@@ -2029,8 +2029,22 @@ def main():
         if _a.get("title"):
             remember_title(title_tokens(_a["title"]),
                            section_of(_a.get("geo", "")), seen_by_section)
+    # 🔴 21.08 — ПАРСЕР РАХУЄ НОМЕРИ ЛИШЕ СЕРЕД СВОЇХ, НИЖЧЕ CMS_ID_BASE.
+    #
+    # Заміряно стендом `cms-chain` наступного ж дня після розведення просторів:
+    # у діапазоні кабінету опинилось **17 чужих статей**. Причина в цьому рядку:
+    # `max` брався по ВСЬОМУ файлу, тож щойно кабінет узяв 1 000 000, парсер
+    # пішов за ним і почав роздавати 1 000 010, 1 000 011…
+    #
+    # 🔑 Тобто розвести простори МАЛО — треба ще й не дати нижньому здертись
+    # угору. Стеля тут не «про всяк випадок»: без неї вчорашній фікс скасовував
+    # сам себе за одну добу, і зіткнення номерів повернулись би тихо.
+    # ⚠️ Число мусить збігатися з `CMS_ID_BASE` у `scripts/sync_cms.py`.
+    # Стереже `tests/cms-chain.mjs`.
+    CMS_ID_BASE = 1_000_000
     next_art_id = max(
-        (a["id"] for a in existing_articles if isinstance(a.get("id"), int)),
+        (a["id"] for a in existing_articles
+         if isinstance(a.get("id"), int) and a["id"] < CMS_ID_BASE),
         default=0,
     ) + 1
 
