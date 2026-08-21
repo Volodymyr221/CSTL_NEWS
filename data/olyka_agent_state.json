@@ -1,10 +1,12 @@
 {
   "done": [
     "weather-compact",
-    "event:день-знань"
+    "event:день-знань",
+    "story:олицький-замок-одна-з"
   ],
   "kinds": {
     "weather-compact": "feature",
-    "event:день-знань": "brand"
+    "event:день-знань": "brand",
+    "story:олицький-замок-одна-з": "brand"
   }
 }
