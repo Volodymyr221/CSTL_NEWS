@@ -17,7 +17,10 @@
 //
 // 🔑 Тому цей сторож іншого класу: він бере СПРАВЖНІ файли даних і питає не
 // «чи правильний код», а «чи доходить опубліковане до людини».
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdtempSync, copyFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { projectFile, reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
@@ -63,5 +66,67 @@ const чужіВдіапазоні = статті.filter(a => Number.isInteger(a
                                           && a.kind !== 'editor');
 ok('🔴 у діапазоні кабінету немає чужих статей', чужіВдіапазоні.length === 0,
    `${чужіВдіапазоні.length}`);
+
+
+// ── 4. 🔴 СИНК ЗАПУСКАЄТЬСЯ, А НЕ ЛИШЕ ЧИТАЄТЬСЯ ────────────────────────────
+// 🛑 НАЙДОРОЖЧИЙ УРОК ДНЯ, І ВІН ПРО МЕНЕ САМОГО. Перевірки вище я написав під
+// гаслом «ланцюг міряємо на ДАНИХ, а не в коді» — і полагодив порядок дій та
+// простір номерів, жодного разу не ЗАПУСТИВШИ синк.
+//
+// А він падав. Рівно місяць, з 21.07: у `sync_cms.py` лишились виклики
+// `pr.apply_daily_limits()` і `pr.balance_ua_world()` — обидві функції прибрали
+// з `parse_rss.py`, коли денні ліміти замінили зберіганням за віком. Кожен
+// прогін, у якому БУЛО ЩО СИНКАТИ, помирав з `AttributeError` — уже ПІСЛЯ того,
+// як позначив рядки опублікованими. Наступний прогін бачив порожню чергу і
+// рапортував «синк не потрібен»: 913 запусків, більшість «успішних», над
+// мертвим ланцюгом.
+//
+// ⚠️ Другий мертвий виклик я знайшов ЛИШЕ запуском. Читанням не побачив: рядок
+// `pr.balance_ua_world(merged)` виглядає бездоганно.
+//
+// 🔑 Тому ця сцена ЗАПУСКАЄ справжній `sync_cms.py` з підробленою чергою і
+// тимчасовим файлом. Перевірка на текст коду тут безсила за визначенням: щоб
+// побачити `AttributeError`, треба виконати рядок.
+const прогін = (() => {
+  const dir = mkdtempSync(join(tmpdir(), 'cms-'));
+  const art = join(dir, 'articles.json');
+  copyFileSync('data/articles.json', art);
+  const драйвер = join(dir, 'run.py');
+  writeFileSync(драйвер, `
+import importlib.util, json, os, pathlib
+os.environ['SUPABASE_SERVICE_ROLE_KEY'] = 'stub'
+spec = importlib.util.spec_from_file_location('sc', 'scripts/sync_cms.py')
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+m.pr.DATA_PATH = pathlib.Path(${JSON.stringify(art)})
+m.PENDING_PATH = pathlib.Path(${JSON.stringify(join(dir, 'pend.json'))})
+m.fetch_ready = lambda: [{"id": 4, "title": "Тестова стаття кабінету про Олику XVI століття",
+  "excerpt": "лід", "content": "текст", "category": "Історія", "geo": "Громада", "ts": 1750000000000}]
+m.sync_events = lambda: None
+m.autopublish_scheduled = lambda: None
+m.heal_phantom_drafts = lambda: None
+m.main()
+файл = json.load(open(${JSON.stringify(art)}, encoding='utf-8'))
+ред = [a for a in файл if a.get('kind') == 'editor']
+print('РЕЗУЛЬТАТ', json.dumps({'своїх': len(ред), 'номери': [a['id'] for a in ред],
+      'наміри': json.load(open(${JSON.stringify(join(dir, 'pend.json'))}, encoding='utf-8'))}, ensure_ascii=False))
+`);
+  try {
+    const out = execFileSync('python3', [драйвер], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const рядок = out.split('\n').find(l => l.startsWith('РЕЗУЛЬТАТ'));
+    return { ok: true, ...JSON.parse(рядок.slice(9)) };
+  } catch (e) {
+    return { ok: false, err: String(e.stderr || e.message).slice(-400) };
+  }
+})();
+
+ok('🔴 синк ДОХОДИТЬ ДО КІНЦЯ на справжньому запуску (не падає на мертвому виклику)',
+   прогін.ok, прогін.ok ? '' : прогін.err);
+ok('🔴 стаття кабінету справді лягла у файл', прогін.ok && прогін.своїх === 1,
+   `своїх у файлі: ${прогін.своїх}`);
+ok('🔴 номер виданий із простору кабінету (≥ 1 000 000)',
+   прогін.ok && прогін.номери.every(n => n >= 1_000_000), JSON.stringify(прогін.номери));
+ok('🔴 намір відкладено на підтвердження, а не позначено одразу',
+   прогін.ok && Array.isArray(прогін.наміри) && прогін.наміри.length === 1,
+   JSON.stringify(прогін.наміри));
 
 done();
