@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-21 20:58 UTC
+**Зріз на:** 2026-08-21 21:32 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `d199c26b` 21.08 20:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| останній коміт людини | `9fcf2498` 21.08 21:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260820-1816` |
-| останній PR у `main` | #983 |
+| останній PR у `main` | #984 |
 | стендів на диску | 96 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-21 | **НЕМАЄ** ⚠️ |
@@ -25,16 +25,17 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
+- `.github/workflows/geocode-settlements.yml`
+- `scripts/geocode-settlements.mjs`
 - `tests/settlements-geo.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `d199c26b` 21.08 20:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `6225dfe9` 21.08 20:51 — fix(сторож координат): читаємо обгортку файлу + дві різні межі відстані
-- `60497565` 21.08 20:46 — feat: пункт А з визначеного місця + кнопка координат зі сторожем на числа (#983)
-- `de7e5990` 21.08 16:33 — fix(капсули): «Олика → Олика» — кінець рейсу беремо зі зупинок, а не з назви (#982)
-- `c51e180d` 21.08 13:15 — feat(капсули): три джерела для Питань — відповіли мені, нове для мене, потрібна відповідь (#981)
+- `9fcf2498` 21.08 21:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `855ead75` 21.08 21:14 — fix(координати): обираємо своє село з кількох відповідей, а не беремо першу
+- `36a9410a` 21.08 21:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `16e5f779` 21.08 20:59 — fix(сторож координат): читаємо обгортку файлу + дві різні межі відстані (#984)
+- `c5a15752` 21.08 20:58 — merge main + оновлення NOW.md
 
 <!-- AUTO:END -->
 
