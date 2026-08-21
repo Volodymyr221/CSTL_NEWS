@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787288730960,
+      "mission": "olyka:story:олицький-замок-одна-з",
+      "model": "claude-opus-5",
+      "input_tokens": 4741,
+      "output_tokens": 352,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0325,
+      "note": "Олицький замок — одна з найдавніших бастіонних фортець України"
+    },
+    {
       "ts": 1787228905966,
       "mission": "olyka:event:день-знань",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0099,
       "note": ""
-    },
-    {
-      "ts": 1783758066191,
-      "mission": "holiday:🇺🇦 День Української Державно",
-      "model": "claude-sonnet-5",
-      "input_tokens": 453,
-      "output_tokens": 494,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0088,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.1976,
-    "runs": 83,
+    "cost_usd": 5.2301,
+    "runs": 84,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.088,
-      "runs": 5,
+      "cost_usd": 0.1205,
+      "runs": 6,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787228905966
+  "updated_ts": 1787288730960
 }
