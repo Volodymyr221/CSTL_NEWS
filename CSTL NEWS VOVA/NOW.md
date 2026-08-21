@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-21 21:32 UTC
+**Зріз на:** 2026-08-21 21:59 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `9fcf2498` 21.08 21:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| останній коміт людини | `45ab100a` 21.08 21:59 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260820-1816` |
-| останній PR у `main` | #984 |
+| останній PR у `main` | #985 |
 | стендів на диску | 96 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-21 | **НЕМАЄ** ⚠️ |
@@ -26,16 +26,15 @@
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `.github/workflows/geocode-settlements.yml`
-- `scripts/geocode-settlements.mjs`
 - `tests/settlements-geo.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9fcf2498` 21.08 21:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `855ead75` 21.08 21:14 — fix(координати): обираємо своє село з кількох відповідей, а не беремо першу
-- `36a9410a` 21.08 21:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `16e5f779` 21.08 20:59 — fix(сторож координат): читаємо обгортку файлу + дві різні межі відстані (#984)
-- `c5a15752` 21.08 20:58 — merge main + оновлення NOW.md
+- `45ab100a` 21.08 21:59 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR
+- `6d2c1b2d` 21.08 21:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `4dd60b14` 21.08 21:33 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `f4815532` 21.08 21:33 — fix(координати): обираємо своє село з кількох відповідей, а не беремо першу (#985)
+- `10ac9873` 21.08 21:32 — merge main + пульс NOW.md
 
 <!-- AUTO:END -->
 

@@ -55,12 +55,19 @@ jobs:
           set -e
           git config user.name  "CSTL Geo Bot"
           git config user.email "geo@cstl-news"
-          if git diff --quiet -- data/settlements-geo.json; then
+          # 🔴 22.08 — ТУТ ВОРКФЛОВ МОВЧКИ З'ЇДАВ ВЛАСНИЙ РЕЗУЛЬТАТ. Було
+          # `git diff --quiet -- <файл>`, а `git diff` НЕ БАЧИТЬ невідстежуваних
+          # файлів. Файла координат у git ніколи не було — отже на ПЕРШОМУ ж
+          # прогоні (єдиному, який має значення) умова казала «змін немає»,
+          # крок виходив з нулем, і прогін світився зеленим БЕЗ PR.
+          # 🔑 Тому спершу додаємо у індекс, а порівнюємо вже з HEAD: новий
+          # файл там видно як новий, а незмінений — як незмінений.
+          git add -- data/settlements-geo.json
+          if git diff --cached --quiet -- data/settlements-geo.json; then
             echo "Координати не змінились — PR не потрібен"; exit 0
           fi
           ГІЛКА="geo/settlements-$(date -u +%Y%m%d-%H%M)"
           git checkout -b "$ГІЛКА"
-          git add data/settlements-geo.json
           git commit -m "data: координати сіл громади (OpenStreetMap)"
           git push -u origin "$ГІЛКА"
           {
