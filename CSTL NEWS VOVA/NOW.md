@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 05:47 UTC
+**Зріз на:** 2026-08-22 07:11 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `f30cdcfa` 22.08 05:47 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0515` |
-| останній PR у `main` | #986 |
+| останній коміт людини | `36a3b7a1` 22.08 07:11 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
+| останній PR у `main` | #987 |
 | стендів на диску | 97 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-22 | **НЕМАЄ** ⚠️ |
@@ -25,25 +25,22 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `bundle.js`
 - `src/core/settlements-geo.js`
-- `src/core/settlements.js`
-- `src/tabs/buses.js`
+- `src/tabs/community-blocks.js`
 - `src/tabs/home-caps.js`
 - `sw.js`
 - `tests/home-caps.mjs`
-- `tests/stop-names.mjs`
+- `tests/home.mjs`
+- `tests/weather.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `f30cdcfa` 22.08 05:47 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `7dbfb3d4` 22.08 05:44 — docs: пульс NOW.md
-- `df747bd8` 22.08 05:44 — fix(автобуси): наша назва села = назва зупинки в перевізника + найближча зупинка
-- `2a2be806` 21.08 22:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `9509ac6a` 21.08 22:00 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR (#986)
+- `36a3b7a1` 22.08 07:11 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація
+- `0458bfbb` 22.08 06:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `d102bcce` 22.08 05:48 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `e522b10b` 22.08 05:48 — fix(автобуси): наша назва села = назва зупинки в перевізника + найближча зупинка (#987)
+- `b8000507` 22.08 05:47 — merge main + пульс перед деплоєм
 
 <!-- AUTO:END -->
 
