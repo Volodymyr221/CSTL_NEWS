@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1787382655041,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 508,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0119,
+      "note": ""
+    },
+    {
+      "ts": 1787382640759,
+      "mission": "holiday:🇺🇦 День Незалежності України",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 510,
+      "cache_read": 0,
+      "cache_write": 1194,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0121,
+      "note": ""
+    },
+    {
       "ts": 1787349359752,
       "mission": "olyka:story:підземелля-олицького-замку-15",
       "model": "claude-opus-5",
@@ -753,37 +779,11 @@
       "found": 1,
       "cost_usd": 0.0097,
       "note": ""
-    },
-    {
-      "ts": 1784018265192,
-      "mission": "holiday:🇺🇦 День Української Державно",
-      "model": "claude-sonnet-5",
-      "input_tokens": 453,
-      "output_tokens": 601,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0104,
-      "note": ""
-    },
-    {
-      "ts": 1783936563875,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 512,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0092,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.3135,
-    "runs": 88,
+    "cost_usd": 5.3375,
+    "runs": 90,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.2039,
-      "runs": 10,
+      "cost_usd": 0.2279,
+      "runs": 12,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787349359752
+  "updated_ts": 1787382655041
 }
