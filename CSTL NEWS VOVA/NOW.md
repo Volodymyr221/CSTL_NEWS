@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 10:45 UTC
+**Зріз на:** 2026-08-22 12:51 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `47fd8ccd` 22.08 10:38 — docs(правила): №12 — заміряно, чи є що сигналізувати (Дошка: 8 оголошень) |
+| останній коміт людини | `bd175908` 22.08 12:51 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
-| останній PR у `main` | #992 |
+| останній PR у `main` | #993 |
 | стендів на диску | 97 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-22 | **НЕМАЄ** ⚠️ |
@@ -25,16 +25,17 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CLAUDE.md`
 - `CSTL NEWS VOVA/HOT_RULES.md`
 - `CSTL NEWS VOVA/NOW.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `47fd8ccd` 22.08 10:38 — docs(правила): №12 — заміряно, чи є що сигналізувати (Дошка: 8 оголошень)
-- `a3160242` 22.08 10:38 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `a433ed6d` 22.08 10:20 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `3ca84e96` 22.08 10:20 — docs(правила): №12 — капсула = сам зробив + сталась подія + ще актуально (#992)
-- `6cf73e2a` 22.08 10:19 — merge main + пульс перед деплоєм
+- `bd175908` 22.08 12:51 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `dcc921f2` 22.08 12:47 — docs(правила): до запуску цифри з бази нічого не доводять про людей
+- `d3421b05` 22.08 12:45 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `eb7ecbb6` 22.08 10:46 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `2c549899` 22.08 10:45 — docs(правила): №12 — заміряно, чи є що сигналізувати (Дошка: 8 оголошень) (#993)
 
 <!-- AUTO:END -->
 
