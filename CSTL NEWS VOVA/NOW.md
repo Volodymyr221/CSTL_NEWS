@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 07:12 UTC
+**Зріз на:** 2026-08-22 08:09 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `5f2e216b` 22.08 07:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| останній коміт людини | `033508c1` 22.08 08:09 — fix(координати): bash не приймає кириличну назву змінної — крок падав із кодом 127 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
-| останній PR у `main` | #987 |
+| останній PR у `main` | #988 |
 | стендів на диску | 97 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-22 | **НЕМАЄ** ⚠️ |
@@ -25,23 +25,16 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
-- `bundle.js`
-- `src/core/settlements-geo.js`
-- `src/tabs/community-blocks.js`
-- `src/tabs/home-caps.js`
-- `sw.js`
-- `tests/home-caps.mjs`
-- `tests/home.mjs`
-- `tests/weather.mjs`
+- `.github/workflows/geocode-settlements.yml`
+- `tests/settlements-geo.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `5f2e216b` 22.08 07:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `aee4db04` 22.08 07:11 — docs: пульс NOW.md
-- `36a3b7a1` 22.08 07:11 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація
-- `9aa63856` 22.08 07:10 — ai(editor): свята-чернетки 22.08 07:10 UTC
-- `0458bfbb` 22.08 06:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `033508c1` 22.08 08:09 — fix(координати): bash не приймає кириличну назву змінної — крок падав із кодом 127
+- `86fd10c2` 22.08 08:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `109a5b54` 22.08 07:13 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `0f878fb3` 22.08 07:13 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація (#988)
+- `aca81667` 22.08 07:12 — merge main + пульс перед деплоєм
 
 <!-- AUTO:END -->
 

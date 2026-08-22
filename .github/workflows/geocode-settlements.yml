@@ -66,10 +66,19 @@ jobs:
           if git diff --cached --quiet -- data/settlements-geo.json; then
             echo "Координати не змінились — PR не потрібен"; exit 0
           fi
-          ГІЛКА="geo/settlements-$(date -u +%Y%m%d-%H%M)"
-          git checkout -b "$ГІЛКА"
+          # 🔴 22.08 — НАЗВА ЗМІННОЇ ТУТ АНГЛІЙСЬКА, І ЦЕ НЕ НЕДБАЛІСТЬ.
+          # Тут стояло присвоєння змінній з кириличною назвою, і прогін падав
+          # із «No such file or directory», код 127. Причина: bash не приймає
+          # не-ASCII у НАЗВАХ змінних — він читає такий рядок не як присвоєння,
+          # а як імʼя команди, і чесно шукає таку програму.
+          # ⚠️ Проєкт пише назви українською, і в JS та Python це працює. У
+          # shell — ні. Межа звички проходить саме тут.
+          # 🛑 `bash -n` цього НЕ ловить: синтаксично рядок бездоганний — тому
+          # сторож `settlements-geo` тепер ВИКОНУЄ весь цей блок, а не читає.
+          BRANCH="geo/settlements-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
           git commit -m "data: координати сіл громади (OpenStreetMap)"
-          git push -u origin "$ГІЛКА"
+          git push -u origin "$BRANCH"
           {
             echo "Згенеровано воркфловом «Координати сіл» з OpenStreetMap."
             echo
@@ -87,6 +96,6 @@ jobs:
             echo "**Навіщо файл:** без нього застосунок упізнає за координатами лише Олику,"
             echo "і житель Метельного отримує рейси з Олики — за 7 км від себе."
           } > /tmp/pr-body.md
-          gh pr create --base main --head "$ГІЛКА" \
+          gh pr create --base main --head "$BRANCH" \
             --title "data: координати сіл громади" \
             --body-file /tmp/pr-body.md
