@@ -75,12 +75,13 @@ import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/aut
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { nearestSettlement, pickedPlace, detectedPlace } from '../core/settlements-geo.js';
+import { nearestSettlement, nearestServedStop, pickedPlace, detectedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
   getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops, normalizeStopName,
 } from './buses.js';
+import { canonicalPlace } from '../core/settlements.js';
 import { openAdModalStandalone } from './board.js';
 import { openMyAds, openThreadsList, openThreadById, unreadTopCached } from './board-chat.js';
 import { answersCount, openChatModal, discussionsReady } from './board-discussions.js';
@@ -274,8 +275,19 @@ async function обчислитиСело() {
 }
 
 // Зупинка посадки: місце з погоди → де я фізично → анкета → Олика.
-async function мояЗупинка() {
-  return (await поточнеСело()) || (await mySettlement()) || HOME_STOP;
+//
+// 🔴 22.08 — і ОСТАННІЙ КРОК, якого бракувало. Визначити село точно ще не
+// означає знайти рейс: у пʼять сіл громади (Горянівка, Залісоче, Мощаниця,
+// Путилівка, Ставок) автобус не заходить взагалі. Раніше людина звідти не
+// бачила НІЧОГО — і саме тому, що ми правильно вгадали її село.
+// 🔑 Тому питання переформульоване: не «рейс із мого села», а «звідки я реально
+// можу поїхати». Відповідь бере ті самі координати, що й усе решта.
+// ⚠️ `зупинки` передає викличний код: список залежить від ДНЯ розкладу, і
+// зчитувати його тут означало б завести друге джерело того самого факту.
+async function мояЗупинка(зупинки) {
+  const село = (await поточнеСело()) || (await mySettlement()) || HOME_STOP;
+  if (!зупинки || !зупинки.size || зупинки.has(село)) return село;
+  return (await nearestServedStop(село, [...зупинки])) || HOME_STOP;
 }
 
 // ── РОЛЬ 1: МОЄ ──────────────────────────────────────────────────────────────
@@ -407,7 +419,17 @@ async function nowCapsule() {
   } catch { return null; }
   if (!routes.length && !tomorrowRoutes.length) return null;
 
+  // 🔑 22.08 — зводимо назви зупинок до наших ОДРАЗУ, як це робить вкладка
+  // Автобуси. Капсула тягне `schedule.json` власним запитом, тобто повз
+  // нормалізацію в `buses.js`, — і без цього рядка на головній жив би другий
+  // набір назв: у розкладі «МИТЕЛЬНО», у профілі «Метельне».
+  for (const r of [...routes, ...tomorrowRoutes]) {
+    for (const s of (r.stops || [])) s.name = canonicalPlace(s.name);
+  }
+
   const live = routes.filter(r => r.status !== 'cancelled');
+  // Які зупинки взагалі існують сьогодні — щоб знати, чи є рейс із мого села.
+  const зупинкиДня = new Set(routes.flatMap(r => (r.stops || []).map(s => s.name)));
   const nowMin = nowMinutes();
 
   // Скільки хвилин до посадки САМЕ НА ЦІЙ зупинці, а не до виїзду з початкової.
@@ -452,7 +474,7 @@ async function nowCapsule() {
   // Зупинка посадки: де я ЗАРАЗ → де я ЖИВУ → Олика (див. `мояЗупинка`).
   // ⚠️ Гість теж отримує геолокацію: вона не потребує входу, і людині з
   // Метельного корисно бачити свої рейси ще до реєстрації.
-  const myStop = await мояЗупинка();
+  const myStop = await мояЗупинка(зупинкиДня);
 
   // ── 🔴 СКАСОВАНИЙ РЕЙС — ВИЩЕ ЗА ВСЕ (20.08) ─────────────────────────────
   //

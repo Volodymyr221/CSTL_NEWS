@@ -9,6 +9,7 @@ import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/au
 import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { ICONS } from '../core/icons.js';
 import { SHEET_EASE } from '../core/sheet-motion.js';
+import { canonicalPlace } from '../core/settlements.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -791,13 +792,15 @@ function findActiveRoutes() {
   return activeList;
 }
 
-// Прибирає суфікс " пов." (поворот — технічне позначення на квитках VOPAS).
-// "Хорлупи пов." і "Хорлупи" — одна фізична зупинка.
-// 🔑 21.08 — стало `export`: те саме звіряння назв зупинок знадобилось капсулі
-// на Громаді («Олика → Олика»). Другу копію правила заводити не можна — воно
-// про суфікс «пов.» у даних перевізника, і дві копії розійшлись би тихо.
+// Зводить назву зупинки до нашої канонічної назви села.
+// 🔑 21.08 — стало `export`: те саме звіряння назв знадобилось капсулі на
+// Громаді («Олика → Олика»). Другу копію правила заводити не можна.
+// 🔴 22.08 — саме правило переїхало в `core/settlements.js`. Тут воно було про
+// суфікс «пов.», але живий розклад показав, що розходяться й самі назви сіл
+// («Хромяків», «Мительно»), а список правильних назв живе там. Тримати мірку
+// окремо від того, з чим вона звіряється, — і є спосіб тихо розійтись.
 export function normalizeStopName(name) {
-  return name.replace(/\s+пов\.$/, '').trim();
+  return canonicalPlace(name);
 }
 
 function getAllStops() {
@@ -2315,12 +2318,16 @@ export async function initBuses() {
     const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 60000)}`); // cache-bust кожну хвилину
     if (!res.ok) throw new Error(res.status);
     busData = await res.json();
-    // Нормалізація застарілих назв зупинок (для старого кешу на пристроях)
-    const STOP_ALIASES = { 'Гараджа': 'Гаразджа', 'Хорлупи пов.': 'Хромяків' };
-    const normalizeStop = name => STOP_ALIASES[name] || name;
+    // 🔑 22.08 — назви зупинок зводимо до наших ОДРАЗУ ПРИ ЗАВАНТАЖЕННІ, одним
+    // місцем. Тут раніше лежала власна табличка з двох рядків «для старого кешу»,
+    // а поруч, у normalizeStopName, жило друге правило про ті самі назви. Поки
+    // вони не збігались, «Хромяків» і «Мительно» не знаходились ніде — ні в
+    // пошуку, ні в капсулі. Тепер правда одна (core/settlements.js), і вона
+    // застосована до даних, а не до кожного порівняння окремо: список зупинок,
+    // шкала руху й підпис на екрані показують ту саму назву, що й профіль.
     const allDays = busData?.days ? Object.values(busData.days) : (busData ? [busData] : []);
     allDays.forEach(day => (day.routes || []).forEach(r =>
-      (r.stops || []).forEach(s => { s.name = normalizeStop(s.name); })
+      (r.stops || []).forEach(s => { s.name = canonicalPlace(s.name); })
     ));
   } catch {
     busData = null;

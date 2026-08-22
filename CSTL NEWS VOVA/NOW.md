@@ -10,31 +10,40 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-21 21:59 UTC
+**Зріз на:** 2026-08-22 05:47 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `45ab100a` 21.08 21:59 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260820-1816` |
-| останній PR у `main` | #985 |
-| стендів на диску | 96 |
+| останній коміт людини | `f30cdcfa` 22.08 05:47 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0515` |
+| останній PR у `main` | #986 |
+| стендів на диску | 97 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-08-21 | **НЕМАЄ** ⚠️ |
+| журнал за 2026-08-22 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/geocode-settlements.yml`
-- `tests/settlements-geo.mjs`
+- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `bundle.js`
+- `src/core/settlements-geo.js`
+- `src/core/settlements.js`
+- `src/tabs/buses.js`
+- `src/tabs/home-caps.js`
+- `sw.js`
+- `tests/home-caps.mjs`
+- `tests/stop-names.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `45ab100a` 21.08 21:59 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR
-- `6d2c1b2d` 21.08 21:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `4dd60b14` 21.08 21:33 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `f4815532` 21.08 21:33 — fix(координати): обираємо своє село з кількох відповідей, а не беремо першу (#985)
-- `10ac9873` 21.08 21:32 — merge main + пульс NOW.md
+- `f30cdcfa` 22.08 05:47 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `7dbfb3d4` 22.08 05:44 — docs: пульс NOW.md
+- `df747bd8` 22.08 05:44 — fix(автобуси): наша назва села = назва зупинки в перевізника + найближча зупинка
+- `2a2be806` 21.08 22:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `9509ac6a` 21.08 22:00 — fix(координати): крок «чи є що комітити» не бачив нового файлу — зелено, але без PR (#986)
 
 <!-- AUTO:END -->
 
