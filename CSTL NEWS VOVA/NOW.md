@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 21:28 UTC
+**Зріз на:** 2026-08-22 22:32 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-e7n2vk` |
-| останній коміт людини | `09b0c465` 22.08 21:23 — Merge remote-tracking branch 'origin/main' into claude/startuem-e7n2vk |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260822-2121` |
-| останній PR у `main` | #997 |
+| останній коміт людини | `1cd861d2` 22.08 22:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-e7n2vk |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260822-2231` |
+| останній PR у `main` | #998 |
 | стендів на диску | 98 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-22 | є ✅ |
@@ -25,27 +25,21 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/HOT_RULES.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-08-22b.md`
-- `admin.html`
 - `bundle.js`
-- `src/core/boot.js`
-- `src/core/supabase.js`
-- `src/tabs/feed.js`
+- `src/tabs/home-caps.js`
 - `sw.js`
-- `tests/_board-fixture.mjs`
-- `tests/error-report.mjs`
 - `tests/home-caps.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `09b0c465` 22.08 21:23 — Merge remote-tracking branch 'origin/main' into claude/startuem-e7n2vk
-- `825482fa` 22.08 21:23 — docs(пульс): другий контур діагностики + капсула агента; CACHE_NAME
-- `b939a5ac` 22.08 20:59 — feat: капсула на дописі агента + другий контур діагностики (js_error)
-- `2836e378` 22.08 19:36 — docs(журнал): фініш №2 — PR #997, деплой v4867
-- `3577ea9e` 22.08 19:35 — B-32: коментарі не надсилались дві доби + збої стають видимими + живе оновлення капсули (#997)
+- `1cd861d2` 22.08 22:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-e7n2vk
+- `c992ecf1` 22.08 22:32 — docs(пульс): свіжий зріз + CACHE_NAME
+- `581043c4` 22.08 22:09 — fix(капсули): число рахує все джерело, а не один шматок
+- `50ff8592` 22.08 21:31 — docs(журнал): фініш №3 — PR #998, деплой v4876
+- `dd7a897d` 22.08 21:29 — Капсула на дописі ШІ-агента + другий контур діагностики (помилки застосунку) (#998)
 
 <!-- AUTO:END -->
 
