@@ -47,7 +47,11 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
   await page.route(CDN, r => r.fulfill({
     contentType: 'application/javascript',
     body: `(() => {
-      const T = ${JSON.stringify(tables)};
+      // 🔑 22.08 — таблиці лежать на window, а не в замиканні: стенд мусить уміти
+      // ДОДАТИ рядок посеред прогону, щоб відтворити «хтось щойно написав, поки я
+      // дивлюсь на екран». Той самий прийом, що вже зроблено для __cstlProfiles.
+      window.__cstlTables = ${JSON.stringify(tables)};
+      const T = window.__cstlTables;
       const U = ${JSON.stringify(user)};
       const SESSION = U ? { user: U } : null;
       // 🆕 07.08 (B-30): { назваТаблиці: мс } — відповідь приходить ПІЗНО.
