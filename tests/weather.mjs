@@ -401,5 +401,59 @@ ok('🔴 «Крижаний дощ» показується дощем, а не 
   ok('контроль: денний код у наборі саме «дощ» (61)', НАБІР.daily.weather_code[0] === 61);
 }
 
+// ── 🔴 БЕЗ ГЕОЛОКАЦІЇ — ОСТАННІЙ ВИБІР ЛЮДИНИ, А НЕ ЦЕНТР ГРОМАДИ (22.08) ────
+//
+// З 22.08 обране в погоді живе ОДИН СЕАНС: закрив додаток — місце знову
+// визначається (замовлення Вови). Але для того, хто дозволу на геолокацію не
+// дав, вибір руками був ЄДИНИМ способом сказати, де він. Без запасного шляху
+// фікс перетворився б на нову ваду: така людина отримувала б погоду Олики
+// щоразу після перезапуску, скільки б разів не обирала своє село.
+//
+// 🔑 Сцена відтворює саме НОВИЙ ЗАПУСК: у `localStorage` є «останнє обране», у
+// `sessionStorage` порожньо. Плюс дозволу немає — `getCoords()` віддасть
+// запасну Олику, і без нашого кроку в шапці стояла б вона.
+{
+  const c = await b.newContext({ viewport: { width: 390, height: 844 },
+    isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  const стор = await c.newPage();
+  // ⚠️ Підміняємо САМ `navigator.geolocation`, а не дозвіл: у headless дозвіл
+  // відкликати можна, але браузер тоді просто мовчить, і сцена перевіряла б
+  // таймаут замість відмови.
+  await c.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition: (_ok, err) => err && err({ code: 1 }) },
+    });
+    localStorage.setItem('wx_place_v1', 'Дерно');       // обрав колись
+    sessionStorage.removeItem('wx_pick_session_v1');    // цей сеанс — новий
+    // 📐 Координати Дерна в кеші — це НЕ підгонка сцени, а відтворення
+    // справжнього стану телефона. Перший прогін цієї перевірки червонів саме
+    // через їх відсутність, і я мало не «полагодив» код: насправді запис
+    // «останнє обране = Дерно» взагалі не може зʼявитись, поки людина хоч раз
+    // не подивилась погоду Дерна, — а той погляд і кладе координати в кеш
+    // (`coordsOf` → `writeCache`). Сцена без кешу описувала неможливий стан.
+    // Число справжнє — з прогону геокодера 21.08.
+    localStorage.setItem('wx_geo_v1', JSON.stringify({
+      'Дерно': { lat: 50.78107, lon: 25.74236 },
+    }));
+  });
+  await mockSupabase(стор, { posts: [], threads: [], messages: [], thread_user_state: [], announcements: [] });
+  await стор.route('**://api.open-meteo.com/**', r =>
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify(ПОГОДА) }));
+  if (REV) {
+    const body = projectFile('bundle.js', REV);
+    await стор.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+  }
+  await стор.goto(url, { waitUntil: 'domcontentloaded' });
+  await стор.waitForTimeout(2200);
+  await стор.evaluate(() => document.querySelector('.consent-accept')?.click());
+  await стор.waitForTimeout(3000);
+  const назва = await стор.evaluate(() =>
+    document.querySelector('.hm-wx-place-n')?.textContent.trim() || '');
+  ok('🔴 геолокації немає — показуємо останнє обране, а не Олику',
+     назва === 'Дерно', `у шапці: «${назва}»`);
+  await c.close();
+}
+
 await b.close(); await stop();
 done();

@@ -7,7 +7,7 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, showToast } from '../core/utils.js';
-import { coordsOf, locationGroups, isKnownPlace, pickedPlace, rememberDetectedPlace, WX_PLACE_KEY } from '../core/settlements-geo.js';
+import { coordsOf, locationGroups, isKnownPlace, pickedPlace, lastPickedPlace, pickPlace, rememberDetectedPlace } from '../core/settlements-geo.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -108,12 +108,10 @@ function setWeatherTitle(cityName) {
 // погода одного міста при автобусах з іншого.
 const loadWxPlace = pickedPlace;
 
-function saveWxPlace(name) {
-  try {
-    if (name) localStorage.setItem(WX_PLACE_KEY, name);
-    else localStorage.removeItem(WX_PLACE_KEY);
-  } catch { /* приватний режим — вибір просто не переживе перезапуск */ }
-}
+// 🔑 22.08 — запис теж переїхав у `core/settlements-geo.js`. Обране тепер живе
+// у ДВОХ сховищах із різним строком (сеанс + останнє колись), і ставити їх
+// мусить одне місце: розійдуться — «останнє обране» перестане бути останнім.
+const saveWxPlace = pickPlace;
 
 export async function renderWeatherBlock() {
   const el = document.getElementById('cm-weather-content');
@@ -128,10 +126,24 @@ export async function renderWeatherBlock() {
     if (place) picked = await coordsOf(place);
     const placeFailed = !!place && !picked;
 
-    const geo = picked ? null : await getCoords();
+    let geo = picked ? null : await getCoords();
+    // 🛑 ГЕОЛОКАЦІЇ НЕМАЄ — БЕРЕМО ОСТАННІЙ ВИБІР ЛЮДИНИ, А НЕ ЦЕНТР ГРОМАДИ.
+    // З 22.08 обране руками живе один сеанс, тож на новому запуску `place`
+    // порожній — і це правильно (Вова: «локація має стати на його місце»).
+    // Але для того, хто дозволу НЕ дав, вибір руками був єдиним способом
+    // сказати, де він: `getCoords()` віддасть запасну Олику, і без цього кроку
+    // така людина отримувала б чужу погоду щоразу після перезапуску.
+    // ⚠️ Розрізняє їх те саме поле, що й нижче: у справжньої позиції `city`
+    // порожній, у запасної стоїть «Олика».
+    let запасне = null;
+    if (!picked && geo && geo.city != null) {
+      запасне = lastPickedPlace();
+      const c = запасне ? await coordsOf(запасне) : null;
+      if (c) { picked = c; geo = null; } else { запасне = null; }
+    }
     const lat = picked ? picked.lat : geo.lat;
     const lon = picked ? picked.lon : geo.lon;
-    const knownCity = picked ? place : geo.city;
+    const knownCity = picked ? (place || запасне) : geo.city;
     // 🔴 04.08 — НАЗВА МІСТА БІЛЬШЕ НЕ ТРИМАЄ ПОГОДУ.
     // Було `Promise.all([погода, getCityName()])`, тобто температура не
     // показувалась, поки не відповість Nominatim (OpenStreetMap) — а він
