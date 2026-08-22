@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 13:00 UTC
+**Зріз на:** 2026-08-22 13:01 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `511264f6` 22.08 13:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
+| останній коміт людини | `26a81f44` 22.08 13:00 — docs: пульс після мерджу передачі |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
-| останній PR у `main` | #994 |
+| останній PR у `main` | #995 |
 | стендів на диску | 97 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-22 | є ✅ |
@@ -26,18 +26,14 @@
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_ARCHIVE_2026-08-20_lantsyugy.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-08-22.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `26a81f44` 22.08 13:00 — docs: пульс після мерджу передачі
+- `06415717` 22.08 13:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `0bd834de` 22.08 13:00 — docs: передача в новий чат — 22.08.2026 (#995)
+- `c6f8252d` 22.08 13:00 — docs: пульс після злиття main
 - `511264f6` 22.08 13:00 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `42de68fa` 22.08 12:59 — docs: передача в новий чат — 22.08.2026
-- `193ca43d` 22.08 12:52 — docs(правила): до запуску цифри з бази нічого не доводять про людей (#994)
-- `ecbc8c4b` 22.08 12:51 — merge main + пульс перед деплоєм
-- `bd175908` 22.08 12:51 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
 
 <!-- AUTO:END -->
 
