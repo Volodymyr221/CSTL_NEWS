@@ -125,8 +125,21 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
         for (const m of ['select','is','not','order','limit','range',
                          'filter','or','gte','lte','like','ilike','contains',
-                         'insert','upsert','update','delete','match','abortSignal','returns'])
+                         'upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
+        // 🔴 22.08 — ВСТАВКИ ТЕПЕР ВИДНО СТЕНДУ. Було: insert() — порожня
+        // заглушка, тобто ЩО САМЕ застосунок пише в базу, не міг перевірити
+        // ніхто. Через це не було чим довести, що діагностика збоїв справді
+        // ДОЛІТАЄ, — а перевірити «чи стоїть слухач помилок» означало б знову
+        // міряти форму запису замість наслідку.
+        // 🔑 Пишемо в ОКРЕМИЙ журнал, а не в таблиці: поведінка читання лишається
+        // байт-у-байт такою, як була, тож жоден із наявних стендів не змінює
+        // сенсу від цієї правки.
+        window.__cstlInserted = window.__cstlInserted || [];
+        self.insert = (рядок) => {
+          try { window.__cstlInserted.push({ table, row: рядок }); } catch (_) {}
+          return self;
+        };
         self.single = self.maybeSingle = () => { один = true; return self; };
         // Ці два справді звужують набір (див. пояснення вище).
         self.eq  = (поле, значення) => { умови.push({ поле, значення, не: false }); return self; };

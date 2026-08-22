@@ -818,13 +818,20 @@ async function sharePost(id) {
 // застосунку, тобто ходили б у базу дарма. Пускаємо лише те, що справді моє:
 // коментар під МОЇМ дописом або відповідь, адресована МЕНІ. Свої власні
 // коментарі не рахуємо — автор, що сам себе доповнив, відповіді не отримав.
+// 🔴 22.08, другий захід — «мій допис» тут мусить означати ТЕ САМЕ, що в запиті
+// капсули і що в push: я автор **або** я редактор цієї сторінки. Дописи ШІ-агента
+// мають ПОРОЖНЄ поле автора, тож перша редакція цього фільтра мовчала саме на
+// них — і живе оновлення відставало б від самої капсули.
+// 🔑 `myPageIds` — той самий набір, яким малюється меню «⋯» і яким питає база
+// (`page_admins`). Другого списку сторінок не заводимо.
 function notifyCapsIfMine(payload) {
   try {
     const row = payload.new || payload.old;
     const uid = currentUserId();
     if (!row || !uid || row.author_uid === uid) return;
-    const мійДопис = posts.some(p => p.id === row.post_id && p.author_uid === uid);
-    if (!мійДопис && row.reply_to_uid !== uid) return;
+    const допис = posts.find(p => p.id === row.post_id);
+    const мій = !!допис && (допис.author_uid === uid || myPageIds.has(допис.page_id));
+    if (!мій && row.reply_to_uid !== uid) return;
     window.dispatchEvent(new Event('cstl-feed-mine-changed'));
   } catch (_) { /* жива синхронізація не сміє впасти через капсулу */ }
 }

@@ -1381,14 +1381,22 @@ function summarizeEvents(rows) {
 // 🔑 Групуємо за КОДОМ + текстом бази, а не за людьми: питання тут «що зламано і
 // в скількох», а не «в кого». Скільки різних пристроїв — окремим числом, бо саме
 // воно відрізняє «одна людина щось химерне зробила» від «зламано у всіх».
+// ⚠️ 22.08 — ДВА ВИДИ ЗБОЇВ, і плутати їх не можна:
+//   `db_refusal` — базa відхилила дію (зламане правило доступу, тригер);
+//   `js_error`   — впав сам застосунок у браузері («натиснув — і нічого»).
+// Другий вид до бази взагалі не доходить, тож без нього журнал бачив би лише
+// половину поломок.
 function summarizeFailures(rows) {
   const groups = new Map();
   for (const r of rows) {
-    if (r.event_type !== 'db_refusal') continue;
-    const code = (r.meta && r.meta.code) || '—';
+    if (r.event_type !== 'db_refusal' && r.event_type !== 'js_error') continue;
+    const vyd  = r.event_type === 'js_error' ? 'застосунок' : 'база';
+    const code = (r.meta && (r.meta.code || r.meta.kind)) || '—';
     const msg  = (r.meta && r.meta.msg) || '';
-    const key  = code + ' ' + msg;
-    const g = groups.get(key) || { code, msg, n: 0, prystroji: new Set(), ostannij: r.created_at };
+    const de   = (r.meta && r.meta.at) || '';
+    const key  = vyd + code + msg + de;
+    const g = groups.get(key)
+      || { vyd, code, msg, de, n: 0, prystroji: new Set(), ostannij: r.created_at };
     g.n++;
     g.prystroji.add(r.visitor_id);
     if (r.created_at > g.ostannij) g.ostannij = r.created_at;
@@ -1400,15 +1408,20 @@ function summarizeFailures(rows) {
 function failureRows(list) {
   if (!list.length) {
     return '<div class="card" style="border-left:3px solid #2e7d32"><b>Збоїв немає.</b>'
-      + '<p style="font-size:12px;color:#999;margin-top:6px">Тут зʼявляються дії, які база ВІДХИЛИЛА — '
-      + 'зламане правило доступу, порушена унікальність, спрацьований тригер. '
-      + 'Обриви звʼязку сюди не пишуться навмисно: їх тисячі, і вони не наша поломка.</p></div>';
+      + '<p style="font-size:12px;color:#999;margin-top:6px">Сюди потрапляє двоє: дії, які '
+      + '<b>база відхилила</b> (зламане правило доступу, тригер, дубль), і помилки '
+      + '<b>самого застосунку</b> в телефоні («натиснув — і нічого»).<br>'
+      + '🛑 <b>Порожньо ≠ все справно.</b> Обриви звʼязку сюди не пишуться навмисно (їх тисячі '
+      + 'і вони не наша поломка), а «мовчазний провал» — коли нічого не впало, просто нічого '
+      + 'не сталося — не бачить жоден журнал. Такі вади ловлять лише стенди й живі люди.</p></div>';
   }
   return '<div class="spend-log">' + list.map(g => `
     <div class="spend-row" style="align-items:flex-start;border-left:3px solid var(--red);padding-left:10px">
       <span class="spend-row-meta" style="flex:1">
-        <b style="color:var(--red)">${escapeHtml(g.code)}</b>
+        <span style="font-size:11px;color:#999">${escapeHtml(g.vyd)}</span>
+        <b style="color:var(--red);display:block">${escapeHtml(g.code)}</b>
         <span style="display:block;font-size:12px;color:#555;margin-top:2px">${escapeHtml(g.msg)}</span>
+        ${g.de ? `<span style="display:block;font-size:11px;color:#777;margin-top:2px">${escapeHtml(g.de)}</span>` : ''}
         <span style="display:block;font-size:11px;color:#999;margin-top:2px">
           ${g.prystroji.size} ${g.prystroji.size === 1 ? 'пристрій' : 'пристроїв'} ·
           востаннє ${new Date(g.ostannij).toLocaleString('uk-UA')}
