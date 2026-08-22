@@ -41,7 +41,7 @@ import { keepScroll, paintIfChanged } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
-  cardTitleText, markBoardSeen, markChatSeen,
+  cardTitleText, markBoardSeen, markChatSeen, markFeedSeen,
 } from '../core/board-shared.js';
 import {
   initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs, answersCount,
@@ -3027,6 +3027,14 @@ export function initBoard() {
     // для Дошки: рендер трапляється на старті застосунку і гасив би лічильник
     // тому, хто вкладку навіть не відкривав.
     if (вкладка === 'discussions') markChatSeen();
+    // 🔴 22.08 — ТА САМА ПОЗНАЧКА ДЛЯ СТРІЧКИ. Потрібна капсулі «відповіли під
+    // моїм дописом»: без неї «нове» означало б «усі коментарі за всю історію», і
+    // людина бачила б той самий рядок вічно.
+    // ⚠️ Позначка живе ТУТ, а не в `feed.js`, з тієї самої причини, що дві вище:
+    // рендер Стрічки трапляється на СТАРТІ застосунку і гасив би лічильник тому,
+    // хто вкладку навіть не відкривав. Слухач `cstl-tab-changed` уже стоїть один
+    // на весь застосунок — другого не заводимо.
+    if (вкладка === 'shotam') markFeedSeen();
   });
 
   // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────

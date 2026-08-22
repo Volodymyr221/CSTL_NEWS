@@ -91,6 +91,17 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             window.__cstlQueries[table] = (window.__cstlQueries[table] || 0) + 1;
             let рядки = T[table] || [];
             for (const c of умови) {
+              if (c.набір) { рядки = рядки.filter(r => c.значення.includes(r[c.поле])); continue; }
+              if (c.межа) {
+                рядки = рядки.filter(r => {
+                  const a = r[c.поле], b = c.значення;
+                  if (a == null) return false;
+                  // Дати приходять рядками ISO — вони лексикографічно впорядковані,
+                  // тож те саме порівняння працює і для чисел, і для часу.
+                  return c.межа === 'gt' ? a > b : a < b;
+                });
+                continue;
+              }
               рядки = рядки.filter(r => c.не ? r[c.поле] !== c.значення : r[c.поле] === c.значення);
             }
             const payload = { data: один ? (рядки[0] || null) : рядки, error: null };
@@ -108,14 +119,30 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         // ⚠️ 07.08: доданий 'not' — без нього fetchUnreadByThread падав із
         // «.not is not a function», ланцюг рвався і розмови не приїжджали ЗОВСІМ.
         // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
-        for (const m of ['select','in','is','not','order','limit','range',
-                         'filter','or','gt','lt','gte','lte','like','ilike','contains',
+        for (const m of ['select','is','not','order','limit','range',
+                         'filter','or','gte','lte','like','ilike','contains',
                          'insert','upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
         self.single = self.maybeSingle = () => { один = true; return self; };
         // Ці два справді звужують набір (див. пояснення вище).
         self.eq  = (поле, значення) => { умови.push({ поле, значення, не: false }); return self; };
         self.neq = (поле, значення) => { умови.push({ поле, значення, не: true  }); return self; };
+        // 🔴 22.08 — .in() ТЕЖ СПРАВДІ ЗВУЖУЄ. Було порожньою заглушкою, тобто
+        // запит «коментарі під ОЦИМИ дописами» повертав коментарі під УСІМА, і
+        // сцена, що доводить «чуже не рахується», зеленіла б над зламаним
+        // фільтром. Третій випадок тієї самої хвороби (.eq 07.08, .single 17.08):
+        // брехала не логіка застосунку, а заглушка під нею.
+        self.in  = (поле, значення) => {
+          умови.push({ поле, значення: значення || [], набір: true }); return self;
+        };
+        // 🔴 22.08 — .gt()/.lt() ТЕЖ ЗВУЖУЮТЬ. Знайдено падінням: сцена «перший
+        // запуск застосунку» показувала капсулу про коментарі, яких людина не
+        // пропускала. Виглядало це як вада в капсулі, а насправді запит «новіші за
+        // мій візит» фільтрує на СЕРВЕРІ, і заглушка мовчки віддавала весь архів.
+        // 🛑 Тобто без цих двох рядків будь-яка перевірка «що вважається новим»
+        // міряла б не те, що робить застосунок.
+        self.gt  = (поле, значення) => { умови.push({ поле, значення, межа: 'gt' }); return self; };
+        self.lt  = (поле, значення) => { умови.push({ поле, значення, межа: 'lt' }); return self; };
         return self;
       };
       window.supabase = {

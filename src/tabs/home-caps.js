@@ -70,10 +70,10 @@
 
 import { escapeHtml, lineMetrics, fitLine, getCoords } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, fetchAllComments, isSupabaseReady } from '../core/supabase.js';
+import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, fetchAllComments, fetchMyFeedReplies, isSupabaseReady } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
-import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
+import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen, feedSeenTs, markFeedSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { nearestSettlement, nearestServedStop, pickedPlace, lastPickedPlace, detectedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
@@ -85,6 +85,7 @@ import { canonicalPlace } from '../core/settlements.js';
 import { openAdModalStandalone } from './board.js';
 import { openMyAds, openThreadsList, openThreadById, unreadTopCached } from './board-chat.js';
 import { answersCount, openChatModal, discussionsReady } from './board-discussions.js';
+import { focusFeedPost } from './feed.js';
 
 // Максимум капсул. Три — стільки було в макеті, який вибрав Вова, і це не
 // випадкове число: чотири капсули по 56px з проміжками дають 248px, тобто
@@ -121,6 +122,16 @@ const RANK = {
   ANSWERS:       85,
   AD_REJECTED:   80,   // моє оголошення відхилене — чекає МОЄЇ дії
   MSG:           70,   // повідомлення старше години
+  // 🔴 22.08 — ВІДПОВІЛИ ПІД МОЇМ У СТРІЧЦІ. Місце обґрунтоване з обох боків, як
+  // вимагає шкала:
+  //   • НИЖЧЕ за MSG (70), бо приватне повідомлення адресоване мені особисто і на
+  //     тому кінці конкретна людина чекає відповіді; публічний коментар відповіді
+  //     не вимагає взагалі.
+  //   • ВИЩЕ за BUS_SOON (60), бо рейс за 16-45 хв людина побачить іще й у віджеті
+  //     автобусів на цій самій сторінці, а коментар під її дописом не показує
+  //     БІЛЬШЕ НІЩО в застосунку: дзвіночок Стрічки — це підписка на push, а не
+  //     список непрочитаного. Тобто прибереш капсулу — і сигналу не лишиться.
+  FEED_REPLIES:  65,
   BUS_SOON:      60,   // рейс 16-45 хв — ще встигаєш зібратись
   AD_PENDING:    45,   // на модерації — чекання, а не дія
   // 🔑 21.08 — «нове питання, якого я не бачив» вище за «без відповіді»: перше
@@ -782,6 +793,97 @@ function відмінокВідповіді(n) {
   return 'нових відповідей';
 }
 
+// ── РОЛЬ 6: ВІДПОВІЛИ ПІД МОЇМ У СТРІЧЦІ (22.08) ────────────────────────────
+//
+// 🔑 Замовлення Вови: «у вас два нових непереглянутих коментарі». Дійшли до
+// цього через його ж заперечення — «а нам взагалі треба капсула Стрічки, у нас
+// же внизу є віджет Стрічки?». Заперечення знялось тією самою парою, що вже
+// вирішена в автобусах: віджет показує ЧУЖІ дописи (вміст розділу), капсула
+// каже, що сталося з МОЇМ. Різні питання, не дубль.
+//
+// 🛑 ЩО СВІДОМО НЕ ВЗЯТО — ДРУГА ІДЕЯ ТОГО САМОГО ЗАМОВЛЕННЯ: «ваш пост
+// вподобали 53 людини». Відхилено двома чинними правилами, не смаком:
+//   • шкала балів читається як «через скільки цей рядок стане непотрібним», а
+//     лайк не стає непотрібним ніколи — йому нема куди стати в шкалу;
+//   • «капсула каже ЩО, бейджі кажуть СКІЛЬКИ», а «53 людини» — чисте СКІЛЬКИ.
+// Лайкам місце в самому дописі (число під сердечком там уже є), не в смузі, де
+// три слоти конкурують зі «скасовано твій рейс».
+//
+// 🛑 І НЕ ЗРОБЛЕНО «ТІЛЬКИ ДЛЯ АДМІНІВ», хоч так і питали. Це не адмінська
+// фіча, а правило №12 «я створив»: власнику сторінки вона каже «під вашою
+// публікацією відповіли», звичайному жителю — «вам відповіли на ваш коментар».
+// Обмежити її командою означало б забрати в жителя рівно те, що йому вже дано
+// в Питаннях.
+//
+// ⚠️ ЧИСЛО В КАПСУЛІ — той самий обґрунтований виняток, що в ANSWERS: другої
+// поверхні, яка це показує, у застосунку не існує (дзвіночок Стрічки — підписка
+// на push, а не список непрочитаного), тож ми не дублюємо лічильник, а кажемо
+// те, чого без нас не скаже ніхто.
+async function feedCapsule() {
+  const uid = currentUserId();
+  if (!uid || !isSupabaseReady()) return null;
+  const seen = feedSeenTs();
+  // Перший запуск: нічого не пропускали — позначку ставимо мовчки (те саме
+  // правило, що в Дошки, Питань і Новин).
+  if (!seen) { markFeedSeen(); return null; }
+
+  let дані;
+  try { дані = await fetchMyFeedReplies(uid, seen); } catch { return null; }
+  if (!дані || !дані.comments.length) return null;
+
+  const мої = new Map(дані.myPosts.map(p => [p.id, p]));
+
+  // Групуємо за дописом: п'ять коментарів під одним — це одна капсула з числом,
+  // а не п'ять капсул (те саме рішення, що в ANSWERS).
+  const заДописом = new Map();
+  for (const c of дані.comments) {
+    const g = заДописом.get(c.post_id)
+      || { postId: c.post_id, n: 0, остання: 0, адресна: null };
+    g.n++;
+    const ts = tsOf(c);
+    if (ts > g.остання) g.остання = ts;
+    // Адресну відповідь запам'ятовуємо найсвіжішу: саме її текст і покажемо.
+    if (c.reply_to_uid === uid && (!g.адресна || ts > tsOf(g.адресна))) g.адресна = c;
+    заДописом.set(c.post_id, g);
+  }
+
+  // Вибір: спершу те, де відповіли ОСОБИСТО МЕНІ (адресне сильніше за загальне),
+  // далі — де більше нового, за рівності — де відповіли останнім.
+  let найкраще = null;
+  for (const g of заДописом.values()) {
+    const кращий = !найкраще
+      || (!!g.адресна !== !!найкраще.адресна ? !!g.адресна
+        : g.n !== найкраще.n ? g.n > найкраще.n
+          : g.остання > найкраще.остання);
+    if (кращий) найкраще = g;
+  }
+  if (!найкраще) return null;
+
+  const { postId, n, адресна } = найкраще;
+  // Предмет рядка різний і це навмисно: під МОЇМ дописом людину цікавить, про що
+  // був допис; під ЧУЖИМ (куди вона лише писала коментар) — сама відповідь, бо
+  // чужого допису вона не «має», і його назва нічого їй не нагадає.
+  const мійДопис = мої.get(postId);
+  const предмет = (адресна && !мійДопис ? адресна.text : (мійДопис?.text || адресна?.text) || '').trim();
+  const текст = предмет || 'ваш допис';
+
+  const слово = plural(n, 'НОВИЙ КОМЕНТАР', 'НОВІ КОМЕНТАРІ', 'НОВИХ КОМЕНТАРІВ');
+  const мітка = адресна ? 'ВАМ ВІДПОВІЛИ У СТРІЧЦІ' : `${n} ${слово} ПІД ВАШИМ ДОПИСОМ`;
+  const коротка = адресна ? 'ВАМ ВІДПОВІЛИ' : `${n} ${слово}`;
+
+  return {
+    key: 'feed', icon: ICONS.message,
+    rank: RANK.FEED_REPLIES,
+    labelVariants: [мітка, коротка],
+    valueVariants: [текст],
+    aria: `${адресна ? 'вам відповіли у стрічці' : `${n} нових коментарів під вашим дописом`}: ${текст}`,
+    // 🔑 Тап веде ТУДИ САМО, куди веде push про коментар — `focusFeedPost(id,
+    // 'all')` перемикає вкладку, доводить до допису і відкриває лист коментарів.
+    // Своєї дороги не будуємо: два шляхи до одного місця розійшлися б.
+    tap: () => focusFeedPost(postId, 'all'),
+  };
+}
+
 // ── РОЛЬ 3: НОВЕ ─────────────────────────────────────────────────────────────
 // Що змінилось на Дошці з мого останнього візиту туди.
 //
@@ -1119,7 +1221,7 @@ export async function renderHomeCaps() {
   const gen = ++_gen;
 
   // allSettled, а не all: падіння однієї ролі не має забирати з екрана решту.
-  const результати = await Promise.allSettled([myCapsule(), nowCapsule(), newCapsule(), msgCapsule(), answersCapsule()]);
+  const результати = await Promise.allSettled([myCapsule(), nowCapsule(), newCapsule(), msgCapsule(), answersCapsule(), feedCapsule()]);
   if (gen !== _gen) return;
   const caps = результати
     .map(r => (r.status === 'fulfilled' ? r.value : null))
