@@ -10,12 +10,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 08:46 UTC
+**Зріз на:** 2026-08-22 10:19 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `ccf2317a` 22.08 08:46 — docs(правила): №12 — капсула = сам зробив + сталась подія + ще актуально |
+| останній коміт людини | `48338bf3` 22.08 10:19 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
 | останній PR у `main` | #990 |
 | стендів на диску | 97 |
@@ -30,11 +30,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `ccf2317a` 22.08 08:46 — docs(правила): №12 — капсула = сам зробив + сталась подія + ще актуально
+- `48338bf3` 22.08 10:19 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `2fdd55de` 22.08 08:46 — docs(правила): №12 — капсула = сам зробив + сталась подія + ще актуально
 - `730db2bb` 22.08 08:43 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
 - `2d41f38b` 22.08 08:33 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
 - `dbe4eef9` 22.08 08:33 — data: координати сіл громади (OpenStreetMap) (#990)
-- `2687fea9` 22.08 08:26 — fix(координати): заборона Actions відкривати PR більше не валить крок (#991)
 
 <!-- AUTO:END -->
 
