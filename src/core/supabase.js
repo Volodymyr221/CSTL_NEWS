@@ -2113,20 +2113,58 @@ export async function fetchMyFeedReplies(uid, sinceMs) {
   if (!supa || !uid) return null;
   const sinceIso = new Date(sinceMs).toISOString();
 
+  // 🔴 22.08, ДРУГИЙ ЗАХІД — «МІЙ ДОПИС» ЦЕ НЕ ЛИШЕ ТОЙ, ДЕ Я АВТОР.
+  //
+  // Скарга Вови: під дописом, який написав ШІ-агент, а він лише опублікував,
+  // push приходив, а капсули не було. Причина: у таких дописів `author_uid`
+  // ПОРОЖНІЙ (їх створює не людина), а `send-comment-push` шле не авторові, а
+  // РЕДАКТОРАМ СТОРІНКИ. Тобто дві поверхні відповідали на різні питання про ту
+  // саму подію: push — «хто відповідає за сторінку», капсула — «хто написав».
+  // 🔑 Слова Вови: «це ж одне ціле». Тому капсула тепер питає ТЕ САМЕ, ЩО PUSH:
+  // мій допис = я автор **або** я редактор цієї сторінки.
+  // ⚠️ Це не послаблення правила №12 «я створив»: опублікувати текст під своїм
+  // брендом — така сама моя дія, як написати його руками.
+  let myPages = [];
+  const pa = await netCall(
+    () => supa.from('page_admins').select('page_id').eq('uid', uid),
+    { timeout: NET_TIMEOUT },
+  );
+  // Не змогли дізнатись сторінки — не привід мовчати зовсім: гілка «я автор»
+  // однаково працює. Часткова відповідь краща за жодної.
+  if (pa.ok) myPages = (pa.data || []).map(r => r.page_id);
+
   // Мої дописи. `status` фільтруємо із запобіжником — тим самим, що у
   // `fetchPagePosts`: якщо міграція чернеток ще не накотилась, колонки немає, і
   // без відкату запит упав би цілком.
-  const myQ = (withStatus) => {
+  // 🛑 `.or()` тут НЕ використовуємо: у PostgREST він не приймає `in.(…)` поруч
+  // із `is.null` без екранування, і одна помилка синтаксису тихо віддала б
+  // ПОРОЖНЬО. Два окремі запити коштують дешевше за мовчазну відмову.
+  const myQ = (withStatus, byPages) => {
     let q = supa.from('page_posts').select('id, text, page_id')
-      .eq('author_uid', uid).is('deleted_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }).limit(100);
+    q = byPages ? q.in('page_id', myPages) : q.eq('author_uid', uid);
     if (withStatus) q = q.eq('status', 'published');
     return q;
   };
-  let mine = await netCall(() => myQ(true), { timeout: NET_TIMEOUT });
-  if (noSuchColumn(mine.rawError)) mine = await netCall(() => myQ(false), { timeout: NET_TIMEOUT });
-  if (!mine.ok) return null;
-  const myPosts = mine.data || [];
+  const тягни = async (byPages) => {
+    let r = await netCall(() => myQ(true, byPages), { timeout: NET_TIMEOUT });
+    if (noSuchColumn(r.rawError)) r = await netCall(() => myQ(false, byPages), { timeout: NET_TIMEOUT });
+    return r;
+  };
+
+  const заходи = [тягни(false)];
+  if (myPages.length) заходи.push(тягни(true));
+  const частини = await Promise.all(заходи);
+  if (частини.every(r => !r.ok)) return null;   // «не знаємо» ≠ «нічого немає»
+
+  // Дедуп за id: допис на моїй сторінці, де я ще й автор, приходить двічі.
+  const мапаДописів = new Map();
+  for (const r of частини) {
+    if (!r.ok) continue;
+    for (const p of (r.data || [])) if (!мапаДописів.has(p.id)) мапаДописів.set(p.id, p);
+  }
+  const myPosts = [...мапаДописів.values()];
   const myIds = myPosts.map(p => p.id);
 
   // Колонки `reply_to_uid` може не бути (та сама міграція, що у `fetchPostComments`).

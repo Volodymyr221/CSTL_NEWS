@@ -224,6 +224,7 @@ const оголошення = (id, o = {}) => ({
 async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕКО], posts = [], user = null,
                        profiles = [], seen = ВІЗИТ, tracked = null, comments = [],
                        threads = [], messages = [], pagePosts = [], pageComments = [],
+                       pageAdmins = [],
                        ширина = 390, завтра = null,
                        гео = null, місце = null, визначене = null,
                        обранеРаніше = null } = {}) {
@@ -305,7 +306,8 @@ async function сцена({ routes = [РЕЙС_БЛИЗЬКО, РЕЙС_ДАЛЕ
   }, [seen, tracked, UID]);
 
   await mockSupabase(p, { posts, profiles, comments, threads, messages, thread_user_state: [],
-                          page_posts: pagePosts, page_comments: pageComments },
+                          page_posts: pagePosts, page_comments: pageComments,
+                          page_admins: pageAdmins },
                      user ? { user } : {});
   await p.route('**/data/schedule.json*', r => r.fulfill({
     contentType: 'application/json',
@@ -1388,6 +1390,49 @@ const ВІДПОВІДЬ = (id, postId, o = {}) => ({
   const стало = await капсули(s.p);
   ok('🔴 капсула зʼявилась БЕЗ перемикання вкладки',
      стало.ключі.includes('feed'), стало.ключі.join(',') || '(порожньо)');
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 25: ДОПИС ШІ-АГЕНТА — АВТОРА НЕМА, АЛЕ ДОПИС МІЙ (22.08) ──────────
+//
+// 🔴 Скарга Вови з прода: «коментар на допис, який написав агент, а я його просто
+// опублікував — сповіщення приходить, а капсула не підтягується. Це ж одне ціле».
+// 📐 Заміряно на живій базі: у дописів агента `author_uid` **порожній** (їх
+// створює не людина), а push шле РЕДАКТОРАМ СТОРІНКИ. Тобто дві поверхні
+// відповідали на різні питання про ту саму подію.
+// 🔑 Сцена стереже саме це: автора немає, але я редактор сторінки — капсула МУСИТЬ
+// бути. Це та половина правила, якої не існувало до 22.08.
+{
+  const s = await сцена({
+    user: USER,
+    routes: [РЕЙС_ДАЛЕКО],
+    // Допис агента: author_uid порожній, сторінка 'pg1'.
+    pagePosts: [допис(600, { author_uid: null, text: 'Історія Олицького замку' })],
+    pageComments: [коментар(9200, 600)],
+    pageAdmins: [{ page_id: 'pg1', uid: UID, role: 'owner' }],
+  });
+  const к = await капсули(s.p);
+  const i = к.ключі.indexOf('feed');
+  ok('🔴 допис агента без автора, але я редактор сторінки → капсула Є', i >= 0, к.ключі.join(','));
+  ok('🔴 і предметом стоїть сам допис', i >= 0 && /Історія Олицького/.test(к.тексти[i] || ''),
+     i >= 0 ? к.тексти[i] : '(немає)');
+  await s.ctx.close();
+}
+
+// ── СЦЕНА 26: КОНТРОЛЬ — ЧУЖА СТОРІНКА МЕНІ НЕ НАЛЕЖИТЬ ─────────────────────
+// 🛑 Без цієї сцени попередня зеленіла б і над правилом «капсула на будь-який
+// коментар у застосунку». Той самий допис без автора, але я НЕ редактор.
+{
+  const s = await сцена({
+    user: USER,
+    routes: [РЕЙС_ДАЛЕКО],
+    pagePosts: [допис(601, { author_uid: null, page_id: 'pg9' })],
+    pageComments: [коментар(9201, 601)],
+    pageAdmins: [],                       // я не редактор жодної сторінки
+  });
+  const к = await капсули(s.p);
+  ok('🔴 допис на ЧУЖІЙ сторінці капсули не дає',
+     !к.ключі.includes('feed'), к.ключі.join(',') || '(порожньо)');
   await s.ctx.close();
 }
 
