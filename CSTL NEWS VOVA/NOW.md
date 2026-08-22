@@ -10,12 +10,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-22 07:11 UTC
+**Зріз на:** 2026-08-22 07:12 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-v2m8mz` |
-| останній коміт людини | `36a3b7a1` 22.08 07:11 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація |
+| останній коміт людини | `5f2e216b` 22.08 07:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260822-0708` |
 | останній PR у `main` | #987 |
 | стендів на диску | 97 |
@@ -25,6 +25,7 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/NOW.md`
 - `bundle.js`
 - `src/core/settlements-geo.js`
 - `src/tabs/community-blocks.js`
@@ -36,11 +37,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `5f2e216b` 22.08 07:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
+- `aee4db04` 22.08 07:11 — docs: пульс NOW.md
 - `36a3b7a1` 22.08 07:11 — feat(місце): обране руками живе один сеанс — після перезапуску вирішує геолокація
+- `9aa63856` 22.08 07:10 — ai(editor): свята-чернетки 22.08 07:10 UTC
 - `0458bfbb` 22.08 06:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `d102bcce` 22.08 05:48 — Merge remote-tracking branch 'origin/main' into claude/startuem-v2m8mz
-- `e522b10b` 22.08 05:48 — fix(автобуси): наша назва села = назва зупинки в перевізника + найближча зупинка (#987)
-- `b8000507` 22.08 05:47 — merge main + пульс перед деплоєм
 
 <!-- AUTO:END -->
 
