@@ -2046,6 +2046,84 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
   return { comments, hasMore };
 }
 
+// ── НОВЕ ПІД МОЇМ У СТРІЧЦІ (22.08) — для капсули на Громаді ─────────────────
+//
+// 🔴 ЗАВЕДЕНО ТОМУ, ЩО ВСЕРЕДИНІ ЗАСТОСУНКУ ЦЬОГО НЕ КАЗАВ НІХТО. У Стрічці є
+// push про коментарі (`send-comment-push`) і є дзвіночок — але дзвіночок це
+// ПІДПИСКА на сповіщення, а не список непрочитаного. Тобто людина, яка push не
+// дозволила або просто його змахнула, не мала ЖОДНОЇ поверхні, що каже «під
+// вашим дописом відповіли». Капсула стала першою.
+//
+// 🔑 ДВА ДЖЕРЕЛА, ОДИН ЗАПИТ КОЖНЕ — і обидва проходять правило №12 «я створив»:
+//   1. коментар під МОЇМ дописом;
+//   2. відповідь, адресована особисто мені (`reply_to_uid`), хоч би під чиїм.
+// Друге потрібне саме тому, що коментувати чужий допис — теж моя дія: без нього
+// найчастіший випадок звичайного жителя (він не веде сторінки, але пише під
+// чужими) не давав би капсули ніколи.
+//
+// ⚠️ Свої коментарі не рахуємо: автор, що сам себе доповнив, відповіді не
+// отримав. Це не дрібниця — саме автор допису найчастіше і дописує.
+//
+// 🛑 ЗАПИТУЄМО ПО СПИСКУ МОЇХ ДОПИСІВ, а не «усі свіжі коментарі + фільтр у
+// клієнті». Другий шлях виглядає простішим рівно доти, доки коментарів за період
+// менше за ліміт: як тільки їх стане більше, обрізка тихо з'їсть саме мої, і
+// капсула мовчки перестане з'являтись — той самий клас мовчазної вади, від якої
+// лікували капсулу «ДОДОМУ» (HOT_RULES №12).
+export async function fetchMyFeedReplies(uid, sinceMs) {
+  if (!supa || !uid) return null;
+  const sinceIso = new Date(sinceMs).toISOString();
+
+  // Мої дописи. `status` фільтруємо із запобіжником — тим самим, що у
+  // `fetchPagePosts`: якщо міграція чернеток ще не накотилась, колонки немає, і
+  // без відкату запит упав би цілком.
+  const myQ = (withStatus) => {
+    let q = supa.from('page_posts').select('id, text, page_id')
+      .eq('author_uid', uid).is('deleted_at', null)
+      .order('created_at', { ascending: false }).limit(100);
+    if (withStatus) q = q.eq('status', 'published');
+    return q;
+  };
+  let mine = await netCall(() => myQ(true), { timeout: NET_TIMEOUT });
+  if (noSuchColumn(mine.rawError)) mine = await netCall(() => myQ(false), { timeout: NET_TIMEOUT });
+  if (!mine.ok) return null;
+  const myPosts = mine.data || [];
+  const myIds = myPosts.map(p => p.id);
+
+  // Колонки `reply_to_uid` може не бути (та сама міграція, що у `fetchPostComments`).
+  // Тоді джерело 2 просто мовчить, а джерело 1 працює — часткова відповідь тут
+  // краща за жодної.
+  const cols = 'id, post_id, author_uid, text, created_at, reply_to_uid';
+  const свіжі = (q) => q.is('deleted_at', null).gt('created_at', sinceIso)
+    .neq('author_uid', uid).order('created_at', { ascending: false }).limit(200);
+
+  const запити = [];
+  if (myIds.length) {
+    запити.push(netCall(
+      () => свіжі(supa.from('page_comments').select(cols).in('post_id', myIds)),
+      { timeout: NET_TIMEOUT },
+    ));
+  }
+  запити.push(netCall(
+    () => свіжі(supa.from('page_comments').select(cols).eq('reply_to_uid', uid)),
+    { timeout: NET_TIMEOUT },
+  ));
+
+  const відповіді = await Promise.all(запити);
+  // Жодне джерело не відповіло — це «не знаємо», а не «нічого немає». Порожній
+  // результат тут показав би людині тишу там, де насправді збій мережі.
+  if (відповіді.every(r => !r.ok)) return null;
+
+  // Дедуп за id: відповідь мені під МОЇМ же дописом приходить обома запитами.
+  const усі = new Map();
+  for (const r of відповіді) {
+    if (!r.ok) continue;
+    for (const c of (r.data || [])) {
+      if (c && c.id != null && !усі.has(c.id)) усі.set(c.id, c);
+    }
+  }
+  return { myPosts, comments: [...усі.values()] };
+}
+
 // replyToUid — кому адресована відповідь («Віктор,» на початку + сповіщення саме йому).
 // Зберігаємо посилання на людину, а не текст: імʼя підставляється живим при показі.
 // Підробити не вийде — RLS пускає лише того, хто вже писав під ЦИМ постом
