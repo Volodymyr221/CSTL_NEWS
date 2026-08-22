@@ -96,6 +96,30 @@ jobs:
             echo "**Навіщо файл:** без нього застосунок упізнає за координатами лише Олику,"
             echo "і житель Метельного отримує рейси з Олики — за 7 км від себе."
           } > /tmp/pr-body.md
-          gh pr create --base main --head "$BRANCH" \
-            --title "data: координати сіл громади" \
-            --body-file /tmp/pr-body.md
+          # 🔴 22.08, ПРОГІН №7 — ВІДКРИТТЯ PR МОЖЕ БУТИ ЗАБОРОНЕНЕ НАЛАШТУВАННЯМ.
+          # `gh pr create` віддав: «GitHub Actions is not permitted to create or
+          # approve pull requests». Це перемикач репозиторію
+          # (Settings → Actions → General → Workflow permissions), а не вада коду.
+          #
+          # 🔑 І ТУТ ВАЖЛИВО НЕ ПЕРЕПЛУТАТИ ДВІ РІЗНІ РЕЧІ. Робота — згенерувати,
+          # перевірити числа і ДОСТАВИТИ їх у репозиторій — на цей момент уже
+          # виконана: гілка запушена рядком вище. Відкриття PR це зручність.
+          # Валити весь прогін через неї означало б кричати «зламано» над
+          # доставленими даними — та сама хибна тривога, від якої ми лікувались
+          # із протилежного боку.
+          #
+          # 🛑 АЛЕ ЦЕ Й НЕ ТИХЕ КОВТАННЯ ПОМИЛКИ: пишемо гучне попередження і
+          # ПРЯМЕ ПОСИЛАННЯ, за яким PR відкривається одним дотиком. Мовчазний
+          # `|| true` тут був би точно тією вадою, яку ми ловили в прогоні №5.
+          if gh pr create --base main --head "$BRANCH" \
+               --title "data: координати сіл громади" \
+               --body-file /tmp/pr-body.md; then
+            echo "✅ PR відкрито"
+          else
+            echo "::warning::PR не відкрито: GitHub Actions не має дозволу створювати pull request'и."
+            echo "🔸 КООРДИНАТИ ВЖЕ В РЕПОЗИТОРІЇ — гілка «$BRANCH» запушена."
+            echo "🔸 Відкрити PR одним дотиком:"
+            echo "   https://github.com/$GITHUB_REPOSITORY/compare/main...$BRANCH?expand=1"
+            echo "🔸 Щоб це робилось само: Settings → Actions → General →"
+            echo "   Workflow permissions → «Allow GitHub Actions to create and approve pull requests»."
+          fi
