@@ -16,10 +16,39 @@
 // 🛑 ЦЕЙ СТОРОЖ ОХОРОНЯЄ ПРАВИЛО, А НЕ ВИПАДОК: жодна дочірня таблиця не сміє
 // вирішувати свою видимість сама. Нова таблиця з `using (true)` — це та сама
 // дірка під іншою назвою, і вона має падати тут, а не через два місяці в базі.
+// 🔴 22.08 — ЦЕЙ СТОРОЖ САМ ВИМАГАВ ЗЛАМАНОЇ ФОРМИ, І ЧЕРЕЗ ЦЕ ПРОПУСТИВ БАГ,
+// ЯКИЙ ДВІ ДОБИ ЛАМАВ КОМЕНТАРІ ВСІМ. У списку `діти` нижче стояв рядок
+// `['page_comments', 'page_comment_visible(id)']`, тобто стенд ВИМАГАВ, щоб
+// політика читання питала про ВЛАСНИЙ рядок — а саме це й ламало
+// `INSERT ... RETURNING` (пояснення: scripts/supabase_visibility_returning_fix.sql).
+//
+// 🔑 Урок ширший за цей файл і вже записаний у CLAUDE.md: перевірка міряла
+// ФОРМУ ЗАПИСУ, а не НАСЛІДОК. «Політика кличе потрібну функцію» — це не те
+// саме, що «людина може написати коментар». Тому нижче доданий окремий блок,
+// який стереже сам КЛАС вади: жодна SELECT-політика не сміє питати
+// `*_visible(id)` про власний рядок своєї ж таблиці.
 import { projectFile, reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
-const sql = projectFile('scripts/supabase_visibility_model.sql');
+const sql = projectFile('scripts/supabase_visibility_model.sql')
+  // Виправлення 22.08 лежить окремим файлом (міграція поверх міграції — так само,
+  // як це зроблено для всіх інших правок схеми), тож правило читаємо з обох.
+  + '\n' + projectFile('scripts/supabase_visibility_returning_fix.sql');
+
+// 🔴 СКЛЕЄНІ МІГРАЦІЇ — ЦЕ ІСТОРІЯ, А НЕ СТАН. Друга міграція перевизначає
+// політики першої, тож шукати в тексті «чи є десь такий рядок» означає питати
+// «чи так БУЛО КОЛИСЬ», а не «чи так Є». Перша редакція цього блоку саме так і
+// зробила — і показала три неіснуючі самозапити на вже вилікуваній базі.
+// 🔑 У SQL останнє означення перемагає, тому міряємо ОСТАННЄ.
+function останніПолітикиSelect(текст) {
+  const мапа = new Map();
+  for (const m of текст.matchAll(
+    /create policy\s+"([^"]+)"\s+on public\.(\w+)\s+for select\s+using \(([\s\S]*?)\);/g)) {
+    мапа.set(`${m[2]}:${m[1]}`, { табл: m[2], вираз: m[3].trim() });
+  }
+  return [...мапа.values()];
+}
+const політики = останніПолітикиSelect(sql);
 
 // ── Три функції — по одній на сутність, і жодної копії правила ──────────────
 for (const fn of ['post_visible', 'page_post_visible', 'page_comment_visible']) {
@@ -30,14 +59,25 @@ for (const fn of ['post_visible', 'page_post_visible', 'page_comment_visible']) 
 // admins does not exist». Пишемо без лапок, і стенд це стереже.
 ok('🔴 search_path без лапок (у лапках це одна схема з комою в назві)',
    /set search_path = public, auth/.test(sql) && !/search_path = '/.test(sql));
-ok('функції STABLE + SECURITY DEFINER (інакше політика впаде в рекурсію)',
-   (sql.match(/language sql stable security definer/g) || []).length === 3);
+// ⚠️ Рахувати збіги числом не можна — після другої міграції функцій стало шість,
+// і «=== 3» падало б на цілком правильній схемі. Питаємо про КОЖНУ поіменно.
+for (const fn of ['post_visible', 'page_post_visible', 'page_comment_visible',
+                  'post_visible_row', 'page_post_visible_row', 'page_comment_visible_row']) {
+  ok(`«${fn}» — STABLE + SECURITY DEFINER (інакше політика впаде в рекурсію)`,
+     new RegExp(`function public\\.${fn}\\([^)]*\\)\\s*\\n?returns boolean language sql stable security definer`)
+       .test(sql));
+}
 
 // ── Кожна дитина питає БАТЬКА, а не вирішує сама ───────────────────────────
+// ⚠️ 22.08 — `page_comments` тепер питає `page_comment_visible_row(deleted_at,
+// post_id)`: те саме правило, але ВІД КОЛОНОК свого рядка. Друга ланка
+// всередині тієї функції однаково питає батька (`page_post_visible(post_id)`),
+// тож принцип «дитина виводить видимість із батька» цілий — зникла лише
+// самоперевірка, яка ламала вставку.
 const діти = [
   ['comments',               'post_visible(post_id)'],
   ['reactions',              'post_visible(post_id)'],
-  ['page_comments',          'page_comment_visible(id)'],
+  ['page_comments',          'page_comment_visible_row(deleted_at, post_id)'],
   ['page_reactions',         'page_post_visible(post_id)'],
   ['page_comment_reactions', 'page_comment_visible(comment_id)'],
 ];
@@ -55,10 +95,46 @@ ok('🔴 жодна дочірня таблиця не читається без
 // ── Батьки кличуть ТУ САМУ функцію — інакше правило живе у двох місцях ──────
 // У проєкті дві копії одного правила вже коштували розсинхрону двох списків
 // антиспаму і двох кривих анімації. Тут копія коштувала б дірки в доступі.
-ok('🔴 політика posts кличе post_visible (правило не дублюється)',
-   /create policy "posts read" on public\.posts for select using \(public\.post_visible\(id\)\)/.test(sql));
-ok('🔴 політика page_posts кличе page_post_visible',
-   /create policy "pposts read" on public\.page_posts for select using \(public\.page_post_visible\(id\)\)/.test(sql));
+ok('🔴 політика posts кличе спільне правило (не дублює його)',
+   /create policy "posts read" on public\.posts for select\s+using \(public\.post_visible_row\(status, owner_uid\)\)/.test(sql));
+ok('🔴 політика page_posts кличе спільне правило',
+   /create policy "pposts read" on public\.page_posts for select\s+using \(public\.page_post_visible_row\(deleted_at, status, page_id\)\)/.test(sql));
+
+// ── 🔴 22.08 — СТОРОЖ САМОГО КЛАСУ ВАДИ ────────────────────────────────────
+//
+// Правило: **SELECT-політика таблиці не сміє питати `*_visible(id)` про власний
+// рядок цієї ж таблиці.** Причина не в стилі, а в тому, що така політика робить
+// `INSERT ... RETURNING` неможливим: `*_visible` оголошена STABLE і бачить знімок
+// бази на початок оператора, де щойно вставленого рядка ще немає. А
+// `.insert().select()` у supabase-js — це рівно `INSERT ... RETURNING`, тобто
+// ЛАМАЄТЬСЯ САМЕ ЗВИЧАЙНА ДІЯ ЛЮДИНИ, і мовчки: помилка називає INSERT, хоч
+// винна політика ЧИТАННЯ.
+//
+// 🔑 Чому саме такий сторож, а не «перевіримо, що коментар додається»: перевірка
+// поведінки тут потребує ключа до живої бази, якого в репозиторії немає й не
+// має бути. Ця ж перевірка ловить УСЮ родину — включно з таблицею, якої ще не
+// існує, — і коштує нуль.
+const самозапит = (сп) => сп.filter(p => /^public\.\w+\(id\)$/.test(p.вираз))
+                            .map(p => `${p.табл} → ${p.вираз}`);
+ok('🔴 жодна SELECT-політика не питає *_visible(id) про ВЛАСНИЙ рядок (ламає INSERT…RETURNING)',
+   самозапит(політики).length === 0, самозапит(політики).join(' · ') || 'чисто');
+
+// КОНТРОЛЬ: на зламаній формі сторож мусить упасти. Без цього рядка він
+// «не може впасти», а перевірка, яка не падає, нічого не стереже (урок 17.08).
+ok('КОНТРОЛЬ: самозапит розпізнається',
+   самозапит(останніПолітикиSelect(
+     'create policy "x read" on public.page_comments for select using (public.page_comment_visible(id));',
+   )).length === 1);
+
+// Правило мусить лишатись в ОДНІЙ функції на сутність: політика від колонок і
+// запит за id кличуть ту саму *_row(). Інакше ми проміняли б одну ваду на іншу —
+// дві копії правила, які колись розійдуться.
+for (const fn of ['post_visible_row', 'page_post_visible_row', 'page_comment_visible_row']) {
+  const тіло = sql.slice(sql.indexOf(`create or replace function public.${fn}(`));
+  ok(`🔴 «${fn}» — єдине джерело правила (його ж кличе запит за id)`,
+     new RegExp(`create or replace function public\\.${fn}\\(`).test(sql)
+     && new RegExp(`public\\.${fn}\\(`).test(тіло.slice(200)));
+}
 ok('старі розрізнені політики posts прибрані (їх замінила одна)',
    /drop policy if exists "Public can read published posts"/.test(sql)
    && /drop policy if exists "Owner reads own posts"/.test(sql));
