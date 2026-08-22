@@ -75,7 +75,7 @@ import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/aut
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
-import { nearestSettlement, nearestServedStop, pickedPlace, detectedPlace } from '../core/settlements-geo.js';
+import { nearestSettlement, nearestServedStop, pickedPlace, lastPickedPlace, detectedPlace } from '../core/settlements-geo.js';
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
@@ -271,6 +271,14 @@ async function обчислитиСело() {
   // тоді довіряємо назві, яку показує погода. Вона гірша за координати, але
   // краща за нічого: це те саме місце, що людина бачить на екрані.
   if (!_гдеЯ) _гдеЯ = detectedPlace() || '';
+  // 🛑 І ЛИШЕ ПОТІМ — ОСТАННЄ ОБРАНЕ РУКАМИ (22.08). З цього дня вибір у погоді
+  // живе один сеанс: закрив додаток — місце знову визначається (Вова: «локація
+  // знову має стати на його місце розташування»). Але для того, хто дозволу на
+  // геолокацію не дав, той вибір був ЄДИНИМ способом сказати, де він, — і без
+  // цього рядка він отримував би рейси з Олики після кожного перезапуску.
+  // ⚠️ Саме НИЖЧЕ за координати й назву: якщо ми знаємо, де людина зараз, її
+  // вчорашній вибір цього знання не перебиває — інакше фікс нічого б не змінив.
+  if (!_гдеЯ) _гдеЯ = lastPickedPlace() || '';
   return _гдеЯ || null;
 }
 
