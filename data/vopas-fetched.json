@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-23T18:49:03.782071+03:00",
+  "fetched_at": "2026-08-23T19:30:12.982726+03:00",
   "date": "23.08.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5547,8 +5547,8 @@
       "carrier": "Потапчук В.І.-",
       "bus": "ЛАЗ 695",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5562,8 +5562,8 @@
       "carrier": "Яницька В.С. 43018 Волинська о",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5577,8 +5577,8 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5592,8 +5592,8 @@
       "carrier": "ТзОВ''Галактика Авто''",
       "bus": "Фольксваген LT",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5607,8 +5607,8 @@
       "carrier": "Мошковський П.М. ТзОВ",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5622,8 +5622,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5637,8 +5637,8 @@
       "carrier": "ТДВ \"Ковельське АТП \"",
       "bus": "МІЦУБІСІ prenses m",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5652,8 +5652,8 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5667,8 +5667,8 @@
       "carrier": "Шелест С.Г. м. Горохів",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
