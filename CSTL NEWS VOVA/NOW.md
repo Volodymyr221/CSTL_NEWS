@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-23 14:33 UTC
+**Зріз на:** 2026-08-23 14:35 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `4d890c9f` 23.08 14:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
+| останній коміт людини | `c4a78eea` 23.08 14:35 — docs(журнал): фініш №2 — PR #1002, деплой v4924; чому стара якість трималась |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260823-1405` |
-| останній PR у `main` | #1001 |
+| останній PR у `main` | #1002 |
 | стендів на диску | 100 |
 | незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-08-23 | є ✅ |
@@ -25,27 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-23b.md`
-- `bundle.js`
-- `src/core/account-ui.js`
-- `src/core/profile-card.js`
-- `src/core/supabase.js`
-- `src/core/upload.js`
-- `src/core/utils.js`
-- `sw.js`
-- `tests/avatar-quality.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `c4a78eea` 23.08 14:35 — docs(журнал): фініш №2 — PR #1002, деплой v4924; чому стара якість трималась
+- `97dfed52` 23.08 14:33 — docs(пульс): зріз після злиття main, проза під поточну сесію
 - `4d890c9f` 23.08 14:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
 - `b06ddbc0` 23.08 14:29 — docs: стенд якості фото в карті файлів, пульс, 99 -> 100 стендів
 - `4360c07a` 23.08 14:08 — docs(літопис): якість фото жителя — дві версії замість однієї
-- `1a83b467` 23.08 14:06 — docs(журнал): якість фото жителя — діагноз, заміри, три брехливі мірки
-- `3a013c40` 23.08 13:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
 
 <!-- AUTO:END -->
 
