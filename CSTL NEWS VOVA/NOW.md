@@ -10,45 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-23 12:32 UTC
+**Зріз на:** 2026-08-23 12:34 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `7ee825b4` 23.08 12:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
+| останній коміт людини | `f00aa112` 23.08 12:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260823-1213` |
-| останній PR у `main` | #1000 |
+| останній PR у `main` | #1001 |
 | стендів на диску | 99 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-08-23 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-23b.md`
-- `bundle.js`
-- `src/core/profile-card.js`
-- `src/core/supabase.js`
-- `src/tabs/board-chat.js`
-- `src/tabs/board-discussions.js`
-- `src/tabs/board.js`
-- `src/tabs/feed.js`
-- `style/base.css`
-- `sw.js`
-- `tests/official-badge.mjs`
-- `tests/verified-badge.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `f00aa112` 23.08 12:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `6c09edb5` 23.08 12:34 — docs(журнал): фініш — PR #1001, деплой v4917 success
+- `7b202e89` 23.08 12:33 — Синя галочка: гніздо імені — знак у розмір імені і на одній лінії скрізь (#1001)
+- `53bc98a3` 23.08 12:32 — docs(пульс): зріз після злиття main
 - `7ee825b4` 23.08 12:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
-- `1fb6c6fb` 23.08 12:31 — docs(журнал): прогін тестів, документаційні червоні, інцидент з комітом
-- `209ecf74` 23.08 12:26 — docs: галочка в літописі, пульсі та карті файлів
-- `69932576` 23.08 12:14 — fix(галочка): гніздо імені — знак у розмір імені і на одній лінії скрізь
-- `bec5a654` 23.08 11:34 — docs(журнал): старт сесії 23.08 (b) — /startuem, звірка з origin/main
 
 <!-- AUTO:END -->
 
