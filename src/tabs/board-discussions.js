@@ -23,7 +23,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName,
+  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName, liveFirstName,
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -947,9 +947,25 @@ export function renderQuestionCard(p) {
   // питаннями і блок відповіді) читались однаковим тоном, і око бачило суцільну
   // сіру масу замість структури. Тепер відповідь — просто тихий текст в один
   // рядок: вона додає користі й не створює «картку всередині картки».
+  // 🔴 23.08, РЕДАКЦІЯ 6 — ВІДПОВІДЬ ПОПЕРЕДУ, АВТОР ПОЗАДУ.
+  // Було: `Дмитро: Та начебто почнуть у вересні.` — тобто рядок починався з
+  // імені й двокрапки, а це розмітка РЕПЛІКИ МЕСЕНДЖЕРА. Саме її ми виводили
+  // з екрана двома редакціями поспіль, а в списку вона лишалась.
+  // 🔑 Рішення Вови 23.08: «Формат "Та начебто почнуть у вересні. — Дмитро"
+  // кращий для щільності стрічки, якщо візуально чітко відділити відповідь від
+  // автора». Порядок відповідає головному в розділі: цінність — ВІДПОВІДЬ, а не
+  // той, хто її дав.
+  //
+  // 🛑 ТИРЕ ЛЕЖИТЬ ПОЗА ВУЗЛОМ З `data-name-uid`, І ЦЕ НЕ ПРИДИРКА.
+  // `hydrateNames()` робить `el.textContent = nm`, тобто ЗАМІНЮЄ ВЕСЬ ВМІСТ
+  // вузла живим імʼям. Поклади тире всередину — і воно зникне рівно тоді, коли
+  // приїде профіль, тобто «іноді», що найгірше для пошуку такої вади.
   const перша = відповіді[0];
   const цитата = перша
-    ? `<p class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(перша.sender_uid)}>${liveName(перша.author || 'Житель', перша.sender_uid)}:</span> ${escapeHtml(перша.text)}</p>`
+    ? `<p class="qa-row-answer">
+         <span class="qa-row-answer-text">${escapeHtml(перша.text)}</span>
+         <span class="qa-row-answer-who">— <span${nameUid(перша.sender_uid, { short: true })}>${liveFirstName(перша.author, перша.sender_uid)}</span></span>
+       </p>`
     : '';
 
   // 🔑 МЕТАДАНІ У ДВА РЯДКИ, а не в один. «Володимир · 8 липня · потрібна
@@ -970,22 +986,45 @@ export function renderQuestionCard(p) {
   // картка називає ЛЮДЕЙ — це різні речі, тож і слова різні.
   const попит = getLikeCount(p.id);
   const хвіст = попит >= 2 ? ` <span class="qa-row-wait">· ${попит} чекають</span>` : '';
+  // Значок при числі — щоб «скільки відповідей» зчитувалось до читання слів.
+  // ⚠️ Той самий контурний значок, що вже стоїть у порожньому стані екрана
+  // питання (`COMMENT_ICON_SVG`), а не емодзі: емодзі малюється шрифтом системи
+  // і на різних телефонах має різний колір та вагу.
   const мітка = n
-    ? `<p class="qa-row-n">${n} ${answerWord(n)}${хвіст}</p>`
+    ? `<p class="qa-row-n"><span class="qa-row-n-ic" aria-hidden="true">${COMMENT_ICON_SVG}</span>${n} ${answerWord(n)}${хвіст}</p>`
     : `<p class="qa-row-n qa-row-n--none">Потрібна відповідь${хвіст}</p>`;
 
+  // 🔴 23.08 — ПОРЯДОК ЗМІНЕНО: «ХТО І КОЛИ» ЇДЕ ВНИЗ І СТАЄ ДРІБНІШИМ.
+  //
+  // 📐 Чому саме це, а не чергова перестановка. Заміряно: під питанням стояли
+  // ТРИ рядки одного кегля (15px) і одного кольору — «хто і коли», «скільки
+  // відповідей», цитата. Око не має за що зачепитись і читає їх як суцільний
+  // абзац; саме це Вова й називав словом «зливається». Ніяке перевпорядкування
+  // однакових рядків цього не лікує — рядків так само три й вони так само
+  // однакові. Лікує РІЗНИЦЯ ВАГИ:
+  //
+  //   питання ................ 20px / 600   ← про що мова
+  //   💬 3 відповіді ......... 15px / 600   ← стан: варто відкривати чи ні
+  //   відповідь — Автор ...... 15px / 400   ← вже готова відповідь
+  //   👤 Олександр · 23 год .. 13px / 400   ← довідка
+  //
+  // 🔑 «Хто питає» — найменш потрібний факт у момент вибору «відкривати чи ні»:
+  // у громаді, де всі одне одного знають, імʼя сусіда рішення не змінює. Воно
+  // лишається (людина хоче знати, хто питає), але перестає сперечатись за увагу
+  // з самою відповіддю.
   return `
     <article class="qa-row${n ? '' : ' qa-row--unanswered'}"
              data-post-id="${p.id}" data-question-open="${p.id}">
       <div class="qa-row-body">
         <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+        ${мітка}
+        ${цитата}
         <p class="qa-card-meta">
+          <span class="qa-card-ava">${authorAvatar(p.author, p.owner_uid)}</span>
           <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-card-when">${formatTime(postTime(p))}</span>
         </p>
-        ${мітка}
-        ${цитата}
       </div>
       <span class="qa-row-go" aria-hidden="true">${CHEVRON_SVG}</span>
     </article>

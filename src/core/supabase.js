@@ -683,11 +683,28 @@ export function markOfficial(nameEl, uid) {
 // nameUid → атрибут-маркер, який hydrateNames знайде і підмінить на живе імʼя.
 // liveName → одразу підставляє вже кешоване живе імʼя (щоб не мигало), інакше
 // вморожений текст, інакше fallback ('Житель' в обговореннях / 'анонімно' на дошці).
-export function nameUid(uid) {
-  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
+export function nameUid(uid, { short = false } = {}) {
+  if (!uid) return '';
+  // 🆕 23.08 — `short` просить показувати ЛИШЕ ІМʼЯ, без прізвища.
+  // 📐 Заміряно на живій базі: 7 профілів із 12 записані як «Імʼя Прізвище»
+  // (найдовше повне — 16 символів, найдовше саме імʼя — 9). Тобто в тісних
+  // місцях повне імʼя не вміщається БІЛЬШОСТІ людей, а не поодиноким.
+  // 🛑 Прапорець потрібен саме тут, а не в місці виклику: `hydrateNames()`
+  // нижче робить `el.textContent = nm`, тобто ЗАМІНЮЄ вміст живим імʼям —
+  // будь-яке скорочення, зроблене при малюванні, воно б стерло, щойно приїде
+  // профіль. Вада виглядала б як «імʼя іноді вилазить», що шукається найгірше.
+  return ` data-name-uid="${escapeHtml(uid)}"${short ? ' data-name-short=""' : ''}`;
 }
 export function liveName(name, uid, fallback = 'Житель') {
   return escapeHtml(cachedName(uid) || name || fallback);
+}
+// Те саме, але лише перше слово — для тісних рядків (цитата відповіді в картці).
+// ⚠️ Скорочуємо ДО `escapeHtml`, а не після: екранування може перетворити один
+// символ на послідовність (`&` → `&amp;`), і різати вже екранований рядок —
+// вірний спосіб колись отримати на екрані половину такої послідовності.
+export function liveFirstName(name, uid, fallback = 'Житель') {
+  const повне = (cachedName(uid) || name || fallback).trim();
+  return escapeHtml(повне.split(/\s+/)[0] || fallback);
 }
 
 // Батч-підвантаження аватарів за списком uid. Тягне лише ще невідомі, заповнює кеш.
@@ -798,7 +815,11 @@ export async function hydrateNames(root) {
     el.dataset.nameGen = gen;
     const uid = el.dataset.nameUid;
     const nm = cachedName(uid);
-    if (nm && el.textContent !== nm) el.textContent = nm;   // жива назва перекриває вморожену
+    // `data-name-short` — показати лише імʼя (без прізвища). Ставить `nameUid(uid,
+    // { short: true })`; потрібен там, де рядок тісний і повне імʼя обрізалось би
+    // трьома крапками посеред прізвища.
+    const показ = (nm && el.hasAttribute('data-name-short')) ? (nm.trim().split(/\s+/)[0] || nm) : nm;
+    if (показ && el.textContent !== показ) el.textContent = показ;   // жива назва перекриває вморожену
     // 🔵 Галочка їде разом з іменем — тим самим проходом, по тих самих вузлах.
     // Саме це і робить її «всюди, де видно імʼя» без правок у кожному екрані.
     markOfficial(el, uid);
