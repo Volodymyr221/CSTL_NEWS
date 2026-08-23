@@ -27,7 +27,7 @@ import {
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
-import { getSavedIds, saveBtnHtml } from '../core/board-shared.js';
+import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons } from '../core/board-shared.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
@@ -100,12 +100,29 @@ function isLikedByMe(postId) {
 // Вміст кнопки «Мене теж цікавить» (той самий рядок реакції в базі — див.
 // `qaInterestHtml`). Окремою функцією, бо `handleLikeClick` перемальовує лише
 // нутрощі кнопки, не саму кнопку — інакше делегований обробник втратив би вузол.
+//
+// 🔴 23.08 — КНОПКА ТЕПЕР КАЖЕ, ЩО САМЕ СТАЛОСЬ.
+// Було: змінювалась лише заливка серця, підпис «Мене теж цікавить» стояв в обох
+// станах. Тобто єдиний сигнал «спрацювало» — колір іконки, і людина, яка не
+// дивилась саме на серце, не знала, натиснула вона чи ні.
+//
+// 🔑 «· Збережено» береться з `isSaved()`, а НЕ з припущення «раз натиснув, то
+// збережено». Різниця не теоретична: людина може зняти закладку в шапці рукою,
+// лишивши «Цікавить» увімкненим (зняття закладки нічого не вимикає — так
+// вирішив Вова). Тоді напис мусить зникнути, інакше кнопка бреше про стан.
 function likeBtnInner(postId) {
   const on = isLikedByMe(postId);
   const n  = getLikeCount(postId);
-  return `${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
-          <span class="qa-interest-label">Мене теж цікавить</span>
-          ${n ? `<span class="qa-interest-n">${n}</span>` : ''}`;
+  const число = n ? `<span class="qa-interest-n">${n}</span>` : '';
+  if (!on) {
+    return `${HEART_OUTLINE_SVG}
+            <span class="qa-interest-label">Мене теж цікавить</span>
+            ${число}`;
+  }
+  return `${HEART_FILLED_SVG}
+          <span class="qa-interest-label">Цікавить</span>
+          ${число}
+          ${isSaved(postId) ? '<span class="qa-interest-saved">· Збережено</span>' : ''}`;
 }
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
@@ -538,16 +555,26 @@ export function openDiscussionCompose() {
 // темах) перестали б рахуватись і для людини це виглядало б як «лайки пропали».
 function qaInterestHtml(postId) {
   const on = isLikedByMe(postId);
-  const n  = getLikeCount(postId);
   return `
     <button class="qa-interest${on ? ' qa-interest--on' : ''}" type="button"
             data-like-id="${postId}"
             aria-pressed="${on ? 'true' : 'false'}"
-            aria-label="${on ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить'}">
-      ${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
-      <span class="qa-interest-label">Мене теж цікавить</span>
-      ${n ? `<span class="qa-interest-n">${n}</span>` : ''}
+            aria-label="${interestAria(postId)}">
+      ${likeBtnInner(postId)}
     </button>`;
+}
+
+// Підпис для читача екрана. 🔑 Окремою функцією, бо його ставлять ДВА місця
+// (перший малюнок і перемальовування після тапу), і колись вони вже розійшлись:
+// у `handleLikeClick` мітки були переставлені місцями — увімкнена кнопка казала
+// «Мене теж цікавить», вимкнена «Прибрати позначку». Одне джерело — одна правда.
+// ⚠️ Про «Збережено» читачеві екрана кажемо теж: на екрані це видно, отже має
+// бути й тут (той самий висновок, що записаний про `aria` у правилі №12).
+function interestAria(postId) {
+  if (!isLikedByMe(postId)) return 'Мене теж цікавить';
+  return isSaved(postId)
+    ? 'Цікавить, збережено. Прибрати позначку'
+    : 'Цікавить. Прибрати позначку';
 }
 
 // Шапка екрана питання. 🔑 ПРОЗОРА, зі скляним розмиттям — контент їде ПІД нею.
@@ -930,9 +957,22 @@ export function renderQuestionCard(p) {
   // питання (заклик). Розділені, вони читаються миттєво — на швидкому перегляді
   // стрічки око встигає взяти лише один рядок, і він має бути про стан.
   // _(12.08: тут стояло «особливо в 60+»; вік виправлено на 18-40+.)_
+  // 🆕 23.08 — ПОПИТ ВИХОДИТЬ У СПИСОК. Досі число «цікавить» бачив лише той,
+  // хто вже відкрив питання, — тобто публічний за задумом сигнал був захований
+  // за тапом і не працював на те, заради чого існує.
+  //
+  // 🔑 ПОРІГ ДВА, І ЦЕ НЕ ОКРУГЛЕННЯ. «1 чекає» — це майже завжди сам автор
+  // питання, тобто рядок не додає нічого до того, що вже видно вище. Попит
+  // починається там, де людей БІЛЬШЕ ОДНІЄЇ: «нас четверо, і ніхто не знає» —
+  // це вже суспільний запит, і саме він вмикає того, хто відповість.
+  // ⚠️ «чекають», а не «цікавить»: слово має узгоджуватись із числом, а
+  // «4 цікавить» не узгоджується ніяк. Кнопка називає ДІЮ («Мене теж цікавить»),
+  // картка називає ЛЮДЕЙ — це різні речі, тож і слова різні.
+  const попит = getLikeCount(p.id);
+  const хвіст = попит >= 2 ? ` <span class="qa-row-wait">· ${попит} чекають</span>` : '';
   const мітка = n
-    ? `<p class="qa-row-n">${n} ${answerWord(n)}</p>`
-    : '<p class="qa-row-n qa-row-n--none">Потрібна відповідь</p>';
+    ? `<p class="qa-row-n">${n} ${answerWord(n)}${хвіст}</p>`
+    : `<p class="qa-row-n qa-row-n--none">Потрібна відповідь${хвіст}</p>`;
 
   return `
     <article class="qa-row${n ? '' : ' qa-row--unanswered'}"
@@ -958,6 +998,23 @@ export function renderQuestionCard(p) {
 // лайк теми («мені подобається») перетворився на сигнал попиту («я теж хочу знати»),
 // що для питання єдине осмислене: лайкати чуже незнання нема чого. Новий код емоції
 // знецінив би 9 наявних реакцій, і для людини це виглядало б як «усе пропало».
+//
+// 🔴 23.08 — «ЦІКАВИТЬ» КЛАДЕ ПИТАННЯ У «ЗБЕРЕЖЕНІ», І РОБИТЬ ЦЕ АСИМЕТРИЧНО.
+//
+// Рішення Вови (`docs/QA_CONCEPT.md` §9), дослівно: «Цікавить → автоматично
+// додає в Збережені. Видалення "Цікавить" → не видаляє із Збережених. Це дає
+// правильну незалежність двом механікам».
+//
+// 🔑 ЧОМУ АСИМЕТРІЯ ЩЕ Й ПРОСТІША ЗА ТОГЛ В ОБИДВА БОКИ. Якби зняття «Цікавить»
+// прибирало закладку, довелось би памʼятати ДЖЕРЕЛО кожної закладки — поклала її
+// людина чи механіка. Це поле в базі, міграція і власний клас помилок («чому
+// зникло те, що я зберіг рукою?»). Тут же: увімкнув — дозберегли, якщо ще не
+// збережено; вимкнув — не чіпаємо нічого.
+//
+// 🛑 І головна умова Вови: дія НЕ ПРИХОВАНА. Людина бачить її двічі — підписом
+// «· Збережено» на самій кнопці і закладкою в шапці, що заповнюється тієї ж
+// миті (`syncSaveButtons`). Саме прихованість була єдиним запереченням проти
+// цієї моделі, і вона знята.
 export function handleLikeClick(likeBtn) {
   const id = Number(likeBtn.dataset.likeId);
   requireAuth('позначити питання', async () => {
@@ -967,20 +1024,30 @@ export function handleLikeClick(likeBtn) {
     entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
     entry.my = wasLiked ? null : LIKE_EMOJI;
     reactionsByPost.set(id, entry);
+
+    // Дозбереження — ЛИШЕ при увімкненні і лише якщо закладки ще немає.
+    // ⚠️ Прапорець потрібен для відкату: якщо база відмовить, треба зняти саме
+    // ТУ закладку, яку поставили ми, а не ту, що людина зберегла раніше сама.
+    let дозберегли = false;
+    if (!wasLiked && !isSaved(id)) { toggleSaved(id); дозберегли = true; }
+
     likeBtn.innerHTML = likeBtnInner(id);
     likeBtn.classList.toggle('qa-interest--on', !wasLiked);
     likeBtn.setAttribute('aria-pressed', wasLiked ? 'false' : 'true');
-    likeBtn.setAttribute('aria-label', wasLiked ? 'Мене теж цікавить' : 'Прибрати позначку «мене теж цікавить»');
+    likeBtn.setAttribute('aria-label', interestAria(id));
+    if (дозберегли) syncSaveButtons(id);   // закладка в шапці заповнюється тієї ж миті
+
     const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
     if (!res.ok) {
-      // Відкат при помилці мережі/RLS
+      // Відкат при помилці мережі/RLS — разом із закладкою, яку поставили ми.
       entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
       entry.my = wasLiked ? LIKE_EMOJI : null;
       reactionsByPost.set(id, entry);
+      if (дозберегли) { toggleSaved(id); syncSaveButtons(id); }
       likeBtn.innerHTML = likeBtnInner(id);
       likeBtn.classList.toggle('qa-interest--on', wasLiked);
       likeBtn.setAttribute('aria-pressed', wasLiked ? 'true' : 'false');
-      likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить');
+      likeBtn.setAttribute('aria-label', interestAria(id));
       showToast('Не вдалося зберегти позначку', 2500, 'error');
     }
   });
