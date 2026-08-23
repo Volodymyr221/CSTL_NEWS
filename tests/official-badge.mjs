@@ -122,13 +122,17 @@ ok('🔴 Контроль: у звичайного жителя галочки �
 // ── 3. ШАПКА ЧАТУ — друга поверхня, той самий механізм ──────────────────────
 // Тапаємо саме той рядок, у якому стоїть імʼя офіційної людини — інакше
 // відкрилась би випадкова розмова і перевірка міряла б не те, що обіцяє.
+// ⚠️ 23.08 — селектор став НАЩАДКОМ (пробіл), а не тим самим вузлом. Маркер
+// `data-name-uid` переїхав усередину гнізда імені (`nameSlot`), і саме гніздо
+// тримає розмір та вирівнювання знака. Механізм «знак — сусід вузла імені»
+// не змінився: сусідом він тепер стоїть усередині гнізда.
 await p.evaluate((u) => {
-  const nameEl = document.querySelector(`.pm-thread-name[data-name-uid="${u}"]`);
+  const nameEl = document.querySelector(`.pm-thread-name [data-name-uid="${u}"]`);
   nameEl?.closest('.pm-thread')?.click();
 }, ОФІЦІЙНИЙ);
 await p.waitForTimeout(1400);
 const шапка = await p.evaluate(() => {
-  const el = document.querySelector('.pm-head-name[data-name-uid]');
+  const el = document.querySelector('.pm-head-name [data-name-uid]');
   if (!el) return { знайдено: false, є: false, імʼя: '' };
   const next = el.nextElementSibling;
   return { знайдено: true, імʼя: el.textContent.trim(),

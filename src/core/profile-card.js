@@ -10,7 +10,7 @@
 // мінімальна картка (фото з кешу + імʼя).
 
 import { openModal, closeModal } from './modal.js';
-import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, officialMarkHtml } from './supabase.js';
+import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, nameSlotStatic } from './supabase.js';
 import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
@@ -76,12 +76,12 @@ function cardHtml(p) {
   // відповіді `get_public_profile` ще до того, як вузол потрапить у документ.
   // Але сам ЗНАК мусить бути фізично тим самим, що й скрізь — інакше два майже
   // однакові кола розійшлись би розміром при першій же правці стилю.
-  const official = (p && p.official === true) ? officialMarkHtml() : '';
-
+  // 🔵 23.08 — і не лише знак, а й ГНІЗДО навколо нього (`nameSlotStatic`):
+  // саме гніздо тримає розмір «у кегль імені» і єдиний механізм вирівнювання.
   return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ''}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}${official}</div>
+      <div class="pcard-name">${nameSlotStatic(escapeHtml(name), p && p.official === true)}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
