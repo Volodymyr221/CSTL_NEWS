@@ -10,30 +10,40 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-23 12:34 UTC
+**Зріз на:** 2026-08-23 14:28 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `f00aa112` 23.08 12:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260823-1213` |
+| останній коміт людини | `4360c07a` 23.08 14:08 — docs(літопис): якість фото жителя — дві версії замість однієї |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260823-1405` |
 | останній PR у `main` | #1001 |
-| стендів на диску | 99 |
-| незакомічених файлів | 1 ⚠️ |
+| стендів на диску | 100 |
+| незакомічених файлів | 2 ⚠️ |
 | журнал за 2026-08-23 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-23b.md`
+- `bundle.js`
+- `src/core/account-ui.js`
+- `src/core/profile-card.js`
+- `src/core/supabase.js`
+- `src/core/upload.js`
+- `src/core/utils.js`
+- `sw.js`
+- `tests/avatar-quality.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `4360c07a` 23.08 14:08 — docs(літопис): якість фото жителя — дві версії замість однієї
+- `1a83b467` 23.08 14:06 — docs(журнал): якість фото жителя — діагноз, заміри, три брехливі мірки
+- `3a013c40` 23.08 13:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `1fcda559` 23.08 12:34 — docs(пульс): зріз після мерджу main
 - `f00aa112` 23.08 12:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
-- `6c09edb5` 23.08 12:34 — docs(журнал): фініш — PR #1001, деплой v4917 success
-- `7b202e89` 23.08 12:33 — Синя галочка: гніздо імені — знак у розмір імені і на одній лінії скрізь (#1001)
-- `53bc98a3` 23.08 12:32 — docs(пульс): зріз після злиття main
-- `7ee825b4` 23.08 12:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
 
 <!-- AUTO:END -->
 
