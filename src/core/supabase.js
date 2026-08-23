@@ -463,13 +463,19 @@ export const CHAT_BUCKET   = 'chat-photos';
 // комусь переслали.
 const CHAT_URL_TTL = 12 * 3600;
 
-export async function uploadPhotoToStorage(blob, folder = '', bucket = PUBLIC_BUCKET) {
+// `explicitPath` (23.08) — покласти файл ПОРУЧ із уже завантаженим, під заданим
+// іменем. Потрібен рівно одному місцю: парі фото жителя (дрібне для кружечків +
+// велике для картки), де другий файл мусить лежати за передбачуваною адресою —
+// інакше його не знайти, бо в `profiles` одне поле `avatar_url`, а додати друге
+// означало б міграцію бази. Не передано → ім'я генерується як раніше, тобто
+// жоден наявний виклик не змінює поведінки.
+export async function uploadPhotoToStorage(blob, folder = '', bucket = PUBLIC_BUCKET, explicitPath = '') {
   if (!supa) return { url: null, path: null, error: 'Supabase не підключений' };
   if (!blob) return { url: null, path: null, error: 'Порожній blob' };
 
   const ext  = (blob.type && blob.type.split('/')[1]) || 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
-  const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+  const path = explicitPath || `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
 
   const { error: uploadError } = await supa.storage
     .from(bucket)
@@ -492,6 +498,29 @@ export async function uploadPhotoToStorage(blob, folder = '', bucket = PUBLIC_BU
 
   const { data } = supa.storage.from(bucket).getPublicUrl(path);
   return { url: data?.publicUrl || null, path, error: null };
+}
+
+// ── ВЕЛИКА ВЕРСІЯ ФОТО ЖИТЕЛЯ: домовленість про імʼя (23.08) ────────────────
+//
+// 🔑 Чому домовленість про імʼя, а не друге поле в базі. `profiles` віддається
+// назовні вузьким RPC `get_public_profile`, який повертає РІВНО 6 несекретних
+// полів; додати сьоме означало б міграцію бази і зміну того RPC. Домовленість
+// про імʼя дає те саме безкоштовно: адреса великого файлу ОДНОЗНАЧНО виводиться
+// з адреси дрібного, тому зберігати треба лише одну.
+//
+// ⚠️ У базу пишемо адресу ДРІБНОГО. Це не випадковість: його читають усі
+// списки, кружечки, чати й коментарі — тобто весь наявний код працює далі без
+// жодної правки, а велике фото просить рівно те місце, якому воно потрібне.
+//
+// 🛑 Для аватарів, завантажених ДО 23.08, великої версії не існує — там буде
+// 404. Це передбачено: картка ловить помилку і лишається на дрібному, тобто
+// виглядає рівно як сьогодні. Мовчазного провалу немає — є чесний відкат.
+const LARGE_PHOTO_SUFFIX = '@lg';
+export function largePhotoUrl(url) {
+  const s = String(url || '');
+  if (!s) return '';
+  // Розширення + необовʼязковий «хвіст» запиту (`?token=…` у підписаних адресах).
+  return s.replace(/(\.[a-z0-9]+)(\?.*)?$/i, `${LARGE_PHOTO_SUFFIX}$1$2`);
 }
 
 // ── ФОТО ПРИВАТНИХ ЧАТІВ: шлях → тимчасове посилання ──────────────────────
