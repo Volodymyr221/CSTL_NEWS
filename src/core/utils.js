@@ -58,9 +58,124 @@ export function avatarCircle({ name, url, cls = 'pm-avatar', uid = '' } = {}) {
   return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)"${idAttr}>${escapeHtml(letter)}</span>`;
 }
 
+// ── КОДУВАННЯ КАНВАСУ: WebP із ЧЕСНОЮ ПЕРЕВІРКОЮ ТИПУ (23.08) ───────────────
+//
+// 🔴 ПАСТКА, ЗАРАДИ ЯКОЇ ЦЯ ФУНКЦІЯ ІСНУЄ. `canvas.toBlob(cb, 'image/webp', q)`
+// у браузері, що не вміє КОДУВАТИ цей формат, **не падає і не віддає null** —
+// він мовчки повертає PNG. А PNG для фотографії катастрофічний: заміряно на
+// живому знімку — 1024px просили в AVIF, отримали PNG на **1273.9 KB** замість
+// очікуваних ~48 KB, тобто в 26 разів важче, і жодної помилки ніде.
+// Safari навчився кодувати WebP лише в iOS 17, тож на старіших айфонах жителів
+// це не теорія. Тому тип перевіряється ФАКТОМ, а не вірою в підтримку.
+//
+// 🛑 AVIF не пробуємо взагалі: його `toBlob` не кодує ЖОДЕН браузер, включно з
+// найсвіжішим Chromium (перевірено 23.08 — саме звідти цифра вище).
+function encodeCanvas(canvas, quality, tryWebp = true) {
+  const toBlob = (type) => new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+  return (async () => {
+    if (tryWebp) {
+      const webp = await toBlob('image/webp');
+      // Саме `=== 'image/webp'`, а не «не порожній»: PNG-підміна теж не порожня.
+      if (webp && webp.type === 'image/webp') return webp;
+    }
+    const jpeg = await toBlob('image/jpeg');
+    if (jpeg) return jpeg;
+    throw new Error('toBlob failed');
+  })();
+}
+
+// Намалювати квадратний центр-кроп файлу-зображення у канвас розміру size.
+function squareCanvas(img, size) {
+  const side = Math.min(img.width, img.height);        // сторона квадрата = менша
+  const sx = (img.width  - side) / 2;                  // центрування кропу
+  const sy = (img.height - side) / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+  return canvas;
+}
+
+// Намалювати файл у канвас, вписавши БІЛЬШУ сторону в maxDim (пропорції цілі).
+function fitCanvas(img, maxDim) {
+  let w = img.width, h = img.height;
+  if (w > h && w > maxDim)       { h = h * maxDim / w; w = maxDim; }
+  else if (h >= w && h > maxDim) { w = w * maxDim / h; h = maxDim; }
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.round(w);
+  canvas.height = Math.round(h);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+// Прочитати файл у <img>. ⚠️ Свідомо через FileReader/dataURL, а НЕ
+// `URL.createObjectURL`: цей шлях перевірений на проді з iPhone-форматом .heic,
+// і міняти його заради економії памʼяті означало б внести невідомий ризик у
+// єдиний робочий шлях завантаження фото.
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;   // напр. формат, який браузер не декодує
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── ПАРА ФОТО ЖИТЕЛЯ: дрібне для списків + велике для картки (23.08) ─────────
+//
+// 🔴 Скарга Вови: у картці жителя фото «дуже неякісне, розмите, піксельне».
+// Причина була вимірна: аватар зберігався ОДНИМ файлом 256×256, а показувався
+// двома різними розмірами, і обидва більші за нього:
+//   • кружечок картки 120px × щільність екрана 3 = **360 точок** (мали 256);
+//   • тап по кружечку → фото на весь екран: лайтбокс `max-width:96%`, на
+//     iPhone Pro Max це **1238 точок** завширшки, а для портретного фото 3:4
+//     більша сторона виходить **1651** — тобто розтяг у 4.5 раза.
+// «Стиснути без втрати якості» тут неможливо в принципі: деталей, яких у файлі
+// немає, не поверне ніщо. Лікується РОЗМІРОМ, а плату за розмір знімає формат.
+//
+// 📐 Числа заміряні на справжньому фото (не на око):
+//   256px JPEG 13.5 KB · 256px WebP **9 KB** · 1600px JPEG q0.9 239 KB ·
+//   1600px WebP q0.82 **80.7 KB** (портрет 3:4 ще менше — там на чверть менше
+//   пікселів). WebP дає −50% ваги при тій самій картинці.
+//
+// 🔑 Чому саме 1700, а не «на око». Число ВИВЕДЕНЕ з заміру, а не вибране:
+// стенд `tests/avatar-quality.mjs` вставляє портрет 3:4 у справжній лайтбокс на
+// екрані 430×932 при щільності 3 і питає браузер, до якого прямокутника той
+// його довів — виходить **1238×1651 точок**. Тобто 1651 і є найсуворіша вимога,
+// а 1700 покриває її з невеликим запасом.
+// ⚠️ Спершу тут стояло 1600 — «майже вистачає» (розтяг 3%). Стенд це завалив, і
+// правильно: «майже» в мірці — те саме, що її відсутність. Ціна повного
+// покриття виявилась мізерною, тому й піднято: заміряно на живому фото —
+// квадрат 1600 = 80.7 KB, квадрат 1700 = 87.2 KB, портрет 3:4 = **73.5 KB**.
+// 🛑 1280 не розглядався всерйоз: дав би на портреті розтяг 29%, тобто ваду
+// було б полагоджено наполовину.
+//
+// 🛑 Дрібний лишається КВАДРАТНИМ (кружечки в списках мусять бути однакові),
+// великий зберігає ПРОПОРЦІЇ ОРИГІНАЛУ — рішення Вови 23.08: у великому
+// перегляді людина має бачити те фото, яке поставила, а не його центр.
+// Наслідок, названий свідомо: кружечок і лайтбокс тепер РІЗНІ кадри (як у
+// Telegram та Instagram), раніше це був один і той самий квадрат.
+//
+// ⚠️ Файл читається ОДИН раз на обидві версії: телефонне фото 3-5 МБ, і читати
+// його двічі означало б подвоїти найдорожчий крок.
+export async function avatarPairBlobs(file, { small = 256, large = 1700, quality = 0.82 } = {}) {
+  const img = await loadImageFile(file);
+  return {
+    small: await encodeCanvas(squareCanvas(img, small), quality),
+    large: await encodeCanvas(fitCanvas(img, large), quality),
+  };
+}
+
 // Фото → квадратний аватар (Потік 12): центр-кроп у квадрат + ресайз до size px,
 // повертає JPEG-Blob (~15-40КБ). Окремо від compressImage (та прямокутна, для
 // оголошень) — аватар мусить бути квадратним для кружечка. Promise<Blob>.
+// ⚠️ 23.08 — для аватара жителя більше НЕ використовується (там `avatarPairBlobs`).
+// Лишається як загальний примітив «квадратне фото» і як шлях `square: true` у
+// `uploadImageReliable`; прибирати без потреби не варто (правило №9).
 export function squareImageBlob(file, size = 256) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -415,11 +530,23 @@ export function showToast(msg, duration = 0, type = '', action = null) {
 // Перегляд фото на весь екран (спільний lightbox — переюз `.pm-lightbox`).
 // Раніше локальна копія жила в board-chat.js (openPhoto); винесено сюди, бо
 // картку профілю (тап по аватару) теж треба вміти збільшувати.
-export function openPhotoLightbox(url) {
+// `fallbackUrl` (23.08) — запасна адреса, якщо основна не завантажилась.
+// Потрібна рівно картці жителя: з 23.08 вона просить ВЕЛИКУ версію фото, якої
+// в аватарів старших за цю дату не існує. Без відкату там був би чорний екран
+// зі зламаною картинкою — гірше, ніж дрібне фото, яке людина бачила вчора.
+// Не передано → поведінка байт-у-байт як раніше (чат нічого не помітив).
+export function openPhotoLightbox(url, fallbackUrl = '') {
   if (!url) return;
   const ov = document.createElement('div');
   ov.className = 'pm-lightbox';
   ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
+  if (fallbackUrl && fallbackUrl !== url) {
+    const im = ov.querySelector('img');
+    // Умова «ще не підміняли» боронить від кола, якщо запасна теж не долетить.
+    im.addEventListener('error', () => {
+      if (!im.dataset.fellBack) { im.dataset.fellBack = '1'; im.src = fallbackUrl; }
+    });
+  }
   // Спільний механізм шарів (core/layers.js): жест «назад» закриває саме фото.
   const layer = openLayer(() => ov.remove());
   ov.addEventListener('click', () => closeLayer(layer));
