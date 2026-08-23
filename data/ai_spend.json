@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1787469103970,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 446,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.011,
+      "note": ""
+    },
+    {
+      "ts": 1787469092183,
+      "mission": "holiday:🇺🇦 День Незалежності України",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 427,
+      "cache_read": 0,
+      "cache_write": 1194,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0109,
+      "note": ""
+    },
+    {
       "ts": 1787382655041,
       "mission": "holiday:🇺🇦 День знань",
       "model": "claude-sonnet-5",
@@ -753,37 +779,11 @@
       "found": 1,
       "cost_usd": 0.0129,
       "note": ""
-    },
-    {
-      "ts": 1784018294636,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 565,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0098,
-      "note": ""
-    },
-    {
-      "ts": 1784018280242,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 564,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0097,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.3375,
-    "runs": 90,
+    "cost_usd": 5.3594,
+    "runs": 92,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.2279,
-      "runs": 12,
+      "cost_usd": 0.2498,
+      "runs": 14,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787382655041
+  "updated_ts": 1787469103970
 }
