@@ -28,7 +28,7 @@ import {
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
-  hydrateAvatars, hydrateNames, nameUid,
+  hydrateAvatars, hydrateNames, nameSlot,
   CHAT_BUCKET,
 } from '../core/supabase.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся → свіже» (07.08)
@@ -140,7 +140,7 @@ export async function openChat(convOrThread, post, activeId = null) {
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
       ${avatar(partner, conv.otherUid)}
       <div class="pm-head-titles" data-av-uid="${escapeHtml(conv.otherUid)}" role="button">
-        <div class="pm-head-name"${nameUid(conv.otherUid)}>${escapeHtml(partner)}</div>
+        <div class="pm-head-name">${nameSlot(conv.otherUid, escapeHtml(partner))}</div>
       </div>
     </header>
     <div class="pm-ctxwrap" id="pm-ctxwrap">${tabsHtml()}${ctxHtml(thread, post)}</div>
@@ -792,7 +792,7 @@ export function openThreadsList() {
               ${avatar(c.otherName, c.otherUid)}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
-                  <span class="pm-thread-name"${nameUid(c.otherUid)}>${escapeHtml(c.otherName)}</span>
+                  <span class="pm-thread-name">${nameSlot(c.otherUid, escapeHtml(c.otherName))}</span>
                   <span class="pm-thread-time">${threadListTime(top?.last_message_at)}</span>
                 </div>
                 <div class="pm-thread-post">${escapeHtml(threadPostTitle(top))}${more > 0 ? `<span class="pm-thread-more">+${more}</span>` : ''}</div>

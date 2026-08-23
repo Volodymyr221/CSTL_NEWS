@@ -10,7 +10,7 @@ import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsPro
          looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
-  fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
+  fetchAvatars, cachedName, cachedAvatar, liveName,
   fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
@@ -20,7 +20,7 @@ import {
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
   fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
-  officialMarkHtml,
+  nameSlot, nameSlotStatic,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -715,7 +715,10 @@ function postCardHtml(post, onPage = false) {
   const photo = galleryHtml(imgs, post.id);
   const hasPhoto = imgs.length > 0;
   const author = authorName
-    ? `<div class="fd-author"${nameUid(post.author_uid)}>— ${authorName}</div>` : '';
+    // ⚠️ Маркер імені сидить у ГНІЗДІ, а не на самому `.fd-author`. Той —
+    // блоковий `div`, тож знак, поставлений його сусідом, падав на НОВИЙ РЯДОК
+    // під підписом автора. Це було найпомітніше з місць, де знак «десь знизу».
+    ? `<div class="fd-author">— ${nameSlot(post.author_uid, authorName)}</div>` : '';
   const canEditPost = myPageIds.has(post.page_id);   // «⋯» лише для своїх сторінок
   // 🔴 20.08 — ЧЕРНЕТКА ШІ-АГЕНТА. Її бачить лише редактор сторінки (це вирішує
   // база). Позначка навмисно помітна: людина має одразу розуміти, що цього тексту
@@ -1442,7 +1445,7 @@ function commentRowHtml(c, reply = false, replyTo = null) {
   // згадку набором тексту неможливо. data-av-uid — той самий делегат, що відкриває картку
   // профілю з аватара й імені, тож нової механіки тапу не додається.
   const mention = c.reply_to_uid
-    ? `<span class="fd-com-mention"${nameUid(c.reply_to_uid)} data-av-uid="${escapeHtml(c.reply_to_uid)}">${liveName('', c.reply_to_uid, 'Житель')}</span>, `
+    ? `<span class="fd-com-mention" data-av-uid="${escapeHtml(c.reply_to_uid)}">${nameSlot(c.reply_to_uid, liveName('', c.reply_to_uid, 'Житель'))}</span>, `
     : '';
   // «змінено» біля часу — як у Facebook. Позначку ставить БАЗА при правці тексту
   // (тригер page_comments_guard_update), тож підробити її з клієнта не вийде:
@@ -1451,7 +1454,7 @@ function commentRowHtml(c, reply = false, replyTo = null) {
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
+        <div class="fd-com-head"><span class="fd-com-name"${av}>${nameSlot(c.author_uid, nm)}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${replyTo || c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
@@ -2412,7 +2415,7 @@ async function openPageScreen(pageId, reopen = false) {
                сторінки, а не мітка в стрічці.
                ⚠️ Повертати знак у стрічку варто лише тоді, коли зʼявляться
                спільноти ВІД ЖИТЕЛІВ — тобто коли буде що з чим порівнювати. -->
-          <div class="fd-screen-name">${escapeHtml(page.name)}${page.official === true ? officialMarkHtml() : ''}</div>
+          <div class="fd-screen-name">${nameSlotStatic(escapeHtml(page.name), page.official === true)}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
         </div>
       </div>

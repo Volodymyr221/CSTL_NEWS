@@ -23,7 +23,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName,
+  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameSlot, liveName,
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -301,7 +301,7 @@ function answersHtml(post) {
     // за uid, а не за іменем — двоє тезок мають лишитись різними людьми.
     const самомуСобі = батько && батько.sender_uid && батько.sender_uid === c.sender_uid;
     const згадка = (sub && батько && !самомуСобі)
-      ? `<span class="qa-answer-to"${nameUid(батько.sender_uid)}>${liveName(батько.author || 'Житель', батько.sender_uid)}</span>, `
+      ? `<span class="qa-answer-to">${nameSlot(батько.sender_uid, liveName(батько.author || 'Житель', батько.sender_uid))}</span>, `
       : '';
     // «Відповісти» лише на КОРЕНЕВІЙ — інакше з другого рівня росло б дерево.
     const replyBtn = sub ? '' :
@@ -320,7 +320,7 @@ function answersHtml(post) {
         <span class="qa-answer-ava">${authorAvatar(author, c.sender_uid)}</span>
         <div class="qa-answer-body">
           <div class="qa-answer-head">
-            <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+            <span class="qa-answer-name">${nameSlot(c.sender_uid, liveName(author, c.sender_uid))}</span>
             <span class="qa-answer-when">${formatTime(postTime(c))}${edited}</span>
           </div>
           <p class="qa-answer-text">${згадка}${escapeHtml(c.text)}</p>
@@ -585,7 +585,7 @@ export function openChatModal(post) {
         <h1 class="qa-question-text">${escapeHtml(post.text)}</h1>
         <div class="qa-question-by">
           ${authorAvatar(post.author, post.owner_uid)}
-          <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-question-name">${nameSlot(post.owner_uid, liveName(post.author, post.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-question-when">${formatTime(postTime(post))}</span>
         </div>
@@ -922,7 +922,9 @@ export function renderQuestionCard(p) {
   // рядок: вона додає користі й не створює «картку всередині картки».
   const перша = відповіді[0];
   const цитата = перша
-    ? `<p class="qa-row-answer"><span class="qa-row-answer-who"${nameUid(перша.sender_uid)}>${liveName(перша.author || 'Житель', перша.sender_uid)}:</span> ${escapeHtml(перша.text)}</p>`
+    // ⚠️ Двокрапка лишається у ЖИРНОМУ span, але ПОЗА гніздом: усередині вона
+    // потрапила б у текстовий вузол імені, і знак став би після неї («Ігор: ✓»).
+    ? `<p class="qa-row-answer"><span class="qa-row-answer-who">${nameSlot(перша.sender_uid, liveName(перша.author || 'Житель', перша.sender_uid))}:</span> ${escapeHtml(перша.text)}</p>`
     : '';
 
   // 🔑 МЕТАДАНІ У ДВА РЯДКИ, а не в один. «Володимир · 8 липня · потрібна
@@ -940,7 +942,7 @@ export function renderQuestionCard(p) {
       <div class="qa-row-body">
         <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
         <p class="qa-card-meta">
-          <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+          <span class="qa-card-name">${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-card-when">${formatTime(postTime(p))}</span>
         </p>
