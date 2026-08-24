@@ -10,37 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-24 09:33 UTC
+**Зріз на:** 2026-08-24 09:35 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `e1c77f43` 24.08 09:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
+| останній коміт людини | `2016a092` 24.08 09:35 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260824-0756` |
-| останній PR у `main` | не видно в останніх комітах |
+| останній PR у `main` | #1003 |
 | стендів на диску | 100 |
-| незакомічених файлів | 1 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-24 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-23b.md`
-- `bundle.js`
-- `src/tabs/home-caps.js`
-- `sw.js`
-- `tests/home-caps.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `2016a092` 24.08 09:35 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `b4372f9c` 24.08 09:35 — docs(журнал): фініш №3 — PR #1003, деплой v4976 success
+- `7d47401f` 24.08 09:34 — Капсула автобуса: «СЬОГОДНІ» замість «ЗАВТРА», коли рейс сьогодні ще є (#1003)
+- `d3af0b95` 24.08 09:33 — docs(пульс): зріз після злиття main, проза під сесію 23-24.08
 - `e1c77f43` 24.08 09:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
-- `a2ad565d` 24.08 09:07 — ai(news): памʼять+чернетки+витрати 24.08 09:07 UTC
-- `617fd91a` 24.08 08:24 — cms: статті кабінету у стрічку 24.08 08:24 UTC
-- `5d1b4803` 24.08 08:21 — fix(журнал): знято маркери конфлікту, які закомітились непоміченими
-- `55cc1907` 24.08 08:03 — docs(літопис): капсула автобуса 24.08 — «завтра» замість сьогоднішніх рейсів
 
 <!-- AUTO:END -->
 
