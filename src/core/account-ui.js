@@ -27,7 +27,7 @@ import { ICONS } from './icons.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
 import { escapeHtml, showToast, avatarCircle } from './utils.js';
-import { uploadImageReliable } from './upload.js';   // стиснення(square)+повтор — єдиний надійний шлях
+import { uploadAvatarPair } from './upload.js';   // дрібне+велике фото жителя за один захід
 import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
@@ -342,7 +342,12 @@ async function openAccount() {
     if (!file) return;
     avBtn.disabled = true; avBox.classList.add('acc-av--loading');
     try {
-      const { url, error } = await uploadImageReliable(file, { folder: 'avatars/', square: true, maxDim: 256 });
+      // 🔵 23.08 — ДВІ версії за один захід: дрібна квадратна (кружечки в
+      // списках) і велика в пропорціях оригіналу (картка жителя + фото на весь
+      // екран). До цього був ОДИН файл 256×256 на всі місця, і в картці він
+      // розтягувався до 4.5 раза — саме це Вова й побачив як «розмите,
+      // піксельне». У базу йде адреса ДРІБНОЇ, велика лежить поруч (`@lg`).
+      const { url, error } = await uploadAvatarPair(file);
       if (!url) throw new Error(error || 'upload');
       const res = await saveProfile({ avatar_url: url });
       if (!res.ok) throw new Error(res.error || 'save');

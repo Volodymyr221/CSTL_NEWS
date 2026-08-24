@@ -25,7 +25,7 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
   fetchAllComments,
   fetchAllReactions, getAnonId,
-  fetchSavedPostIds, hydrateNames, nameUid, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
+  fetchSavedPostIds, hydrateNames, nameSlot, liveName, hydrateAvatars, cachedAvatar, fetchPublicProfile,
   submitAdReport, fetchPostContact,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
@@ -158,10 +158,12 @@ function renderCardFoot(p, { actions = false } = {}) {
 // Вова 29.07: «при відкритій модалці назву населеного пункту та ім'я людини поміняй
 // місцями». Тобто НП з шапки переїхав у футер (і там працює за тією самою логікою, що
 // на картці: пін над стрілкою, дата під першою буквою), а ім'я піднялось у шапку.
-// ⚠️ `nameUid` + `liveName` обов'язкові — на них тримається підстановка живого імені
+// ⚠️ `nameSlot` + `liveName` обов'язкові — на них тримається підстановка живого імені
 // з бази (`hydrateNames`); без них у шапці лишався б знімок імені на момент відкриття.
+// (`nameSlot` = гніздо імені зі знаком офіційності; сам маркер `data-name-uid`, який
+// шукає `hydrateNames`, тепер стоїть на внутрішньому вузлі гнізда.)
 function renderAuthorHead(p) {
-  return `<span class="cm-board-author cm-board-author--head">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>`;
+  return `<span class="cm-board-author cm-board-author--head">— ${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid, 'анонімно'))}</span>`;
 }
 
 // Контакт у зум-модалці: одна широка кнопка «Написати» (внутрішній чат) + дзвінок
@@ -487,7 +489,7 @@ function wireAdModalChrome(modal, close) {
       // але не тапнути і не відкрити картку»*. Один екран — один шматок коду, і
       // так довелось би обійти всі поверхні застосунку по черзі.
       // Тепер знак їде разом з іменем: вузол уже несе `data-name-uid`
-      // (`nameUid(p.owner_uid)` нижче в розмітці), а `hydrateNames` ставить
+      // (`nameSlot(p.owner_uid, …)` нижче в розмітці), а `hydrateNames` ставить
       // галочку сама. Тримати тут другий шлях означало б дві галочки поспіль.
     }).catch(() => {});   // fail-soft: профіль не приїхав — картка лишається як є
   }
@@ -843,7 +845,7 @@ function renderAdAuthor(p) {
       <div class="cm-ad-author"${uid ? ` data-av-uid="${escapeHtml(String(uid))}" role="button" tabindex="0"` : ''}>
         ${av}
         <span class="cm-ad-author-info">
-          <span class="cm-ad-author-name"${nameUid(p.owner_uid)}>${name}</span>
+          <span class="cm-ad-author-name">${nameSlot(p.owner_uid, name)}</span>
           ${uid ? `<span class="cm-ad-author-since" data-ad-since>Учасник CSTL LIFE</span>` : ''}
           ${uid && others ? `<span class="cm-ad-author-more">Ще ${others} ${plural(others, 'оголошення', 'оголошення', 'оголошень')} автора</span>` : ''}
         </span>

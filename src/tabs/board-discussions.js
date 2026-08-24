@@ -23,7 +23,8 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName, liveFirstName,
+  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, nameSlot,
+  liveName, liveFirstName,
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -318,7 +319,7 @@ function answersHtml(post) {
     // за uid, а не за іменем — двоє тезок мають лишитись різними людьми.
     const самомуСобі = батько && батько.sender_uid && батько.sender_uid === c.sender_uid;
     const згадка = (sub && батько && !самомуСобі)
-      ? `<span class="qa-answer-to"${nameUid(батько.sender_uid)}>${liveName(батько.author || 'Житель', батько.sender_uid)}</span>, `
+      ? `<span class="qa-answer-to">${nameSlot(батько.sender_uid, liveName(батько.author || 'Житель', батько.sender_uid))}</span>, `
       : '';
     // «Відповісти» лише на КОРЕНЕВІЙ — інакше з другого рівня росло б дерево.
     const replyBtn = sub ? '' :
@@ -337,7 +338,7 @@ function answersHtml(post) {
         <span class="qa-answer-ava">${authorAvatar(author, c.sender_uid)}</span>
         <div class="qa-answer-body">
           <div class="qa-answer-head">
-            <span class="qa-answer-name"${nameUid(c.sender_uid)}>${liveName(author, c.sender_uid)}</span>
+            <span class="qa-answer-name">${nameSlot(c.sender_uid, liveName(author, c.sender_uid))}</span>
             <span class="qa-answer-when">${formatTime(postTime(c))}${edited}</span>
           </div>
           <p class="qa-answer-text">${згадка}${escapeHtml(c.text)}</p>
@@ -660,7 +661,7 @@ export function openChatModal(post, focusCommentId = null) {
         <h1 class="qa-question-text">${escapeHtml(post.text)}</h1>
         <div class="qa-question-by">
           ${authorAvatar(post.author, post.owner_uid)}
-          <span class="qa-question-name"${nameUid(post.owner_uid)}>${liveName(post.author, post.owner_uid)}</span>
+          <span class="qa-question-name">${nameSlot(post.owner_uid, liveName(post.author, post.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-question-when">${formatTime(postTime(post))}</span>
         </div>
@@ -1011,9 +1012,20 @@ export function renderQuestionCard(p) {
   // приїде профіль, тобто «іноді», що найгірше для пошуку такої вади.
   const перша = відповіді[0];
   const цитата = перша
+    // 🔀 24.08 — ЗЛИТТЯ ДВОХ РОБІТ, які змінили цей рядок ОДНОЧАСНО і по-різному:
+    //   • ця гілка: формат «текст — Автор» (відповідь попереду) + КОРОТКЕ імʼя;
+    //   • `main` (PR #1001): гніздо `nameSlot()` під синю галочку офіційного акаунта.
+    // Обидві потрібні, і вони не конфліктують по суті: `nameSlot` лише обгортає
+    // текст, а який саме текст — вирішуємо ми.
+    // 🔑 `data-name-short` передаємо ТРЕТІМ аргументом (`extraAttrs`), бо всередині
+    // `nameSlot` кличе `nameUid(uid)` без прапорця. Без цього гідрація повернула б
+    // повне імʼя з прізвищем — рівно те, що обрізалось на екрані («— Дмитро Сел…»).
+    // 🛑 Тире — ПОЗА гніздом, з тієї ж причини, з якої там опинилась двокрапка в
+    // редакції `main`: усередині воно потрапило б у текстовий вузол імені, і знак
+    // став би після нього.
     ? `<p class="qa-row-answer">
          <span class="qa-row-answer-text">${escapeHtml(перша.text)}</span>
-         <span class="qa-row-answer-who">— <span${nameUid(перша.sender_uid, { short: true })}>${liveFirstName(перша.author, перша.sender_uid)}</span></span>
+         <span class="qa-row-answer-who">— ${nameSlot(перша.sender_uid, liveFirstName(перша.author, перша.sender_uid), ' data-name-short=""')}</span>
        </p>`
     : '';
 
@@ -1070,7 +1082,7 @@ export function renderQuestionCard(p) {
         ${цитата}
         <p class="qa-card-meta">
           <span class="qa-card-ava">${authorAvatar(p.author, p.owner_uid)}</span>
-          <span class="qa-card-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span>
+          <span class="qa-card-name">${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-card-when">${formatTime(postTime(p))}</span>
         </p>

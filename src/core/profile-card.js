@@ -10,7 +10,7 @@
 // мінімальна картка (фото з кешу + імʼя).
 
 import { openModal, closeModal } from './modal.js';
-import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, officialMarkHtml } from './supabase.js';
+import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, nameSlotStatic, largePhotoUrl } from './supabase.js';
 import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
@@ -36,7 +36,18 @@ function joinDate(iso) {
 function cardHtml(p) {
   const name = (p && p.name && p.name.trim()) ? p.name.trim() : 'Житель громади';
   const url  = (p && p.avatar_url) || cachedAvatar(p && p.uid) || '';
-  const av   = avatarCircle({ name, url, cls: 'pcard-av' });   // фото або кольорова літера
+  // 🔵 23.08 — КАРТКА БЕРЕ ВЕЛИКУ ВЕРСІЮ ФОТО, і це друга половина фіксу.
+  // Скарга Вови була про два різні місця, і дрібного файла бракувало ОБОМ:
+  // кружечок тут 120px, а на екрані щільністю 3 це **360 точок** — тобто навіть
+  // він розтягував 256-піксельний файл. Полагодити самий лише лайтбокс означало
+  // б лишити половину скарги.
+  // 🔑 Заразом виграш у швидкості: коли людина тапне по кружечку, великий файл
+  // уже в кеші браузера — фото на весь екран відкривається без підвантаження.
+  // ⚠️ Для аватарів, старших за 23.08, великої версії НЕ ІСНУЄ. Відкат живе в
+  // `onMount` (обробник `error` на самому `<img>`) — тихо повертає дрібний, тож
+  // такі картки виглядають рівно як сьогодні, без зламаної картинки.
+  const big  = url ? largePhotoUrl(url) : '';
+  const av   = avatarCircle({ name, url: big, cls: 'pcard-av' });   // фото або кольорова літера
 
   // Мета-лінія: 📍громада · N років (кожне опційне; нема обох → рядка нема).
   // 🛑 09.08 — ВІК СЮДИ НЕ ПРИХОДИТЬ І ЦЕ НАВМИСНО, не недогляд.
@@ -76,12 +87,12 @@ function cardHtml(p) {
   // відповіді `get_public_profile` ще до того, як вузол потрапить у документ.
   // Але сам ЗНАК мусить бути фізично тим самим, що й скрізь — інакше два майже
   // однакові кола розійшлись би розміром при першій же правці стилю.
-  const official = (p && p.official === true) ? officialMarkHtml() : '';
-
+  // 🔵 23.08 — і не лише знак, а й ГНІЗДО навколо нього (`nameSlotStatic`):
+  // саме гніздо тримає розмір «у кегль імені» і єдиний механізм вирівнювання.
   return `
     <div class="pcard">
-      <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ''}">${av}</div>
-      <div class="pcard-name">${escapeHtml(name)}${official}</div>
+      <div class="pcard-avwrap" data-pcard-photo="${big ? escapeHtml(big) : ''}" data-pcard-photo-sm="${url ? escapeHtml(url) : ''}">${av}</div>
+      <div class="pcard-name">${nameSlotStatic(escapeHtml(name), p && p.official === true)}</div>
       ${meta}${badge}${bio}${since}
       <div class="pcard-ads" data-pcard-ads hidden></div>
     </div>`;
@@ -155,9 +166,27 @@ export async function openProfileCard(uid) {
       // Тап по фото → на весь екран (лише коли фото реально є).
       const avwrap = wrap.querySelector('.pcard-avwrap');
       const url = avwrap && avwrap.dataset.pcardPhoto;
+      const small = (avwrap && avwrap.dataset.pcardPhotoSm) || '';
       if (url) {
+        // 🔵 23.08 — ВІДКАТ НА ДРІБНЕ ФОТО для аватарів, завантажених до цієї
+        // дати: великої версії в них немає, сховище віддасть 404. Обробник
+        // `error` мовчки повертає дрібний файл, тож людина бачить те саме, що
+        // й учора, а не порожній кружечок.
+        // ⚠️ `once` НЕ ставимо навмисно: після підміни `src` браузер вантажить
+        // наново, і якщо дрібний теж не долетить, обробник має спрацювати ще
+        // раз — інакше лишилась би зламана картинка. Від нескінченного кола
+        // боронить умова «підміняємо лише коли ще не підмінили».
+        const img = avwrap.querySelector('img');
+        if (img && small && small !== url) {
+          img.addEventListener('error', () => {
+            if (!img.dataset.fellBack) { img.dataset.fellBack = '1'; img.src = small; }
+          });
+        }
         avwrap.style.cursor = 'zoom-in';
-        avwrap.addEventListener('click', () => openPhotoLightbox(url));
+        // Лайтбокс отримує ОБИДВІ адреси: якщо великої немає, він сам відкотиться
+        // на дрібну. Покладатись лише на обробник кружечка не можна — людина може
+        // тапнути раніше, ніж повернеться 404.
+        avwrap.addEventListener('click', () => openPhotoLightbox(url, small));
       }
 
       // Оголошення автора — другим, тихим запитом (див. розбір при `adRowHtml`).
