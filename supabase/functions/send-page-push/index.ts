@@ -102,7 +102,27 @@ serve(async (req) => {
       .eq('page_id', post.page_id);
     if (post.author_uid) subsQuery = subsQuery.neq('uid', post.author_uid);
     const { data: subs } = await subsQuery;
-    const recipientUids = (subs || []).map((s: { uid: string }) => s.uid);
+    // 🆕 24.08 (B-33) — хто вимкнув «Стрічку» в кабінеті, того прибираємо
+    // ще ДО перевірки «чи є взагалі кому слати». Інакше запис журналу лишився б
+    // із думкою «надіслали», хоча всі адресати мовчать.
+    // 🔴 До 24.08 вимикачі сповіщень не читав НІХТО: вони писались у
+    // `localStorage` і там лишались. Слово Вови: «Декоративного в нас нічого не
+    // має бути… скасування сповіщення має бути робоче».
+    // 🔑 Відсутній рядок = ДОЗВОЛЕНО; помилка запиту — теж (краще зайве, ніж
+    // мовчки проковтнути підписку, яку людина зробила сама).
+    const усі = (subs || []).map((s: { uid: string }) => s.uid);
+    let recipientUids = усі;
+    {
+      const { data: prefs, error } = await admin
+        .from('notif_prefs').select('uid, feed').in('uid', усі);
+      if (!error) {
+        const off = new Set(
+          ((prefs || []) as Array<{ uid: string; feed: boolean }>)
+            .filter((r) => r.feed === false).map((r) => r.uid),
+        );
+        recipientUids = усі.filter((u: string) => !off.has(u));
+      }
+    }
     // ⚠️ Виходимо ТІЛЬКИ прибравши запис журналу. Інакше «нікому не надіслали» лишалось
     // би позначеним як «надіслано», і повтор уже не спрацював би. Реальна гонка: тригер
     // кличе функцію за ~40 мс після вставки поста, а пристрій підписника саме в цю мить

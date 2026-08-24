@@ -23,11 +23,12 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameSlot, liveName,
+  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, nameSlot,
+  liveName, liveFirstName,
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
-import { getSavedIds, saveBtnHtml } from '../core/board-shared.js';
+import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons } from '../core/board-shared.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
@@ -100,12 +101,29 @@ function isLikedByMe(postId) {
 // Вміст кнопки «Мене теж цікавить» (той самий рядок реакції в базі — див.
 // `qaInterestHtml`). Окремою функцією, бо `handleLikeClick` перемальовує лише
 // нутрощі кнопки, не саму кнопку — інакше делегований обробник втратив би вузол.
+//
+// 🔴 23.08 — КНОПКА ТЕПЕР КАЖЕ, ЩО САМЕ СТАЛОСЬ.
+// Було: змінювалась лише заливка серця, підпис «Мене теж цікавить» стояв в обох
+// станах. Тобто єдиний сигнал «спрацювало» — колір іконки, і людина, яка не
+// дивилась саме на серце, не знала, натиснула вона чи ні.
+//
+// 🔑 «· Збережено» береться з `isSaved()`, а НЕ з припущення «раз натиснув, то
+// збережено». Різниця не теоретична: людина може зняти закладку в шапці рукою,
+// лишивши «Цікавить» увімкненим (зняття закладки нічого не вимикає — так
+// вирішив Вова). Тоді напис мусить зникнути, інакше кнопка бреше про стан.
 function likeBtnInner(postId) {
   const on = isLikedByMe(postId);
   const n  = getLikeCount(postId);
-  return `${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
-          <span class="qa-interest-label">Мене теж цікавить</span>
-          ${n ? `<span class="qa-interest-n">${n}</span>` : ''}`;
+  const число = n ? `<span class="qa-interest-n">${n}</span>` : '';
+  if (!on) {
+    return `${HEART_OUTLINE_SVG}
+            <span class="qa-interest-label">Мене теж цікавить</span>
+            ${число}`;
+  }
+  return `${HEART_FILLED_SVG}
+          <span class="qa-interest-label">Цікавить</span>
+          ${число}
+          ${isSaved(postId) ? '<span class="qa-interest-saved">· Збережено</span>' : ''}`;
 }
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
@@ -351,6 +369,49 @@ function scrollToMyAnswer() {
   else body.scrollTop = body.scrollHeight;
 }
 
+// ── ПОКАЗАТИ КОНКРЕТНУ ВІДПОВІДЬ (крок А4, 23.08) ───────────────────────────
+//
+// 🔴 ГОЛОВНА СКЛАДНІСТЬ ТУТ — НЕ ПРОКРУТКА, А ХОЛОДНИЙ СТАРТ.
+// Тап по сповіщенню часто відкриває застосунок з нуля. Відповіді в цей момент
+// ще їдуть із бази (`fetchAllComments` у `renderBoard`), тож екран малюється з
+// порожнім списком — і шукати в ньому нема чого. Якби ми спробували лише раз,
+// фіча мовчки не працювала б САМЕ В ГОЛОВНОМУ своєму сценарії, а на теплому
+// застосунку працювала б — тобто виглядала б як «іноді не спрацьовує».
+//
+// 🔑 Тому другий захід чекає на подію `cstl-discussions-data`, яку кидає
+// `setDiscussionsData()`, щойно відповіді приїхали. Другого джерела не заводимо —
+// подія вже існує для капсули «НОВЕ» на Громаді.
+//
+// ⚠️ Підписку знімаємо в ОБОХ випадках: і коли знайшли, і коли екран закрили
+// раніше за дані. Інакше слухач пережив би екран і смикнув прокрутку вже в
+// іншому питанні.
+function revealAnswer(commentId) {
+  const id = String(commentId);
+  const спробувати = () => {
+    const screen = _chatModalEl;
+    if (!screen) return true;   // екран закрили — далі чекати нема сенсу
+    const row = screen.querySelector(`.qa-answer[data-msg="${CSS.escape(id)}"]`);
+    if (!row) return false;
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Підсвітка — ПІДКАЗКА «ось воно», а не стан: знімаємо через 2.4с, як у
+    // «Стрічці». Лишена назавжди, вона читалась би як «ця відповідь особлива».
+    row.classList.add('qa-answer--focus');
+    setTimeout(() => row.classList.remove('qa-answer--focus'), 2400);
+    return true;
+  };
+  if (спробувати()) return;
+  const наДані = () => {
+    // Дані приїхали — список перемальовується, тільки тоді є що шукати.
+    rerenderCommentsBlock(_chatOpenPostId);
+    requestAnimationFrame(() => {
+      if (спробувати()) window.removeEventListener('cstl-discussions-data', наДані);
+    });
+  };
+  window.addEventListener('cstl-discussions-data', наДані);
+  // Страховка: якщо відповіді так і не приїхали (мережа), слухач не висить вічно.
+  setTimeout(() => window.removeEventListener('cstl-discussions-data', наДані), 15000);
+}
+
 // Оновити лічильник відповідей у заголовку секції відкритого питання
 function updateChatHeaderCount(postId) {
   if (postId !== _chatOpenPostId) return;
@@ -538,16 +599,26 @@ export function openDiscussionCompose() {
 // темах) перестали б рахуватись і для людини це виглядало б як «лайки пропали».
 function qaInterestHtml(postId) {
   const on = isLikedByMe(postId);
-  const n  = getLikeCount(postId);
   return `
     <button class="qa-interest${on ? ' qa-interest--on' : ''}" type="button"
             data-like-id="${postId}"
             aria-pressed="${on ? 'true' : 'false'}"
-            aria-label="${on ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить'}">
-      ${on ? HEART_FILLED_SVG : HEART_OUTLINE_SVG}
-      <span class="qa-interest-label">Мене теж цікавить</span>
-      ${n ? `<span class="qa-interest-n">${n}</span>` : ''}
+            aria-label="${interestAria(postId)}">
+      ${likeBtnInner(postId)}
     </button>`;
+}
+
+// Підпис для читача екрана. 🔑 Окремою функцією, бо його ставлять ДВА місця
+// (перший малюнок і перемальовування після тапу), і колись вони вже розійшлись:
+// у `handleLikeClick` мітки були переставлені місцями — увімкнена кнопка казала
+// «Мене теж цікавить», вимкнена «Прибрати позначку». Одне джерело — одна правда.
+// ⚠️ Про «Збережено» читачеві екрана кажемо теж: на екрані це видно, отже має
+// бути й тут (той самий висновок, що записаний про `aria` у правилі №12).
+function interestAria(postId) {
+  if (!isLikedByMe(postId)) return 'Мене теж цікавить';
+  return isSaved(postId)
+    ? 'Цікавить, збережено. Прибрати позначку'
+    : 'Цікавить. Прибрати позначку';
 }
 
 // Шапка екрана питання. 🔑 ПРОЗОРА, зі скляним розмиттям — контент їде ПІД нею.
@@ -570,7 +641,12 @@ function qaHeadHtml(post) {
 // ЧОТИРИ зовнішні точки (`board.js` делегація і deep-link, `core/saved-hub.js`
 // `openChatById`, `handleDiscussionsAuthChange`). Перейменування дало б широкий diff
 // без жодної користі для людини — а користь має бути в тому, що вона бачить.
-export function openChatModal(post) {
+//
+// 🆕 23.08 (крок А4) — `focusCommentId`: прийшли зі сповіщення «вам відповіли».
+// Відкрити питання й лишити людину нагорі означало б віддати їй пошук потрібної
+// репліки вручну — а сповіщення саме про неї. `comment_id` лежав у payload push
+// із 16.08 і не використовувався жодного разу.
+export function openChatModal(post, focusCommentId = null) {
   if (_chatModalEl) return;
   _chatOpenPostId = post.id;
 
@@ -619,6 +695,7 @@ export function openChatModal(post) {
   _chatModalEl = screen;
   hydrateAvatars(screen);   // чужі фото профілю
   hydrateNames(screen);     // живі імена за uid
+  if (focusCommentId) revealAnswer(focusCommentId);
 
   requestAnimationFrame(() => screen.classList.add('visible'));
 
@@ -920,11 +997,36 @@ export function renderQuestionCard(p) {
   // питаннями і блок відповіді) читались однаковим тоном, і око бачило суцільну
   // сіру масу замість структури. Тепер відповідь — просто тихий текст в один
   // рядок: вона додає користі й не створює «картку всередині картки».
+  // 🔴 23.08, РЕДАКЦІЯ 6 — ВІДПОВІДЬ ПОПЕРЕДУ, АВТОР ПОЗАДУ.
+  // Було: `Дмитро: Та начебто почнуть у вересні.` — тобто рядок починався з
+  // імені й двокрапки, а це розмітка РЕПЛІКИ МЕСЕНДЖЕРА. Саме її ми виводили
+  // з екрана двома редакціями поспіль, а в списку вона лишалась.
+  // 🔑 Рішення Вови 23.08: «Формат "Та начебто почнуть у вересні. — Дмитро"
+  // кращий для щільності стрічки, якщо візуально чітко відділити відповідь від
+  // автора». Порядок відповідає головному в розділі: цінність — ВІДПОВІДЬ, а не
+  // той, хто її дав.
+  //
+  // 🛑 ТИРЕ ЛЕЖИТЬ ПОЗА ВУЗЛОМ З `data-name-uid`, І ЦЕ НЕ ПРИДИРКА.
+  // `hydrateNames()` робить `el.textContent = nm`, тобто ЗАМІНЮЄ ВЕСЬ ВМІСТ
+  // вузла живим імʼям. Поклади тире всередину — і воно зникне рівно тоді, коли
+  // приїде профіль, тобто «іноді», що найгірше для пошуку такої вади.
   const перша = відповіді[0];
   const цитата = перша
-    // ⚠️ Двокрапка лишається у ЖИРНОМУ span, але ПОЗА гніздом: усередині вона
-    // потрапила б у текстовий вузол імені, і знак став би після неї («Ігор: ✓»).
-    ? `<p class="qa-row-answer"><span class="qa-row-answer-who">${nameSlot(перша.sender_uid, liveName(перша.author || 'Житель', перша.sender_uid))}:</span> ${escapeHtml(перша.text)}</p>`
+    // 🔀 24.08 — ЗЛИТТЯ ДВОХ РОБІТ, які змінили цей рядок ОДНОЧАСНО і по-різному:
+    //   • ця гілка: формат «текст — Автор» (відповідь попереду) + КОРОТКЕ імʼя;
+    //   • `main` (PR #1001): гніздо `nameSlot()` під синю галочку офіційного акаунта.
+    // Обидві потрібні, і вони не конфліктують по суті: `nameSlot` лише обгортає
+    // текст, а який саме текст — вирішуємо ми.
+    // 🔑 `data-name-short` передаємо ТРЕТІМ аргументом (`extraAttrs`), бо всередині
+    // `nameSlot` кличе `nameUid(uid)` без прапорця. Без цього гідрація повернула б
+    // повне імʼя з прізвищем — рівно те, що обрізалось на екрані («— Дмитро Сел…»).
+    // 🛑 Тире — ПОЗА гніздом, з тієї ж причини, з якої там опинилась двокрапка в
+    // редакції `main`: усередині воно потрапило б у текстовий вузол імені, і знак
+    // став би після нього.
+    ? `<p class="qa-row-answer">
+         <span class="qa-row-answer-text">${escapeHtml(перша.text)}</span>
+         <span class="qa-row-answer-who">— ${nameSlot(перша.sender_uid, liveFirstName(перша.author, перша.sender_uid), ' data-name-short=""')}</span>
+       </p>`
     : '';
 
   // 🔑 МЕТАДАНІ У ДВА РЯДКИ, а не в один. «Володимир · 8 липня · потрібна
@@ -932,22 +1034,58 @@ export function renderQuestionCard(p) {
   // питання (заклик). Розділені, вони читаються миттєво — на швидкому перегляді
   // стрічки око встигає взяти лише один рядок, і він має бути про стан.
   // _(12.08: тут стояло «особливо в 60+»; вік виправлено на 18-40+.)_
+  // 🆕 23.08 — ПОПИТ ВИХОДИТЬ У СПИСОК. Досі число «цікавить» бачив лише той,
+  // хто вже відкрив питання, — тобто публічний за задумом сигнал був захований
+  // за тапом і не працював на те, заради чого існує.
+  //
+  // 🔑 ПОРІГ ДВА, І ЦЕ НЕ ОКРУГЛЕННЯ. «1 чекає» — це майже завжди сам автор
+  // питання, тобто рядок не додає нічого до того, що вже видно вище. Попит
+  // починається там, де людей БІЛЬШЕ ОДНІЄЇ: «нас четверо, і ніхто не знає» —
+  // це вже суспільний запит, і саме він вмикає того, хто відповість.
+  // ⚠️ «чекають», а не «цікавить»: слово має узгоджуватись із числом, а
+  // «4 цікавить» не узгоджується ніяк. Кнопка називає ДІЮ («Мене теж цікавить»),
+  // картка називає ЛЮДЕЙ — це різні речі, тож і слова різні.
+  const попит = getLikeCount(p.id);
+  const хвіст = попит >= 2 ? ` <span class="qa-row-wait">· ${попит} чекають</span>` : '';
+  // Значок при числі — щоб «скільки відповідей» зчитувалось до читання слів.
+  // ⚠️ Той самий контурний значок, що вже стоїть у порожньому стані екрана
+  // питання (`COMMENT_ICON_SVG`), а не емодзі: емодзі малюється шрифтом системи
+  // і на різних телефонах має різний колір та вагу.
   const мітка = n
-    ? `<p class="qa-row-n">${n} ${answerWord(n)}</p>`
-    : '<p class="qa-row-n qa-row-n--none">Потрібна відповідь</p>';
+    ? `<p class="qa-row-n"><span class="qa-row-n-ic" aria-hidden="true">${COMMENT_ICON_SVG}</span>${n} ${answerWord(n)}${хвіст}</p>`
+    : `<p class="qa-row-n qa-row-n--none">Потрібна відповідь${хвіст}</p>`;
 
+  // 🔴 23.08 — ПОРЯДОК ЗМІНЕНО: «ХТО І КОЛИ» ЇДЕ ВНИЗ І СТАЄ ДРІБНІШИМ.
+  //
+  // 📐 Чому саме це, а не чергова перестановка. Заміряно: під питанням стояли
+  // ТРИ рядки одного кегля (15px) і одного кольору — «хто і коли», «скільки
+  // відповідей», цитата. Око не має за що зачепитись і читає їх як суцільний
+  // абзац; саме це Вова й називав словом «зливається». Ніяке перевпорядкування
+  // однакових рядків цього не лікує — рядків так само три й вони так само
+  // однакові. Лікує РІЗНИЦЯ ВАГИ:
+  //
+  //   питання ................ 20px / 600   ← про що мова
+  //   💬 3 відповіді ......... 15px / 600   ← стан: варто відкривати чи ні
+  //   відповідь — Автор ...... 15px / 400   ← вже готова відповідь
+  //   👤 Олександр · 23 год .. 13px / 400   ← довідка
+  //
+  // 🔑 «Хто питає» — найменш потрібний факт у момент вибору «відкривати чи ні»:
+  // у громаді, де всі одне одного знають, імʼя сусіда рішення не змінює. Воно
+  // лишається (людина хоче знати, хто питає), але перестає сперечатись за увагу
+  // з самою відповіддю.
   return `
     <article class="qa-row${n ? '' : ' qa-row--unanswered'}"
              data-post-id="${p.id}" data-question-open="${p.id}">
       <div class="qa-row-body">
         <h3 class="qa-card-q">${escapeHtml(p.text)}</h3>
+        ${мітка}
+        ${цитата}
         <p class="qa-card-meta">
+          <span class="qa-card-ava">${authorAvatar(p.author, p.owner_uid)}</span>
           <span class="qa-card-name">${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-card-when">${formatTime(postTime(p))}</span>
         </p>
-        ${мітка}
-        ${цитата}
       </div>
       <span class="qa-row-go" aria-hidden="true">${CHEVRON_SVG}</span>
     </article>
@@ -960,6 +1098,23 @@ export function renderQuestionCard(p) {
 // лайк теми («мені подобається») перетворився на сигнал попиту («я теж хочу знати»),
 // що для питання єдине осмислене: лайкати чуже незнання нема чого. Новий код емоції
 // знецінив би 9 наявних реакцій, і для людини це виглядало б як «усе пропало».
+//
+// 🔴 23.08 — «ЦІКАВИТЬ» КЛАДЕ ПИТАННЯ У «ЗБЕРЕЖЕНІ», І РОБИТЬ ЦЕ АСИМЕТРИЧНО.
+//
+// Рішення Вови (`docs/QA_CONCEPT.md` §9), дослівно: «Цікавить → автоматично
+// додає в Збережені. Видалення "Цікавить" → не видаляє із Збережених. Це дає
+// правильну незалежність двом механікам».
+//
+// 🔑 ЧОМУ АСИМЕТРІЯ ЩЕ Й ПРОСТІША ЗА ТОГЛ В ОБИДВА БОКИ. Якби зняття «Цікавить»
+// прибирало закладку, довелось би памʼятати ДЖЕРЕЛО кожної закладки — поклала її
+// людина чи механіка. Це поле в базі, міграція і власний клас помилок («чому
+// зникло те, що я зберіг рукою?»). Тут же: увімкнув — дозберегли, якщо ще не
+// збережено; вимкнув — не чіпаємо нічого.
+//
+// 🛑 І головна умова Вови: дія НЕ ПРИХОВАНА. Людина бачить її двічі — підписом
+// «· Збережено» на самій кнопці і закладкою в шапці, що заповнюється тієї ж
+// миті (`syncSaveButtons`). Саме прихованість була єдиним запереченням проти
+// цієї моделі, і вона знята.
 export function handleLikeClick(likeBtn) {
   const id = Number(likeBtn.dataset.likeId);
   requireAuth('позначити питання', async () => {
@@ -969,20 +1124,30 @@ export function handleLikeClick(likeBtn) {
     entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
     entry.my = wasLiked ? null : LIKE_EMOJI;
     reactionsByPost.set(id, entry);
+
+    // Дозбереження — ЛИШЕ при увімкненні і лише якщо закладки ще немає.
+    // ⚠️ Прапорець потрібен для відкату: якщо база відмовить, треба зняти саме
+    // ТУ закладку, яку поставили ми, а не ту, що людина зберегла раніше сама.
+    let дозберегли = false;
+    if (!wasLiked && !isSaved(id)) { toggleSaved(id); дозберегли = true; }
+
     likeBtn.innerHTML = likeBtnInner(id);
     likeBtn.classList.toggle('qa-interest--on', !wasLiked);
     likeBtn.setAttribute('aria-pressed', wasLiked ? 'false' : 'true');
-    likeBtn.setAttribute('aria-label', wasLiked ? 'Мене теж цікавить' : 'Прибрати позначку «мене теж цікавить»');
+    likeBtn.setAttribute('aria-label', interestAria(id));
+    if (дозберегли) syncSaveButtons(id);   // закладка в шапці заповнюється тієї ж миті
+
     const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
     if (!res.ok) {
-      // Відкат при помилці мережі/RLS
+      // Відкат при помилці мережі/RLS — разом із закладкою, яку поставили ми.
       entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
       entry.my = wasLiked ? LIKE_EMOJI : null;
       reactionsByPost.set(id, entry);
+      if (дозберегли) { toggleSaved(id); syncSaveButtons(id); }
       likeBtn.innerHTML = likeBtnInner(id);
       likeBtn.classList.toggle('qa-interest--on', wasLiked);
       likeBtn.setAttribute('aria-pressed', wasLiked ? 'true' : 'false');
-      likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати позначку «мене теж цікавить»' : 'Мене теж цікавить');
+      likeBtn.setAttribute('aria-label', interestAria(id));
       showToast('Не вдалося зберегти позначку', 2500, 'error');
     }
   });

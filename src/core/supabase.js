@@ -712,11 +712,28 @@ export function markOfficial(nameEl, uid) {
 // nameUid → атрибут-маркер, який hydrateNames знайде і підмінить на живе імʼя.
 // liveName → одразу підставляє вже кешоване живе імʼя (щоб не мигало), інакше
 // вморожений текст, інакше fallback ('Житель' в обговореннях / 'анонімно' на дошці).
-export function nameUid(uid) {
-  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
+export function nameUid(uid, { short = false } = {}) {
+  if (!uid) return '';
+  // 🆕 23.08 — `short` просить показувати ЛИШЕ ІМʼЯ, без прізвища.
+  // 📐 Заміряно на живій базі: 7 профілів із 12 записані як «Імʼя Прізвище»
+  // (найдовше повне — 16 символів, найдовше саме імʼя — 9). Тобто в тісних
+  // місцях повне імʼя не вміщається БІЛЬШОСТІ людей, а не поодиноким.
+  // 🛑 Прапорець потрібен саме тут, а не в місці виклику: `hydrateNames()`
+  // нижче робить `el.textContent = nm`, тобто ЗАМІНЮЄ вміст живим імʼям —
+  // будь-яке скорочення, зроблене при малюванні, воно б стерло, щойно приїде
+  // профіль. Вада виглядала б як «імʼя іноді вилазить», що шукається найгірше.
+  return ` data-name-uid="${escapeHtml(uid)}"${short ? ' data-name-short=""' : ''}`;
 }
 export function liveName(name, uid, fallback = 'Житель') {
   return escapeHtml(cachedName(uid) || name || fallback);
+}
+// Те саме, але лише перше слово — для тісних рядків (цитата відповіді в картці).
+// ⚠️ Скорочуємо ДО `escapeHtml`, а не після: екранування може перетворити один
+// символ на послідовність (`&` → `&amp;`), і різати вже екранований рядок —
+// вірний спосіб колись отримати на екрані половину такої послідовності.
+export function liveFirstName(name, uid, fallback = 'Житель') {
+  const повне = (cachedName(uid) || name || fallback).trim();
+  return escapeHtml(повне.split(/\s+/)[0] || fallback);
 }
 
 // 🔵 ГНІЗДО ІМЕНІ — ОДНА ОБГОРТКА НА ВСІ ПОВЕРХНІ (23.08).
@@ -881,7 +898,11 @@ export async function hydrateNames(root) {
     el.dataset.nameGen = gen;
     const uid = el.dataset.nameUid;
     const nm = cachedName(uid);
-    if (nm && el.textContent !== nm) el.textContent = nm;   // жива назва перекриває вморожену
+    // `data-name-short` — показати лише імʼя (без прізвища). Ставить `nameUid(uid,
+    // { short: true })`; потрібен там, де рядок тісний і повне імʼя обрізалось би
+    // трьома крапками посеред прізвища.
+    const показ = (nm && el.hasAttribute('data-name-short')) ? (nm.trim().split(/\s+/)[0] || nm) : nm;
+    if (показ && el.textContent !== показ) el.textContent = показ;   // жива назва перекриває вморожену
     // 🔵 Галочка їде разом з іменем — тим самим проходом, по тих самих вузлах.
     // Саме це і робить її «всюди, де видно імʼя» без правок у кожному екрані.
     markOfficial(el, uid);
@@ -1590,6 +1611,56 @@ export async function addSavedPost(uid, postId) {
 export async function removeSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
   const r = await netCall(() => supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId));
+  return r.ok ? { ok: true } : { ok: false };
+}
+
+// ── НАЛАШТУВАННЯ СПОВІЩЕНЬ (B-33, 24.08) ────────────────────────────────────
+//
+// 🔴 Досі вони жили в `localStorage` і не читались НІКИМ — ні застосунком, ні
+// Edge Functions. Тобто чотири тумблери в кабінеті були декоративні. Тепер
+// джерело одне — таблиця `notif_prefs`, і його читають ті самі функції, що
+// надсилають push.
+//
+// 🔑 Чому саме в базу: push прив'язаний до АКАУНТА (`user_push_devices.uid`),
+// отже і вимикач мусить бути акаунтним. У `localStorage` він був на пристрої —
+// вимкнув на телефоні, а на компʼютері й далі приходить.
+
+// Теми, які реально відповідають наявним push (звірено 24.08 по всіх сімох
+// функціях). 🛑 Ключа під те, чого не існує, тут бути не може — саме це й було
+// суттю B-33.
+export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed'];
+
+export async function fetchNotifPrefs(uid) {
+  if (!supa || !uid) return null;
+  const { data, error } = await supa
+    .from('notif_prefs').select('buses, board, questions, feed').eq('uid', uid).maybeSingle();
+  if (error) { console.warn('[supabase] fetchNotifPrefs:', error.message); return null; }
+  return data || null;   // null = рядка ще немає (людина не міняла нічого)
+}
+
+// Зберегти ОДИН перемикач. `upsert` — бо рядок може ще не існувати.
+// ⚠️ БЕЗ `.select()` НАВМИСНО: `.upsert().select()` це `INSERT … RETURNING`, а
+// він мусить ще й ПРОЧИТАТИ вставлений рядок через SELECT-політику. Саме на
+// цьому двічі горів проєкт (правило №11-БІС: `push_subscriptions` 16.08 і
+// `page_comments` 22.08). Повертати нам тут нема чого — стан ми й так знаємо.
+export async function saveNotifPref(uid, topic, enabled) {
+  if (!supa || !uid) return { ok: false };
+  if (!NOTIF_TOPICS.includes(topic)) return { ok: false };
+  const r = await netCall(() => supa.from('notif_prefs')
+    .upsert({ uid, [topic]: !!enabled, updated_at: new Date().toISOString() },
+            { onConflict: 'uid' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+// Первинне заповнення з того, що людина вже вибирала НА ЦЬОМУ ПРИСТРОЇ.
+// 🔑 Навіщо: до 24.08 вибір лежав у `localStorage`, і просто викинути його
+// означало б мовчки ввімкнути назад те, що людина вимикала. Переносимо один
+// раз — далі джерело тільки база.
+export async function seedNotifPrefs(uid, fromLocal) {
+  if (!supa || !uid || !fromLocal) return { ok: false };
+  const рядок = { uid, updated_at: new Date().toISOString() };
+  for (const t of NOTIF_TOPICS) if (t in fromLocal) рядок[t] = !!fromLocal[t];
+  const r = await netCall(() => supa.from('notif_prefs').upsert(рядок, { onConflict: 'uid' }));
   return r.ok ? { ok: true } : { ok: false };
 }
 

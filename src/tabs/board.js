@@ -2766,7 +2766,11 @@ export async function openChatById(postId) {
 // Deep-link (6b): відкрити елемент Дошки за id — оголошення АБО обговорення.
 // Сам визначає тип поста (chat → Обговорення-чат, інше → модалка оголошення) і
 // перемикає на потрібну вкладку. Холодний старт — дочекатись даних (await renderBoard).
-export async function openBoardItemById(postId) {
+// 🆕 23.08 (крок А4) — `focusCommentId` веде до КОНКРЕТНОЇ відповіді у питанні.
+// Приходить із `?c=<id>` у deep-link сповіщення (той самий хвіст, що вже
+// живить «Стрічку»). Для оголошень Дошки він не потрібен: там лист коментарів
+// відкривається окремою дією, а не разом із карткою.
+export async function openBoardItemById(postId, focusCommentId = null) {
   if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
   const post = allPosts.find(p => p.id === postId);
   // 🔴 16.08 — БУЛО МОВЧАЗНЕ `return`. Тап по сповіщенню про оголошення, якого вже
@@ -2779,7 +2783,7 @@ export async function openBoardItemById(postId) {
     showToast('Це оголошення більше недоступне — можливо, його вже зняли', 3500);
     return;
   }
-  if (post.type === 'chat') { window.switchTab?.('discussions'); openChatModal(post); }
+  if (post.type === 'chat') { window.switchTab?.('discussions'); openChatModal(post, focusCommentId); }
   else                      { window.switchTab?.('board');       openAdModalStandalone(post); }
 }
 
