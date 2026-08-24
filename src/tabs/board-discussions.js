@@ -28,7 +28,8 @@ import {
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
-import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons } from '../core/board-shared.js';
+import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
+         adoptLegacyScopedKey } from '../core/board-shared.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
@@ -128,7 +129,14 @@ function likeBtnInner(postId) {
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
 
-const LS_CHAT_SEEN = 'cstl-chat-seen-v1';  // { postId: timestamp останнього перегляду теми (ms) }
+// 🔴 24.08 — під акаунт (як решта міток «бачив»): мапа «яку тему коли дивився»
+// це персональна історія, і другому акаунту на тому самому телефоні вона
+// казала, що він уже читав те, чого не відкривав.
+const LS_CHAT_SEEN_BASE = 'cstl-chat-seen-v1';  // { postId: timestamp перегляду теми (ms) }
+const LS_CHAT_SEEN_KEY = () => {
+  adoptLegacyScopedKey(LS_CHAT_SEEN_BASE);   // мапа старої версії → в простір людини
+  return LS_CHAT_SEEN_BASE + ':' + (currentUserId() || 'anon');
+};
 
 // lsGet/lsSet тепер спільні (core/utils.js) — ними користується і антифлуд «Стрічки».
 
@@ -170,13 +178,13 @@ function tsMs(v) {
 // в екрані більше немає (чат-механіка), але сама межа ПОТРІБНА далі: на ній
 // тримається крапка «є нове» біля іконки вкладки (`unseenDiscussionsCount`).
 function getChatSeen(postId) {
-  const m = lsGet(LS_CHAT_SEEN, {});
+  const m = lsGet(LS_CHAT_SEEN_KEY(), {});
   return m[String(postId)] || 0;
 }
 function setChatSeen(postId, ts) {
-  const m = lsGet(LS_CHAT_SEEN, {});
+  const m = lsGet(LS_CHAT_SEEN_KEY(), {});
   m[String(postId)] = ts;
-  lsSet(LS_CHAT_SEEN, m);
+  lsSet(LS_CHAT_SEEN_KEY(), m);
 }
 
 // ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────
