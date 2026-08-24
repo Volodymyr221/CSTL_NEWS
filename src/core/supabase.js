@@ -1531,6 +1531,56 @@ export async function removeSavedPost(uid, postId) {
   return r.ok ? { ok: true } : { ok: false };
 }
 
+// ── НАЛАШТУВАННЯ СПОВІЩЕНЬ (B-33, 24.08) ────────────────────────────────────
+//
+// 🔴 Досі вони жили в `localStorage` і не читались НІКИМ — ні застосунком, ні
+// Edge Functions. Тобто чотири тумблери в кабінеті були декоративні. Тепер
+// джерело одне — таблиця `notif_prefs`, і його читають ті самі функції, що
+// надсилають push.
+//
+// 🔑 Чому саме в базу: push прив'язаний до АКАУНТА (`user_push_devices.uid`),
+// отже і вимикач мусить бути акаунтним. У `localStorage` він був на пристрої —
+// вимкнув на телефоні, а на компʼютері й далі приходить.
+
+// Теми, які реально відповідають наявним push (звірено 24.08 по всіх сімох
+// функціях). 🛑 Ключа під те, чого не існує, тут бути не може — саме це й було
+// суттю B-33.
+export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed'];
+
+export async function fetchNotifPrefs(uid) {
+  if (!supa || !uid) return null;
+  const { data, error } = await supa
+    .from('notif_prefs').select('buses, board, questions, feed').eq('uid', uid).maybeSingle();
+  if (error) { console.warn('[supabase] fetchNotifPrefs:', error.message); return null; }
+  return data || null;   // null = рядка ще немає (людина не міняла нічого)
+}
+
+// Зберегти ОДИН перемикач. `upsert` — бо рядок може ще не існувати.
+// ⚠️ БЕЗ `.select()` НАВМИСНО: `.upsert().select()` це `INSERT … RETURNING`, а
+// він мусить ще й ПРОЧИТАТИ вставлений рядок через SELECT-політику. Саме на
+// цьому двічі горів проєкт (правило №11-БІС: `push_subscriptions` 16.08 і
+// `page_comments` 22.08). Повертати нам тут нема чого — стан ми й так знаємо.
+export async function saveNotifPref(uid, topic, enabled) {
+  if (!supa || !uid) return { ok: false };
+  if (!NOTIF_TOPICS.includes(topic)) return { ok: false };
+  const r = await netCall(() => supa.from('notif_prefs')
+    .upsert({ uid, [topic]: !!enabled, updated_at: new Date().toISOString() },
+            { onConflict: 'uid' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+// Первинне заповнення з того, що людина вже вибирала НА ЦЬОМУ ПРИСТРОЇ.
+// 🔑 Навіщо: до 24.08 вибір лежав у `localStorage`, і просто викинути його
+// означало б мовчки ввімкнути назад те, що людина вимикала. Переносимо один
+// раз — далі джерело тільки база.
+export async function seedNotifPrefs(uid, fromLocal) {
+  if (!supa || !uid || !fromLocal) return { ok: false };
+  const рядок = { uid, updated_at: new Date().toISOString() };
+  for (const t of NOTIF_TOPICS) if (t in fromLocal) рядок[t] = !!fromLocal[t];
+  const r = await netCall(() => supa.from('notif_prefs').upsert(рядок, { onConflict: 'uid' }));
+  return r.ok ? { ok: true } : { ok: false };
+}
+
 // ── ВІДСТЕЖУВАНІ РЕЙСИ — гідрація з push_subscriptions (синхрон між пристроями) ──
 // Push уже per-uid у БД. Для показу на ІНШОМУ пристрої читаємо підписки акаунта
 // (сьогодні+майбутні) і реконструюємо записи trackedRoutes для hero/модалки.

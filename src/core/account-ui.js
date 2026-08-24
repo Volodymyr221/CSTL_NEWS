@@ -16,6 +16,7 @@ import {
   netErrorText,
   analyticsEnabled, setAnalyticsEnabled,
   deleteMyAccount,
+  fetchNotifPrefs, saveNotifPref, seedNotifPrefs, NOTIF_TOPICS,
 } from './supabase.js';
 import {
   isLoggedIn, currentUser, onAuthChange,
@@ -107,23 +108,50 @@ function openProfile() {
   wrap.querySelector('#acc-later').addEventListener('click', () => finish(false));
 }
 
+// 🔴 24.08 — B-33: ТУМБЛЕРИ СТАЛИ РОБОЧИМИ, І НАБІР ЗМІНИВСЯ.
+//
+// Було чотири: «Автобуси · Світло · Новини · Дошка». Жоден нічого не вимикав
+// (`notif_prefs` у `localStorage` не читався ніким), а два з них були гірші за
+// просто неробочі: **«Світло» і «Новини» вимикали те, чого не існує** — таких
+// push у проєкті немає взагалі. Людина тисне тумблер, нічого не приходить — і
+// робить висновок, що вимикач працює. Вада з ФАЛЬШИВИМ ПІДТВЕРДЖЕННЯМ.
+//
+// 🛑 Тому обидва прибрані, а не «лишені на майбутнє»: тумблер під те, чого
+// немає, — це та сама декорація, тільки з обіцянкою. Заведемо push про світло —
+// повернемо тумблер РАЗОМ із ним.
+//
+// ✅ Лишились ті, під якими є справжній push, і доданий пʼятий — «Питання»
+// (звірено по всіх сімох Edge Functions 24.08).
+//
+// 🛑 Приватних повідомлень і групового чату тут НЕМАЄ навмисно: це персональне
+// звернення до конкретної людини, і воно не притишується — те саме правило, що
+// вже діє всередині `send-answer-push` для «вам відповіли».
 const NOTIF_KEYS = [
-  { k: 'buses', ic: ICONS.bus,       label: 'Автобуси',  def: true },
-  { k: 'power', ic: ICONS.bulb,      label: 'Світло',    def: true },
-  { k: 'news',  ic: ICONS.newspaper, label: 'Новини',    def: false },
-  { k: 'board', ic: ICONS.pin,       label: 'Дошка',     def: true },
+  { k: 'buses',     ic: ICONS.bus,     label: 'Автобуси', hint: 'Рейси, які ви відстежуєте' },
+  { k: 'questions', ic: ICONS.message, label: 'Питання',  hint: 'Відповіді на ваші й позначені питання' },
+  { k: 'board',     ic: ICONS.pin,     label: 'Дошка',    hint: 'Коментарі до ваших оголошень' },
+  { k: 'feed',      ic: ICONS.bookmark, label: 'Стрічка', hint: 'Нові дописи сторінок і коментарі' },
 ];
+
+// Локальний знімок — щоб екран малювався ОДРАЗУ, не чекаючи мережі.
+// 🔑 Це не друге джерело правди, а кеш: істина в базі, сюди лише дублюється
+// після кожної зміни. Без нього тумблери блимали б у стан «усе ввімкнено» на
+// кожному відкритті кабінету.
 function loadNotifPrefs(uid) {
+  const out = {};
+  NOTIF_KEYS.forEach(n => out[n.k] = true);   // за замовчуванням усе ввімкнено
   try {
     const raw = JSON.parse(localStorage.getItem('notif_prefs:' + uid) || '{}');
-    const out = {};
-    NOTIF_KEYS.forEach(n => { out[n.k] = (n.k in raw) ? !!raw[n.k] : n.def; });
-    return out;
-  } catch { const o = {}; NOTIF_KEYS.forEach(n => o[n.k] = n.def); return o; }
+    NOTIF_KEYS.forEach(n => { if (n.k in raw) out[n.k] = !!raw[n.k]; });
+  } catch { /* немає або зіпсовано — лишаємо дефолти */ }
+  return out;
 }
 function saveNotifPrefs(uid, prefs) {
   try { localStorage.setItem('notif_prefs:' + uid, JSON.stringify(prefs)); } catch { /* ignore */ }
 }
+
+// Чи вже перенесли старий вибір із `localStorage` у базу (один раз на акаунт).
+const SEEDED_KEY = (uid) => 'notif_seeded:' + uid;
 
 // ── Екран 3: «Мій кабінет» — повноекранний, з анкетою ─────────────
 // Кабінет — повноекранний ШАР (core/layers.js): системний жест «назад» і кнопка
@@ -232,8 +260,13 @@ async function openAccount() {
         ${NOTIF_KEYS.map(n => `
           <div class="acc-cab-row acc-cab-row--tog">
             <span class="acc-cab-row-ic">${n.ic}</span>
-            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
-            <button class="acc-tog${prefs[n.k] ? '' : ' off'}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
+            <span class="acc-cab-row-body">
+              <span class="acc-cab-row-name">${n.label}</span>
+              <span class="acc-cab-row-desc">${n.hint}</span>
+            </span>
+            <button class="acc-tog${prefs[n.k] ? '' : ' off'}" data-notif="${n.k}" type="button"
+                    role="switch" aria-checked="${prefs[n.k] ? 'true' : 'false'}"
+                    aria-label="${n.label} — ${n.hint}"></button>
           </div>`).join('')}
       </div>
 
@@ -358,13 +391,54 @@ async function openAccount() {
     else if (go === 'msgs') openThreadsList();
     else if (go === 'saved') openSavedHub();   // хаб збережених (замість «незабаром»)
   }));
-  // Тумблери сповіщень (localStorage — працює одразу)
-  cab.querySelectorAll('[data-notif]').forEach(t => t.addEventListener('click', () => {
+  // ── ТУМБЛЕРИ СПОВІЩЕНЬ (B-33, 24.08) ─────────────────────────────────────
+  //
+  // 🔑 Порядок: малюємо з локального знімка (миттєво) → підтягуємо істину з бази
+  // → перемальовуємо, якщо розійшлось. Так екран не блимає і не бреше.
+  cab.querySelectorAll('[data-notif]').forEach(t => t.addEventListener('click', async () => {
     const k = t.dataset.notif;
-    prefs[k] = !prefs[k];
+    const було = prefs[k];
+    prefs[k] = !було;
     t.classList.toggle('off', !prefs[k]);
-    saveNotifPrefs(u.id, prefs);
+    t.setAttribute('aria-checked', prefs[k] ? 'true' : 'false');
+    saveNotifPrefs(u.id, prefs);             // знімок — щоб екран пережив перезапуск
+    const res = await saveNotifPref(u.id, k, prefs[k]);
+    if (!res.ok) {
+      // 🛑 ВІДКАТ ОБОВʼЯЗКОВИЙ. Тумблер, який показує «вимкнено», а в базі
+      // лишився ввімкненим, — це рівно та сама брехня, від якої лікуємо B-33,
+      // тільки тепер вона була б переконливішою: людина ж бачила, як він
+      // клацнув.
+      prefs[k] = було;
+      t.classList.toggle('off', !prefs[k]);
+      t.setAttribute('aria-checked', prefs[k] ? 'true' : 'false');
+      saveNotifPrefs(u.id, prefs);
+      showToast('Не вдалося зберегти налаштування — спробуйте ще раз', 3000, 'error');
+    }
   }));
+
+  // Істина з бази. Якщо рядка ще немає — переносимо туди те, що людина вже
+  // вибрала на цьому пристрої (див. `seedNotifPrefs`), і тільки ОДИН раз.
+  (async () => {
+    const зБази = await fetchNotifPrefs(u.id);
+    if (!зБази) {
+      let вже = false;
+      try { вже = !!localStorage.getItem(SEEDED_KEY(u.id)); } catch { /* ignore */ }
+      if (!вже) {
+        const r = await seedNotifPrefs(u.id, prefs);
+        if (r.ok) { try { localStorage.setItem(SEEDED_KEY(u.id), '1'); } catch { /* ignore */ } }
+      }
+      return;
+    }
+    // Розійшлось — виграє база (вона одна на всі пристрої).
+    let змінилось = false;
+    NOTIF_KEYS.forEach(n => {
+      const val = (n.k in зБази) ? !!зБази[n.k] : true;
+      if (prefs[n.k] !== val) { prefs[n.k] = val; змінилось = true; }
+      const el = cab.querySelector(`[data-notif="${n.k}"]`);
+      if (el) { el.classList.toggle('off', !val); el.setAttribute('aria-checked', val ? 'true' : 'false'); }
+    });
+    if (змінилось) saveNotifPrefs(u.id, prefs);
+  })();
   // Вимикач статистики. Пише в localStorage через дата-шар — діє з наступної події,
   // без перезапуску застосунку (сторож стоїть усередині самого `logEvent`).
   const privTog = cab.querySelector('[data-priv="analytics"]');

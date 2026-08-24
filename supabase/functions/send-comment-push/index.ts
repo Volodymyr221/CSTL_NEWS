@@ -101,7 +101,14 @@ async function handleComment(admin: Admin, commentId: number) {
   // 2. Адмінам сторінки — з вікном тиші.
   const { data: admins } = await admin
     .from('page_admins').select('uid').eq('page_id', post.page_id);
-  const targets = (admins || []).map((a: { uid: string }) => a.uid).filter((u: string) => !notified.has(u));
+  // 🆕 24.08 (B-33) — хто вимкнув «Стрічку» в кабінеті, той не отримує.
+  // 🛑 Гілка 1 вище ЦЬОГО НЕ ПИТАЄ: «вам відповіли» — персональне звернення,
+  // воно не притишується нічим (те саме правило, що в `send-answer-push`).
+  const targets = await allowed(
+    admin,
+    (admins || []).map((a: { uid: string }) => a.uid).filter((u: string) => !notified.has(u)),
+    'feed',
+  );
 
   for (const uid of targets) {
     const { data: st } = await admin
@@ -185,6 +192,27 @@ async function clearState(admin: Admin, st: { post_id: number; uid: string }) {
 }
 
 // ── Надсилання на всі пристрої вказаних людей ─────────────────────────────────
+// ── ЧИ ДОЗВОЛИЛА ЛЮДИНА ЦЮ ТЕМУ (B-33, 24.08) ───────────────────────────────
+// 🔴 До 24.08 вимикачі сповіщень у кабінеті не читав НІХТО — вони писались у
+// `localStorage` і там лишались. Слово Вови: «Декоративного в нас нічого не має
+// бути… скасування сповіщення має бути робоче».
+// 🔑 Відсутній рядок = ДОЗВОЛЕНО (людина нічого не міняла). Помилку запиту
+// трактуємо так само: краще надіслати зайве, ніж мовчки проковтнути те, на що
+// людина підписалась сама.
+// ⚠️ Дубль в кожній Edge Function навмисно: вони крутяться в Deno на сервері
+// Supabase, деплояться окремо, спільного модуля між ними немає.
+async function allowed(admin: Admin, uids: string[], topic: string) {
+  if (!uids.length) return uids;
+  const { data, error } = await admin
+    .from('notif_prefs').select('uid, buses, board, questions, feed').in('uid', uids);
+  if (error) return uids;
+  const off = new Set(
+    (data || []).filter((r: Record<string, unknown>) => r[topic] === false)
+                .map((r: { uid: string }) => r.uid),
+  );
+  return uids.filter((u) => !off.has(u));
+}
+
 async function push(admin: Admin, uids: string[], payload: Record<string, unknown>) {
   if (!uids.length) return 0;
   const { data: devices } = await admin.from('user_push_devices').select('*').in('uid', uids);
