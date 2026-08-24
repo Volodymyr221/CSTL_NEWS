@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787559901562,
+      "mission": "olyka:event:день-незалежності-україни",
+      "model": "claude-opus-5",
+      "input_tokens": 4756,
+      "output_tokens": 365,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0329,
+      "note": "Подія в громаді: 🇺🇦 День Незалежності України"
+    },
+    {
       "ts": 1787558569019,
       "mission": "olyka:story:скарби-радзивіллів-і-привид",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.009,
       "note": ""
-    },
-    {
-      "ts": 1784105831208,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 727,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0124,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.4414,
-    "runs": 96,
+    "cost_usd": 5.4743,
+    "runs": 97,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.3318,
-      "runs": 18,
+      "cost_usd": 0.3647,
+      "runs": 19,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787558569019
+  "updated_ts": 1787559901562
 }
