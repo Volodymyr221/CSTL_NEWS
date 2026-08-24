@@ -17,7 +17,7 @@
 
 import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle, autoGrowTextarea,
          lsGet, lsSet, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
-import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
+import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
@@ -30,6 +30,7 @@ import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
 import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
          adoptLegacyScopedKey } from '../core/board-shared.js';
+import { fetchSeenThreads, markThreadSeenRemote } from '../core/supabase.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
@@ -177,15 +178,62 @@ function tsMs(v) {
 // Час останнього перегляду питання (per-device). ⚠️ Роздільника «Нові повідомлення»
 // в екрані більше немає (чат-механіка), але сама межа ПОТРІБНА далі: на ній
 // тримається крапка «є нове» біля іконки вкладки (`unseenDiscussionsCount`).
+// 🔴 24.08 (друга редакція) — МАПА ТЕМ СИНХРОНІЗУЄТЬСЯ МІЖ ПРИСТРОЯМИ.
+// Питання Вови: «якщо прочитаю з телефону і зайду з компʼютера, то і там буде
+// рівно те саме прочитано?» Тут це важить більше, ніж у розділах: мітка розділу
+// одна, а тем — десятки, і читаються вони вибірково.
+//
+// 🔑 ТА САМА ДВОШАРОВІСТЬ, що в `core/board-shared.js`: памʼять відповідає
+// синхронно (її питає малювання крапки «є нове»), база наповнює памʼять при
+// вході, а сховище пристрою лишається швидким кешем і рятує офлайн.
+// Скрізь беремо НАЙПІЗНІШЕ з трьох — мітка рухається тільки вперед.
+let seenThreads = {};        // { postId: мс } — злите значення
+let seenThreadsFor = null;   // для якого uid наповнено
+
 function getChatSeen(postId) {
-  const m = lsGet(LS_CHAT_SEEN_KEY(), {});
-  return m[String(postId)] || 0;
+  const local = lsGet(LS_CHAT_SEEN_KEY(), {})[String(postId)] || 0;
+  return Math.max(local, seenThreads[String(postId)] || 0);
 }
+
 function setChatSeen(postId, ts) {
+  const key = String(postId);
+  seenThreads[key] = Math.max(seenThreads[key] || 0, ts);
   const m = lsGet(LS_CHAT_SEEN_KEY(), {});
-  m[String(postId)] = ts;
+  m[key] = ts;
   lsSet(LS_CHAT_SEEN_KEY(), m);
+  // Тихо, без очікування: не доїхало — наступний перегляд перекриє.
+  if (currentUserId()) markThreadSeenRemote(postId).catch(() => {});
 }
+
+/**
+ * Наповнити памʼять із бази. Кличеться при вході й зміні акаунта.
+ * ⚠️ Локальні мітки, старші за оновлення, ВІДПРАВЛЯЄМО в базу — інакше людина,
+ * яка читала теми до цього деплою, побачила б їх усі як непрочитані.
+ */
+export async function loadSeenThreads() {
+  const uid = currentUserId();
+  if (!uid) { seenThreads = {}; seenThreadsFor = null; return; }
+  if (seenThreadsFor === uid) return;
+
+  const remote = await fetchSeenThreads(uid);
+  const local = lsGet(LS_CHAT_SEEN_KEY(), {}) || {};
+  const next = { ...remote };
+  for (const [id, ts] of Object.entries(local)) {
+    const t = Number(ts) || 0;
+    if (t > (next[id] || 0)) { next[id] = t; markThreadSeenRemote(Number(id)).catch(() => {}); }
+  }
+  seenThreads = next;
+  seenThreadsFor = uid;
+}
+
+// Та сама підписка, що для міток розділів (`core/board-shared.js`): вхід, вихід
+// і зміна акаунта перечитують мапу тем, а сигнал будить перемальовку крапки.
+onAuthChange(() => {
+  seenThreadsFor = null;
+  loadSeenThreads().then(() => {
+    try { window.dispatchEvent(new CustomEvent('cstl-seen-synced')); } catch (_) {}
+  });
+});
 
 // ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────
 // Механізм переїхав у core/utils.js (спільний зі «Стрічкою»). Тут лишається
