@@ -1,5 +1,6 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
+import { adoptLegacyScopedKey } from '../core/board-shared.js';
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
@@ -155,6 +156,7 @@ const NEWS_SEEN_KEY = 'cstl_news_seen_ts';
 const newsSeenKey = () => NEWS_SEEN_KEY + ':' + (currentUserId() || 'anon');
 
 export function newsSeenTs() {
+  adoptLegacyScopedKey(NEWS_SEEN_KEY);   // мітка старої версії → в простір людини
   const v = Number(localStorage.getItem(newsSeenKey()) || 0);
   return Number.isFinite(v) ? v : 0;
 }

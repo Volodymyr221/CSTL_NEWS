@@ -28,7 +28,8 @@ import {
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
-import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons } from '../core/board-shared.js';
+import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
+         adoptLegacyScopedKey } from '../core/board-shared.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
@@ -132,7 +133,10 @@ function likeBtnInner(postId) {
 // це персональна історія, і другому акаунту на тому самому телефоні вона
 // казала, що він уже читав те, чого не відкривав.
 const LS_CHAT_SEEN_BASE = 'cstl-chat-seen-v1';  // { postId: timestamp перегляду теми (ms) }
-const LS_CHAT_SEEN_KEY = () => LS_CHAT_SEEN_BASE + ':' + (currentUserId() || 'anon');
+const LS_CHAT_SEEN_KEY = () => {
+  adoptLegacyScopedKey(LS_CHAT_SEEN_BASE);   // мапа старої версії → в простір людини
+  return LS_CHAT_SEEN_BASE + ':' + (currentUserId() || 'anon');
+};
 
 // lsGet/lsSet тепер спільні (core/utils.js) — ними користується і антифлуд «Стрічки».
 

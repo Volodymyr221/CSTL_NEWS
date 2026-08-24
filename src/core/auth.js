@@ -129,10 +129,23 @@ export async function signInWithGoogle() {
 // ⚠️ Вихід має відбутись НАВІТЬ якщо мережі немає: помилка відвʼязування не
 // зупиняє `signOut`. Другий рубіж на цей випадок стоїть у базі —
 // `claim_push_device` забирає чужі рядки при наступному вході.
+// 🔴 `getRegistration()`, А НЕ `ready` — І ЦЕ НЕ ПРИДИРКА ДО API.
+// `navigator.serviceWorker.ready` означає «чекай, доки Service Worker стане
+// активним», і якщо його немає, обіцянка НЕ ВИКОНУЄТЬСЯ НІКОЛИ: не
+// відхиляється, а мовчки висить вічно. Перша редакція цього фікса саме так і
+// вішала `signOut()` — людина тисне «Вийти», і не стається НІЧОГО.
+// 🔑 Спіймав стенд `legal-privacy.mjs` («після видалення кабінет закривається»),
+// і це НЕ тестовий випадок: так само поводиться перше відкриття до активації SW,
+// приватний режим і будь-який збій реєстрації.
+// 🛑 Другою спробою була стеля очікування 1.5с — вона теж хибна, тільки тихіше:
+// півтори секунди на незмінному екрані після «Вийти» людина читає як «не
+// спрацювало». `getRegistration()` відповідає ОДРАЗУ (undefined, якщо SW немає),
+// тож ніякої штучної паузи не потрібно взагалі.
 async function detachThisDevice() {
   try {
     if (!_user || !('serviceWorker' in navigator)) return;
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return;                       // SW немає — відвʼязувати нічого
     const sub = await reg.pushManager.getSubscription();
     if (sub?.endpoint) await releasePushDevice(_user.id, sub.endpoint);
   } catch (e) {

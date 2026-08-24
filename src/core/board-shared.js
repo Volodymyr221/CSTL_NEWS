@@ -99,12 +99,58 @@ export function cardTitleText(p) {
 function seenKey(base) {
   return base + ':' + (currentUserId() || 'anon');
 }
+
+// Перенести мітку СТАРОЇ (безіменної) версії у простір поточної людини.
+//
+// 🔴 БЕЗ ЦЬОГО ОНОВЛЕННЯ ТИХО СКИДАЛО Б УСІ «N НОВИХ». Людина, яка користується
+// застосунком місяць, після деплою побачила б «нічого нового» скрізь: новий
+// ключ порожній, а перший запуск за домовленістю віддає 0. Знайдено падінням
+// `home-caps.mjs` (105/135) — стенди сіють саме старий ключ, бо так писала
+// попередня версія, тобто вони відтворювали справжній стан справжнього телефона.
+//
+// 🔑 СТАРИЙ КЛЮЧ СТИРАЄМО ЛИШЕ КОЛИ ЙОГО ЗАБРАВ СПРАВЖНІЙ АКАУНТ.
+// Гість теж має право на свої мітки, але якщо стерти ключ на його читанні, то
+// людина, яка гортала застосунок до входу, при вході дістала б порожньо. А от
+// коли мітку забрав акаунт — ключа більше немає, і ДРУГИЙ акаунт на цьому
+// телефоні починає з чистого аркуша. Саме та асиметрія, що вже діє для згоди з
+// правилами Дошки (`tabs/board.js`): перенесення одноразове за побудовою.
+//
+// ⚠️ Пастка, через яку це написано саме так: на старті `currentUserId()` ще
+// може бути `null` (сесія відновлюється асинхронно). Якби перенесення стирало
+// ключ на анонімному читанні, справжній акаунт не дістав би нічого — і мітки
+// зникли б рівно так само, тільки непомітніше.
+function adoptLegacySeen(base) {
+  const old = localStorage.getItem(base);
+  if (old == null) return null;
+  try {
+    localStorage.setItem(seenKey(base), old);
+    if (currentUserId()) localStorage.removeItem(base);
+  } catch (_) { /* сховище недоступне — поводимось як «мітки немає» */ }
+  return old;
+}
+
 function readSeen(base) {
-  const v = Number(localStorage.getItem(seenKey(base)) || 0);
+  let raw = localStorage.getItem(seenKey(base));
+  if (raw == null) raw = adoptLegacySeen(base);
+  const v = Number(raw || 0);
   return Number.isFinite(v) ? v : 0;
 }
 function writeSeen(base) {
   try { localStorage.setItem(seenKey(base), String(Date.now())); } catch (_) {}
+}
+
+// Той самий перенос для міток, що живуть поза цим файлом (Новини, теми Питань).
+// 🛑 Копію логіки НЕ робити — правило одноразовості легко зіпсувати наполовину,
+// і симптом виглядав би як «у декого мітки зникли».
+export function adoptLegacyScopedKey(base) {
+  const key = base + ':' + (currentUserId() || 'anon');
+  if (localStorage.getItem(key) != null) return;
+  const old = localStorage.getItem(base);
+  if (old == null) return;
+  try {
+    localStorage.setItem(key, old);
+    if (currentUserId()) localStorage.removeItem(base);
+  } catch (_) { /* нічого не робимо */ }
 }
 
 const BOARD_SEEN_KEY = 'cstl_board_seen_ts';
