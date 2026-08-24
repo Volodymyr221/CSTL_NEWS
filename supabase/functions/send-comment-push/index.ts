@@ -163,6 +163,12 @@ async function flushPending(admin: Admin) {
 
   let sent = 0;
   for (const st of rows) {
+    // 🆕 24.08 (B-33) — і в ДОБІГУ теж. Пропустити цю перевірку тут означало б
+    // лишити дірку рівно там, де вона найпомітніша: людина вимкнула тему, під
+    // дописом за вечір набралось 12 коментарів, і за десять хвилин їй усе одно
+    // прилітає «Ще 12 коментарів». Тобто вимикач працює на кожному окремому
+    // сповіщенні і не працює на зведеному — найгірший вид напівробочого.
+    if (!(await allowed(admin, [st.uid], 'feed')).length) { await clearState(admin, st); continue; }
     const { data: post } = await admin
       .from('page_posts').select('id, page_id, text').eq('id', st.post_id).single();
     if (!post) { await clearState(admin, st); continue; }
@@ -191,7 +197,6 @@ async function clearState(admin: Admin, st: { post_id: number; uid: string }) {
     .delete().eq('post_id', st.post_id).eq('uid', st.uid);
 }
 
-// ── Надсилання на всі пристрої вказаних людей ─────────────────────────────────
 // ── ЧИ ДОЗВОЛИЛА ЛЮДИНА ЦЮ ТЕМУ (B-33, 24.08) ───────────────────────────────
 // 🔴 До 24.08 вимикачі сповіщень у кабінеті не читав НІХТО — вони писались у
 // `localStorage` і там лишались. Слово Вови: «Декоративного в нас нічого не має
@@ -213,6 +218,7 @@ async function allowed(admin: Admin, uids: string[], topic: string) {
   return uids.filter((u) => !off.has(u));
 }
 
+// ── Надсилання на всі пристрої вказаних людей ─────────────────────────────────
 async function push(admin: Admin, uids: string[], payload: Record<string, unknown>) {
   if (!uids.length) return 0;
   const { data: devices } = await admin.from('user_push_devices').select('*').in('uid', uids);
