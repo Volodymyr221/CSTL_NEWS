@@ -10,28 +10,26 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-24 10:31 UTC
+**Зріз на:** 2026-08-24 10:40 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-gqj5ae` |
-| останній коміт людини | `b793768f` 24.08 10:31 — docs: пульс і літопис перед фінішем сесії 23-24.08 |
+| останній коміт людини | `6fda3d2b` 24.08 10:40 — merge: origin/main — злито з паралельною сесією (гніздо імені, фото, капсула автобуса) |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260824-1027` |
 | останній PR у `main` | #1003 |
-| стендів на диску | 98 |
+| стендів на диску | 100 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-24 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/CSTL_BUGS.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `CSTL NEWS VOVA/docs/QA_CONCEPT.md`
-- `_session-log/vova-2026-08-23b.md`
+- `_session-log/vova-2026-08-23c.md`
 - `bundle.js`
 - `scripts/supabase_answer_push_targets.sql`
 - `scripts/supabase_notif_prefs.sql`
@@ -39,21 +37,23 @@
 - `src/core/account-ui.js`
 - `src/core/auth.js`
 - `src/core/board-shared.js`
-- `src/core/profile-card.js`
 - `src/core/supabase.js`
-- `src/core/upload.js`
-- `src/core/utils.js`
-- `src/tabs/board-chat.js`
 - `src/tabs/board-discussions.js`
-- …ще 16
+- `src/tabs/board.js`
+- `style/board.css`
+- `supabase/.temp/cli-latest`
+- `supabase/functions/send-answer-push/index.ts`
+- `supabase/functions/send-bus-push/index.ts`
+- `supabase/functions/send-comment-push/index.ts`
+- …ще 3
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `6fda3d2b` 24.08 10:40 — merge: origin/main — злито з паралельною сесією (гніздо імені, фото, капсула автобуса)
+- `cefee7b0` 24.08 10:31 — docs(пульс): зріз після коміту
 - `b793768f` 24.08 10:31 — docs: пульс і літопис перед фінішем сесії 23-24.08
 - `d6b2945f` 24.08 10:28 — fix(вхід): Google завжди питає, яким акаунтом зайти
 - `076126b3` 24.08 09:59 — docs(сповіщення): B-33 закрито — перевірки після деплою
-- `3d03e165` 24.08 09:56 — feat(сповіщення): усі Edge Functions читають notif_prefs (B-33)
-- `20899912` 24.08 08:34 — feat(сповіщення): B-33 — notif_prefs у базі, вимикачі стають робочими
 
 <!-- AUTO:END -->
 
