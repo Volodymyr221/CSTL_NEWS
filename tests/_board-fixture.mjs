@@ -202,6 +202,37 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               const u = args && args.p_uid;
               return { data: all.filter(r => r.uid === u), error: null };
             }
+            // 🔴 24.08 — МІТКИ «БАЧИВ». Заглушка мусить емулювати їх ЧЕСНО, бо
+            // головне правило живе саме тут: мітка рухається ТІЛЬКИ ВПЕРЕД
+            // (у базі це greatest). Якби тут стояв простий запис, стенд зеленів
+            // би над реалізацією, що дозволяє відкотити мітку назад — тобто над
+            // рівно тією вадою, від якої вся ця робота.
+            // ⚠️ Пишемо В ТАБЛИЦЮ, а не в окреме сховище: читання йде через
+            // .from('user_seen_marks'), і два різні сховища розійшлись би.
+            if (fn === 'mark_seen' || fn === 'seed_seen') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: null, error: { message: 'not authenticated' } };
+              const now = Date.now();
+              const want = fn === 'seed_seen'
+                ? Math.min(Date.parse(args.p_seen_at) || 0, now)   // стеля now(), як у базі
+                : now;
+              T.user_seen_marks = T.user_seen_marks || [];
+              const row = T.user_seen_marks.find(r => r.uid === uid && r.scope === args.p_scope);
+              const next = Math.max(row ? Date.parse(row.seen_at) || 0 : 0, want);
+              if (row) row.seen_at = new Date(next).toISOString();
+              else T.user_seen_marks.push({ uid, scope: args.p_scope, seen_at: new Date(next).toISOString() });
+              return { data: new Date(next).toISOString(), error: null };
+            }
+            if (fn === 'mark_thread_seen') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: null, error: { message: 'not authenticated' } };
+              T.user_seen_threads = T.user_seen_threads || [];
+              const row = T.user_seen_threads.find(r => r.uid === uid && r.post_id === args.p_post_id);
+              const next = Math.max(row ? Date.parse(row.seen_at) || 0 : 0, Date.now());
+              if (row) row.seen_at = new Date(next).toISOString();
+              else T.user_seen_threads.push({ uid, post_id: args.p_post_id, seen_at: new Date(next).toISOString() });
+              return { data: new Date(next).toISOString(), error: null };
+            }
             return { data: null, error: null };
           },
           storage: { from: () => ({

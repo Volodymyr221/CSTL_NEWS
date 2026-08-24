@@ -1730,6 +1730,62 @@ export async function seedSavedArticles(uid, ids) {
   return r.ok ? { ok: true, moved: rows.length } : { ok: false, moved: 0 };
 }
 
+// ── МІТКИ «ЩО Я ВЖЕ БАЧИВ» — СИНХРОН МІЖ ПРИСТРОЯМИ (24.08) ─────────────────
+//
+// Питання Вови: «А не можна щоб синхронізація була з акаунтом, тобто якщо
+// прочитаю з телефону і зайду з компʼютера, то і там буде рівно те саме
+// прочитано?» Можна — і це те, що тут зроблено.
+//
+// 🔑 ЧОМУ ЗАПИС ЧЕРЕЗ ФУНКЦІЮ, А НЕ ЗВИЧАЙНИЙ `upsert`. Два правила неможливо
+// виконати з клієнта: мітка мусить рухатись ТІЛЬКИ ВПЕРЕД (`greatest`), і час
+// мусить брати СЕРВЕР. Годинник телефона може відставати або бігти вперед; мітка
+// «з майбутнього» назавжди заблокувала б правду. Подробиці й доказ —
+// `scripts/supabase_seen_marks.sql`.
+//
+// ⚠️ Читання лишається звичайним `select` — тут нічого захищати, RLS уже пускає
+// лише до своїх рядків.
+
+export async function fetchSeenMarks(uid) {
+  const out = {};
+  if (!supa || !uid) return out;
+  const { data, error } = await supa.from('user_seen_marks').select('scope, seen_at').eq('uid', uid);
+  if (error) { console.warn('[supabase] fetchSeenMarks:', error.message); return out; }
+  for (const r of (data || [])) out[r.scope] = Date.parse(r.seen_at) || 0;
+  return out;
+}
+
+export async function markSeenRemote(scope) {
+  if (!supa) return { ok: false };
+  const r = await netCall(() => supa.rpc('mark_seen', { p_scope: scope }));
+  return r.ok ? { ok: true, ts: Date.parse(r.data) || 0 } : { ok: false };
+}
+
+// Перенести мітку, яка вже лежить на цьому пристрої. Єдине місце, де час шле
+// клієнт — і саме тому в базі стоїть стеля `least(p_seen_at, now())`.
+export async function seedSeenRemote(scope, ts) {
+  if (!supa || !ts) return { ok: false };
+  const r = await netCall(() => supa.rpc('seed_seen', {
+    p_scope: scope, p_seen_at: new Date(ts).toISOString(),
+  }));
+  return r.ok ? { ok: true, ts: Date.parse(r.data) || 0 } : { ok: false };
+}
+
+// Мітки ТЕМ (Питання): тут одного числа замало — теми читаються вибірково.
+export async function fetchSeenThreads(uid) {
+  const out = {};
+  if (!supa || !uid) return out;
+  const { data, error } = await supa.from('user_seen_threads').select('post_id, seen_at').eq('uid', uid);
+  if (error) { console.warn('[supabase] fetchSeenThreads:', error.message); return out; }
+  for (const r of (data || [])) out[r.post_id] = Date.parse(r.seen_at) || 0;
+  return out;
+}
+
+export async function markThreadSeenRemote(postId) {
+  if (!supa || postId == null) return { ok: false };
+  const r = await netCall(() => supa.rpc('mark_thread_seen', { p_post_id: postId }));
+  return r.ok ? { ok: true, ts: Date.parse(r.data) || 0 } : { ok: false };
+}
+
 // ── НАЛАШТУВАННЯ СПОВІЩЕНЬ (B-33, 24.08) ────────────────────────────────────
 //
 // 🔴 Досі вони жили в `localStorage` і не читались НІКИМ — ні застосунком, ні

@@ -1,6 +1,6 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { adoptLegacyScopedKey } from '../core/board-shared.js';
+import { registerScope, readSeen, writeSeen } from '../core/board-shared.js';
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
@@ -152,18 +152,21 @@ export function articlesOfGroup(arts, group) {
 // 🔴 24.08 — мітка стала акаунтною (як три інші, див. `core/board-shared.js`):
 // другий акаунт на тому самому телефоні успадковував чужу і не бачив «нових»
 // новин, які для нього справді нові.
-const NEWS_SEEN_KEY = 'cstl_news_seen_ts';
-const newsSeenKey = () => NEWS_SEEN_KEY + ':' + (currentUserId() || 'anon');
+// 🔴 24.08 (друга редакція) — МІТКА ЖИВЕ В ОДНОМУ МІСЦІ З РЕШТОЮ.
+// Була власна копія читання/запису прямо тут; тепер це той самий помічник, що
+// обслуговує Дошку, Питання і Стрічку (`core/board-shared.js`). Копія була б
+// четвертою реалізацією одного правила — а щойно ми додали синхрон із базою,
+// вона мовчки лишилась би без нього, і новини єдині не синхронізувались би.
+// 🛑 У проєкті вже коштували бага дві копії списків антиспаму; тут та сама пастка.
+const NEWS_SEEN_KEY = registerScope('cstl_news_seen_ts', 'news');
 
 export function newsSeenTs() {
-  adoptLegacyScopedKey(NEWS_SEEN_KEY);   // мітка старої версії → в простір людини
-  const v = Number(localStorage.getItem(newsSeenKey()) || 0);
-  return Number.isFinite(v) ? v : 0;
+  return readSeen(NEWS_SEEN_KEY);
 }
 
 // Позначити новини переглянутими. Кличе хаб у момент відкриття.
 export function markNewsSeen() {
-  try { localStorage.setItem(newsSeenKey(), String(Date.now())); } catch (_) {}
+  writeSeen(NEWS_SEEN_KEY);
 }
 
 // Скільки статей Громади новіші за останній перегляд.

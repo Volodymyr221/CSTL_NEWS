@@ -10,8 +10,9 @@
 // живуть тут, поза циклом.)
 
 import { escapeHtml, deepLink } from './utils.js';
-import { currentUserId } from './auth.js';
-import { addSavedPost, removeSavedPost } from './supabase.js';
+import { currentUserId, onAuthChange } from './auth.js';
+import { addSavedPost, removeSavedPost, fetchSeenMarks, markSeenRemote,
+         seedSeenRemote } from './supabase.js';
 
 // ── Іконки закладки/шер (спільні для карток оголошень і обговорень) ──────────
 export const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
@@ -129,15 +130,101 @@ function adoptLegacySeen(base) {
   return old;
 }
 
-function readSeen(base) {
-  let raw = localStorage.getItem(seenKey(base));
-  if (raw == null) raw = adoptLegacySeen(base);
-  const v = Number(raw || 0);
-  return Number.isFinite(v) ? v : 0;
+// ═══ СИНХРОН МІЖ ПРИСТРОЯМИ (24.08, друга редакція) ════════════════════════
+//
+// Питання Вови: «А не можна щоб синхронізація була з акаунтом, тобто якщо
+// прочитаю з телефону і зайду з компʼютера, то і там буде рівно те саме
+// прочитано?» Можна — і вранішня редакція (мітки стали іменними, але лишились
+// на пристрої) була свідомо дешевшим кроком, названим боргом. Борг закрито.
+//
+// 🔑 ДЖЕРЕЛО ПРАВДИ — БАЗА, СХОВИЩЕ ПРИСТРОЮ ЛИШИЛОСЬ ШВИДКИМ КЕШЕМ.
+// Обидва потрібні, і ось чому не можна лишити щось одне:
+//   • тільки база — `boardSeenTs()` кличеться ПІД ЧАС МАЛЮВАННЯ капсул, тобто
+//     синхронно; похід у мережу там означав би або порожній екран на секунду,
+//     або переписування всіх викликачів на `await`;
+//   • тільки пристрій — це рівно те, на що Вова і поскаржився.
+// Тому читаємо з памʼяті, а памʼять наповнює база при вході.
+//
+// 🔑 БЕРЕМО НАЙПІЗНІШЕ З ДВОХ (`Math.max`). Пристрій міг поставити мітку
+// офлайн — тоді вона свіжіша за базу; база могла дістати мітку з іншого
+// телефона — тоді свіжіша вона. Максимум обидва випадки покриває одним
+// правилом, і воно те саме, що `greatest` у базі: **мітка рухається тільки
+// вперед**. Інакше старий відкритий таб «непрочитував» би все назад.
+//
+// 🛑 Гість лишається ПОВНІСТЮ на пристрої: синхронізувати нема з чим, акаунта
+// немає. Це не виняток із правила, а те саме правило.
+let seenCache = {};        // { base: мітка в мс } — злите значення бази й пристрою
+let seenLoadedFor = null;  // для якого uid кеш наповнений (null = гість/ще ні)
+
+export function readSeen(base) {
+  const local = (() => {
+    let raw = localStorage.getItem(seenKey(base));
+    if (raw == null) raw = adoptLegacySeen(base);
+    const v = Number(raw || 0);
+    return Number.isFinite(v) ? v : 0;
+  })();
+  return Math.max(local, seenCache[base] || 0);
 }
-function writeSeen(base) {
-  try { localStorage.setItem(seenKey(base), String(Date.now())); } catch (_) {}
+
+export function writeSeen(base) {
+  const now = Date.now();
+  seenCache[base] = Math.max(seenCache[base] || 0, now);
+  // Пристрій — одразу: екран мусить відреагувати без мережі.
+  try { localStorage.setItem(seenKey(base), String(now)); } catch (_) {}
+  // База — слідом, тихо. ⚠️ НЕ чекаємо і НЕ показуємо помилку: мітка «я це
+  // бачив» не та річ, заради якої можна зупинити людину або блимнути тостом.
+  // Не доїхало — наступний `markSeen` перекриє, бо час іде тільки вперед.
+  const uid = currentUserId();
+  if (uid) markSeenRemote(SCOPE_OF[base]).catch(() => {});
 }
+
+// Назви розділів у базі (`user_seen_marks.scope`). Тримаємо мапу тут, поруч із
+// самими ключами, а не в чотирьох викликачах — інакше друга копія розійшлась би
+// з першою (у проєкті таке вже коштувало бага зі списками антиспаму).
+const SCOPE_OF = {};
+
+/** Зареєструвати мітку: локальний ключ ↔ назва розділу в базі. */
+export function registerScope(base, scope) { SCOPE_OF[base] = scope; return base; }
+
+/**
+ * Наповнити кеш із бази. Кличеться при вході й зміні акаунта.
+ *
+ * ⚠️ ПЕРЕНОСИМО ТЕ, ЩО ВЖЕ ЛЕЖИТЬ НА ПРИСТРОЇ. Людина користувалась застосунком
+ * до цього оновлення, і її мітки живуть лише тут. Якби ми просто прочитали базу
+ * (порожню) і поклали в кеш, усе прочитане стало б «новим» — рівно та вада, яку
+ * вранці вже ловив `home-caps`. Тому кожну локальну мітку відправляємо в базу
+ * через `seed_seen`, а вона сама вирішує через `greatest`, чи вона свіжіша.
+ */
+export async function loadSeenMarks() {
+  const uid = currentUserId();
+  if (!uid) { seenCache = {}; seenLoadedFor = null; return; }
+  if (seenLoadedFor === uid) return;      // уже наповнено для цієї людини
+
+  const remote = await fetchSeenMarks(uid);
+  const next = {};
+  for (const [base, scope] of Object.entries(SCOPE_OF)) {
+    const fromDb = remote[scope] || 0;
+    let local = Number(localStorage.getItem(seenKey(base)) || 0);
+    if (!Number.isFinite(local)) local = 0;
+    next[base] = Math.max(fromDb, local);
+    if (local > fromDb) seedSeenRemote(scope, local).catch(() => {});
+  }
+  seenCache = next;
+  seenLoadedFor = uid;
+}
+
+// 🔑 Підписка живе ТУТ, а не в `app.js`: мітки знає цей файл, і додавати за ними
+// нагляд ззовні означало б, що про новий розділ треба памʼятати у двох місцях.
+// ⚠️ Після завантаження шлемо `cstl-seen-synced` — бейджі «N нових» уже
+// намальовані зі СТАРИМ значенням, і без сигналу мітка з іншого пристрою
+// доїхала б лише до наступного перемальовування. Саме це людина й помітила б як
+// «синхронізація не працює».
+onAuthChange(() => {
+  seenLoadedFor = null;
+  loadSeenMarks().then(() => {
+    try { window.dispatchEvent(new CustomEvent('cstl-seen-synced')); } catch (_) {}
+  });
+});
 
 // Той самий перенос для міток, що живуть поза цим файлом (Новини, теми Питань).
 // 🛑 Копію логіки НЕ робити — правило одноразовості легко зіпсувати наполовину,
@@ -153,7 +240,7 @@ export function adoptLegacyScopedKey(base) {
   } catch (_) { /* нічого не робимо */ }
 }
 
-const BOARD_SEEN_KEY = 'cstl_board_seen_ts';
+const BOARD_SEEN_KEY = registerScope('cstl_board_seen_ts', 'board');
 
 export function boardSeenTs() { return readSeen(BOARD_SEEN_KEY); }
 
@@ -171,7 +258,7 @@ export function markBoardSeen() { writeSeen(BOARD_SEEN_KEY); }
 // екрані це різниця без різниці — зате новий стан, нове сховище і новий спосіб
 // збрехати. Проєкт цю розвилку вже проходив на Дошці й обрав час візиту; друга
 // модель «баченого» в тому самому застосунку розійшлася б із першою.
-const CHAT_SEEN_KEY = 'cstl_chat_seen_ts';
+const CHAT_SEEN_KEY = registerScope('cstl_chat_seen_ts', 'chat');
 
 export function chatSeenTs() { return readSeen(CHAT_SEEN_KEY); }
 
@@ -190,7 +277,7 @@ export function markChatSeen() { writeSeen(CHAT_SEEN_KEY); }
 // свідомо обрав час візиту: друга модель «баченого» в тому самому застосунку
 // розійшлася б із першою, а розходження двох лічильників тут уже коштувало
 // бага B-27. Одна модель на чотири поверхні дорожча за точність в одній.
-const FEED_SEEN_KEY = 'cstl_feed_seen_ts';
+const FEED_SEEN_KEY = registerScope('cstl_feed_seen_ts', 'feed');
 
 export function feedSeenTs() { return readSeen(FEED_SEEN_KEY); }
 
