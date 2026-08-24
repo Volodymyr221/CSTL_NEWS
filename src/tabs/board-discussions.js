@@ -897,7 +897,11 @@ async function doDiscDelete(c) {
   const idx = list.findIndex(x => x.id === c.id);
   const prev = idx >= 0 ? list[idx] : null;
   if (idx >= 0) {
-    list[idx] = { ...list[idx], deleted_at: new Date().toISOString(), text: '' };
+    // ⚠️ 24.08 — текст тут теж НЕ затираємо: локальний знімок мусить збігатися
+    // з тим, що після видалення справді лежить у базі (там текст лишається).
+    // Показу це не змінює — рендер фільтрує за `deleted_at`, а не за порожнім
+    // текстом (`getComments(...).filter(c => !c.deleted_at)` вище).
+    list[idx] = { ...list[idx], deleted_at: new Date().toISOString() };
     commentsByPost.set(postId, list);
     rerenderCommentsBlock(postId);
   }
