@@ -10,27 +10,29 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-24 12:55 UTC
+**Зріз на:** 2026-08-24 12:59 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `7a8c777d` 24.08 12:40 — test: три червоні стенди — жоден не був вадою застосунку |
+| останній коміт людини | `24c8b146` 24.08 12:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260824-1254` |
 | останній PR у `main` | #1004 |
 | стендів на диску | 100 |
-| незакомічених файлів | 2 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-24 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-08-23b.md`
 - `bundle.js`
 - `scripts/supabase_soft_delete_visibility.sql`
 - `src/core/supabase.js`
 - `src/tabs/board-discussions.js`
+- `sw.js`
 - `tests/ad-report.mjs`
 - `tests/admin-shell.mjs`
 - `tests/news-widget.mjs`
@@ -38,11 +40,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `24c8b146` 24.08 12:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `eef743b0` 24.08 12:59 — docs: пульс і літопис — видалення коментаря + три брехливі стенди
 - `7a8c777d` 24.08 12:40 — test: три червоні стенди — жоден не був вадою застосунку
 - `16fb6a69` 24.08 11:51 — test(видимість): сторож на «автор бачить свій видалений рядок»
 - `6398860e` 24.08 11:49 — fix(видалення): коментар не видалявся — політика читання ламала UPDATE
-- `e57825c6` 24.08 11:18 — docs(пульс): зріз після розведення конфлікту з паралельною сесією
-- `fb65dd6f` 24.08 11:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
 
 <!-- AUTO:END -->
 
