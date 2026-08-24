@@ -86,13 +86,30 @@ await p.route('**/data/community-board.json*', r => json(r, { posts: POSTS }));
 //     першим же рядком — тому «оголошення відкрилось» стоїть саме там.
 // ⚠️ Живе ЛИШЕ у стенді. У застосунку немає жодного рядка, який би про неї знав.
 await ctx.addInitScript((posts) => {
+  // 🔴 24.08 — ЛАНЦЮЖОК ТЕПЕР ПОВНИЙ, І ЦЕ НЕ ПРИКРАСА.
+  // Було: сім методів. Щойно `fetchAllComments` отримав `.is('deleted_at', null)`
+  // (виправлення мʼякого видалення), ланцюг рвався на «.is is not a function»,
+  // Дошка не малювалась узагалі, і стенд падав аж на своєму першому рядку з
+  // «Cannot read properties of null» — тобто повідомляв про поламану РОЗМІТКУ там,
+  // де насправді бракувало методу в ЗАГЛУШЦІ. Заміряно: на збірці до тієї правки
+  // цей самий стенд давав 16/16.
+  // 🔑 Це вже ЧЕТВЕРТИЙ випадок однієї хвороби (`.eq` 07.08, `.single` 17.08,
+  // `.in`/`.gt`/`.lt` 22.08 — усі описані в `_board-fixture.mjs`): бреше не
+  // застосунок, а підставка під ним. Тому список тримаємо повним НАПЕРЕД —
+  // зайвий прохідний метод не коштує нічого, а відсутній вимикає весь екран.
+  // ⚠️ Вони саме ПРОХІДНІ, не фільтрувальні: цьому стендові звуження не потрібне
+  // (усе, крім `posts`, і так порожнє), а вдавана фільтрація була б гіршою за
+  // явну її відсутність.
+  const PASS = ['select', 'eq', 'neq', 'order', 'limit', 'in', 'is', 'not',
+                'filter', 'or', 'gt', 'lt', 'gte', 'lte', 'like', 'ilike',
+                'contains', 'range', 'match', 'abortSignal', 'returns'];
   const thenable = (value) => {
     const o = {
-      select: () => thenable(value), eq: () => thenable(value), neq: () => thenable(value),
-      order: () => thenable(value), limit: () => thenable(value), in: () => thenable(value),
       single: () => thenable({ data: null, error: null }),
+      maybeSingle: () => thenable({ data: null, error: null }),
       then: (res) => Promise.resolve(value).then(res),
     };
+    for (const m of PASS) o[m] = () => thenable(value);
     return o;
   };
   const session = {
