@@ -73,8 +73,16 @@ async function поміряти({ зламати = false } = {}) {
   const p = await ctx.newPage();
   await p.addInitScript(() => {
     const відповідь = (data) => Promise.resolve({ data, error: null });
-    const запит = () => { const o = { select: () => o, eq: () => o, order: () => o, limit: () => o,
-      maybeSingle: () => відповідь(null), then: (f) => відповідь([]).then(f) }; return o; };
+    // ⚠️ Список прохідних методів тримаємо ПОВНИМ (див. `ad-report.mjs`, 24.08):
+    // бракує одного — ланцюг рветься на «X is not a function», екран не малюється
+    // взагалі, а стенд повідомляє про зламану розмітку замість дірки в заглушці.
+    const МЕТОДИ = ['select', 'eq', 'neq', 'order', 'limit', 'in', 'is', 'not',
+                    'filter', 'or', 'gt', 'lt', 'gte', 'lte', 'like', 'ilike',
+                    'contains', 'range', 'match', 'abortSignal', 'returns',
+                    'insert', 'update', 'delete', 'upsert'];
+    const запит = () => { const o = { maybeSingle: () => відповідь(null),
+      single: () => відповідь(null), then: (f) => відповідь([]).then(f) };
+      for (const m of МЕТОДИ) o[m] = () => o; return o; };
     window.supabase = { createClient: () => ({
       auth: { getSession: () => відповідь({ session: { user: { id: 'u1', email: 'v@e.com' } } }),
               onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),

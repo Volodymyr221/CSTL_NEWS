@@ -382,11 +382,21 @@ export async function setReaction(postId, userId, emoji) {
 // ── КОМЕНТАРІ ────────────────────────────────────────────────────────────
 
 // Усі коментарі усіх постів — Map<post_id, comments[]>.
+// ⚠️ 24.08 — доданий явний `.is('deleted_at', null)`. До міграції
+// `soft_delete_visibility_own_comments` видалені відсікала САМА політика
+// читання, тож запит міг про них не думати. Тепер автор бачить свої видалені
+// (без цього видалення взагалі не працювало — розбір у
+// `scripts/supabase_soft_delete_visibility.sql`), і без цього рядка вони
+// приїжджали б у клієнт марно.
+// 🔑 На екран це не впливало б і без фільтра — усі лічильники Питань ідуть
+// через `activeComments()`, який відсіює видалені. Йдеться саме про трафік:
+// просимо те, що показуємо.
 export async function fetchAllComments() {
   if (!supa) return new Map();
   const { data, error } = await supa
     .from('comments')
     .select('id, post_id, author, text, created_at, sender_uid, reply_to_id, edited_at, deleted_at, client_tag')
+    .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (error) {
     console.warn('[supabase] fetchAllComments error:', error.message);
@@ -428,11 +438,35 @@ export async function editComment(commentId, text) {
 }
 
 // М'яке видалення коментаря (лишаємо рядок, ставимо deleted_at → плейсхолдер у UI).
-// text='' бо колонка може бути NOT NULL; UI орієнтується на deleted_at.
+//
+// 🔴 24.08 — ЗВІДСИ ПРИБРАНО `text: ''`, І ЦЕ ВИПРАВЛЕННЯ БАГА, ЯКИЙ ЗНАЙШОВ
+// ВОВА НА ПРОДІ: «написав відповідь на питання і не можу видалити», тост
+// «❌ Не вдалося видалити: Текст порожній».
+//
+// 🔑 Ланцюг був такий. На `comments` у базі стоїть тригер
+// `trg_comments_guard_update_antispam` (BEFORE UPDATE, накочено міграцією
+// `comment_edit_support_and_antispam_on_update` 25.07). Він каже:
+//     if new.text is distinct from old.text then  → прогнати антиспам
+// Ми міняли текст на порожній → тригер бачив «текст змінився» → антиспам
+// законно відповідав «порожній коментар» → весь UPDATE відкочувався.
+// Тобто **видалення не відрізнялось від правки тексту**.
+//
+// ⚠️ Старий коментар тут пояснював `text: ''` тим, що «колонка може бути NOT
+// NULL». Це хибний аргумент, і він же тримав ваду: `NOT NULL` забороняє
+// записати NULL, а НЕ передати поле взагалі. Звірено з базою 24.08:
+// `comments.text` справді `NOT NULL` — і саме тому поле треба просто НЕ
+// ЧІПАТИ, а не затирати порожнім рядком.
+//
+// 🔑 Тепер однаково зі «Стрічкою»: `deletePageComment` завжди слав лише
+// `deleted_at`, і тому там видалення працювало. Різниця між двома поверхнями
+// і була всією вадою — той самий клас, що ловився 22-24.08 тричі поспіль.
+// 🛑 База теж полагоджена (`scripts/supabase_comment_delete_antispam.sql`):
+// покладатись лише на клієнта не можна — його можна обійти, і наступний виклик
+// повторив би це мовчки.
 export async function deleteComment(commentId) {
   if (!supa) return { ok: false, error: 'no-supa' };
   const r = await netCall(() => supa.from('comments')
-    .update({ deleted_at: new Date().toISOString(), text: '' })
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', commentId).select().single());
   return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
