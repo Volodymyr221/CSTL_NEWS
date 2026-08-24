@@ -102,7 +102,15 @@ async function handleAnswer(admin: Admin, commentId: number) {
 
   // Питання і оголошення — та сама механіка, різні слова і різний deep-link.
   const isQuestion = post.type === 'chat';
-  const url = `./#/post/${isQuestion ? 'disc' : 'board'}/${post.id}`;
+  // 🆕 23.08 (крок А4) — ХВІСТ `?c=` ВЕДЕ ДО КОНКРЕТНОЇ ВІДПОВІДІ.
+  // `comment_id` лежав у payload push із 16.08 і не використовувався жодного
+  // разу: посилання доводило людину до питання й лишало шукати репліку очима.
+  // 🔑 Формат не вигаданий — це той самий хвіст, яким уже живе «Стрічка»
+  // (`handlePostHash` у `src/app.js`), тож клієнт розуміє його однаково скрізь.
+  // ⚠️ І він НЕОБОВʼЯЗКОВИЙ у розборі, тому старий застосунок, який ще не вміє
+  // прокручувати, просто відкриє питання — без помилки й без регресу.
+  const base = `./#/post/${isQuestion ? 'disc' : 'board'}/${post.id}`;
+  const url  = `${base}?c=${c.id}`;
   const subject = trim(post.title || post.text, 60) || (isQuestion ? 'ваше питання' : 'ваше оголошення');
   const authorName = await nameOf(admin, c.sender_uid);
   const snippet = trim(c.text, 110);
@@ -158,7 +166,12 @@ async function handleAnswer(admin: Admin, commentId: number) {
         //    людині менше, ніж є: заголовок обіцяв би вісім, а тіло показувало б
         //    одну — і саме та одна виглядала б як «усе, що сталось».
         body: n > 1 ? subject : (snippet || subject),
-        tag: `answer-post-${post.id}`, url,
+        // 🛑 ЗВЕДЕНЕ СПОВІЩЕННЯ ЯКОРЯ НЕ МАЄ. «5 нових відповідей» — це не про
+        //    одну репліку, і підсвітити довелось би навмання: людина побачила б
+        //    виділеною випадкову з пʼяти й вирішила, що решта вже прочитані.
+        //    `?c=all` — той самий домовлений маркер, що у «Стрічці»: «просто
+        //    відкрий, не підсвічуй».
+        tag: `answer-post-${post.id}`, url: n > 1 ? `${base}?c=all` : url,
       });
       await mark(admin, c.id, post.id, [owner], 'owner');    // лише запис у журнал адресатів
       notified.add(owner);
@@ -235,7 +248,7 @@ async function handleAnswer(admin: Admin, commentId: number) {
             ? `${n} ${plural(n, 'нова відповідь', 'нові відповіді', 'нових відповідей')} на питання, яке вас цікавить`
             : 'Зʼявилась відповідь на питання, яке вас цікавить',
           body: n > 1 ? subject : (snippet || subject),
-          tag: `answer-interest-${post.id}`, url,
+          tag: `answer-interest-${post.id}`, url: n > 1 ? `${base}?c=all` : url,
         });
         await mark(admin, c.id, post.id, група, 'interest');
         група.forEach((u) => notified.add(u));

@@ -4223,6 +4223,26 @@ textarea.cm-board-input.bm-invalid {
   pointer-events: none;
 }
 .qa-answer--sub .qa-answer-ava .bd-avatar { width: 30px; height: 30px; font-size: 13px; }
+
+/* ── ПІДСВІТКА ВІДПОВІДІ, ДО ЯКОЇ ПРИВЕЛО СПОВІЩЕННЯ (крок А4, 23.08) ───────
+   Геометрію і тривалість беремо з «Стрічки» (`.fd-com-row--replying`), бо там
+   вона вже виміряна й прийнята Вовою — але власним класом: `fd-*` живуть у
+   контексті «Стрічки» зі своїми токенами, і чужий екран не має від них
+   залежати (те саме рішення, що для решти `.qa-*`).
+   🔑 Підкладка через ::before з відʼємними полями, а не `background` на самому
+   рядку: рядок — це flex з аватаром, і фон на ньому обрізався б рівно по
+   тексту, не накриваючи аватар. */
+.qa-answer--focus { position: relative; }
+.qa-answer--focus::before {
+  content: ''; position: absolute; left: -8px; right: -8px; top: -6px; bottom: -6px;
+  background: rgba(114, 47, 55, 0.06);
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
+  animation: qa-answer-hl 0.18s ease-out;
+}
+/* Вміст рядка — НАД підкладкою, інакше текст пішов би під неї. */
+.qa-answer--focus > * { position: relative; }
+@keyframes qa-answer-hl { from { opacity: 0 } to { opacity: 1 } }
 .qa-answer--sub .qa-answer-text { font-size: 15px; }
 
 /* Порожній список відповідей — заклик, а не констатація. Без пунктирної рамки:

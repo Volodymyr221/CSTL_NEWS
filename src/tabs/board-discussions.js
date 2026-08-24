@@ -368,6 +368,49 @@ function scrollToMyAnswer() {
   else body.scrollTop = body.scrollHeight;
 }
 
+// ── ПОКАЗАТИ КОНКРЕТНУ ВІДПОВІДЬ (крок А4, 23.08) ───────────────────────────
+//
+// 🔴 ГОЛОВНА СКЛАДНІСТЬ ТУТ — НЕ ПРОКРУТКА, А ХОЛОДНИЙ СТАРТ.
+// Тап по сповіщенню часто відкриває застосунок з нуля. Відповіді в цей момент
+// ще їдуть із бази (`fetchAllComments` у `renderBoard`), тож екран малюється з
+// порожнім списком — і шукати в ньому нема чого. Якби ми спробували лише раз,
+// фіча мовчки не працювала б САМЕ В ГОЛОВНОМУ своєму сценарії, а на теплому
+// застосунку працювала б — тобто виглядала б як «іноді не спрацьовує».
+//
+// 🔑 Тому другий захід чекає на подію `cstl-discussions-data`, яку кидає
+// `setDiscussionsData()`, щойно відповіді приїхали. Другого джерела не заводимо —
+// подія вже існує для капсули «НОВЕ» на Громаді.
+//
+// ⚠️ Підписку знімаємо в ОБОХ випадках: і коли знайшли, і коли екран закрили
+// раніше за дані. Інакше слухач пережив би екран і смикнув прокрутку вже в
+// іншому питанні.
+function revealAnswer(commentId) {
+  const id = String(commentId);
+  const спробувати = () => {
+    const screen = _chatModalEl;
+    if (!screen) return true;   // екран закрили — далі чекати нема сенсу
+    const row = screen.querySelector(`.qa-answer[data-msg="${CSS.escape(id)}"]`);
+    if (!row) return false;
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Підсвітка — ПІДКАЗКА «ось воно», а не стан: знімаємо через 2.4с, як у
+    // «Стрічці». Лишена назавжди, вона читалась би як «ця відповідь особлива».
+    row.classList.add('qa-answer--focus');
+    setTimeout(() => row.classList.remove('qa-answer--focus'), 2400);
+    return true;
+  };
+  if (спробувати()) return;
+  const наДані = () => {
+    // Дані приїхали — список перемальовується, тільки тоді є що шукати.
+    rerenderCommentsBlock(_chatOpenPostId);
+    requestAnimationFrame(() => {
+      if (спробувати()) window.removeEventListener('cstl-discussions-data', наДані);
+    });
+  };
+  window.addEventListener('cstl-discussions-data', наДані);
+  // Страховка: якщо відповіді так і не приїхали (мережа), слухач не висить вічно.
+  setTimeout(() => window.removeEventListener('cstl-discussions-data', наДані), 15000);
+}
+
 // Оновити лічильник відповідей у заголовку секції відкритого питання
 function updateChatHeaderCount(postId) {
   if (postId !== _chatOpenPostId) return;
@@ -597,7 +640,12 @@ function qaHeadHtml(post) {
 // ЧОТИРИ зовнішні точки (`board.js` делегація і deep-link, `core/saved-hub.js`
 // `openChatById`, `handleDiscussionsAuthChange`). Перейменування дало б широкий diff
 // без жодної користі для людини — а користь має бути в тому, що вона бачить.
-export function openChatModal(post) {
+//
+// 🆕 23.08 (крок А4) — `focusCommentId`: прийшли зі сповіщення «вам відповіли».
+// Відкрити питання й лишити людину нагорі означало б віддати їй пошук потрібної
+// репліки вручну — а сповіщення саме про неї. `comment_id` лежав у payload push
+// із 16.08 і не використовувався жодного разу.
+export function openChatModal(post, focusCommentId = null) {
   if (_chatModalEl) return;
   _chatOpenPostId = post.id;
 
@@ -646,6 +694,7 @@ export function openChatModal(post) {
   _chatModalEl = screen;
   hydrateAvatars(screen);   // чужі фото профілю
   hydrateNames(screen);     // живі імена за uid
+  if (focusCommentId) revealAnswer(focusCommentId);
 
   requestAnimationFrame(() => screen.classList.add('visible'));
 
