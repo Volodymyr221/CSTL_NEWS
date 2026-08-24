@@ -10,16 +10,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-24 20:12 UTC
+**Зріз на:** 2026-08-24 20:22 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-bn0us5` |
-| останній коміт людини | `4ad5aa33` 24.08 20:11 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
+| останній коміт людини | `a2b83d68` 24.08 20:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260824-1926` |
-| останній PR у `main` | #1009 |
+| останній PR у `main` | #1010 |
 | стендів на диску | 102 |
-| незакомічених файлів | 1 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-24 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -29,11 +29,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `a2b83d68` 24.08 20:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `ebf8cf11` 24.08 20:14 — Передача в новий чат — 24.08.2026 (тільки документи) (#1010)
+- `2336ee25` 24.08 20:13 — docs: передача в новий чат — 24.08.2026
 - `4ad5aa33` 24.08 20:11 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
 - `20fa02ad` 24.08 19:37 — Мітки «бачив» синхронізуються між пристроями (#1009)
-- `2798adc0` 24.08 19:36 — docs(пульс): звів роботу двох сесій за правилом №13
-- `1235fae3` 24.08 19:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
-- `6ee03b3c` 24.08 19:31 — docs: пульс, літопис і 102 стенди після синхрону міток
 
 <!-- AUTO:END -->
 
