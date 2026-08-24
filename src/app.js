@@ -379,7 +379,14 @@ function handlePostHash() {
   const [, source, id, commentId] = m;
   const n = Number(id);
   if      (source === 'feed')              focusFeedPost(n, commentId === 'all' ? 'all' : (commentId ? Number(commentId) : null));
-  else if (source === 'board' || source === 'disc') openBoardItemById(n);
+  // 🆕 23.08 — `?c=` тепер працює і для ПИТАНЬ: веде до тієї самої відповіді,
+  // про яку прийшло сповіщення. Раніше хвіст тут розпізнавався, але мовчки
+  // відкидався — тобто посилання доводило людину до питання й лишало шукати
+  // репліку очима. `all` (зведене «N нових відповідей») якоря не має навмисно:
+  // одного винуватця там немає, і підсвітити довелось би навмання.
+  else if (source === 'board' || source === 'disc') {
+    openBoardItemById(n, (commentId && commentId !== 'all') ? Number(commentId) : null);
+  }
   else if (source === 'news')              openArticleById(n);
 }
 

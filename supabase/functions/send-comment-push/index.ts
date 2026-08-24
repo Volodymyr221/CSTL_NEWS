@@ -101,7 +101,14 @@ async function handleComment(admin: Admin, commentId: number) {
   // 2. Адмінам сторінки — з вікном тиші.
   const { data: admins } = await admin
     .from('page_admins').select('uid').eq('page_id', post.page_id);
-  const targets = (admins || []).map((a: { uid: string }) => a.uid).filter((u: string) => !notified.has(u));
+  // 🆕 24.08 (B-33) — хто вимкнув «Стрічку» в кабінеті, той не отримує.
+  // 🛑 Гілка 1 вище ЦЬОГО НЕ ПИТАЄ: «вам відповіли» — персональне звернення,
+  // воно не притишується нічим (те саме правило, що в `send-answer-push`).
+  const targets = await allowed(
+    admin,
+    (admins || []).map((a: { uid: string }) => a.uid).filter((u: string) => !notified.has(u)),
+    'feed',
+  );
 
   for (const uid of targets) {
     const { data: st } = await admin
@@ -156,6 +163,12 @@ async function flushPending(admin: Admin) {
 
   let sent = 0;
   for (const st of rows) {
+    // 🆕 24.08 (B-33) — і в ДОБІГУ теж. Пропустити цю перевірку тут означало б
+    // лишити дірку рівно там, де вона найпомітніша: людина вимкнула тему, під
+    // дописом за вечір набралось 12 коментарів, і за десять хвилин їй усе одно
+    // прилітає «Ще 12 коментарів». Тобто вимикач працює на кожному окремому
+    // сповіщенні і не працює на зведеному — найгірший вид напівробочого.
+    if (!(await allowed(admin, [st.uid], 'feed')).length) { await clearState(admin, st); continue; }
     const { data: post } = await admin
       .from('page_posts').select('id, page_id, text').eq('id', st.post_id).single();
     if (!post) { await clearState(admin, st); continue; }
@@ -182,6 +195,27 @@ async function flushPending(admin: Admin) {
 async function clearState(admin: Admin, st: { post_id: number; uid: string }) {
   await admin.from('page_comment_push_state')
     .delete().eq('post_id', st.post_id).eq('uid', st.uid);
+}
+
+// ── ЧИ ДОЗВОЛИЛА ЛЮДИНА ЦЮ ТЕМУ (B-33, 24.08) ───────────────────────────────
+// 🔴 До 24.08 вимикачі сповіщень у кабінеті не читав НІХТО — вони писались у
+// `localStorage` і там лишались. Слово Вови: «Декоративного в нас нічого не має
+// бути… скасування сповіщення має бути робоче».
+// 🔑 Відсутній рядок = ДОЗВОЛЕНО (людина нічого не міняла). Помилку запиту
+// трактуємо так само: краще надіслати зайве, ніж мовчки проковтнути те, на що
+// людина підписалась сама.
+// ⚠️ Дубль в кожній Edge Function навмисно: вони крутяться в Deno на сервері
+// Supabase, деплояться окремо, спільного модуля між ними немає.
+async function allowed(admin: Admin, uids: string[], topic: string) {
+  if (!uids.length) return uids;
+  const { data, error } = await admin
+    .from('notif_prefs').select('uid, buses, board, questions, feed').in('uid', uids);
+  if (error) return uids;
+  const off = new Set(
+    (data || []).filter((r: Record<string, unknown>) => r[topic] === false)
+                .map((r: { uid: string }) => r.uid),
+  );
+  return uids.filter((u) => !off.has(u));
 }
 
 // ── Надсилання на всі пристрої вказаних людей ─────────────────────────────────

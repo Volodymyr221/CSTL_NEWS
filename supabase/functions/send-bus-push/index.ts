@@ -138,6 +138,40 @@ serve(async (req) => {
     console.error('❌ schedule.json НЕ завантажено — скасовані рейси НЕ виявляться:', e);
   }
 
+  // ── B-33 (24.08): ХТО ВИМКНУВ «АВТОБУСИ» В КАБІНЕТІ — ТОМУ НЕ ШЛЕМО ────────
+  //
+  // 🔴 Це найгірший із чотирьох випадків B-33, і саме через те, що підписка тут
+  // СПРАВЖНЯ. Людина відстежує рейс, тумблер у кабінеті вимикає — а push усе
+  // одно приходить. Тобто на одну річ було ДВА вимикачі, і кабінетний брехав.
+  // Наслідок ширший за автобуси: після такого людина перестає вірити будь-якому
+  // вимикачу в застосунку.
+  //
+  // 🔑 Кабінетний тумблер — ГЛОБАЛЬНИЙ рубильник теми, а відстеження рейсу
+  // лишається точковим вибором. Вимкнув тему — мовчать усі рейси, зокрема ті,
+  // що вже відстежуються.
+  //
+  // ⚠️ `push_subscriptions.user_uuid` має тип TEXT, а `notif_prefs.uid` — `uuid`.
+  // Один нестандартний рядок у списку відкинув би ВЕСЬ запит
+  // (`invalid input syntax for type uuid`), і тоді б замовкли ВСІ автобусні
+  // сповіщення — мовчазний провал, який виглядав би як «push зник». Тому
+  // фільтр форми обовʼязковий (та сама пастка, що в `reactions.user_id`).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const вимкнули = new Set<string>();
+  {
+    const uids = [...new Set(
+      (subs as Array<{ user_uuid?: string }>)
+        .map((x) => x.user_uuid || '')
+        .filter((u) => u && UUID_RE.test(u)),
+    )];
+    if (uids.length) {
+      const { data: prefs } = await supa
+        .from('notif_prefs').select('uid, buses').in('uid', uids);
+      for (const r of ((prefs || []) as Array<{ uid: string; buses: boolean }>)) {
+        if (r.buses === false) вимкнули.add(r.uid);
+      }
+    }
+  }
+
   let sent = 0;
   const toDelete: number[] = [];
 
@@ -157,6 +191,10 @@ serve(async (req) => {
   };
 
   for (const sub of subs) {
+    // 🛑 Тема вимкнена — рейс далі відстежується, але телефон мовчить.
+    // Підписку НЕ видаляємо: людина може ввімкнути тему назад, і відстеження
+    // має лишитись там, де вона його поставила.
+    if (sub.user_uuid && вимкнули.has(sub.user_uuid)) continue;
     const routeLabel = sub.route_name || sub.route_id;
     const segLabel   = sub.boarding_stop && sub.alighting_stop
       ? `${sub.boarding_stop.toUpperCase()} → ${sub.alighting_stop.toUpperCase()}`
