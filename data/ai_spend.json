@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787558569019,
+      "mission": "olyka:story:скарби-радзивіллів-і-привид",
+      "model": "claude-opus-5",
+      "input_tokens": 4753,
+      "output_tokens": 243,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0298,
+      "note": "Скарби Радзивіллів і привид пані: легенди Олики"
+    },
+    {
       "ts": 1787557168248,
       "mission": "holiday:🇺🇦 День знань",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0124,
       "note": ""
-    },
-    {
-      "ts": 1784105814231,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 625,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0107,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 5.4116,
-    "runs": 95,
+    "cost_usd": 5.4414,
+    "runs": 96,
     "web_searches": 63
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 0.302,
-      "runs": 17,
+      "cost_usd": 0.3318,
+      "runs": 18,
       "web_searches": 0
     }
   },
-  "updated_ts": 1787557168248
+  "updated_ts": 1787558569019
 }

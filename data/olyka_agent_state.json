@@ -5,7 +5,8 @@
     "story:олицький-замок-одна-з",
     "story:сім-днів-коли-олика",
     "story:підземелля-олицького-замку-15",
-    "swipe-back"
+    "swipe-back",
+    "story:скарби-радзивіллів-і-привид"
   ],
   "kinds": {
     "weather-compact": "feature",
@@ -13,6 +14,7 @@
     "story:олицький-замок-одна-з": "brand",
     "story:сім-днів-коли-олика": "brand",
     "story:підземелля-олицького-замку-15": "brand",
-    "swipe-back": "feature"
+    "swipe-back": "feature",
+    "story:скарби-радзивіллів-і-привид": "brand"
   }
 }
