@@ -390,6 +390,34 @@ function handlePostHash() {
   else if (source === 'news')              openArticleById(n);
 }
 
+// Deep-link на ВКЛАДКУ ЦІЛКОМ: #/tab/<назва>.
+//
+// 🔴 Заведено 24.08 разом із типом 4 («у громаді питання без відповіді»).
+// Доти deep-link умів вести ЛИШЕ в конкретний запис — і зведене сповіщення
+// «5 питань чекають на відповідь» не мало куди вести чесно: відкривши одне з
+// пʼяти, воно збрехало б про решту чотири. Це те саме правило, за яким 23.08
+// зведене «N нових відповідей» отримало `?c=all`: **тап мусить вести туди, що
+// обіцяє текст** (`HOT_RULES` №12).
+//
+// 🔑 Назви в посиланні КОРОТКІ й ті самі, що вже вживаються в `#/post/<source>/`
+// (`disc`, `feed`, `board`), а не внутрішні імена вкладок (`discussions`,
+// `shotam`). Одне слово в посиланні має означати одне й те саме скрізь, інакше
+// наступного разу доведеться згадувати, яке з двох імен тут доречне.
+// ⚠️ Невідома назва просто ігнорується: сповіщення, надіслане новішою версією
+// функції, не мусить кидати помилку в старішому застосунку.
+const TAB_BY_HASH = {
+  disc: 'discussions', feed: 'shotam', board: 'board',
+  community: 'community', buses: 'buses', power: 'power',
+};
+function handleTabHash() {
+  const m = (location.hash || '').match(/^#\/tab\/([a-z]+)/);
+  if (!m) return;
+  const tab = TAB_BY_HASH[m[1]];
+  history.replaceState(null, '', location.pathname + location.search);
+  guardAppRoot();   // ⚠️ САМЕ ПІСЛЯ replaceState — див. пояснення в handleThreadHash
+  if (tab) window.switchTab?.(tab);
+}
+
 // ── ЗАСТАВКА: ЗНИКАЄ, КОЛИ ЕКРАН ГОТОВИЙ, А НЕ ЗА РОЗКЛАДОМ (16.08) ──────────
 //
 // 🔴 БУЛО: `setTimeout(…, 3500)` + 600мс на згасання = **4.1 секунди БЕЗУМОВНО**,
@@ -494,6 +522,8 @@ async function init() {
   window.addEventListener('hashchange', handleThreadHash);
   handlePostHash();                                // deep-link на пост «Стрічки»
   window.addEventListener('hashchange', handlePostHash);
+  handleTabHash();                                 // deep-link на вкладку (тип 4)
+  window.addEventListener('hashchange', handleTabHash);
 
   // Тап по системному сповіщенню, коли додаток УЖЕ відкритий. Холодний старт працював
   // (sw.js відкриває вікно на deep-link), а тут раніше вікно лише фокусувалось — і
@@ -518,6 +548,10 @@ async function init() {
       if (i < 0) return;                           // url без deep-link — нічого відкривати
       location.hash = String(d.url).slice(i);
       handlePostHash();                            // ідемпотентно: сам чистить hash після відкриття
+      // 🔑 І вкладка теж: зведене «N питань чекають» веде саме сюди, а не в
+      // окремий запис. Обидва обробники самі виходять, якщо хеш не їхній, тож
+      // порядок значення не має.
+      handleTabHash();
     });
   }
 
