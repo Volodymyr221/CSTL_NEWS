@@ -94,7 +94,24 @@ export async function signInWithGoogle() {
   const supa = getSupabase();
   if (!supa) { showToast('Немає звʼязку з сервером', 3000, 'error'); return; }
   const redirectTo = window.location.origin + window.location.pathname;
-  const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+  // 🔴 24.08 — `prompt: 'select_account'`: ГОOGLE ЗАВЖДИ ПИТАЄ, ЯКИМ АКАУНТОМ ЗАЙТИ.
+  //
+  // Скарга Вови: «чому я ніколи не натискаю авторизуватися — мене зразу закидає
+  // через пошту, якою я авторизовувався останній раз? Чому я не можу вибрати?»
+  //
+  // 🔑 Це не була наша поломка — це стандартна поведінка Google: коли в браузері
+  // рівно ОДНА активна Google-сесія, він пропускає екран вибору і мовчки логінить
+  // нею. Список показується лише якщо сесій кілька або жодної. Тобто перемкнути
+  // акаунт можна було тільки вийшовши з Google у самому браузері — а Вова веде
+  // проєкт із двох акаунтів і робить це постійно.
+  //
+  // ⚠️ Ціна рішення названа чесно: для жителя з одним акаунтом це +1 екран при
+  // кожному вході. Прийнято свідомо — «Увійти з Google» без питання, ЯКИМ саме,
+  // це рівно той клас поведінки, коли застосунок вирішує за людину мовчки.
+  const { error } = await supa.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, queryParams: { prompt: 'select_account' } },
+  });
   // Сира помилка входу («Load failed» тощо) людині нічого не пояснює — через словник.
   if (error) showToast(netErrorText(error), 4000, 'error');
 }
