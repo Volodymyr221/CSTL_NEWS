@@ -382,12 +382,30 @@ const look = await page.evaluate(() => {
     badgeTxt: badge ? badge.textContent.trim() : null,
     titleSize: parseFloat(getComputedStyle(title).fontSize),
     footSize: parseFloat(getComputedStyle(foot).fontSize),
-    lead: !!document.querySelector('.nc--lead'),
+    // 🔴 24.08 — ТУТ СТОЯВ КЛАС, ЯКОГО В ЗАСТОСУНКУ НЕМАЄ. Було
+    // `.nc-card:first-child`, а картка новини має клас `.nc` (`news.js`,
+    // `renderCard`) — заміряно: `document.querySelectorAll('.nc-card').length`
+    // дорівнює НУЛЮ на живому екрані. Тобто `першаЗФото` було false ЗАВЖДИ, і
+    // правило «герой є тоді і лише тоді» насправді вимагало ВІДСУТНОСТІ героя.
+    // 🔑 Зеленим воно стояло з 21.08 лише тому, що найсвіжішими були наші власні
+    // статті без фото і `markLead` чесно героя не вішав. Щойно парсер приніс
+    // свіжу новину З ФОТО, застосунок спрацював ПРАВИЛЬНО — і сторож почервонів
+    // саме на правильній поведінці. Це той самий найгірший тип хибного виміру,
+    // що й сцена «НІЧ» в автобусах: перевірка не ловила ваду, а ВИМАГАЛА її.
+    // ⚠️ Обидва поля тепер прив'язані до `.nh-list`: без цього `querySelector`
+    // брав перший збіг по ВСЬОМУ документу, а під екраном хаба лишається ще й
+    // віджет Громади зі своїми картками.
+    lead: !!document.querySelector('.nh-list .nc--lead'),
     // 🔑 Чи МОЖЕ перша картка бути «героєм»: правило в `markLead` дозволяє це
     // лише за наявності фото. Без цього поля перевірка нижче міряла б ДАНІ
     // (чи трапилось фото в найсвіжішої новини), а не поведінку коду.
-    першаЗФото: !!document.querySelector('.nc-card:first-child img, .nc-card:first-child .img-fallback'),
-    leadHasPhoto: !!document.querySelector('.nc--lead img, .nc--lead .img-fallback'),
+    // ⚠️ `.img-fallback` у списку НЕ зайвий: стенд глушить усі картинки, тож
+    // `handleImgError` підміняє `<img>` плейсхолдером. А ось `.nc-img--mono` сюди
+    // НЕ входить свідомо — це «джерело не дало фото взагалі», тобто саме той
+    // випадок, коли героя бути не повинно.
+    першаЗФото: (() => { const f = document.querySelector('.nh-list .nc');
+      return !!(f && f.querySelector('img, .img-fallback')); })(),
+    leadHasPhoto: !!document.querySelector('.nh-list .nc--lead img, .nh-list .nc--lead .img-fallback'),
     // Ексклюзив більше не обводимо кільцем (обідок читався як тривога).
     exclRing: (() => { const e = document.querySelector('.nh-list .nc.exclusive');
       return e ? getComputedStyle(e).boxShadow : 'none'; })(),
@@ -433,6 +451,27 @@ ok('🔴 велика картка є ТОДІ І ЛИШЕ ТОДІ, коли в
    look.lead === look.першаЗФото, `герой: ${look.lead}, фото в першої: ${look.першаЗФото}`);
 ok('якщо герой є — він саме з фото (інакше це роздутий текст)',
    !look.lead || look.leadHasPhoto, `герой: ${look.lead}, фото: ${look.leadHasPhoto}`);
+
+// 🔴 КОНТРОЛЬ НА ДВІ ПЕРЕВІРКИ ВИЩЕ (24.08). Без нього вони знову можуть три дні
+// стояти зеленими над зламаним селектором — саме так і сталось із `.nc-card`.
+// Знімаємо з першої картки клас героя (рівно та вада, яку правило має ловити:
+// фото є, а великої картки немає) і міряємо ТИМ САМИМ виразом. Якщо він цього не
+// помітив — він не міряє нічого, і стенд мусить впасти.
+// ⚠️ Псуємо DOM НАВМИСНО і ПІСЛЯ всіх вимірів вигляду, щоб нічого не зіпсувати
+// наступним перевіркам; сторінку далі однаково відкриваємо заново.
+const контрольГероя = await page.evaluate(() => {
+  const f = document.querySelector('.nh-list .nc');
+  if (!f) return null;
+  f.classList.replace('nc--lead', 'nc--row');
+  const lead = !!document.querySelector('.nh-list .nc--lead');
+  const першаЗФото = !!(f.querySelector('img, .img-fallback'));
+  f.classList.replace('nc--row', 'nc--lead');       // повертаємо як було
+  return { lead, першаЗФото, правилоТримається: lead === першаЗФото };
+});
+ok('🔴 контроль: правило героя ЛОВИТЬ зняту велику картку',
+   !!контрольГероя && контрольГероя.першаЗФото && !контрольГероя.правилоТримається,
+   контрольГероя ? `герой: ${контрольГероя.lead}, фото в першої: ${контрольГероя.першаЗФото}`
+                 : 'першої картки в хабі немає');
 ok('ексклюзив БЕЗ обідка-кільця', !/0px 0px 0px 1\.5px/.test(look.exclRing), look.exclRing.slice(0, 40));
 
 // 🔴 ГЕО-МІТКА, ЩО ПОВТОРЮЄ ВКЛАДКУ, — ШУМ. Перевіряємо в КОЖНОМУ розділі.

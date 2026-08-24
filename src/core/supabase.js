@@ -382,11 +382,21 @@ export async function setReaction(postId, userId, emoji) {
 // ── КОМЕНТАРІ ────────────────────────────────────────────────────────────
 
 // Усі коментарі усіх постів — Map<post_id, comments[]>.
+// ⚠️ 24.08 — доданий явний `.is('deleted_at', null)`. До міграції
+// `soft_delete_visibility_own_comments` видалені відсікала САМА політика
+// читання, тож запит міг про них не думати. Тепер автор бачить свої видалені
+// (без цього видалення взагалі не працювало — розбір у
+// `scripts/supabase_soft_delete_visibility.sql`), і без цього рядка вони
+// приїжджали б у клієнт марно.
+// 🔑 На екран це не впливало б і без фільтра — усі лічильники Питань ідуть
+// через `activeComments()`, який відсіює видалені. Йдеться саме про трафік:
+// просимо те, що показуємо.
 export async function fetchAllComments() {
   if (!supa) return new Map();
   const { data, error } = await supa
     .from('comments')
     .select('id, post_id, author, text, created_at, sender_uid, reply_to_id, edited_at, deleted_at, client_tag')
+    .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (error) {
     console.warn('[supabase] fetchAllComments error:', error.message);
@@ -428,11 +438,35 @@ export async function editComment(commentId, text) {
 }
 
 // М'яке видалення коментаря (лишаємо рядок, ставимо deleted_at → плейсхолдер у UI).
-// text='' бо колонка може бути NOT NULL; UI орієнтується на deleted_at.
+//
+// 🔴 24.08 — ЗВІДСИ ПРИБРАНО `text: ''`, І ЦЕ ВИПРАВЛЕННЯ БАГА, ЯКИЙ ЗНАЙШОВ
+// ВОВА НА ПРОДІ: «написав відповідь на питання і не можу видалити», тост
+// «❌ Не вдалося видалити: Текст порожній».
+//
+// 🔑 Ланцюг був такий. На `comments` у базі стоїть тригер
+// `trg_comments_guard_update_antispam` (BEFORE UPDATE, накочено міграцією
+// `comment_edit_support_and_antispam_on_update` 25.07). Він каже:
+//     if new.text is distinct from old.text then  → прогнати антиспам
+// Ми міняли текст на порожній → тригер бачив «текст змінився» → антиспам
+// законно відповідав «порожній коментар» → весь UPDATE відкочувався.
+// Тобто **видалення не відрізнялось від правки тексту**.
+//
+// ⚠️ Старий коментар тут пояснював `text: ''` тим, що «колонка може бути NOT
+// NULL». Це хибний аргумент, і він же тримав ваду: `NOT NULL` забороняє
+// записати NULL, а НЕ передати поле взагалі. Звірено з базою 24.08:
+// `comments.text` справді `NOT NULL` — і саме тому поле треба просто НЕ
+// ЧІПАТИ, а не затирати порожнім рядком.
+//
+// 🔑 Тепер однаково зі «Стрічкою»: `deletePageComment` завжди слав лише
+// `deleted_at`, і тому там видалення працювало. Різниця між двома поверхнями
+// і була всією вадою — той самий клас, що ловився 22-24.08 тричі поспіль.
+// 🛑 База теж полагоджена (`scripts/supabase_comment_delete_antispam.sql`):
+// покладатись лише на клієнта не можна — його можна обійти, і наступний виклик
+// повторив би це мовчки.
 export async function deleteComment(commentId) {
   if (!supa) return { ok: false, error: 'no-supa' };
   const r = await netCall(() => supa.from('comments')
-    .update({ deleted_at: new Date().toISOString(), text: '' })
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', commentId).select().single());
   return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
@@ -1551,10 +1585,41 @@ export async function fetchPostBrief(postId) {
 }
 
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).
+//
+// 🔴 24.08 — ТЕПЕР ЦЕ ЗАХОПЛЕННЯ, А НЕ ПРОСТО ЗАПИС.
+// Було: звичайний `upsert` під свій `uid`. А `unique (uid, endpoint)` вважає
+// «той самий телефон під двома акаунтами» цілком законною парою рядків — тож
+// після виходу з одного акаунта й входу в інший push летіли ОБОМ. Заміряно на
+// живій базі: один endpoint під «Володимиром» (26.07) і «Олександром» (24.08
+// 08:09 UTC — рівно коли Вова перемикався). Саме на це він і скаржився.
+// 🔑 `claim_push_device` в одній транзакції прибирає чужі рядки з цим endpoint і
+// кладе свій. Одна транзакція, а не два запити: між ними було б вікно, у якому
+// пристрій не належить нікому і сповіщення губляться.
+// ⚠️ Прибирання чужого тут безпечне: `endpoint` — ~200 випадкових символів від
+// Apple/Google, і прочитати чужий неможливо (політика пускає лише до своїх
+// рядків). Назвати те, чого не бачиш, не вийде. Подробиці й доказ —
+// `scripts/supabase_account_scoped_state.sql`.
 export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
   if (!supa || !uid) return { ok: false };
+  const r = await netCall(() => supa.rpc('claim_push_device', {
+    p_endpoint: endpoint, p_p256dh: p256dh, p_auth_key: auth_key,
+  }));
+  return r.ok ? { ok: true } : { ok: false };
+}
+
+// 🔴 24.08 — ВІДВʼЯЗАТИ ПРИСТРІЙ ПРИ ВИХОДІ З АКАУНТА.
+// Друга половина того самого фікса. `claim_push_device` рятує наступний вхід, а
+// це — проміжок МІЖ входами: людина вийшла і сидить гостем, а сповіщення
+// попереднього акаунта далі приходять на екран.
+// ⚠️ Кличеться ДО `supa.auth.signOut()`: після виходу токена вже немає, і RLS
+// не пустить видалити навіть власний рядок.
+// 🛑 Помилку тут НЕ роздуваємо в тост: людина натиснула «Вийти», і вихід має
+// відбутись навіть без мережі. Слід лишається в консолі й у журналі збоїв.
+export async function releasePushDevice(uid, endpoint) {
+  if (!supa || !uid || !endpoint) return { ok: false };
   const r = await netCall(() => supa.from('user_push_devices')
-    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' }));
+    .delete().eq('uid', uid).eq('endpoint', endpoint));
+  if (!r.ok) console.warn('[supabase] releasePushDevice:', r.error);
   return r.ok ? { ok: true } : { ok: false };
 }
 
@@ -1612,6 +1677,57 @@ export async function removeSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
   const r = await netCall(() => supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId));
   return r.ok ? { ok: true } : { ok: false };
+}
+
+// ── ЗБЕРЕЖЕНІ СТАТТІ — 24.08 ПЕРЕЇХАЛИ З ПРИСТРОЮ В АКАУНТ ──────────────────
+//
+// 🔴 Було: ключ `cstl_saved_articles` у `localStorage`, без жодної згадки про
+// людину. Доведено стендом `tests/account-scope.mjs` у живому браузері: акаунт Б
+// бачив статтю, збережену акаунтом А, і гість бачив її теж.
+// 🔑 Ліки не вигадані: у тому ж аркуші «Збережені» поруч лежать ОГОЛОШЕННЯ, і
+// вони не протікали — бо живуть у `saved_posts` з `uid`. Тому статті зведено до
+// того самого зразка, а не до нового.
+// ⚠️ Зберігаємо лише НОМЕР статті — контент завжди з `data/articles.json`
+// (правило `CLAUDE.md`); саме тому в таблиці немає зовнішнього ключа.
+
+export async function fetchSavedArticleIds(uid) {
+  const set = new Set();
+  if (!supa || !uid) return set;
+  const { data, error } = await supa.from('saved_articles')
+    .select('article_id').eq('uid', uid).order('created_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchSavedArticleIds:', error.message); return set; }
+  for (const r of (data || [])) set.add(r.article_id);
+  return set;
+}
+
+export async function addSavedArticle(uid, articleId) {
+  if (!supa || !uid) return { ok: false };
+  const r = await netCall(() => supa.from('saved_articles')
+    .upsert({ uid, article_id: articleId }, { onConflict: 'uid,article_id' }));
+  return r.ok ? { ok: true } : { ok: false };
+}
+
+export async function removeSavedArticle(uid, articleId) {
+  if (!supa || !uid) return { ok: false };
+  const r = await netCall(() => supa.from('saved_articles')
+    .delete().eq('uid', uid).eq('article_id', articleId));
+  return r.ok ? { ok: true } : { ok: false };
+}
+
+// Разове перенесення того, що людина зберегла ДО переїзду.
+//
+// 🔑 Мовчки нічого не викидаємо: у Вови й перших людей у сховищі вже лежать
+// закладки, і «полагодили, а твої збережені зникли» — гірше за сам баг.
+// ⚠️ Переносимо на ПЕРШИЙ акаунт, який зайшов на цьому пристрої після оновлення,
+// і одразу стираємо локальний ключ — інакше ті самі статті приїхали б і
+// ДРУГОМУ акаунту, тобто витік, який ми лікуємо, просто переїхав би в базу.
+// Той самий прийом уже застосовано до згоди з правилами Дошки (`board.js`).
+export async function seedSavedArticles(uid, ids) {
+  if (!supa || !uid || !ids?.length) return { ok: true, moved: 0 };
+  const rows = ids.map(id => ({ uid, article_id: id }));
+  const r = await netCall(() => supa.from('saved_articles')
+    .upsert(rows, { onConflict: 'uid,article_id' }));
+  return r.ok ? { ok: true, moved: rows.length } : { ok: false, moved: 0 };
 }
 
 // ── НАЛАШТУВАННЯ СПОВІЩЕНЬ (B-33, 24.08) ────────────────────────────────────
