@@ -9,7 +9,7 @@
 // Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
-import { getSupabase, netErrorText, netCall } from './supabase.js';
+import { getSupabase, netErrorText, netCall, releasePushDevice } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
@@ -116,9 +116,34 @@ export async function signInWithGoogle() {
   if (error) showToast(netErrorText(error), 4000, 'error');
 }
 
+// 🔴 24.08 — ВИХІД ТЕПЕР ВІДВʼЯЗУЄ ПРИСТРІЙ ВІД АКАУНТА.
+// Було: чистились лише памʼять і сесія Supabase, про базу тут не було жодного
+// рядка. Наслідок Вова знайшов на проді: вийшов з «Олександра», зайшов
+// «Володимиром» — а push і далі приходили на попередній акаунт. Заміряно: один
+// endpoint під двома акаунтами одночасно.
+// 🛑 Це не незручність, а витік — у тілі push лежить текст повідомлення.
+//
+// 🔑 ПОРЯДОК ТУТ НЕСУЧИЙ: спершу віддаємо пристрій, ПОТІМ виходимо. Після
+// `auth.signOut()` токена вже немає, і RLS не пустить видалити навіть власний
+// рядок — прибирання просто мовчки не відбулось би.
+// ⚠️ Вихід має відбутись НАВІТЬ якщо мережі немає: помилка відвʼязування не
+// зупиняє `signOut`. Другий рубіж на цей випадок стоїть у базі —
+// `claim_push_device` забирає чужі рядки при наступному вході.
+async function detachThisDevice() {
+  try {
+    if (!_user || !('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub?.endpoint) await releasePushDevice(_user.id, sub.endpoint);
+  } catch (e) {
+    console.warn('[auth] detachThisDevice:', e && e.message);
+  }
+}
+
 export async function signOut() {
   const supa = getSupabase();
   if (!supa) return;
+  await detachThisDevice();
   await supa.auth.signOut();
   _user = null;
   _profileName = null;

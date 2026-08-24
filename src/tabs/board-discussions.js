@@ -128,7 +128,11 @@ function likeBtnInner(postId) {
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
 
-const LS_CHAT_SEEN = 'cstl-chat-seen-v1';  // { postId: timestamp останнього перегляду теми (ms) }
+// 🔴 24.08 — під акаунт (як решта міток «бачив»): мапа «яку тему коли дивився»
+// це персональна історія, і другому акаунту на тому самому телефоні вона
+// казала, що він уже читав те, чого не відкривав.
+const LS_CHAT_SEEN_BASE = 'cstl-chat-seen-v1';  // { postId: timestamp перегляду теми (ms) }
+const LS_CHAT_SEEN_KEY = () => LS_CHAT_SEEN_BASE + ':' + (currentUserId() || 'anon');
 
 // lsGet/lsSet тепер спільні (core/utils.js) — ними користується і антифлуд «Стрічки».
 
@@ -170,13 +174,13 @@ function tsMs(v) {
 // в екрані більше немає (чат-механіка), але сама межа ПОТРІБНА далі: на ній
 // тримається крапка «є нове» біля іконки вкладки (`unseenDiscussionsCount`).
 function getChatSeen(postId) {
-  const m = lsGet(LS_CHAT_SEEN, {});
+  const m = lsGet(LS_CHAT_SEEN_KEY(), {});
   return m[String(postId)] || 0;
 }
 function setChatSeen(postId, ts) {
-  const m = lsGet(LS_CHAT_SEEN, {});
+  const m = lsGet(LS_CHAT_SEEN_KEY(), {});
   m[String(postId)] = ts;
-  lsSet(LS_CHAT_SEEN, m);
+  lsSet(LS_CHAT_SEEN_KEY(), m);
 }
 
 // ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────

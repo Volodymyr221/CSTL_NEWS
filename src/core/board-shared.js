@@ -77,16 +77,41 @@ export function cardTitleText(p) {
 //
 // ⚠️ Живе в `core/`, а не в `tabs/board.js`, бо читає це Громада, а пише Дошка —
 // а `core` не має імпортувати з `tabs` (правило проти циклу, див. шапку файла).
-const BOARD_SEEN_KEY = 'cstl_board_seen_ts';
-
-export function boardSeenTs() {
-  const v = Number(localStorage.getItem(BOARD_SEEN_KEY) || 0);
+// 🔴 24.08 — МІТКИ «БАЧИВ» СТАЛИ АКАУНТНИМИ.
+// Було: `cstl_board_seen_ts` без жодної згадки про людину — тобто другий акаунт
+// на тому самому телефоні успадковував чужу мітку і не бачив «нових» речей, які
+// для НЬОГО справді нові. Заміряно стендом `tests/account-scope.mjs`: після
+// сесії акаунта А в сховищі лежали чотири такі ключі, усі безіменні.
+//
+// 🔑 ОДИН помічник на всі чотири мітки (Дошка · Питання · Стрічка · Новини), а
+// не `:uid` дописаний у чотирьох місцях руками: правило «як зветься ключ» уже
+// розходилось копіями в цьому проєкті (списки антиспаму), і ціна була бага, яка
+// виглядає як «текст правильний, а не працює».
+//
+// ⚠️ ЧЕСНА МЕЖА, яку варто знати: це прибирає витік МІЖ АКАУНТАМИ, але мітки
+// лишаються на пристрої — прочитав новини на телефоні, на компʼютері бейдж усе
+// одно висить. Повна синхронізація вимагає таблиці й походу в мережу на кожне
+// перемикання вкладки; тут свідомо взято дешевше рішення, бо шкода від
+// розсинхрону між пристроями — зайвий бейдж, а не чужі дані на екрані.
+//
+// 🛑 Гість дістає СВІЙ простір міток (`anon`), а не спільний: інакше він знову
+// ділив би їх із останнім, хто виходив.
+function seenKey(base) {
+  return base + ':' + (currentUserId() || 'anon');
+}
+function readSeen(base) {
+  const v = Number(localStorage.getItem(seenKey(base)) || 0);
   return Number.isFinite(v) ? v : 0;
 }
-
-export function markBoardSeen() {
-  try { localStorage.setItem(BOARD_SEEN_KEY, String(Date.now())); } catch (_) {}
+function writeSeen(base) {
+  try { localStorage.setItem(seenKey(base), String(Date.now())); } catch (_) {}
 }
+
+const BOARD_SEEN_KEY = 'cstl_board_seen_ts';
+
+export function boardSeenTs() { return readSeen(BOARD_SEEN_KEY); }
+
+export function markBoardSeen() { writeSeen(BOARD_SEEN_KEY); }
 
 // ── КОЛИ Я ОСТАННІЙ РАЗ БУВ У ПИТАННЯХ (21.08) ───────────────────────────────
 //
@@ -102,14 +127,9 @@ export function markBoardSeen() {
 // модель «баченого» в тому самому застосунку розійшлася б із першою.
 const CHAT_SEEN_KEY = 'cstl_chat_seen_ts';
 
-export function chatSeenTs() {
-  const v = Number(localStorage.getItem(CHAT_SEEN_KEY) || 0);
-  return Number.isFinite(v) ? v : 0;
-}
+export function chatSeenTs() { return readSeen(CHAT_SEEN_KEY); }
 
-export function markChatSeen() {
-  try { localStorage.setItem(CHAT_SEEN_KEY, String(Date.now())); } catch (_) {}
-}
+export function markChatSeen() { writeSeen(CHAT_SEEN_KEY); }
 
 // ── КОЛИ Я ОСТАННІЙ РАЗ БУВ У СТРІЧЦІ (22.08) ────────────────────────────────
 //
@@ -126,14 +146,9 @@ export function markChatSeen() {
 // бага B-27. Одна модель на чотири поверхні дорожча за точність в одній.
 const FEED_SEEN_KEY = 'cstl_feed_seen_ts';
 
-export function feedSeenTs() {
-  const v = Number(localStorage.getItem(FEED_SEEN_KEY) || 0);
-  return Number.isFinite(v) ? v : 0;
-}
+export function feedSeenTs() { return readSeen(FEED_SEEN_KEY); }
 
-export function markFeedSeen() {
-  try { localStorage.setItem(FEED_SEEN_KEY, String(Date.now())); } catch (_) {}
-}
+export function markFeedSeen() { writeSeen(FEED_SEEN_KEY); }
 
 // ── Закладки: БД per-uid (saved_posts) — синхрон між пристроями ───────────────
 // savedIds тримаємо в пам'яті (заповнює renderBoard() через setSavedIds з

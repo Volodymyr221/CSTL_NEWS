@@ -1,21 +1,73 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
+import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
+import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
+         seedSavedArticles } from '../core/supabase.js';
 
 let allArticles = [];
 
-// Батч 5.3: збереження статей (нове — раніше save для статей не існував).
-// Зберігаємо лише id (не контент — контент завжди з data/articles.json, правило CLAUDE.md).
-const SAVED_KEY = 'cstl_saved_articles';
+// ── ЗБЕРЕЖЕНІ СТАТТІ ────────────────────────────────────────────────────────
+//
+// 🔴 24.08 — ПЕРЕЇХАЛИ З ПРИСТРОЮ В АКАУНТ.
+// Було: масив номерів у `localStorage` під ключем `cstl_saved_articles`, без
+// жодної згадки про людину. Доведено стендом `tests/account-scope.mjs` у живому
+// браузері: акаунт Б бачив статтю, збережену акаунтом А, і гість бачив її теж.
+// Слово Вови: «все персональне має зберігатись в акаунті, а не на пристрої».
+// 🔑 Зразок не вигаданий — поруч в аркуші «Збережені» лежать ОГОЛОШЕННЯ, і вони
+// не протікали, бо живуть у `saved_posts` з `uid`. Статті зведено до них.
+// ⚠️ Зберігаємо лише НОМЕР — контент завжди з `data/articles.json` (правило
+// `CLAUDE.md`); ця частина не змінилась.
+const SAVED_KEY = 'cstl_saved_articles';   // лишається ЛИШЕ як джерело переносу
+
+// 🔑 ЧОМУ В ПАМʼЯТІ, А НЕ ЩОРАЗУ ЗАПИТОМ. `getSavedArticleIds()` кличеться при
+// кожному відкритті статті — щоб намалювати стан прапорця. Похід у мережу на
+// малювання іконки означав би або блимання «не збережено → збережено», або
+// переписування всіх викликачів на `await`. Той самий прийом уже вибрано для
+// оголошень (`savedIds` у `core/board-shared.js`) — тримаємо одну модель.
+let savedArticleIds = [];
+
 export function getSavedArticleIds() {
-  try { return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch { return []; }
+  return savedArticleIds;
 }
+
+// Перечитати закладки поточного акаунта. Гість → порожньо: збережене належить
+// людині, а не телефону.
+export async function refreshSavedArticles() {
+  const uid = currentUserId();
+  if (!uid) { savedArticleIds = []; return; }
+  await migrateLegacySaved(uid);
+  savedArticleIds = [...(await fetchSavedArticleIds(uid))];
+}
+
+// Разовий перенос того, що людина зберегла ДО переїзду.
+// 🛑 Мовчки викидати не можна: у Вови й перших людей закладки вже лежать, і
+// «полагодили, а твої збережені зникли» гірше за сам баг.
+// ⚠️ Локальний ключ стираємо ОДРАЗУ після переносу — інакше ті самі статті
+// приїхали б і ДРУГОМУ акаунту на цьому телефоні, тобто витік, який ми
+// лікуємо, просто переселився б у базу. Той самий прийом, що з перенесенням
+// анонімної згоди з правилами Дошки (`tabs/board.js`).
+async function migrateLegacySaved(uid) {
+  let ids = [];
+  try { ids = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch { return; }
+  if (!Array.isArray(ids) || !ids.length) return;
+  const r = await seedSavedArticles(uid, ids.filter(n => Number.isFinite(n)));
+  if (r.ok) { try { localStorage.removeItem(SAVED_KEY); } catch (_) {} }
+}
+
+// Оптимістично міняємо памʼять і пишемо в базу — як `toggleSaved` для оголошень.
+// Гість сюди не доходить: гейт стоїть у кліку (нижче, в шапці модалки статті).
 function toggleSavedArticle(id) {
-  const ids = getSavedArticleIds();
-  const idx = ids.indexOf(id);
-  if (idx === -1) ids.push(id); else ids.splice(idx, 1);
-  localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+  const uid = currentUserId();
+  if (!uid) return false;
+  const idx = savedArticleIds.indexOf(id);
+  if (idx === -1) { savedArticleIds.unshift(id); addSavedArticle(uid, id); }
+  else            { savedArticleIds.splice(idx, 1); removeSavedArticle(uid, id); }
   return idx === -1;   // true = щойно збережено
 }
+
+// Вхід, вихід і зміна акаунта — перечитуємо. Саме тут закривається сцена
+// «вийшов і зайшов іншим»: у нового акаунта список стає ЙОГО, а не спадком.
+onAuthChange(() => { refreshSavedArticles(); });
 
 // Базові категорії (рішення Вови 21.07): лише 4. Кольори лишаємо тільки для них.
 const CATEGORY_COLORS = {
@@ -96,16 +148,20 @@ export function articlesOfGroup(arts, group) {
 // корисним. Заміряно: Громада дає ~0.26 статті на день, Волинь ~24, «Україна та
 // Світ» ~30. Якби бейдж рахував усе, він показував би «54 нових» щоранку і за
 // тиждень перетворився б на шум, який ніхто не читає.
+// 🔴 24.08 — мітка стала акаунтною (як три інші, див. `core/board-shared.js`):
+// другий акаунт на тому самому телефоні успадковував чужу і не бачив «нових»
+// новин, які для нього справді нові.
 const NEWS_SEEN_KEY = 'cstl_news_seen_ts';
+const newsSeenKey = () => NEWS_SEEN_KEY + ':' + (currentUserId() || 'anon');
 
 export function newsSeenTs() {
-  const v = Number(localStorage.getItem(NEWS_SEEN_KEY) || 0);
+  const v = Number(localStorage.getItem(newsSeenKey()) || 0);
   return Number.isFinite(v) ? v : 0;
 }
 
 // Позначити новини переглянутими. Кличе хаб у момент відкриття.
 export function markNewsSeen() {
-  try { localStorage.setItem(NEWS_SEEN_KEY, String(Date.now())); } catch (_) {}
+  try { localStorage.setItem(newsSeenKey(), String(Date.now())); } catch (_) {}
 }
 
 // Скільки статей Громади новіші за останній перегляд.
@@ -501,11 +557,14 @@ export function openArticle(id) {
   if (saveBtn) {
     saveBtn.hidden = false;
     saveBtn.classList.toggle('modal-icon-btn--active', getSavedArticleIds().includes(article.id));
-    saveBtn.onclick = () => {
+    // 🔴 24.08 — ГЕЙТ ВХОДУ. До цього зберегти статтю міг будь-хто, і закладка
+    // лягала на ПРИСТРІЙ: наступна людина за тим самим телефоном бачила її як
+    // свою. Тепер це дія акаунта, як і збереження оголошення поруч.
+    saveBtn.onclick = () => requireAuth('зберігати статті', () => {
       const nowSaved = toggleSavedArticle(article.id);
       saveBtn.classList.toggle('modal-icon-btn--active', nowSaved);
       showToast(nowSaved ? 'Статтю збережено' : 'Прибрано зі збережених');
-    };
+    });
   }
 
   modal.classList.add('open');

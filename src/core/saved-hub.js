@@ -2,12 +2,23 @@
 // Хаб «Збережені» — bottom-sheet з іконки 🔖 у шапці (рішення Роми 08.07).
 // 12.07 (за проханням Роми): 2 екрани замість одного довгого списку — спершу
 // категорії з лічильником, тап відкриває список саме цієї категорії.
-//   📰 СТАТТІ       (localStorage cstl_saved_articles) → тап: модалка статті. Доступно й гостю.
+//   📰 СТАТТІ      (saved_articles, БД)  → тап: модалка статті
 //   🚌 АВТОБУСИ    (trackedRoutes, buses.js)           → тап: вкладка Автобуси + скрол на рейс
 //   💬 ПИТАННЯ     (пости type='chat')  → тап по картці: вкладка Питання + екран питання
 //   📌 ОГОЛОШЕННЯ  (пости type='board') → тап по картці: Дошка, таб «Збережені»
-// Питання/Оголошення/Автобуси — вимагають акаунт (кожен по-своєму). Статті — локальне
-// сховище пристрою (Б5.4), без акаунта. Порожньо всюди → підказка.
+//
+// 🔴 24.08 — ВЕСЬ АРКУШ ЗА ГЕЙТОМ ВХОДУ, І ЦЕ ВИПРАВЛЕННЯ ДВОХ ВАД ОДРАЗУ.
+// Було: «Статті — локальне сховище пристрою (Б5.4), без акаунта», тобто аркуш
+// відкривався кому завгодно і показував закладки попередньої людини. Заміряно
+// стендом `tests/account-scope.mjs`: акаунт Б бачив статтю акаунта А, і гість
+// бачив її теж.
+// 🛑 Друга вада була В КОМЕНТАРІ: `sidebar.js` ДВІЧІ стверджував, що
+// «`openSavedHub` має власну перевірку» — а її не існувало ЖОДНОЇ. Коментар,
+// який описує неіснуючий запобіжник, знімає обережність рівно з того місця, де
+// вона найпотрібніша (той самий урок, що сторожі `kb-guard.test.js`, на які
+// документація роками посилалась, а в git їх не було).
+// 🔑 Слово Вови: гість «може тільки переглядати публічну інформацію, а не
+// взаємодіяти в рамках додатку». Збережене — не публічна інформація.
 
 import { escapeHtml } from './utils.js';
 import { isLoggedIn, currentUserId, requireAuth } from './auth.js';
@@ -24,7 +35,7 @@ let _view = 'categories';   // 'categories' | 'articles' | 'buses' | 'chats' | '
 let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
 
 const CATS = [
-  { key: 'articles', icon: ICONS.newspaper, label: 'Статті',       needsAuth: false },
+  { key: 'articles', icon: ICONS.newspaper, label: 'Статті',       needsAuth: true },
   { key: 'buses',    icon: ICONS.bus,       label: 'Автобуси',     needsAuth: false },
   { key: 'chats',    icon: ICONS.message,   label: 'Питання',      needsAuth: true },
   { key: 'boards',   icon: ICONS.pin,       label: 'Оголошення',   needsAuth: true },
@@ -64,10 +75,15 @@ function busCardHtml(r) {
 async function loadData() {
   const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
 
-  // Статті — localStorage, доступно й гостю (Б5.4).
+  // Статті — БД `saved_articles` за `uid` (24.08). Гість сюди не доходить: аркуш
+  // за гейтом входу. ⚠️ `.reverse()` більше НЕ треба — база вже віддає
+  // найновіші зверху (`order created_at desc`), а другий переворот показував би
+  // найстаріші першими.
   try {
-    const artIds = [...getSavedArticleIds()].reverse();   // найновіші збережені зверху
-    if (artIds.length) data.articles = await getArticlesByIds(artIds);
+    if (data.loggedIn) {
+      const artIds = getSavedArticleIds();
+      if (artIds.length) data.articles = await getArticlesByIds(artIds);
+    }
   } catch (e) { console.warn('[saved-hub] articles', e); }
 
   // Автобуси — trackedRoutes (buses.js), вже порожні для гостя на джерелі (loadTrackedRoute).
@@ -150,7 +166,18 @@ function render() {
   bodyEl.innerHTML = _view === 'categories' ? categoriesScreenHtml() : categoryScreenHtml(_view);
 }
 
+// 🔴 ГЕЙТ ВХОДУ (24.08). Єдина точка: аркуш відкривають і шапка, і бічне меню,
+// тож перевірка стоїть тут, а не в кожного викликача — інакше вона існувала б у
+// стількох копіях, скільки входів, і розійшлась би при першому ж новому вході.
+// ⚠️ Тіло винесене в окрему функцію НАВМИСНО: `requireAuth` виконує передану дію
+// ОДРАЗУ, тож `requireAuth(…, () => openSavedHub())` викликав би сам себе без
+// кінця. Спіймано на собі при написанні цього фікса.
 export function openSavedHub() {
+  if (_sheet) return;
+  requireAuth('бачити збережені', openSavedSheet);
+}
+
+function openSavedSheet() {
   if (_sheet) return;
   _view = 'categories';
   _backdrop = document.createElement('div');
