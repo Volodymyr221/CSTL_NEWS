@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-24 10:40 UTC
+**Зріз на:** 2026-08-24 11:12 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/startuem-gqj5ae` |
-| останній коміт людини | `6fda3d2b` 24.08 10:40 — merge: origin/main — злито з паралельною сесією (гніздо імені, фото, капсула автобуса) |
+| гілка | `claude/startuem-bn0us5` |
+| останній коміт людини | `fb65dd6f` 24.08 11:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260824-1027` |
-| останній PR у `main` | #1003 |
+| останній PR у `main` | #1004 |
 | стендів на диску | 100 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-24 | **НЕМАЄ** ⚠️ |
@@ -25,35 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CSTL_BUGS.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/docs/QA_CONCEPT.md`
-- `_session-log/vova-2026-08-23c.md`
-- `bundle.js`
-- `scripts/supabase_answer_push_targets.sql`
-- `scripts/supabase_notif_prefs.sql`
-- `src/app.js`
-- `src/core/account-ui.js`
-- `src/core/auth.js`
-- `src/core/board-shared.js`
-- `src/core/supabase.js`
-- `src/tabs/board-discussions.js`
-- `src/tabs/board.js`
-- `style/board.css`
-- `supabase/.temp/cli-latest`
-- `supabase/functions/send-answer-push/index.ts`
-- `supabase/functions/send-bus-push/index.ts`
-- `supabase/functions/send-comment-push/index.ts`
-- …ще 3
+- `_session-log/vova-2026-08-23b.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `6fda3d2b` 24.08 10:40 — merge: origin/main — злито з паралельною сесією (гніздо імені, фото, капсула автобуса)
-- `cefee7b0` 24.08 10:31 — docs(пульс): зріз після коміту
-- `b793768f` 24.08 10:31 — docs: пульс і літопис перед фінішем сесії 23-24.08
-- `d6b2945f` 24.08 10:28 — fix(вхід): Google завжди питає, яким акаунтом зайти
-- `076126b3` 24.08 09:59 — docs(сповіщення): B-33 закрито — перевірки після деплою
+- `fb65dd6f` 24.08 11:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `6369d8ab` 24.08 10:51 — Питання: «Цікавить» стає публічною дією + B-33 (вимикачі сповіщень нарешті працюють) (#1004)
+- `fccae8dd` 24.08 09:35 — docs(пульс): зріз після мерджу main
+- `2016a092` 24.08 09:35 — Merge remote-tracking branch 'origin/main' into claude/startuem-bn0us5
+- `b4372f9c` 24.08 09:35 — docs(журнал): фініш №3 — PR #1003, деплой v4976 success
 
 <!-- AUTO:END -->
 
