@@ -10,16 +10,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-25 12:09 UTC
+**Зріз на:** 2026-08-25 12:11 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-upyy76` |
-| останній коміт людини | `f442c9b3` 25.08 11:36 — Пульс: авто-блок після злиття з main |
+| останній коміт людини | `b5ce2637` 25.08 12:11 — Злиття main: голос спільноти (#1017) + нічна тиша разом |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260825-1122` |
 | останній PR у `main` | #1017 |
 | стендів на диску | 105 |
-| незакомічених файлів | 15 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-25 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -28,30 +28,22 @@
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/CSTL_BUGS.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `CSTL NEWS VOVA/docs/QA_CONCEPT.md`
 - `_session-log/vova-2026-08-24b.md`
-- `_session-log/vova-2026-08-25b.md`
-- `bundle.js`
-- `scripts/supabase_comment_as_page.sql`
-- `src/core/supabase.js`
-- `src/tabs/feed.js`
-- `style/feed.css`
 - `supabase/functions/send-answer-push/index.ts`
-- `supabase/functions/send-comment-push/index.ts`
-- `sw.js`
 - `tests/README.md`
-- `tests/comment-as-page.mjs`
 - `tests/night-silence.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `b5ce2637` 25.08 12:11 — Злиття main: голос спільноти (#1017) + нічна тиша разом
+- `3144d0d8` 25.08 11:50 — Стрічка: відповідь від імені спільноти + бейджі «Спільнота» / «Адмін» (#1017)
 - `f442c9b3` 25.08 11:36 — Пульс: авто-блок після злиття з main
 - `31981ce8` 25.08 11:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
 - `5d713382` 25.08 11:35 — Журнал, літопис і пульс: нічна тиша, B-33, звірка документів
-- `d004db6d` 25.08 11:30 — Сторож нічної тиші + B-33 закрито + чесність tests/README
-- `cdd54400` 25.08 11:23 — Документи: звірено з кодом три застарілі записи
 
 <!-- AUTO:END -->
 
