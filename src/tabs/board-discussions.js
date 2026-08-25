@@ -471,6 +471,22 @@ function answersHtml(post) {
   // зі своїми токенами, і чужий екран не має від них залежати. Спільна тут
   // ГЕОМЕТРІЯ (44px відступ гілки, 34px аватар) — вона в `feed.css` виміряна, а не
   // взята на око, тож повторювати вимір немає сенсу.
+  // 🔴 25.08 — ТАП ПО ІМЕНІ ВІДКРИВАЄ КАРТКУ ПРОФІЛЮ, ЯК У «СТРІЧЦІ».
+  //
+  // Скарга Вови: «в стрічці в коментарях я можу тапнути на імʼя і відкрити
+  // профіль… у Питаннях я цього не можу, ти не все скопіював, візьми повністю
+  // всю логіку».
+  //
+  // 🔑 Механізм СПІЛЬНИЙ і вже стоїть: делегат `initProfileCardTaps`
+  // (`core/profile-card.js`) слухає `[data-av-uid]` на `document`. Тобто нової
+  // механіки тапу тут не додається — бракувало самого АТРИБУТА на іменах.
+  // ⚠️ Аватар його вже мав (його ставить `avatarCircle`), тому тап по кружечку
+  // працював, а по імені поруч — ні. Саме цю асиметрію Вова й побачив.
+  //
+  // 🛑 Атрибут ставимо на ОБГОРТКУ імені, а не всередину `nameSlot`: цю функцію
+  // кличуть 14 місць по всьому застосунку, і зробити її глобально клікабельною
+  // означало б перетворити на кнопку кожне імʼя скрізь — зміна, про яку ніхто
+  // не просив. У «Стрічці» це зроблено так само, посайтово.
   const byIdAll = new Map(all.map(c => [c.id, c]));
   const answer = (c, sub) => {
     const author = c.author || 'Житель';
@@ -484,7 +500,7 @@ function answersHtml(post) {
     // за uid, а не за іменем — двоє тезок мають лишитись різними людьми.
     const самомуСобі = батько && батько.sender_uid && батько.sender_uid === c.sender_uid;
     const згадка = (sub && батько && !самомуСобі)
-      ? `<span class="qa-answer-to">${nameSlot(батько.sender_uid, liveName(батько.author || 'Житель', батько.sender_uid))}</span>, `
+      ? `<span class="qa-answer-to" data-av-uid="${escapeHtml(String(батько.sender_uid || ''))}">${nameSlot(батько.sender_uid, liveName(батько.author || 'Житель', батько.sender_uid))}</span>, `
       : '';
     // 🔴 24.08 — «ВІДПОВІСТИ» НА КОЖНІЙ ВІДПОВІДІ, А НЕ ЛИШЕ НА КОРЕНЕВІЙ.
     //
@@ -521,7 +537,7 @@ function answersHtml(post) {
         <span class="qa-answer-ava">${authorAvatar(author, c.sender_uid)}</span>
         <div class="qa-answer-body">
           <div class="qa-answer-head">
-            <span class="qa-answer-name">${nameSlot(c.sender_uid, liveName(author, c.sender_uid))}</span>
+            <span class="qa-answer-name"${c.sender_uid ? ` data-av-uid="${escapeHtml(String(c.sender_uid))}"` : ''}>${nameSlot(c.sender_uid, liveName(author, c.sender_uid))}</span>
             <span class="qa-answer-when">${formatTime(postTime(c))}${edited}</span>
           </div>
           <p class="qa-answer-text">${згадка}${escapeHtml(c.text)}</p>
@@ -868,7 +884,7 @@ export function openChatModal(post, focusCommentId = null) {
         <h1 class="qa-question-text">${escapeHtml(post.text)}</h1>
         <div class="qa-question-by">
           ${authorAvatar(post.author, post.owner_uid)}
-          <span class="qa-question-name">${nameSlot(post.owner_uid, liveName(post.author, post.owner_uid))}</span>
+          <span class="qa-question-name"${post.owner_uid ? ` data-av-uid="${escapeHtml(String(post.owner_uid))}"` : ''}>${nameSlot(post.owner_uid, liveName(post.author, post.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-question-when">${formatTime(postTime(post))}</span>
         </div>
@@ -1361,7 +1377,7 @@ export function renderQuestionCard(p) {
         ${цитата}
         <p class="qa-card-meta">
           <span class="qa-card-ava">${authorAvatar(p.author, p.owner_uid)}</span>
-          <span class="qa-card-name">${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
+          <span class="qa-card-name"${p.owner_uid ? ` data-av-uid="${escapeHtml(String(p.owner_uid))}"` : ''}>${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
           <span class="qa-card-when">${formatTime(postTime(p))}</span>
         </p>
