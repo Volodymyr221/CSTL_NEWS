@@ -935,26 +935,36 @@
 /* Позначка «це можна перемкнути» — лише для команди сторінки. Стоїть ПОВЕРХ
    обличчя і власної висоти рядку не додає (`position: absolute`). */
 .fd-com-myava--switch { cursor: pointer; }
-/* 🔑 ЗОНА ДОТИКУ 44px ПРИ ОБЛИЧЧІ 34px. Це не косметика: тап міняє те, ЧИЇМ голосом
-   прозвучить текст, а промах тут коштує дорого — надіслати від імені спільноти те,
-   що хотів сказати від себе, назад не забереш. Розширюємо ПСЕВДОЕЛЕМЕНТОМ, а не
-   відступами: інакше виросла б висота стосу під клавіатурою — рівно те, що ми
-   щойно прибрали. */
-.fd-com-myava--switch::before {
-  content: ''; position: absolute; inset: -5px; border-radius: 50%;
-}
+/* 🔑 ЗОНА ДОТИКУ 44px ПРИ ОБЛИЧЧІ 34px. Не косметика: тап міняє те, ЧИЇМ голосом
+   прозвучить текст, а промах коштує дорого. Розширюємо ПСЕВДОЕЛЕМЕНТОМ, а не
+   відступами: інакше виросла б висота стосу під клавіатурою — те, що ми прибрали. */
+.fd-com-myava--switch::before { content: ''; position: absolute; inset: -5px; border-radius: 50%; }
+
+/* ── ЩО ЦЕ КНОПКА: ЗНАЧОК ⇄, А НЕ ▾ (26.08, друга редакція) ─────────────────
+   🔴 Скарга Вови: «стрілочку на іконці біля поля вводу погано видно, взагалі не
+   зрозуміло що там переключається акаунт».
+   🔑 Справа була не лише в розмірі. **«Галочка вниз» читається як «розгорнути
+   список»** — а тут списку немає, тут перемикання між двома. Двонаправлена
+   стрілка каже саме «поміняти», і це інша думка, а не той самий знак побільше.
+   ➕ Заразом 13px → 16px: на 7px значок усередині не було видно форми взагалі. */
 .fd-com-myava--switch::after {
-  content: ''; position: absolute; right: -1px; bottom: -1px;
-  width: 13px; height: 13px; border-radius: 50%;
-  background: var(--fd-surface) center / 7px 7px no-repeat;
+  content: ''; position: absolute; right: -2px; bottom: -2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--fd-surface) center / 10px 10px no-repeat;
   box-shadow: 0 0 0 1.5px var(--fd-surface);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='12' x2='21' y2='12'/%3E%3Cpolyline points='7 7 2 12 7 17'/%3E%3Cpolyline points='17 7 22 12 17 17'/%3E%3C/svg%3E");
 }
-/* Говоримо від імені спільноти — позначка в кольорі бренду, щоб стан було видно
-   не лише за фото (логотип спільноти можна й не впізнати з першого разу). */
+
+/* ── СТАН ВИДНО ЗДАЛЕКУ: КІЛЬЦЕ, А НЕ ЛИШЕ ЗНАЧОК ──────────────────────────
+   🔑 Значок 16px відповідає на «це кнопка», але не на «від чийого імені я зараз
+   пишу» — щоб це прочитати, треба вдивитись. Кільце в кольорі бренду видно
+   периферійним зором, тобто ще ДО того, як людина натисне «Надіслати».
+   ⚠️ `box-shadow` навмисно: він малюється ПОЗА потоком і висоти рядка не додає —
+   а будь-який `border` чи `padding` тут коштував би пікселів під клавіатурою. */
+.fd-com-myava--page { border-radius: 50%; box-shadow: 0 0 0 2px var(--fd-accent); }
 .fd-com-myava--page::after {
   box-shadow: 0 0 0 1.5px var(--fd-accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='12' x2='21' y2='12'/%3E%3Cpolyline points='7 7 2 12 7 17'/%3E%3Cpolyline points='17 7 22 12 17 17'/%3E%3C/svg%3E");
 }
 
 /* Бейдж біля імені: «Спільнота» (говорить сама сторінка) або «Адмін» (говорить
