@@ -15,7 +15,7 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-upyy76` |
-| останній коміт людини | `883a0bef` 25.08 17:09 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76 |
+| останній коміт людини | `a675cc93` 25.08 17:09 — Пульс: авто-блок після злиття передачі |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260825-1513` |
 | останній PR у `main` | #1027 |
 | стендів на диску | 108 |
@@ -25,15 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- ✅ нічого. Уся робота гілки вже в `main`.
+- `CSTL NEWS VOVA/NOW.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `a675cc93` 25.08 17:09 — Пульс: авто-блок після злиття передачі
 - `883a0bef` 25.08 17:09 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
 - `b71edd8b` 25.08 17:09 — docs: передача в новий чат — 25.08.2026 (#1027)
 - `ddab03a4` 25.08 17:08 — Пульс: авто-блок після коміту передачі
 - `4771781e` 25.08 17:07 — docs: передача в новий чат — 25.08.2026
-- `13faacf2` 25.08 17:03 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
 
 <!-- AUTO:END -->
 
