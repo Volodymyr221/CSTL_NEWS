@@ -72,28 +72,49 @@ ok('є обидва бейджі: «Спільнота» і «Адмін»',
 //    прав, гірша за її відсутність — це вже коштувало проєкту разу 24.07, коли
 //    глобальному адміну малювали композер на ВСІХ сторінках.
 ok('перемикач схований від усіх, крім команди сторінки',
-   /asRow\.hidden = !мояКоманда/.test(feed) && /мояКоманда = !!сторінка && myPageIds\.has/.test(feed));
+   /avaBtn\.classList\.toggle\('fd-com-myava--switch', мояКоманда\)/.test(feed)
+   && /мояКоманда = !!сторінка && myPageIds\.has/.test(feed));
+// 🔴 ГОЛОВНА ПЕРЕВІРКА ПІСЛЯ СКАРГИ ВОВИ 25.08 («поле вводу не піднімається
+// доверху, воно зупиняється знизу»): вибір голосу НЕ сміє бути окремим поверхом
+// у стосі під клавіатурою. Там на 390pt лишається ~172px на все.
+ok('вибір голосу НЕ додає поверху в стос під клавіатурою',
+   !/fd-com-as/.test(feed) && /data-com-as-toggle/.test(feed));
 ok('не з команди — голос завжди особистий, хай що в памʼяті',
    /мояКоманда \? \(commentAsChoice\.get\(postId\) \?\? null\) : null/.test(feed));
 ok('бейдж «Адмін» бере роль з БАЗИ, а не вгадує на клієнті',
    /rpc\('page_team_flags'/.test(supa));
 
-console.log('\n── Б. РОЗКЛАДКА НА 390pt (справжній вимір)');
+console.log('\n── Б. ВИСОТА СТОСУ ПІД КЛАВІАТУРОЮ (справжній вимір на 390pt)');
+
+// 🔴 ЗАРАДИ ЧОГО ЦЕЙ БЛОК. Скарга Вови 25.08: «поле вводу не піднімається доверху,
+// воно зупиняється знизу». Перша редакція давала окремий рядок «Відповідати як»
+// між смугою відповіді і полем — ТРЕТІЙ поверх у стосі, що стоїть під клавіатурою.
+// На 390pt клавіатура забирає ~336px, тож кожен зайвий поверх там коштує найдорожче.
+//
+// 🔑 МІРЯЄМО НЕ «ЧИ ГАРНО», А РІВНО ОДНЕ ЧИСЛО: чи додає вибір голосу хоч піксель
+// висоти. Дві однакові сцени, різниця рівно в тому, чи обличчя вміє перемикати.
+// Якщо числа збігаються — фіча не займає місця, і повернутись скарга не може.
+// 🛑 Так само важливо, ЩО ЦЕ НЕ ДОВОДИТЬ: iOS-клавіатуру Chromium не відтворює
+// (HOT_RULES №9), тож зелений рядок тут не означає «на айфоні добре». Він означає
+// вужче й чесніше: ми не додали жодного поверху в стос.
 
 const css = projectFile('style/feed.css');       // розкладку міряємо ЗАВЖДИ на свіжій CSS
 const ДОВГА = 'КЦ «ЦЕНТР КУЛЬТУРИ, СПОРТУ ТА ТУРИЗМУ ОЛИЦЬКОЇ МІСЬКОЇ РАДИ»';
 
-const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+const html = (перемикач) => `<!doctype html><html><head><meta charset="utf-8"><style>
  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
  :root{--fd-surface:#fff;--fd-ink:#111;--fd-chip:#eee;--fd-accent:#722F37;
        --fd-muted:#888;--fd-line:#ddd;--fd-divider:#e5e5e5}
  body{width:390px;background:#fff}
  ${css}
 </style></head><body>
- <div class="fd-com-as">
-   <span class="fd-com-as-lab">Відповідати як</span>
-   <button class="fd-com-as-btn is-on" data-com-as="me"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt">Від себе</span></button>
-   <button class="fd-com-as-btn" data-com-as="page"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt">${ДОВГА}</span></button>
+ <div id="стос">
+   <div class="fd-com-replybar"><span class="fd-com-replyto">Відповідь для Олександр</span><button class="fd-com-replyx">×</button></div>
+   <div class="fd-com-compose">
+     <button class="fd-com-ava fd-com-myava${перемикач ? ' fd-com-myava--switch fd-com-myava--page' : ''}" type="button" data-com-as-toggle></button>
+     <input class="fd-com-input" placeholder="Відповідь від імені спільноти…">
+     <button class="fd-com-send"></button>
+   </div>
  </div>
  <div class="fd-com-row" data-com-id="1">
    <span class="fd-com-ava"></span>
@@ -105,39 +126,48 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 </body></html>`;
 
 const b = await launch(chromium);
-const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-await p.setContent(html);
-await p.waitForTimeout(80);
+const заміряти = async (перемикач) => {
+  const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+  await p.setContent(html(перемикач));
+  await p.waitForTimeout(80);
+  const g = await p.evaluate(() => {
+    const r = (s) => { const e = document.querySelector(s); if (!e) return null;
+      const b = e.getBoundingClientRect(); return { l: Math.round(b.left), r: Math.round(b.right), h: Math.round(b.height) }; };
+    const дотик = (() => { const e = document.querySelector('.fd-com-myava--switch');
+      if (!e) return { w: 0, h: 0 };
+      const b = e.getBoundingClientRect(); const cs = getComputedStyle(e, '::before');
+      const inset = Math.abs(parseFloat(cs.inset) || 0);
+      return { w: Math.round(b.width + inset * 2), h: Math.round(b.height + inset * 2) }; })();
+    return { дотик, стос: r('#стос'), обличчя: r('.fd-com-myava'), поле: r('.fd-com-input'),
+             бейдж: r('.fd-com-badge'), імʼя: r('.fd-com-name'), час: r('.fd-com-time'),
+             ширинаТіла: document.body.scrollWidth };
+  });
+  await p.close();
+  return g;
+};
 
-const g = await p.evaluate(() => {
-  const r = (s) => { const e = document.querySelector(s); if (!e) return null;
-    const b = e.getBoundingClientRect(); return { l: Math.round(b.left), r: Math.round(b.right), h: Math.round(b.height) }; };
-  return {
-    рядок: r('.fd-com-as'), я: r('[data-com-as="me"]'), спільнота: r('[data-com-as="page"]'),
-    кружечок: r('[data-com-as="page"] .fd-com-as-dot'),
-    бейдж: r('.fd-com-badge'), імʼя: r('.fd-com-name'), час: r('.fd-com-time'),
-    ширинаТіла: document.body.scrollWidth,
-  };
-});
+const без = await заміряти(false);
+const з   = await заміряти(true);
+await b.close();
 
-console.log(`   перемикач: висота ${g.рядок.h}px · «Від себе» ${g.я.l}…${g.я.r} · спільнота ${g.спільнота.l}…${g.спільнота.r}`);
-console.log(`   бейдж «Спільнота»: ${g.бейдж.l}…${g.бейдж.r}  ·  час: ${g.час.l}…${g.час.r}  ·  тіло ${g.ширинаТіла}px`);
+console.log(`   стос БЕЗ перемикача: ${без.стос.h}px  ·  З перемикачем: ${з.стос.h}px`);
+console.log(`   обличчя: ${з.обличчя.h}px  ·  поле: ${з.поле.l}…${з.поле.r}`);
+console.log(`   бейдж «Спільнота»: ${з.бейдж.l}…${з.бейдж.r}  ·  час: ${з.час.l}…${з.час.r}  ·  тіло ${з.ширинаТіла}px`);
 
-// 🔑 Друга кнопка — це і є вся фіча. Якщо довга назва виштовхнула її за екран,
-// перемкнутись на голос спільноти неможливо взагалі.
-ok('кнопка спільноти ПОВНІСТЮ на екрані попри довжелезну назву',
-   g.спільнота.r <= 390, `правий край ${g.спільнота.r}px`);
-ok('кнопка «Від себе» не стиснулась у ніщо', g.я.r - g.я.l >= 80, `ширина ${g.я.r - g.я.l}px`);
-// Кружечок і Є відповідь «хто зараз говорить» — обрізати можна текст, але не його.
-ok('кружечок стану видимий (обрізається лише текст)',
-   g.кружечок && g.кружечок.r <= 390 && g.кружечок.r - g.кружечок.l >= 8);
-ok('сторінка не поїхала вбік', g.ширинаТіла <= 390, `${g.ширинаТіла}px`);
-// Рядок стоїть ПІД клавіатурою — кожні 4px висоти там видно.
-ok('перемикач не з\'їдає висоту (≤ 44px)', g.рядок.h <= 44, `${g.рядок.h}px`);
-ok('бейдж стоїть у рядку імені, а не під ним', g.бейдж.l >= g.імʼя.l, `бейдж ${g.бейдж.l}, імʼя ${g.імʼя.l}`);
-ok('час не виліз за екран поруч із бейджем', g.час.r <= 390, `${g.час.r}px`);
-
-await p.close(); await b.close();
+// 🔴 ГОЛОВНЕ ЧИСЛО ЦЬОГО СТЕНДА.
+ok('вибір голосу НЕ додає ЖОДНОГО пікселя висоти стосу',
+   з.стос.h === без.стос.h, `${без.стос.h}px → ${з.стос.h}px`);
+// Обличчя не сміє розпухнути від позначки: вона стоїть поверх (absolute).
+// Ціль дотику мусить бути 44px (обличчя лише 34px) — і при цьому НЕ рости в стос.
+ok('зона дотику перемикача ≥ 44px', з.дотик.h >= 44 && з.дотик.w >= 44,
+   `${з.дотик.w}×${з.дотик.h}px при обличчі ${з.обличчя.h}px`);
+ok('позначка перемикання не збільшує обличчя',
+   з.обличчя.h === без.обличчя.h, `${без.обличчя.h}px → ${з.обличчя.h}px`);
+ok('поле вводу лишилось на своєму місці', з.поле.l === без.поле.l && з.поле.r === без.поле.r,
+   `${без.поле.l}…${без.поле.r} → ${з.поле.l}…${з.поле.r}`);
+ok('сторінка не поїхала вбік', з.ширинаТіла <= 390, `${з.ширинаТіла}px`);
+ok('бейдж стоїть у рядку імені, а не під ним', з.бейдж.l >= з.імʼя.l, `бейдж ${з.бейдж.l}, імʼя ${з.імʼя.l}`);
+ok('час не виліз за екран поруч із бейджем', з.час.r <= 390, `${з.час.r}px`);
 
 const bad = res.filter(r => !r).length;
 console.log(`\n${bad ? '❌' : '✅'} ${res.length - bad}/${res.length} перевірок пройдено`);
