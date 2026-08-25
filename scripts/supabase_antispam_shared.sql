@@ -20,6 +20,17 @@
 -- Рейт-ліміт лишається в обгортках навмисно: у таблиць різні колонки автора
 -- і різне поняття «дубль» (див. коментар у page_comments_antispam).
 --
+-- 🔴 25.08 — ОДНЕ ПРАВИЛО ОДНИМ ЧИСЛОМ: **15 секунд**. За цей час не більше
+-- 8 повідомлень і не двічі той самий текст. Раніше вікно мав лише рейт-ліміт,
+-- а дубль порівнювався з останнім текстом БЕЗ обмеження в часі — тому
+-- найкоротші й найприродніші відповіді («Окей», «Дякую», «Так») блокувались
+-- найнадійніше: саме їх пишуть повторно. Скарга Вови: «я вчора написав
+-- повідомлення, сьогодні зранку не можу те саме слово написати».
+-- 🛑 Число дзеркалить клієнт (`src/core/utils.js`, DUP_WINDOW / FLOOD_WINDOW).
+-- ✅ Накатано міграцією `antispam_duplicate_gets_time_window` і доведено на
+-- живій базі транзакцією з відкотом: дубль годину тому проходить, миттєвий
+-- повтор блокується САМЕ антиспамом, інший текст одразу проходить.
+--
 -- Джерело правди для списків слів — `src/core/utils.js` (клієнт). Тут вони
 -- дзеркалені 1-в-1. Міняєш там — міняй і тут (обидва рівні мусять збігатись,
 -- інакше людина бачить «надіслано», а база мовчки відхиляє).
@@ -165,8 +176,13 @@ begin
       raise exception 'antispam: занадто швидко (зачекайте кілька секунд)' using errcode = 'check_violation';
     end if;
 
+    -- 🔑 25.08 — ДУБЛЬ МАЄ ВІКНО. Без `created_at > …` останній текст блокував
+    -- свій повтор НАЗАВЖДИ: «Окей», написане вчора, не давало написати «Окей»
+    -- сьогодні. Рейт-ліміт вікно мав, а ця перевірка — ні.
     select text into lasttext from public.comments
-     where sender_uid = NEW.sender_uid order by created_at desc limit 1;
+     where sender_uid = NEW.sender_uid
+       and created_at > now() - interval '15 seconds'
+     order by created_at desc limit 1;
     if lasttext is not null and lasttext = txt then
       raise exception 'antispam: ви щойно це написали' using errcode = 'check_violation';
     end if;
@@ -209,10 +225,12 @@ begin
   -- живе тестування (Вова 25.07). Спам — те саме слово ТІЙ САМІЙ людині вдруге.
   -- `is not distinct from` — щоб null (кореневий коментар) порівнювався з null,
   -- а не давав невизначеність, за якої умова ніколи не спрацьовує.
+  -- 🔑 25.08 — те саме вікно, що й у Дошці (див. пояснення там).
   select text into lasttext from public.page_comments
    where author_uid = NEW.author_uid
      and post_id = NEW.post_id
      and reply_to_uid is not distinct from NEW.reply_to_uid
+     and created_at > now() - interval '15 seconds'
    order by created_at desc limit 1;
   if lasttext is not null and lasttext = txt then
     raise exception 'antispam: ви щойно це написали' using errcode = 'check_violation';
