@@ -29,10 +29,28 @@ function hex(buf) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// 🔴 25.08 — ЧИ БРАУЗЕР ВЗАГАЛІ МОЖЕ ПЕРЕВІРИТИ КОД.
+//
+// `crypto.subtle` існує ЛИШЕ в захищеному контексті: `https://` або localhost. По
+// `http://` його немає — отже жоден код не збігається, хоч би який правильний.
+//
+// 🛑 НАВІЩО ОКРЕМА ФУНКЦІЯ, А НЕ ПЕРЕВІРКА ВСЕРЕДИНІ `devCodeHash`. Хеш віддає лише
+// «збіглось / не збіглось» — а це ДВА РІЗНІ стани, зведені в один. Замок через це
+// казав «Код не той» там, де правильно було б сказати «я не можу перевірити», і ще
+// й нараховував людині хибну спробу. Заміряно на живому: Вова ввів ПРАВИЛЬНИЙ код
+// з компʼютера по HTTP, отримав «Код не той», повторив — і дістав паузу 60 секунд
+// **ні за що**. Тобто повідомлення вело розслідування не туди — рівно той клас
+// вади, що `42501` на вставці (HOT_RULES №11-БІС).
+// ⚠️ Замок при цьому НЕ послаблюється: без криптографії він і мусить лишатись
+// зачиненим. Міняється тільки те, ЩО він каже і чи карає за це людину.
+export function devCryptoReady() {
+  return typeof crypto !== 'undefined' && !!crypto.subtle;
+}
+
 // PBKDF2-SHA256 → 256 біт у hex. Повертає null, якщо `crypto.subtle` недоступний
 // (незахищений контекст) — тоді замок лишається зачиненим, а не відкривається.
 export async function devCodeHash(raw) {
-  if (typeof crypto === 'undefined' || !crypto.subtle) return null;
+  if (!devCryptoReady()) return null;
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', enc.encode(normalizeDevCode(raw)),
     'PBKDF2', false, ['deriveBits']);
