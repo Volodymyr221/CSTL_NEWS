@@ -94,6 +94,18 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
           then(res) {
             window.__cstlQueries[table] = (window.__cstlQueries[table] || 0) + 1;
             let рядки = T[table] || [];
+            // 🔴 25.08 — RLS ЕМУЛЮЄТЬСЯ ЧЕСНО ДЛЯ МʼЯКОГО ВИДАЛЕННЯ.
+            // У базі політика 'posts read' вимагає deleted_at is null, а
+            // post_visible(post_id) переносить це на дочірні таблиці. Якби
+            // заглушка віддавала видалений рядок, стенд зеленів би над
+            // застосунком, що показує видалене питання, — і саме таку діру я
+            // сьогодні знайшов у САМІЙ БАЗІ (відповіді видаленого питання
+            // читались далі). Заглушка не сміє бути добрішою за прод.
+            if (table === 'posts') рядки = рядки.filter(r => !r.deleted_at);
+            if (table === 'comments' || table === 'reactions') {
+              const живі = new Set((T.posts || []).filter(r => !r.deleted_at).map(r => String(r.id)));
+              рядки = рядки.filter(r => r.post_id == null || живі.has(String(r.post_id)));
+            }
             for (const c of умови) {
               if (c.набір) { рядки = рядки.filter(r => c.значення.includes(r[c.поле])); continue; }
               if (c.межа) {
@@ -232,6 +244,35 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               if (row) row.seen_at = new Date(next).toISOString();
               else T.user_seen_threads.push({ uid, post_id: args.p_post_id, seen_at: new Date(next).toISOString() });
               return { data: new Date(next).toISOString(), error: null };
+            }
+            // 🆕 25.08 — РЕДАГУВАННЯ Й ВИДАЛЕННЯ ВЛАСНОГО ПИТАННЯ.
+            // 🛑 Емулюємо СЕРВЕРНІ ПЕРЕВІРКИ, а не лише щасливий шлях. Справжні
+            // update_question / delete_question відмовляють чужому, не-питанню
+            // і порожньому тексту — якби заглушка мовчки погоджувалась на все,
+            // стенд зеленів би над клієнтом, що надсилає будь-що. Той самий
+            // урок, що з .eq / .single / .in: брехала не логіка застосунку, а
+            // заглушка під нею.
+            if (fn === 'update_question' || fn === 'delete_question') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: { ok: false, error: 'Треба увійти' }, error: null };
+              const row = (T.posts || []).find(r => String(r.id) === String(args.p_id));
+              if (!row) return { data: { ok: false, error: 'Питання не знайдено' }, error: null };
+              if (row.owner_uid !== uid) return { data: { ok: false, error: 'Це не ваше питання' }, error: null };
+              if ((row.type || 'board') !== 'chat') return { data: { ok: false, error: 'Це не питання' }, error: null };
+              if (row.deleted_at) {
+                return fn === 'delete_question'
+                  ? { data: { ok: true, already: true }, error: null }
+                  : { data: { ok: false, error: 'Питання вже видалене' }, error: null };
+              }
+              if (fn === 'delete_question') {
+                row.deleted_at = new Date().toISOString();
+                return { data: { ok: true }, error: null };
+              }
+              const txt = String(args.p_text == null ? '' : args.p_text).trim();
+              if (!txt) return { data: { ok: false, error: 'Порожнє питання' }, error: null };
+              row.text = txt;
+              row.edited_at = new Date().toISOString();
+              return { data: { ok: true, edited_at: row.edited_at }, error: null };
             }
             return { data: null, error: null };
           },

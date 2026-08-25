@@ -4102,6 +4102,27 @@ textarea.cm-board-input.bm-invalid {
   margin-left: auto; width: 44px; height: 44px; color: var(--red);
   display: flex; align-items: center; justify-content: center;
 }
+/* «⋯» — дії автора над власним питанням (25.08).
+   🔑 44×44, як «Назад» і «Зберегти»: у смузі три круглі цілі однакового розміру,
+   і жодна не менша за поріг дотику. Колір тихіший за бордовий — це не дія
+   першого ряду, а вхід у меню. */
+.qa-head-more {
+  width: 44px; height: 44px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--qa-ink-2);
+  cursor: pointer;
+}
+.qa-head-more:active { background: var(--qa-fill); }
+.qa-head-more svg { width: 22px; height: 22px; }
+/* Питання перед видаленням. Не заголовок аркуша, а рядок над кнопками: він
+   мусить читатись саме там, куди вже дивиться палець. */
+/* «змінено» — довідка, а не подія: той самий кегль і колір, що час поруч. */
+.qa-edited { color: var(--qa-ink-3); }
+.pm-actions-note {
+  margin: 0; padding: 14px 16px 10px;
+  font-size: 14px; line-height: 1.4; color: var(--qa-ink-2); text-align: center;
+}
 
 .qa-body {
   flex: 1; min-height: 0;
