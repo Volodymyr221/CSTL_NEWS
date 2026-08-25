@@ -471,6 +471,40 @@ export async function deleteComment(commentId) {
   return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
+// ── ВЛАСНЕ ПИТАННЯ: РЕДАГУВАТИ Й ВИДАЛИТИ (25.08) ────────────────────────────
+//
+// Слово Вови: «Коли користувач написав питання, він його не може ні редагувати,
+// ні видалити… Це потрібно виправити. Виправити технічно правильно.»
+//
+// 📐 Заміряно перед роботою: у `posts` не було ЖОДНОГО `update`/`delete` з
+// клієнта, а в базі — рівно дві політики запису, обидві `is_admin()`. Заборона
+// була станом за замовчуванням, а не випадковою дірою.
+//
+// 🔑 ЧОМУ RPC, А НЕ ПРЯМИЙ `.update()`. Це вже усталений спосіб цього проєкту —
+// так само редагується оголошення (`update_board_post`). Причина не в смаку:
+// політика `using (owner_uid = auth.uid())` дозволила б авторові змінити
+// БУДЬ-ЯКЕ поле рядка — `status` ('rejected' → 'published', тобто обійти
+// модерацію), `type` ('chat' → 'board': питання публікується саме, оголошення
+// проходить перевірку), `owner_uid`. Це рівно клас вади B-23. RPC пише лише ті
+// колонки, які перелічені в його тілі, і майбутня колонка туди не потрапить.
+//
+// 🛑 Перевірки НЕ ДУБЛЮЄМО на клієнті: «це моє?», «це питання?», «не порожнє?»
+// і антиспам живуть у самій функції. Друга копія розійшлася б із першою, а
+// вирішує однаково лише та, що в базі, — клієнт можна обійти.
+export async function updateQuestion(postId, text) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const r = await netCall(() => supa.rpc('update_question', { p_id: postId, p_text: text }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data?.ok ? { ok: true, editedAt: r.data.edited_at } : { ok: false, error: r.data?.error || 'Не вдалося' };
+}
+
+export async function deleteQuestion(postId) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const r = await netCall(() => supa.rpc('delete_question', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data?.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Не вдалося' };
+}
+
 // ── STORAGE: завантаження фото у bucket community-photos ─────────────────
 // Раніше фото зберігались як base64 у posts.photos[] (TEXT[]) — кожне ~150KB
 // тексту у БД, max 3 фото = 450KB на пост. При 100+ постах таблиця посту
