@@ -23,7 +23,7 @@ import {
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
-import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
+import { isLoggedIn, currentUserId, onAuthChange, authReady } from '../core/auth.js';
 // ⚠️ `geoGroupOf` прибрано з цього списку 11.08 разом із його єдиним ужитком:
 // стара стрічка плиток дописувала мітку розділу на КОЖНУ картку, бо в одному
 // вікні лежали новини з різних розділів. Тепер сторінка = один розділ, і його
@@ -1232,6 +1232,14 @@ function renderBusRouteMap(route, timings) {
 export async function renderBusBlock() {
   const el = document.getElementById('cm-bus-content');
   if (!el) return;
+  // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» (беклог, пункт 0). Нижче `loadCmTracked()`
+  // читає ключ `bus_track_v2:<uid>` і починається з `if (!isLoggedIn()) return []`,
+  // тобто без відповіді віджет показує ЗАГАЛЬНИЙ найближчий рейс замість «твій
+  // рейс, який ти відстежуєш». Різниця для людини істотна: перше — довідка,
+  // друге — те, заради чого вона тиснула «відстежувати».
+  // ⏱ Безкоштовно: рядком нижче ми й так ідемо по `schedule.json`, тобто цей
+  // віджет асинхронний за побудовою і нічого не затримує.
+  await authReady();
 
   try {
     const res  = await fetch('./data/schedule.json');

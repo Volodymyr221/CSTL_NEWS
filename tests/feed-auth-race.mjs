@@ -338,6 +338,32 @@ ok('renderHomeCaps ЧЕКАЄ «хто я» ДО збирання ролей',
 ok('після очікування покоління звіряється (старий виклик не перетирає свіжий)',
    /await authReady\(\);\s*\n\s*if \(gen !== _gen\) return;/.test(caps));
 
+// ── ГРОМАДА: віджет автобуса і привітання ────────────────────────────────────
+const cmb = projectFile('src/tabs/community-blocks.js', REV);
+ok('community-blocks.js імпортує гарантію',
+   /import \{[^}]*authReady[^}]*\} from '\.\.\/core\/auth\.js'/.test(cmb));
+// 🔑 Без факту віджет показує ЗАГАЛЬНИЙ найближчий рейс замість «твого, який ти
+// відстежуєш». Різниця для людини істотна: перше — довідка, друге — те, заради
+// чого вона тиснула «відстежувати».
+const віджет = (cmb.match(/export async function renderBusBlock\(\)[\s\S]*?try \{/) || [''])[0];
+ok('renderBusBlock ЧЕКАЄ «хто я» ДО читання відстежуваних рейсів',
+   /await authReady\(\)/.test(віджет), віджет ? 'тіло знайдено' : 'функцію не знайдено');
+
+const cm = projectFile('src/tabs/community.js', REV);
+ok('community.js імпортує гарантію',
+   /import \{[^}]*authReady[^}]*\} from '\.\.\/core\/auth\.js'/.test(cm));
+// 🛑 ДВІ ПОЛОВИНИ, І ДРУГА ВАЖИТЬ БІЛЬШЕ ЗА ПЕРШУ.
+// 1) привітання й аватар перепитуються, щойно факт відомий;
+// 2) `initCommunity()` при цьому НЕ стає асинхронною — `renderSkeleton()` це ПЕРШИЙ
+//    екран, і поставити його в чергу за сесією означало б проміняти блимання імені
+//    на порожній екран. Саме тому гілка `.then()`, а не `await`.
+ok('привітання й аватар перепитуються після факту',
+   /authReady\(\)\.then\(\(\) => \{[\s\S]{0,120}?updateGreetingName\(\)[\s\S]{0,120}?refreshAccountButtons\(\)/.test(cm));
+const старт = (cm.match(/export function initCommunity\(\)[\s\S]*?renderContactsBlock\(\);/) || [''])[0];
+ok('🛑 initCommunity НЕ чекає гарантію перед скелетом (перший екран цілий)',
+   старт.indexOf('await authReady()') < 0 && /export function initCommunity/.test(cm),
+   старт ? 'тіло знайдено' : 'функцію не знайдено');
+
 // Контроль самого правила: воно мусить УМІТИ спрацювати. Інакше зелений рядок
 // нічого не вартий — саме так у проєкті вже був «контроль, який не може впасти».
 const підробка = 'const x = fetchMyEditablePageIds();';
