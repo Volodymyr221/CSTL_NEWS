@@ -918,6 +918,52 @@
   cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-com-replyx svg { width: 15px; height: 15px; }
 
+/* ── ВІД ЧИЙОГО ІМЕНІ ВІДПОВІДАЄМО (25.08) ──────────────────────────────────
+   Живе між смугою «Відповідь для…» і полем вводу, тобто читається як частина НИЗУ,
+   а не як черговий коментар — рівно та сама задача, що вже вирішена для .fd-com-replybar,
+   і рівно тими самими трьома дрібницями: власне тло, лінія-волосинка згори, мʼяка тінь.
+   Без тла список просвічував би крізь рядок при прокрутці.
+   ⚠️ Вигляд кнопок — той самий, що в композера поста (.fd-comp-as): це та сама за
+   змістом дія, і другої мови для неї в застосунку бути не має. Розміри трохи менші —
+   тут рядок стоїть під клавіатурою, де кожні 4px висоти видно. */
+.fd-com-as:not([hidden]) { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+  padding: 6px 4px; background: var(--fd-surface);
+  border-top: 1px solid var(--fd-divider);
+  box-shadow: 0 -6px 12px -6px rgba(22, 24, 28, 0.16);
+  position: relative; z-index: 1; }
+/* Підпис зникає першим: на 390pt довга назва спільноти важливіша за слово «як». */
+.fd-com-as-lab { font-size: 12.5px; color: var(--fd-muted); flex: none; }
+/* 🔴 `flex: none` НЕ ДЛЯ КРАСИ. Без нього flex стискав ОБИДВІ кнопки, і на 390pt
+   «Від себе» худнула до 53px — тобто напис на ній різало, хоч він короткий і місця
+   вимагає стільки ж завжди. Стискатись має рівно та кнопка, чий текст справді
+   довгий і змінний (назва спільноти), і вона нижче. Заміряно стендом. */
+.fd-com-as-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 5px 10px; border: 1px solid var(--fd-divider); border-radius: 999px;
+  background: var(--fd-surface); color: var(--fd-muted); font: inherit; font-size: 13px;
+  cursor: pointer;
+}
+/* Довгі назви сторінок («КЦ «ЦЕНТР КУЛЬТУРИ, СПОРТУ ТА ТУРИЗМУ…»») інакше рвуть
+   рядок і виштовхують другу кнопку за екран. Обрізаємо саме ТЕКСТ, не кнопку:
+   кружечок стану має лишатись видимим завжди — він і є відповідь «хто говорить». */
+.fd-com-as-btn:last-child { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.fd-com-as-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-com-as-dot { width: 11px; height: 11px; flex: none; border-radius: 50%;
+  border: 2px solid var(--fd-divider); background: transparent; }
+.fd-com-as-btn.is-on { color: var(--fd-accent); border-color: var(--fd-accent); background: rgba(114,47,55,0.06); }
+.fd-com-as-btn.is-on .fd-com-as-dot { border-color: var(--fd-accent); background: var(--fd-accent); }
+
+/* Бейдж біля імені: «Спільнота» (говорить сама сторінка) або «Адмін» (говорить
+   людина з її команди). Свідомо ТИХИЙ — це уточнення до імені, а не заголовок.
+   🛑 Великий напис «ВІД ІМЕНІ СПІЛЬНОТИ» тут був би шумом: рядок і так має інше
+   обличчя та іншу назву, бейдж лише дає слово тому, що вже видно оком. */
+.fd-com-badge {
+  flex: none; font-size: 10.5px; line-height: 1; letter-spacing: .02em;
+  padding: 3px 6px; border-radius: 5px;
+  background: var(--fd-chip); color: var(--fd-muted);
+}
+.fd-com-badge--page { background: rgba(114,47,55,0.08); color: var(--fd-accent); }
+
 .fd-com-compose, .fd-comp-bar { display: flex; gap: 10px; align-items: center; }
 .fd-com-compose { padding-top: 10px; border-top: 1px solid var(--fd-divider); }
 .fd-com-myava { width: 34px; height: 34px; flex: none; }

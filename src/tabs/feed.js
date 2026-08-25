@@ -13,7 +13,7 @@ import {
   fetchAvatars, cachedName, cachedAvatar, liveName,
   fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
-  addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
+  addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds, fetchPageTeam,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, setPagePostPinned, fetchMySubscriptions, setPageSubscription,
   subscribePagePosts,
@@ -1379,6 +1379,26 @@ function patchLike(postId) {
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
 let replyTarget = null;   // { parentId, name } — активна відповідь у відкритому листі
+
+// ── ВІД ЧИЙОГО ІМЕНІ ГОВОРИМО В ЛИСТІ (25.08) ───────────────────────────────
+// commentTeam — uid-и команди сторінки ВІДКРИТОГО поста. Потрібні лише на бейдж
+// «Адмін»: читач інакше не знає, що ця людина від сільради, і не може відрізнити
+// офіційну відповідь від сусідської. Набір вузький — база підтверджує тільки тих,
+// хто вже є на екрані (`fetchPageTeam`), списку команди вона не віддає.
+let commentTeam = new Set();
+// Кого вже питали. Без цього кожен коментар пересічного жителя (він у наборі не
+// з'явиться ніколи) знову ганяв би запит — тобто найзвичайніший випадок коштував би
+// найдорожче. Питаємо рівно раз на нового учасника розмови.
+let teamChecked = new Set();
+
+// Вибір голосу — ПОСТ ЗА ПОСТОМ і лише в межах сесії (postId → as_page_id | null).
+// 🔑 За замовчуванням NULL, тобто ВІД СЕБЕ. Рішення Вови 25.08, і воно не випадкове:
+// ціна помилки несиметрична. Написав особисто, а хотів офіційно — дрібниця. Написав
+// офіційно, а хотів особисто — СПІЛЬНОТА публічно щось сказала, і це не відкочується.
+// ⚠️ Порада ChatGPT була протилежна («пост від спільноти → default спільнота»), але
+// в Стрічці всі пости від сторінок, тож це означало б «адмін завжди говорить
+// офіційно» — не контекстний default, а постійний.
+const commentAsChoice = new Map();
 let editTarget = null;    // { id } — коментар, який зараз редагують (взаємовиключно з відповіддю)
 // Гілки, у яких людина натиснула «Ще N відповідей». Тримаємо ТУТ, а не в DOM, бо
 // список перемальовується цілком щоразу, коли приходить чужий коментар (realtime) —
@@ -1428,12 +1448,36 @@ function commentErrorText(err) {
 // а не сам рядок: тільки там видно рівень. Для 3-го рівня це господар гілки, не сам
 // коментар — так глибина зупиняється на трьох, як у Facebook.
 function commentRowHtml(c, reply = false, replyTo = null) {
-  const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
+  // 🔑 ГОЛОС РЯДКА. `as_page_id` НЕ підміняє автора — автор завжди лишається в
+  // `author_uid` (на ньому тримаються модерація, антиспам, права і адресація push).
+  // Міняється рівно три речі, які видно оком: обличчя, підпис і бейдж.
+  const asPage = c.as_page_id != null ? pages.find(p => p.id === c.as_page_id) : null;
+  const nm = asPage
+    ? escapeHtml(asPage.name || 'Спільнота')          // liveName екранує сам, назва сторінки — ні
+    : (c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель');
   const mine = c.author_uid && c.author_uid === currentUserId();
+  // Коментар спільноти — СПІЛЬНИЙ (рішення Вови 25.08: «адмін і учасники команди»).
+  // Голос не належить людині, тож і керує ним уся команда сторінки, а не той, чиї
+  // пальці натиснули «Надіслати». Те саме каже база (`can_edit_page`), тут лише кнопки.
+  const командний = !!asPage && myPageIds.has(c.as_page_id);
+  const керую = mine || командний;
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
+  // Бейдж — це відповідь на питання «наскільки це офіційно». Два різні випадки:
+  //   «Спільнота» — говорить сама сторінка;
+  //   «Адмін»     — говорить людина, але вона з команди цієї сторінки.
+  // 🔑 Другий потрібен рівно тому, що без нього офіційну відповідь не відрізнити від
+  // сусідської: читач не знає, що Володимир Шевчук веде цю спільноту.
+  const badge = asPage
+    ? '<span class="fd-com-badge fd-com-badge--page">Спільнота</span>'
+    : (c.author_uid && commentTeam.has(c.author_uid)
+        ? '<span class="fd-com-badge">Адмін</span>' : '');
   // data-av-uid на аватарі й імені → тап відкриває картку профілю (делегат
   // initProfileCardTaps у profile-card.js слухає [data-av-uid] на document).
-  const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : '';
+  // ⚠️ У рядка спільноти картки профілю бути НЕ МОЖЕ: тап по ній відкрив би людину,
+  // яку ми на екрані навмисно не називаємо. Тому там власний гачок на сторінку.
+  const av = asPage
+    ? ` data-com-page="${c.as_page_id}"`
+    : (c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : '');
   // data-com-id — щоб було за що вхопитись підсвітці й підтягуванню (раніше рядок не
   // мав ідентифікатора взагалі). Клас --replying ставиться ТУТ, а не лише в DOM:
   // список перемальовується цілком щоразу, коли приходить чужий коментар (realtime),
@@ -1452,11 +1496,13 @@ function commentRowHtml(c, reply = false, replyTo = null) {
   // мовчки переписати вже прочитаний людьми коментар не можна.
   const edited = c.edited_at ? ` · <span class="fd-com-edited">змінено</span>` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
-      <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
+      <span class="fd-com-ava"${av}>${asPage
+        ? avatarHtml(asPage.avatar_url, asPage.name, 'fd-com-ava-img')
+        : avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-head"><span class="fd-com-name"${av}>${nameSlot(c.author_uid, nm)}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
+        <div class="fd-com-head"><span class="fd-com-name"${av}>${asPage ? nm : nameSlot(c.author_uid, nm)}</span>${badge}<span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${replyTo || c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${replyTo || c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${asPage ? '' : (c.author_uid || '')}"${asPage ? ` data-reply-page="${c.as_page_id}"` : ''} type="button">Відповісти</button>${керую ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -1749,6 +1795,11 @@ function applyCommentUpsert(c) {
   arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   commentMap.set(c.post_id, arr);
   // Автор ще не в кеші імен — дотягнути ім'я/аватар і перемалювати після цього.
+  // Новий для нас учасник — спитати базу, чи він у команді сторінки. Питаємо ЛИШЕ
+  // про тих, кого ще не питали (`teamChecked`), тож звичайний коментар жителя
+  // коштує один запит за весь час, а не по запиту на кожну репліку.
+  if (openCommentSheet && openCommentSheet.postId === c.post_id
+      && c.author_uid && !teamChecked.has(c.author_uid)) openCommentSheet.syncTeam?.();
   const fresh = [c.author_uid, c.reply_to_uid].filter(u => u && !cachedName(u));
   if (fresh.length) {
     fetchAvatars(fresh).then(() => {
@@ -1853,6 +1904,11 @@ function openComments(postId, focusCommentId = null) {
         </div>
         <div class="fd-com-list"></div>
         <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
+        <div class="fd-com-as" hidden>
+          <span class="fd-com-as-lab">Відповідати як</span>
+          <button class="fd-com-as-btn" data-com-as="me" type="button"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt">Від себе</span></button>
+          <button class="fd-com-as-btn" data-com-as="page" type="button"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt"></span></button>
+        </div>
         <div class="fd-com-compose">
           <span class="fd-com-ava fd-com-myava">${myAva}</span>
           <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
@@ -1864,6 +1920,49 @@ function openComments(postId, focusCommentId = null) {
   const titleEl = sheet.querySelector('.fd-com-title');
   const replyBar = sheet.querySelector('.fd-com-replybar');
   const replyTo = sheet.querySelector('.fd-com-replyto');
+
+  // ── ВІД ЧИЙОГО ІМЕНІ ВІДПОВІДАЄМО ──────────────────────────────────────────
+  // Перемикач бачить ЛИШЕ член команди цієї сторінки. Для всіх інших рядок схований
+  // і поле лишається таким, яким було, — тобто нового елемента вони не бачать узагалі.
+  // 🔑 Вигляд узятий у композера поста (`.fd-comp-as`, «Публікувати як»): це та сама
+  // за змістом дія, і другої мови для неї заводити не треба.
+  const пост = posts.find(p => p.id === postId);
+  const сторінка = пост ? pages.find(p => p.id === пост.page_id) : null;
+  const мояКоманда = !!сторінка && myPageIds.has(сторінка.id);
+  const asRow = sheet.querySelector('.fd-com-as');
+  if (мояКоманда) asRow.querySelector('[data-com-as="page"] .fd-com-as-txt').textContent = сторінка.name || 'Спільнота';
+  // Поточний голос. `?? null` а не `||`: 0 не буває id сторінки, але звичка з `||`
+  // рано чи пізно з'їдає законне значення.
+  const asPageId = () => (мояКоманда ? (commentAsChoice.get(postId) ?? null) : null);
+  // Активний голос видно ТРЬОМА способами одразу — підсвічена кнопка, обличчя біля поля
+  // і підказка в полі. Один сигнал легко проґавити, а ціна помилки тут несиметрична:
+  // випадково сказане від імені спільноти назад не забереш.
+  const paintAs = () => {
+    // Під час ПРАВКИ вибору немає: голос заморожено самою базою (тригер
+    // `page_comments_guard_update`), тож показувати перемикач означало б обіцяти дію,
+    // яка впаде помилкою. Ховаємо — так само, як ховаємо його від не-команди.
+    asRow.hidden = !мояКоманда || !!editTarget;
+    const on = asPageId() != null;
+    asRow.querySelectorAll('[data-com-as]').forEach(b =>
+      b.classList.toggle('is-on', (b.dataset.comAs === 'page') === on));
+    const ava = sheet.querySelector('.fd-com-myava');
+    if (ava) ava.innerHTML = on
+      ? avatarHtml(сторінка.avatar_url, сторінка.name, 'fd-com-ava-img')
+      : avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
+    const inp = sheet.querySelector('.fd-com-input');
+    // ⚠️ Назву спільноти в підказку НЕ підставляємо: імена сторінок тут довгі
+    // («КЦ «ЦЕНТР КУЛЬТУРИ, СПОРТУ ТА ТУРИЗМУ ОЛИЦЬКОЇ МІСЬКОЇ РАДИ»»), і підказка
+    // перетворилась би на обрізаний хвіст. Хто саме говорить — каже обличчя поруч.
+    if (inp && !editTarget) inp.placeholder = on ? 'Відповідь від імені спільноти…' : 'Додати коментар…';
+  };
+  asRow.addEventListener('click', e => {
+    const b = e.target.closest('[data-com-as]');
+    if (!b || !мояКоманда) return;
+    commentAsChoice.set(postId, b.dataset.comAs === 'page' ? сторінка.id : null);
+    paintAs();
+    sheet.querySelector('.fd-com-input')?.focus();
+  });
+
   replyTarget = null;
   expandedThreads.clear();   // нове відкриття листа — гілки знову згорнуті (як у FB/IG)
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
@@ -1871,8 +1970,32 @@ function openComments(postId, focusCommentId = null) {
 
   // Коментарі тягнемо САМЕ ЗАРАЗ, а не при завантаженні стрічки: лист відкривають
   // для одного поста, і немає сенсу возити з собою розмови всіх інших.
+  paintAs();                 // початковий стан: за замовчуванням «Від себе»
+
+  // ── Хто з учасників розмови у команді сторінки (бейдж «Адмін») ─────────────
+  // Питаємо ПІСЛЯ завантаження коментарів і лише про тих, хто справді на екрані.
+  // 🔑 Порожній набір — робочий стан, а не помилка: рядки просто йдуть без бейджів.
+  // Тому окремої гілки «не вдалося» тут немає — на відміну від самих коментарів,
+  // де порожньо і «не змогли» плутати НЕ МОЖНА (там це вміст екрана).
+  commentTeam = new Set();
+  teamChecked = new Set();
+  const loadTeam = async () => {
+    if (!сторінка) return;
+    const uids = [...new Set((commentMap.get(postId) || []).map(c => c.author_uid).filter(Boolean))];
+    const нові = uids.filter(u => !teamChecked.has(u));
+    if (!нові.length) return;
+    const team = await fetchPageTeam(сторінка.id, нові);
+    if (!openCommentSheet || openCommentSheet.postId !== postId) return;   // лист уже закрили
+    нові.forEach(u => teamChecked.add(u));
+    if (!team.size) return;
+    team.forEach(u => commentTeam.add(u));
+    renderCommentSheet();
+  };
+  openCommentSheet.syncTeam = loadTeam;   // щоб жива синхронізація могла дозапитати
+
   loadComments(postId).then(() => {
     if (!openCommentSheet || openCommentSheet.postId !== postId) return;   // лист уже закрили
+    loadTeam();
     // ⚠️ Розкриваємо гілку ПІСЛЯ clear() і ПІСЛЯ завантаження — інакше очищення
     // затерло б її, а до завантаження шукати не було б у чому. Потрібний коментар
     // може лежати під «Ще N», і тоді підсвічувати й гортати не було б до чого.
@@ -1928,6 +2051,7 @@ function openComments(postId, focusCommentId = null) {
       editTarget = null;
       const el = input0(); if (el) { el.value = ''; el.placeholder = 'Додати коментар…'; }
     }
+    paintAs();                              // вибір голосу знову доступний
   };
   if (openCommentSheet) openCommentSheet.clearReply = clearReply;   // щоб realtime міг скинути режим
 
@@ -1943,6 +2067,7 @@ function openComments(postId, focusCommentId = null) {
     replyBar.hidden = false;
     const el = input0();
     if (el) { el.value = c.text; el.placeholder = 'Змініть текст…'; el.focus(); }
+    paintAs();                              // у правці голос не міняють — перемикач геть
     requestAnimationFrame(() => revealRow(id));
   };
   const setReply = (parentId, name, commentId, uid) => {
@@ -2044,6 +2169,7 @@ function openComments(postId, focusCommentId = null) {
     await loadComments(openCommentSheet.postId, { older: true });
     if (!openCommentSheet) return;
     renderCommentSheet();
+    loadTeam();                            // серед старіших теж можуть бути з команди
     const after = anchorId && listEl.querySelector(`[data-com-id="${anchorId}"]`);
     if (after && before != null) {
       const delta = after.getBoundingClientRect().top - before;
@@ -2073,11 +2199,25 @@ function openComments(postId, focusCommentId = null) {
     const rep = e.target.closest('[data-reply-parent]');
     if (rep) {
       const uid = rep.dataset.replyUid;
+      // 🔴 ВІДПОВІДЬ НА КОМЕНТАР СПІЛЬНОТИ НЕ МАЄ ЗГАДКИ. `reply_to_uid` малюється на
+      // екрані як «Володимир,» на початку відповіді — тобто звичайний шлях назвав би
+      // вголос ту саму людину, яку рядок спільноти навмисно не називає. Тому там uid
+      // не передаємо взагалі, а в смужці показуємо назву спільноти.
+      // 🔑 Сповіщення при цьому НЕ губиться: `send-comment-push` окремою гілкою шле
+      // «коментар під вашим дописом» УСІЙ команді сторінки (`page_admins`), тож автор
+      // дізнається про відповідь тим самим шляхом, що й решта команди.
+      const asPage = rep.dataset.replyPage ? pages.find(p => p.id === Number(rep.dataset.replyPage)) : null;
+      const name = asPage ? (asPage.name || 'Спільнота') : ((uid && cachedName(uid)) || 'Житель');
       // parent — корінь гілки (відповіді у 2 рівні), commentId — САМЕ той рядок, на
       // якому натиснули: підсвічувати треба його, а не корінь.
-      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель', Number(rep.dataset.replyId), uid || null);
+      setReply(Number(rep.dataset.replyParent), name, Number(rep.dataset.replyId), uid || null);
       return;
     }
+    // Тап по обличчю/назві спільноти веде на її сторінку. Делегат `wireCards` сюди не
+    // дістає — він висить на контейнері стрічки, а лист коментарів живе окремим шаром
+    // у body. Лист закриваємо: інакше екран сторінки відкрився б ПІД ним.
+    const comPage = e.target.closest('[data-com-page]');
+    if (comPage) { const id = Number(comPage.dataset.comPage); close(); openPageScreen(id); return; }
     const ed = e.target.closest('[data-edit-com]');
     if (ed) { startEdit(Number(ed.dataset.editCom)); return; }
     const del = e.target.closest('[data-del-com]');
@@ -2138,7 +2278,9 @@ function openComments(postId, focusCommentId = null) {
     if (isFlooding())                    { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
-    const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
+    // Голос беремо в момент НАДСИЛАННЯ, а не при вході в поле: людина могла
+    // перемкнути його вже після того, як почала писати.
+    const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid, asPageId());
     sendBtn.disabled = false;
     if (res.ok) {
       // Лічильник флуду ведемо ЛИШЕ після успішної відправки — інакше невдала
