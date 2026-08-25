@@ -2304,7 +2304,14 @@ export async function setPageReaction(postId, userKey, on) {
 // Тоді запит із цією колонкою впав би і зник би ВЕСЬ список коментарів. Тому пробуємо
 // з колонкою, а на «немає такої колонки» повторюємо без неї — згадок просто не буде,
 // доки міграцію не накатано. Прибрати цей запасний шлях можна після накатування.
-const COMMENT_COLS = 'id, post_id, author_uid, text, created_at, deleted_at, parent_id, edited_at';
+// 🔑 `as_page_id` (25.08) — ВІД ЧИЙОГО ІМЕНІ звучить коментар: null = від людини,
+// інакше = від спільноти. `author_uid` при цьому ЗАВЖДИ лишається людиною, яка
+// написала: на ньому тримаються модерація, антиспам, згадки, капсули і push.
+// ⚠️ ЗАПАСНОГО ШЛЯХУ ДЛЯ ЦІЄЇ КОЛОНКИ НЕМА, і це навмисно: міграція
+// `page_comments_as_page_identity` накатана В БАЗУ ПЕРШОЮ, ще до того, як цей код
+// поїхав на сайт. Порядок протилежний до випадку `reply_to_uid`, де код міг
+// випередити міграцію — тут випередити нема чого.
+const COMMENT_COLS = 'id, post_id, author_uid, text, created_at, deleted_at, parent_id, edited_at, as_page_id';
 function noSuchColumn(error) {
   return error && (error.code === '42703' || /reply_to_uid/.test(error.message || ''));
 }
@@ -2532,9 +2539,15 @@ export async function fetchMyFeedReplies(uid, sinceMs) {
 // Зберігаємо посилання на людину, а не текст: імʼя підставляється живим при показі.
 // Підробити не вийде — RLS пускає лише того, хто вже писав під ЦИМ постом
 // (scripts/supabase_comment_push.sql), інакше згадка стала б каналом для спаму.
-export async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
+// asPageId — від чийого імені надсилаємо: null = від себе, id сторінки = від спільноти.
+// 🛑 Право сюди НЕ перевіряємо навмисно. Його перевіряє політика вставки
+// (`can_edit_page(as_page_id)` + «as_page_id = page_id цього поста»), тобто одне
+// джерело правди. Клієнтська перевірка стала б другою копією правила, а копії
+// розходяться — у проєкті це вже коштувало двох списків антиспаму.
+export async function addPageComment(postId, uid, text, parentId = null, replyToUid = null, asPageId = null) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
+  if (asPageId != null) base.as_page_id = asPageId;
   const send = (row) => supa.from('page_comments').insert(row).select().single();
   // ⚠️ У `page_comments` клієнтського ключа (`client_tag`) НЕМА — на відміну від чату,
   // груп і коментарів Дошки. Тобто звіряти нічим, і повтор дав би другий однаковий
@@ -2609,6 +2622,39 @@ export function subscribePageCommentReactions(onChange) {
         payload => onChange(payload))
     .subscribe();
   return () => supa.removeChannel(ch);
+}
+
+// ── ХТО З ЦИХ ЛЮДЕЙ У КОМАНДІ СТОРІНКИ (25.08) — для бейджа «Адмін» ─────────
+//
+// 🔴 НАВІЩО ОКРЕМИЙ ШЛЯХ. Політика `page_admins` віддає лише ВЛАСНИЙ рядок
+// (`uid = auth.uid() or is_admin()`), а `list_page_moderators()` вимагає власника
+// сторінки. Тобто намалювати «Адмін» біля чужого імені не було з чого взагалі —
+// читач не може дізнатись, хто веде спільноту.
+//
+// 🔑 Політику НЕ відкриваємо: `using (true)` віддало б команду будь-якої сторінки
+// одним запитом. Замість цього функція бази відповідає на вузьке питання — «хто
+// з ЦИХ людей у команді». Спитати можна лише про тих, хто вже є на екрані;
+// вивантажити список цілком — не можна. Той самий підхід, що з лайками постів
+// 09.08, де гість дістав ЧИСЛА замість рядків із чужими uid.
+//
+// ⚠️ Чесно: це підвищена планка, а не стіна. Хто активно коментує — того можна
+// перевірити. Але одним запитом команду не забрати, і зріз у 200 uid у самій
+// функції не дає перебирати базу пачками.
+//
+// 🛑 UUID-ФІЛЬТР ОБОВʼЯЗКОВИЙ (те саме правило, що для `.in('uid', …)`): аргумент
+// оголошено як `uuid[]`, і один сторонній рядок у масиві поклав би ВЕСЬ запит —
+// тобто бейджі зникли б у всіх через один битий запис.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function fetchPageTeam(pageId, uids) {
+  if (!supa || pageId == null) return new Set();
+  const clean = [...new Set((uids || []).filter(u => typeof u === 'string' && UUID_RE.test(u)))];
+  if (!clean.length) return new Set();
+  const { data, error } = await supa.rpc('page_team_flags', { p_page_id: pageId, p_uids: clean });
+  // Бейдж — це прикраса поверх імені, а не вміст екрана: не змогли спитати —
+  // показуємо коментарі без бейджів, а не порожній лист.
+  if (error) { console.warn('[supabase] page_team_flags:', error.message); return new Set(); }
+  return new Set((data || []).map(r => (typeof r === 'string' ? r : r.page_team_flags || r.uid)));
 }
 
 // Мої сторінки (де я власник/адмін) → Set page_id — для показу поля «написати пост».

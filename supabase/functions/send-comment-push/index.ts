@@ -65,7 +65,7 @@ serve(async (req) => {
 async function handleComment(admin: Admin, commentId: number) {
   const { data: c } = await admin
     .from('page_comments')
-    .select('id, post_id, author_uid, text, reply_to_uid, deleted_at')
+    .select('id, post_id, author_uid, text, reply_to_uid, deleted_at, as_page_id')
     .eq('id', commentId).single();
   if (!c || c.deleted_at) return { sent: 0, reason: 'comment gone' };
 
@@ -81,6 +81,15 @@ async function handleComment(admin: Admin, commentId: number) {
   const { data: page } = await admin.from('pages').select('name').eq('id', post.page_id).single();
   const pageName = page?.name || 'Стрічка';
   const authorName = await nameOf(admin, c.author_uid);
+  // 🔴 ГОЛОС СПІЛЬНОТИ — І В СПОВІЩЕННІ ТЕЖ (25.08).
+  // Без цього був би витік: на екрані відповідь підписана «OLYKA CASTLE», а push
+  // казав би «Володимир Шевчук відповів на ваш коментар» — тобто застосунок сам
+  // називав би людину, яку в інтерфейсі навмисно не називає. Отримувач при цьому
+  // на екран не дивиться: він читає рядок на замкненому телефоні.
+  // 🔑 Другого запиту не треба: політика вставки не пускає `as_page_id`, відмінний
+  // від `page_id` цього поста, тож назва сторінки поста — це і є назва голосу.
+  const asPage = c.as_page_id != null;
+  const voiceName = asPage ? pageName : authorName;
   const snippet = trim(c.text, 110);
   const url = `./#/post/feed/${post.id}?c=${c.id}`;   // відкриє пост і підсвітить коментар
 
@@ -92,7 +101,11 @@ async function handleComment(admin: Admin, commentId: number) {
   if (c.reply_to_uid && !notified.has(c.reply_to_uid)) {
     sent += await push(admin, [c.reply_to_uid], {
       type: 'comment-reply', post_id: post.id, comment_id: c.id,
-      title: `${authorName} відповів на ваш коментар`,
+      // ⚠️ Для спільноти формулювання БЕЗРОДОВЕ. «OLYKA CASTLE відповів» неправильно,
+      // «відповіла» — теж не завжди: серед назв є і «КЦ «ЦЕНТР…»» (ч.р.), і «ОЛИЦЬКА
+      // МІСЬКА РАДА» (ж.р.). «Відповідь від X» правильна для будь-якої назви.
+      // 🛑 Особисте формулювання НЕ чіпаємо — воно працює і міняти його тут нічого не просить.
+      title: asPage ? `Відповідь від ${voiceName}` : `${authorName} відповів на ваш коментар`,
       body: snippet, tag: `comment-reply-${c.id}`, url,
     });
     notified.add(c.reply_to_uid);
@@ -134,7 +147,7 @@ async function handleComment(admin: Admin, commentId: number) {
     const pend = st?.pending || 0;
     const payload = pend > 0
       ? { title: pageName, body: `Ще ${pend + 1} ${pluralComments(pend + 1)} під вашим дописом${post.text ? `: «${trim(post.text, 60)}»` : ''}` }
-      : { title: `${authorName} прокоментував ваш допис`, body: snippet };
+      : { title: asPage ? `Новий коментар від ${voiceName}` : `${authorName} прокоментував ваш допис`, body: snippet };
 
     sent += await push(admin, [uid], {
       type: 'comment-new', post_id: post.id, comment_id: c.id,
