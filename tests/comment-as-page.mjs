@@ -133,12 +133,25 @@ const заміряти = async (перемикач) => {
   const g = await p.evaluate(() => {
     const r = (s) => { const e = document.querySelector(s); if (!e) return null;
       const b = e.getBoundingClientRect(); return { l: Math.round(b.left), r: Math.round(b.right), h: Math.round(b.height) }; };
+    // Кільце стану: `box-shadow` НЕ входить у getBoundingClientRect, тож міряємо
+    // саме оголошену тінь — інакше перевірка була б сліпа до того, що міряє.
+    const кільце = (() => { const e = document.querySelector('.fd-com-myava--page');
+      if (!e) return { є: false, товщина: 0 };
+      const sh = getComputedStyle(e).boxShadow || '';
+      const м = sh.match(/(\d+(?:\.\d+)?)px\s*$/) || sh.match(/0px 0px 0px (\d+(?:\.\d+)?)px/);
+      return { є: /rgb/.test(sh), товщина: м ? parseFloat(м[1]) : 0, текст: sh };
+    })();
+    const значок = (() => { const e = document.querySelector('.fd-com-myava--switch');
+      if (!e) return { w: 0, знак: '' };
+      const cs = getComputedStyle(e, '::after');
+      return { w: parseFloat(cs.width) || 0, знак: decodeURIComponent(cs.backgroundImage || '') };
+    })();
     const дотик = (() => { const e = document.querySelector('.fd-com-myava--switch');
       if (!e) return { w: 0, h: 0 };
       const b = e.getBoundingClientRect(); const cs = getComputedStyle(e, '::before');
       const inset = Math.abs(parseFloat(cs.inset) || 0);
       return { w: Math.round(b.width + inset * 2), h: Math.round(b.height + inset * 2) }; })();
-    return { дотик, стос: r('#стос'), обличчя: r('.fd-com-myava'), поле: r('.fd-com-input'),
+    return { кільце, значок, дотик, стос: r('#стос'), обличчя: r('.fd-com-myava'), поле: r('.fd-com-input'),
              бейдж: r('.fd-com-badge'), імʼя: r('.fd-com-name'), час: r('.fd-com-time'),
              ширинаТіла: document.body.scrollWidth };
   });
@@ -163,6 +176,25 @@ ok('зона дотику перемикача ≥ 44px', з.дотик.h >= 44 
    `${з.дотик.w}×${з.дотик.h}px при обличчі ${з.обличчя.h}px`);
 ok('позначка перемикання не збільшує обличчя',
    з.обличчя.h === без.обличчя.h, `${без.обличчя.h}px → ${з.обличчя.h}px`);
+// ── ТРИ РІЗНІ ЗАДАЧІ — ТРИ РІЗНІ ЗАСОБИ (26.08) ──────────────────────────────
+// Скарга Вови: «стрілочку погано видно, взагалі не зрозуміло що там переключається
+// акаунт». Розбито на три питання, бо в них різні відповіді:
+//   ЩО ЗАРАЗ?     → кільце в кольорі бренду (видно периферійним зором)
+//   ЦЕ КНОПКА?    → значок ⇄ (а не ▾: «вниз» читається як «розгорнути список»)
+//   ВОНО Є?       → підказка рівно один раз (у коді, перевірка нижче)
+ok('стан «говорю від спільноти» видно КІЛЬЦЕМ, а не лише значком',
+   з.кільце.є && з.кільце.товщина >= 2, `товщина ${з.кільце.товщина}px`);
+ok('кільце НЕ додає висоти (це тінь, а не рамка)',
+   з.стос.h === без.стос.h, `${без.стос.h}px → ${з.стос.h}px`);
+ok('значок ⇄ (двонаправлений), а не ▾',
+   /polyline points='7 7 2 12 7 17'/.test(з.значок.знак) && !/polyline points='6 9 12 15 18 9'/.test(з.значок.знак));
+ok('значок виріс до 16px (на 13px форми не було видно)',
+   з.значок.w >= 16, `${з.значок.w}px`);
+ok('підказка показується РІВНО ОДИН РАЗ і зʼїдає виняток приватного вікна',
+   /cstl-voice-hint:\$\{myUid\}/.test(feed)
+   && /localStorage\.setItem\(ключ, '1'\)/.test(feed)
+   && /catch \(_\) \{ \/\* приватне вікно \*\/ \}/.test(feed));
+
 ok('поле вводу лишилось на своєму місці', з.поле.l === без.поле.l && з.поле.r === без.поле.r,
    `${без.поле.l}…${без.поле.r} → ${з.поле.l}…${з.поле.r}`);
 ok('сторінка не поїхала вбік', з.ширинаТіла <= 390, `${з.ширинаТіла}px`);
