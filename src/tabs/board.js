@@ -44,7 +44,7 @@ import {
   cardTitleText, markBoardSeen, markChatSeen, markFeedSeen,
 } from '../core/board-shared.js';
 import {
-  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, lastAnswerTs, answersCount,
+  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, answersCount,
   openDiscussionCompose, openMyDiscussions, openSavedDiscussions,
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange,
@@ -1847,19 +1847,28 @@ function renderBody() {
   // Порядок: спершу bumped_at (підняте власником угору), далі ts/published_at.
   //
   // 🆕 11.08 — ПИТАННЯ СОРТУЮТЬСЯ ЗА ЖИВІСТЮ, А НЕ ЗА ДАТОЮ СТВОРЕННЯ.
-  // У Q&A нагорі має стояти те, де щойно відповіли: питання місячної давнини, на
-  // яке сьогодні прийшла відповідь, знову цікаве, а свіже без відповідей — ні.
-  // Беремо ПІЗНІШУ з двох дат (питання / остання відповідь), тому нове питання без
-  // відповідей однаково стоїть угорі за своєю датою і не тоне.
-  // 🔑 Чому клієнтом, а не `bumped_at`: політика бази `posts UPDATE` дозволена лише
-  // `is_admin()` (заміряно `pg_policies` 11.08), тож підняти запис нікому — поле
-  // лишалося б порожнім. Коментарі й так усі в памʼяті, мережі це не коштує нічого.
-  const rankTs = (x) => {
-    const base =
-      (x.bumped_at && new Date(x.bumped_at).getTime()) ||
-      x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
-    return x.type === 'chat' ? Math.max(base, lastAnswerTs(x.id)) : base;
-  };
+  // 🔴 24.08 — ПИТАННЯ СТОЯТЬ ЗА ДАТОЮ ПИТАННЯ. Рішення Вови, і воно СКАСОВУЄ
+  // попереднє правило цього ж місця («нагорі те, де щойно відповіли»).
+  //
+  // Тут було `Math.max(base, lastAnswerTs(x.id))` — список сортувався за
+  // ОСТАННЬОЮ ВІДПОВІДДЮ. Аргумент був не безглуздий: питання місячної давнини,
+  // на яке сьогодні відповіли, знову цікаве.
+  //
+  // 🔑 Але вада була не в самому виборі осі, а в РОЗХОДЖЕННІ: картка показує
+  // дату ПИТАННЯ, а порядок будувався за датою ВІДПОВІДІ. Слова Вови зі знімка:
+  // «саме перше питання — це питання, яке було опубліковане 11 серпня, а друге
+  // питання — це питання, яке було опубліковане 11 годин тому… це вже
+  // починається хаос». Він має рацію буквально: порядок неможливо пояснити
+  // нічим, що видно на екрані. Список мусить сортуватись тим полем, яке показує.
+  //
+  // ⚠️ Ціна названа чесно і прийнята: питання, на яке щойно відповіли, більше не
+  // підіймається. «Де щойно відповіли» лишається на іншій поверхні — крапка
+  // «нове» на вкладці (`unseenDiscussionsCount`), яка рахує саме непрочитане.
+  // 🛑 `lastAnswerTs()` НЕ видаляю: вона й далі описує живість питання і
+  // знадобиться, якщо колись вирішимо показувати цей час у самій картці.
+  const rankTs = (x) =>
+    (x.bumped_at && new Date(x.bumped_at).getTime()) ||
+    x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
   const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
 
   if (activeType === 'board') {
