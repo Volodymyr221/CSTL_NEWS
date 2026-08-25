@@ -10,39 +10,38 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-25 01:03 UTC
+**Зріз на:** 2026-08-25 07:01 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-upyy76` |
-| останній коміт людини | `f17844fd` 25.08 01:03 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260825-0058` |
-| останній PR у `main` | #1012 |
-| стендів на диску | 102 |
+| останній коміт людини | `cd068f02` 25.08 07:01 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260825-0634` |
+| останній PR у `main` | #1013 |
+| стендів на диску | 103 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-08-24b.md`
 - `bundle.js`
-- `src/tabs/board-discussions.js`
-- `src/tabs/board.js`
-- `style/base.css`
-- `style/board.css`
+- `scripts/supabase_antispam_shared.sql`
+- `src/core/utils.js`
 - `sw.js`
-- `tests/questions.mjs`
+- `tests/antispam-window.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `f17844fd` 25.08 01:03 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
-- `aad959c0` 25.08 01:02 — Документи: пульс і літопис про три зміни у Питаннях
-- `76d68e22` 25.08 00:59 — Журнал: друга робота дня (відповіді, лінія, сортування)
-- `0662eb21` 25.08 00:58 — Питання: відповідати можна на будь-яку відповідь, лінія суцільна, список за датою
-- `b03487be` 24.08 21:45 — Картка питання: остання коренева відповідь + один лічильник на застосунок (#1012)
+- `cd068f02` 25.08 07:01 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
+- `c3c8f1b5` 25.08 07:00 — Журнал і пульс: антиспам з вікном
+- `e17c4f5b` 25.08 06:34 — Антиспам: дубль тепер має вікно 15с (як і рейт-ліміт)
+- `c1f7999d` 25.08 05:48 — Журнал: номери PR/деплою і чотири недостовірні прогони
+- `67cba25d` 25.08 05:46 — Питання: відповідати можна на будь-яку відповідь, лінія суцільна, список за датою (#1013)
 
 <!-- AUTO:END -->
 
