@@ -1603,7 +1603,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(m)
     <span class="hm-fd-c${e?" hm-fd-c--new":""}">
       <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${a}</span></span>
       <span class="hm-fd-c-name">${p(n)}</span>
-    </span>`}function Fv(t,e=null){e=e||t.pages||{};let n=e.name||"Громада",a=t.image_url||(Array.isArray(t.image_urls)?t.image_urls[0]:null),s=Rv(t.text,a?90:320),o=e.avatar_url?`<img src="${p(e.avatar_url)}" alt="">`:`<span class="hm-fd-p-tx">${p(fh(n))}</span>`;return`
+    </span>`}function Fv(t,e=null){e=e||t.pages||{};let n=e.name||"Громада",a=t.image_url||(Array.isArray(t.image_urls)?t.image_urls[0]:null),s=Rv(t.text,a?170:520),o=e.avatar_url?`<img src="${p(e.avatar_url)}" alt="">`:`<span class="hm-fd-p-tx">${p(fh(n))}</span>`;return`
     <article class="hm-card hm-card--tap hm-fd-post hm-fd-post--${a?"photo":"text"}">
       <span class="hm-fd-p-head">
         <span class="hm-fd-p-av">${o}</span>

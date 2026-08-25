@@ -93,9 +93,9 @@ function postHtml(p, page = null) {
   page = page || p.pages || {};
   const name = page.name || 'Громада';
   const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
-  // 90 проти 320 — не круглі числа «на око»: на 390pt рядок картки тримає ~40 символів,
-  // тобто це рівно 2 рядки підпису під знімком і 8 рядків суцільного тексту.
-  const txt = preview(p.text, img ? 90 : 320);
+    // 📐 170 / 520 — під ЧОТИРИ рядки підпису під знімком і одинадцять рядків суцільного
+  // тексту (друга редакція 25.08: «додай більше тексту, не жалій»).
+  const txt = preview(p.text, img ? 170 : 520);
   const ava = page.avatar_url
     ? `<img src="${escapeHtml(page.avatar_url)}" alt="">`
     : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;

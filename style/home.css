@@ -1382,7 +1382,14 @@
   color: rgba(255, 255, 255, .8); text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden; white-space: normal; overflow-wrap: anywhere;
-  height: calc(2 * 1.15 * 9.5px);
+  /* 🔴 25.08, ДРУГА РЕДАКЦІЯ — ВИСОТА В `em`, А НЕ В `px`.
+     Було `height: calc(2 * 1.15 * 9.5px)` = 21.85px, пораховані з НОМІНАЛЬНИХ значень.
+     На живому iPhone рядок виявився вищим (шрифт рендериться інакше, плюс масштаб
+     тексту в системі), і в коробку пролазив ТРЕТІЙ рядок — зрізаний рівно навпіл:
+     «КЦ «ЦЕНТР / КУЛЬТУРИ,... / СПОРТУ ТА». Видно було на скріні Вови.
+     🔑 `min-height` в `em` рахується від ВЛАСНОГО кегля елемента, тож коробка завжди
+     дорівнює двом його справжнім рядкам, хоч би як браузер їх намалював. */
+  min-height: 2.3em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
 }
 
@@ -1391,13 +1398,13 @@
 .hm-fd-post { display: block; padding: var(--hm-s3); }
 .hm-fd-p-head { display: flex; align-items: center; gap: var(--hm-s2); }
 .hm-fd-p-av {
-  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
   background: var(--brand-grad-sm); display: grid; place-items: center; color: #fff;
 }
 .hm-fd-p-av img { width: 100%; height: 100%; object-fit: cover; }
 .hm-fd-p-tx { font: 700 14px/1 system-ui, -apple-system, sans-serif; }
 .hm-fd-p-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.hm-fd-p-name { font: 700 13px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink); }
+.hm-fd-p-name { font: 700 14.5px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink); }
 .hm-fd-p-when { font: 400 11px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
 .hm-fd-p-txt {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
@@ -1427,7 +1434,11 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  height: 280px;
+  /* 📐 280 → 400px (25.08, друга редакція). Слово Вови: «додай більше тексту, не жалій;
+     фотографію зроби більшою, не жалій; воно виглядає негарно, несучасно».
+     Розкладка форми зі знімком: 14 поле + 40 шапка + 10 + 4 рядки тексту (≈90) + 12 +
+     знімок (≈220, тобто 4:3 замість колишніх 16:9) + 14 поле. */
+  height: 400px;
 }
 .hm-fd-track::-webkit-scrollbar { display: none; }
 /* `flex: 0 0 100%` разом із `width: 100%` — без `flex-shrink: 0` контейнер стиснув би
@@ -1443,22 +1454,32 @@
    Допис зі знімком і допис із самим текстом різняться в РАЗИ (заміряно на чинній
    картці: 302px проти 123px). Одна форма на обидва означала б півкартки порожнечі
    там, де знімка немає, — рівно вада, яку вже лікували в PR #943. */
-.hm-fd-post { display: flex; flex-direction: column; padding: var(--hm-s3); }
+.hm-fd-post { display: flex; flex-direction: column; padding: var(--hm-s4); }
 
 /* Зі знімком: текст — короткий підпис, знімок забирає ВЕСЬ залишок висоти.
    ⚠️ `aspect-ratio` знято навмисно: висоту тепер задає доріжка, і фіксована пропорція
    боролася б із нею. `min-height: 0` обовʼязковий — без нього flex-елемент не має
    права стати нижчим за свій вміст, і картка вилізла б за доріжку. */
-.hm-fd-post--photo .hm-fd-p-txt { -webkit-line-clamp: 2; }
-.hm-fd-post--photo .hm-fd-p-img { flex: 1 1 auto; min-height: 0; aspect-ratio: auto; }
+/* 🔴 ГОЛОВНА ВАДА ПЕРШОЇ РЕДАКЦІЇ, ЗНАЙДЕНА НА ЖИВОМУ ТЕЛЕФОНІ.
+   Текст обрізало ПОСЕРЕД РЯДКА — на екрані було видно верхні половинки літер.
+   Причина не в `line-clamp` (він стояв правильно), а в тому, що у flex-колонці кожен
+   елемент має `flex-shrink: 1` за замовчуванням: знімок ріс (`flex: 1`), і текст
+   СТИСКАВСЯ нижче за свої два рядки. `line-clamp` рахує РЯДКИ, а тут різало ВИСОТУ —
+   тому обрізка й вийшла посеред літер, без жодного «…».
+   🛑 Правило: у flex-колонці все, що має показатись ЦІЛКОМ, потребує `flex-shrink: 0`.
+   ⚠️ Мій стенд це пропустив, бо міряв ВЛАСТИВІСТЬ (`line-clamp: 2` на місці), а не
+   НАСЛІДОК (чи видно текст цілком). Тепер міряє наслідок. */
+.hm-fd-p-head, .hm-fd-p-txt { flex-shrink: 0; }
+.hm-fd-post--photo .hm-fd-p-txt { -webkit-line-clamp: 4; font-size: 15px; line-height: 1.5; }
+.hm-fd-post--photo .hm-fd-p-img { flex: 1 1 auto; min-height: 140px; aspect-ratio: auto; }
 
 /* Без знімка: текст лишається сам, тож дістає БІЛЬШИЙ КЕГЛЬ і всі рядки картки.
    🔑 `margin: auto 0` центрує його по вертикалі — короткий допис читається як цитата
    посеред картки, а не як текст, під яким забули вміст. Це і є відповідь на порожнечу:
    не розтягувати текст, а перестати робити з нього верхній рядок. */
 .hm-fd-post--text .hm-fd-p-txt {
-  -webkit-line-clamp: 9;
-  font-size: 15.5px; line-height: 1.45;
+  -webkit-line-clamp: 11;
+  font-size: 17px; line-height: 1.5;
   margin: auto 0;
 }
 
