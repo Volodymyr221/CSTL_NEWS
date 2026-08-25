@@ -47,7 +47,7 @@ import {
   initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, answersCount,
   openDiscussionCompose, openMyDiscussions, openSavedDiscussions,
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
-  handleDiscussionsAuthChange,
+  handleDiscussionsAuthChange, markQaFloorOnce,
 } from './board-discussions.js';
 
 // Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
@@ -3049,7 +3049,16 @@ export function initBoard() {
     // ⚠️ Тут же, а не в рендері Питань — з тієї самої причини, що описана вище
     // для Дошки: рендер трапляється на старті застосунку і гасив би лічильник
     // тому, хто вкладку навіть не відкривав.
-    if (вкладка === 'discussions') markChatSeen();
+    if (вкладка === 'discussions') {
+      markChatSeen();
+      // 🆕 25.08 — ПОРІГ ІСТОРІЇ, і він НЕ те саме, що позначка вище.
+      // `markChatSeen()` рухається щоразу і живить капсулу «відповіли на ваше
+      // питання». Поріг ставиться ОДИН раз і відповідає лише на «що вважати
+      // історією»: далі непрочитане вирішують позапитаннєві мітки. Без цього
+      // поділу вхід у вкладку мовчки гасив би всі нові питання — рівно та вада,
+      // на яку Вова показав 25.08 («відкриваю — незрозуміло, що горить»).
+      markQaFloorOnce();
+    }
     // 🔴 22.08 — ТА САМА ПОЗНАЧКА ДЛЯ СТРІЧКИ. Потрібна капсулі «відповіли під
     // моїм дописом»: без неї «нове» означало б «усі коментарі за всю історію», і
     // людина бачила б той самий рядок вічно.
