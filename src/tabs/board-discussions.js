@@ -17,7 +17,7 @@
 
 import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle, autoGrowTextarea,
          lsGet, lsSet, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
-import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
+import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange, authReady } from '../core/auth.js';
 import {
   isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
@@ -357,6 +357,13 @@ function setChatSeen(postId, ts) {
  * яка читала теми до цього деплою, побачила б їх усі як непрочитані.
  */
 export async function loadSeenThreads() {
+  // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» (беклог, пункт 0). Рядок нижче ухвалює
+  // остаточне рішення «гість → памʼять порожня», і на холодному старті воно
+  // ухвалювалось за станом, який ще не встиг стати правдою. Наслідок видно на
+  // екрані: мапа «яку тему коли дивився» лишається порожньою, тобто ПРОЧИТАНІ
+  // питання показуються як непрочитані, поки людина не походить по вкладках.
+  // ⏱ Після першого разу коштує нуль; межа часу — всередині самої гарантії.
+  await authReady();
   const uid = currentUserId();
   if (!uid) { seenThreads = {}; seenThreadsFor = null; return; }
   if (seenThreadsFor === uid) return;

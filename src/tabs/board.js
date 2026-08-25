@@ -20,7 +20,7 @@ import { openBoardModal } from './community-modal.js';
 import { catColor, catIcon, catShort, catLabel, ALL_ICON, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached, unreadChatsCount } from './board-chat.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
-import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
+import { requireAuth, isLoggedIn, currentUserId, onAuthChange, authReady } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
   fetchAllComments,
@@ -3043,10 +3043,30 @@ export function initBoard() {
   // 🆕 25.08 — ПАМʼЯТАЄМО, ЗВІДКИ ПРИЙШЛИ. Подія каже лише, де ми ЗАРАЗ, а
   // Питанням потрібен саме момент ВИХОДУ: підсвітка мусить дожити до нього.
   let _звідки = document.querySelector('.app-main')?.dataset.tab || null;
-  window.addEventListener('cstl-tab-changed', () => {
+  window.addEventListener('cstl-tab-changed', async () => {
     const вкладка = document.querySelector('.app-main')?.dataset.tab;
     const пішли_з = _звідки;
     _звідки = вкладка;
+    // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» ПЕРЕД УСІМА ПОЗНАЧКАМИ (беклог, пункт 0).
+    //
+    // 🔑 ЧОМУ ЦЕ НЕ КОСМЕТИКА. Кожна позначка нижче пише в сховище пристрою під
+    // ключем, ЩО ЗАЛЕЖИТЬ ВІД ЛЮДИНИ (`cstl-qa-floor-v2:<uid>`, `cstl-chat-seen-v1:<uid>`
+    // і далі). Поки вхід не відомий, `currentUserId()` дає `null`, і ключ стає
+    // `…:anon` — тобто позначка лягає В ЧУЖИЙ ПРОСТІР, а справжня не ставиться.
+    // Для порогу історії це найгірше: `markQaFloorOnce()` разова, і в просторі
+    // людини лишається порожньо, а в `anon` — сміття.
+    // ⚠️ Сценарій не гіпотетичний: тап по сповіщенню відкриває вкладку ПРОГРАМНО,
+    // на самому старті, коли відновлення сесії ще триває. І на слабшому телефоні
+    // це трапляється частіше, а не рідше.
+    //
+    // 🛑 ЧОМУ ОЧІКУВАННЯ ТУТ, А НЕ ВСЕРЕДИНІ САМИХ ПОЗНАЧОК. Порядок
+    // `markQaFloorOnce()` → `markChatSeen()` — ЧАСТИНА ПОВЕДІНКИ (див. нижче):
+    // другий зрушує ту саму мітку, яку читає перший. Зробити їх асинхронними
+    // означало б розсипати цей порядок на обіцянки і зламати рівно ту ваду, яку
+    // лікували 25.08. Одне очікування перед блоком лишає весь блок синхронним.
+    // ⚠️ `пішли_з` і `_звідки` рахуються ДО очікування — вони про подію, а не про
+    // людину, і мусять лишитись правдою навіть при швидкому перемиканні вкладок.
+    await authReady();
     // 🔴 ВИХІД ІЗ ПИТАНЬ ГАСИТЬ ПІДСВІЧЕНЕ — замовлення Вови 25.08: «я дивлюся,
     // читаю їх, і коли вже я переходжу в будь-яку іншу вкладку, тоді вони
     // згасають і пропадає крапочка». Гасити на вході означало б прибрати
