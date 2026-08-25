@@ -30,7 +30,7 @@ import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
 import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
          adoptLegacyScopedKey, chatSeenTs } from '../core/board-shared.js';
-import { fetchSeenThreads, markThreadSeenRemote } from '../core/supabase.js';
+import { fetchSeenThreads, markThreadSeenRemote, updateQuestion, deleteQuestion } from '../core/supabase.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
 import { revealInScroller } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
@@ -422,6 +422,17 @@ const QA_REPLIES_VISIBLE = 1;
 // число, а питав рядком, `has()` не збігся б НІКОЛИ — гілка розгорталась би на
 // один рендер і мовчки згорталась назад. Тому одна форма скрізь.
 const qaKey = (id) => String(id);
+
+// Позначка «змінено» — рішення Вови 25.08: редагувати можна завжди, але читач
+// мусить бачити, що текст правили ПІСЛЯ того, як на нього відповіли.
+// 🔑 Саме мітка й робить вільне редагування безпечним: підмінити питання
+// непомітно не вийде. Без неї довелось би забороняти правку після першої
+// відповіді — тобто ловити людину на опечатці.
+// ⚠️ Слово те саме, що на відповідях (`edited_at` у `comments`), — одна мова на
+// весь розділ.
+function editedMark(row) {
+  return row?.edited_at ? ' <span class="qa-edited">· змінено</span>' : '';
+}
 
 function answerWord(n) {
   const mod10 = n % 10, mod100 = n % 100;
@@ -908,6 +919,108 @@ export function openDiscussionCompose() {
   });
 }
 
+// ── РЕДАГУВАННЯ ПИТАННЯ (25.08) ─────────────────────────────────────────────
+//
+// 🔑 ТА САМА ФОРМА, ЩО Й «ЗАПИТАТИ ГРОМАДУ», лише з іншим підписом і вже
+// заповненим полем. Друга форма для того самого тексту означала б два місця,
+// де можна розійтись у стелі символів, підказці й антиспамі, — а розходяться
+// вони завжди.
+// ⚠️ `maxlength="300"` тут той самий, що у формі публікації. Серверна стеля
+// вища (2000), і це навмисно: клієнт стримує, база рятує.
+function startQuestionEdit(post) {
+  let detachKb = null;
+  const form = `
+    <form class="disc-compose" id="disc-edit-form">
+      <label class="disc-compose-label" for="disc-edit-text">Змініть своє питання</label>
+      <textarea id="disc-edit-text" class="disc-compose-input" rows="3"
+                placeholder="Напишіть питання…" maxlength="300"></textarea>
+      <p class="disc-compose-hint">Люди, які вже відповіли, бачитимуть позначку «змінено».</p>
+      <button type="submit" class="disc-compose-submit">Зберегти</button>
+    </form>`;
+  openDiscSheet({
+    title: 'Редагувати питання',
+    bodyHtml: form,
+    onMount: (sheet, close) => {
+      const ta = sheet.querySelector('#disc-edit-text');
+      if (ta) ta.value = post.text || '';   // значенням, а не в розмітці: текст може містити «<»
+      autoGrowTextarea(ta);
+      detachKb = attachSheetKeyboardFix(sheet, ta);
+      sheet.querySelector('#disc-edit-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = (ta?.value || '').trim();
+        if (!text) { showToast('Питання не може бути порожнім', 2500); ta?.focus(); return; }
+        if (text === (post.text || '')) { close(); return; }   // нічого не змінилось
+        if (containsProfanity(text)) { showToast('🚫 Питання містить заборонені слова', 4000, 'error'); return; }
+        const btn = sheet.querySelector('.disc-compose-submit');
+        if (btn) { btn.disabled = true; btn.textContent = 'Зберігаємо…'; }
+        const res = await updateQuestion(post.id, text);
+        if (!res.ok) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Зберегти'; }
+          showToast('Не вдалося: ' + (res.error || ''), 4000, 'error');
+          return;
+        }
+        // Оновлюємо ВІДКРИТИЙ екран одразу — інакше людина зберегла б і бачила
+        // старий текст, поки не вийде і не зайде знову.
+        post.text = text;
+        post.edited_at = res.editedAt || new Date().toISOString();
+        const h1 = _chatModalEl?.querySelector('.qa-question-text');
+        if (h1) h1.textContent = text;
+        // 🛑 Мітку теж дописуємо ТУТ. Стенд спіймав: текст оновлювався, а
+        // «змінено» зʼявлялось лише після виходу й повернення — тобто рівно та
+        // людина, яка щойно правила, доказу правки не бачила.
+        const коли = _chatModalEl?.querySelector('.qa-question-when');
+        if (коли && !коли.parentElement?.querySelector('.qa-edited')) {
+          коли.insertAdjacentHTML('afterend', editedMark(post));
+        }
+        close();
+        showToast('Питання змінено');
+        window.dispatchEvent(new CustomEvent('cstl-posts-changed'));
+      });
+    },
+    onClose: () => { detachKb?.(); detachKb = null; },
+  });
+}
+
+// ── ВИДАЛЕННЯ ПИТАННЯ (25.08) ───────────────────────────────────────────────
+//
+// 🔴 ПИТАЄМО ПІДТВЕРДЖЕННЯ, І ЦЕ НЕ ФОРМАЛЬНІСТЬ. Рішення Вови 25.08: питання
+// видаляється РАЗОМ із відповідями. Тобто один тап може стерти роботу кількох
+// сусідів — і людина мусить це знати ДО тапу, а не дізнатись після.
+// 🔑 Тому в тексті стоїть ЧИСЛО відповідей, а не загальне «ви впевнені?»:
+// «разом із 4 відповідями» зупиняє, «ви впевнені?» — ні.
+function confirmQuestionDelete(post) {
+  const n = answersCount(post.id);
+  // ⚠️ ФОРМУЛЮВАННЯ ЗМІНЕНО ПІСЛЯ ЗАМІРУ. Перша редакція писала «разом із 2
+  // відповіді» — неправильний відмінок: після «із» потрібен орудний
+  // («відповідями»), а `answerWord()` віддає називний. 🔑 Лікуємо БУДОВОЮ
+  // РЕЧЕННЯ, а не другою таблицею відмін: окремий список форм для одного рядка
+  // розійшовся б із першим при наступній правці слова.
+  const попередження = n
+    ? `Видалити питання? Разом із ним зникнуть ${n} ${answerWord(n)}. Скасувати це не вийде.`
+    : 'Видалити питання? Скасувати це не вийде.';
+  const sheet = document.createElement('div');
+  sheet.className = 'pm-actions-back';
+  sheet.innerHTML = `
+    <div class="pm-actions">
+      <p class="pm-actions-note">${escapeHtml(попередження)}</p>
+      <button type="button" data-act="yes" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>Видалити</button>
+      <button type="button" data-act="cancel" class="pm-actions-cancel">Скасувати</button>
+    </div>`;
+  const close = () => sheet.remove();
+  sheet.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) { if (e.target === sheet) close(); return; }
+    close();
+    if (b.dataset.act !== 'yes') return;
+    const res = await deleteQuestion(post.id);
+    if (!res.ok) { showToast('Не вдалося видалити: ' + (res.error || ''), 4000, 'error'); return; }
+    closeChatModal();
+    showToast('Питання видалено');
+    window.dispatchEvent(new CustomEvent('cstl-posts-changed'));
+  });
+  (_chatModalEl || document.body).appendChild(sheet);
+}
+
 // Кнопка «Мене теж цікавить» — та сама реакція, що раніше була ❤️ на картці.
 // 🔑 У БАЗІ ЗНАЧЕННЯ ЛИШАЄТЬСЯ `❤️` (`LIKE_EMOJI`) — міняється лише підпис та іконка.
 // Якби ми завели новий код емоції, наявні реакції (заміряно 11.08: 9 рядків на
@@ -942,6 +1055,14 @@ function interestAria(postId) {
 // одразу під статус-баром і читається як заголовок сторінки, а не як вміст
 // коробки. Це та сама відмова від «кольорових плит», що і в списку.
 function qaHeadHtml(post) {
+  // 🆕 25.08 — ДІЇ АВТОРА НАД СВОЇМ ПИТАННЯМ. Слово Вови: «Коли користувач
+  // написав питання, він його не може ні редагувати, ні видалити».
+  // 🔑 «⋯» у шапці, а не дві окремі кнопки: у смузі вже живуть «Назад» і
+  // «Зберегти», і третя з четвертою перетворили б її на панель інструментів.
+  // Той самий прийом, що вже стоїть на кожній ВІДПОВІДІ (`openDiscActions`) —
+  // одна точка входу, аркуш знизу. Дві різні механіки на тому самому екрані
+  // людині довелось би вивчати двічі.
+  const моє = !!post.owner_uid && post.owner_uid === currentUserId();
   return `
     <header class="qa-head">
       <button class="qa-back" type="button" aria-label="Назад">
@@ -949,7 +1070,37 @@ function qaHeadHtml(post) {
       </button>
       <span class="qa-head-title">Питання</span>
       ${saveBtnHtml(post)}
+      ${моє ? `<button class="qa-head-more" type="button" data-question-actions="${post.id}" aria-label="Дії з питанням">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>` : ''}
     </header>`;
+}
+
+// ── ДІЇ АВТОРА НАД ВЛАСНИМ ПИТАННЯМ (25.08) ─────────────────────────────────
+//
+// 🛑 ПЕРЕВІРКУ «ЦЕ МОЄ?» ТУТ НЕ ВВАЖАЄМО ЗАХИСТОМ. Кнопка ховається, щоб не
+// показувати людині дію, якої в неї немає, — і тільки. Вирішує база: обидві
+// операції йдуть через `update_question` / `delete_question`, де `owner_uid`
+// звіряється з `auth.uid()` на сервері. Клієнт можна обійти; правило, яке живе
+// лише в ньому, — не правило (той самий висновок, що в B-23 і B-26).
+function openQuestionActions(post) {
+  const sheet = document.createElement('div');
+  sheet.className = 'pm-actions-back';
+  sheet.innerHTML = `
+    <div class="pm-actions">
+      <button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>Редагувати питання</button>
+      <button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>Видалити питання</button>
+      <button type="button" data-act="cancel" class="pm-actions-cancel">Скасувати</button>
+    </div>`;
+  const close = () => sheet.remove();
+  sheet.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) { if (e.target === sheet) close(); return; }
+    close();
+    if (b.dataset.act === 'edit') startQuestionEdit(post);
+    else if (b.dataset.act === 'delete') confirmQuestionDelete(post);
+  });
+  (_chatModalEl || document.body).appendChild(sheet);
 }
 
 // ⚠️ Імена `openChatModal` / `closeChatModal` збережені навмисно: на них зав'язані
@@ -991,7 +1142,7 @@ export function openChatModal(post, focusCommentId = null) {
           ${authorAvatar(post.author, post.owner_uid)}
           <span class="qa-question-name"${post.owner_uid ? ` data-av-uid="${escapeHtml(String(post.owner_uid))}"` : ''}>${nameSlot(post.owner_uid, liveName(post.author, post.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
-          <span class="qa-question-when">${formatTime(postTime(post))}</span>
+          <span class="qa-question-when">${formatTime(postTime(post))}</span>${editedMark(post)}
         </div>
         ${qaInterestHtml(post.id)}
       </section>
@@ -1036,6 +1187,11 @@ export function openChatModal(post, focusCommentId = null) {
     animateOut: (done) => { screen.classList.remove('visible'); setTimeout(done, 220); },
   });
   screen.querySelector('.qa-back')?.addEventListener('click', () => closeLayer(_qaLayer, { animate: true }));
+  // ⚠️ ОКРЕМИЙ СЛУХАЧ, а не спільна делегація нижче: та висить на `.qa-body`, а
+  // шапка лежить ПОЗА нею (`position: absolute` над тілом). Тап по «⋯» до
+  // делегації просто не доходить — рівно та пастка, що вже коштувала часу у
+  // «Стрічці» (`wireCards()` не дістає до листа коментарів).
+  screen.querySelector('[data-question-actions]')?.addEventListener('click', () => openQuestionActions(post));
   screen.querySelector('#bd-chat-login')?.addEventListener('click',
     () => requireAuth('відповідати на питання', () => {}));
   document.addEventListener('keydown', onChatEsc);
@@ -1573,7 +1729,7 @@ export function renderQuestionCard(p) {
           <span class="qa-card-ava">${authorAvatar(p.author, p.owner_uid)}</span>
           <span class="qa-card-name"${p.owner_uid ? ` data-av-uid="${escapeHtml(String(p.owner_uid))}"` : ''}>${nameSlot(p.owner_uid, liveName(p.author, p.owner_uid))}</span>
           <span class="qa-card-dot" aria-hidden="true">·</span>
-          <span class="qa-card-when">${formatTime(postTime(p))}</span>
+          <span class="qa-card-when">${formatTime(postTime(p))}</span>${editedMark(p)}
         </p>
       </div>
       <span class="qa-row-go" aria-hidden="true">${CHEVRON_SVG}</span>
