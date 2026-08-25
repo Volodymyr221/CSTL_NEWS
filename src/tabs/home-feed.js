@@ -59,15 +59,54 @@ function preview(text, limit) {
   return (sp > limit * 0.6 ? cut.slice(0, sp) : cut) + '…';
 }
 
+// 🔴 25.08 — ДОВГІ НАЗВИ СКОРОЧУЮТЬСЯ ЗМІСТОВНО, А НЕ БАГАТОКРАПКОЮ.
+// 🗣️ Слово Вови по скріну: «КЦ «ЦЕНТР КУЛЬТУРИ,...» — обрізка посеред слова не каже
+// нічого. Рішення: «назви залишити, але довгі скорочувати розумніше».
+//
+// 🔑 ПРАВИЛО: назва спільноти майже завжди має ЯДРО в лапках, а все зайве — після коми.
+//   «КЦ «Центр культури, спорту та дозвілля»» → «КЦ «Центр культури»»
+// Тобто ріжемо по МЕЖІ ЗМІСТУ (лапки, кома), а не по числу символів. Багатокрапка
+// лишається крайнім заходом — коли розрізати нема по чому.
+//
+// ⚠️ Скорочується ЛИШЕ те, що показано на екрані: повна назва їде в `title` і
+// `aria-label`, тож читач екрана і довгий дотик дають людині справжню назву.
+const NAME_FIT = 22;   // стільки символів тримають два рядки підпису на 390pt
+
+function shortPageName(name) {
+  const n = (name || '').trim();
+  if (n.length <= NAME_FIT) return n;
+
+  // 1. Ядро в лапках — найнадійніша межа змісту.
+  const q = n.match(/^(.*?)[«"]([^»"]+)[»"]?(.*)$/);
+  if (q) {
+    const до = q[1].trim();
+    for (const ядро of [q[2].split(',')[0].trim(), q[2].trim().split(/\s+/)[0]]) {
+      const кандидат = (до ? до + ' ' : '') + '«' + ядро + '»';
+      if (кандидат.length <= NAME_FIT + 4) return кандидат;
+    }
+  }
+
+  // 2. Кома теж є межею змісту: «Центр культури, спорту та дозвілля» → «Центр культури».
+  const доКоми = n.split(',')[0].trim();
+  if (доКоми.length <= NAME_FIT + 4 && доКоми.length < n.length) return доКоми;
+
+  // 3. Розрізати нема по чому — обрізаємо по межі слова.
+  const cut = n.slice(0, NAME_FIT);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > NAME_FIT * 0.5 ? cut.slice(0, sp) : cut) + '…';
+}
+
 function circleHtml(page, fresh) {
   const name = page.name || 'Канал';
+  const короткa = shortPageName(name);
   const inner = page.avatar_url
     ? `<img src="${escapeHtml(page.avatar_url)}" alt="" loading="lazy">`
     : `<span class="hm-fd-c-tx">${escapeHtml(initial(name))}</span>`;
+  // `title` і `aria-label` несуть ПОВНУ назву — скорочення живе лише на екрані.
   return `
-    <span class="hm-fd-c${fresh ? ' hm-fd-c--new' : ''}">
+    <span class="hm-fd-c${fresh ? ' hm-fd-c--new' : ''}" title="${escapeHtml(name)}">
       <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${inner}</span></span>
-      <span class="hm-fd-c-name">${escapeHtml(name)}</span>
+      <span class="hm-fd-c-name" aria-label="${escapeHtml(name)}">${escapeHtml(короткa)}</span>
     </span>`;
 }
 
