@@ -10,16 +10,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-25 11:35 UTC
+**Зріз на:** 2026-08-25 11:36 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-upyy76` |
-| останній коміт людини | `d004db6d` 25.08 11:30 — Сторож нічної тиші + B-33 закрито + чесність tests/README |
+| останній коміт людини | `31981ce8` 25.08 11:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260825-1012` |
 | останній PR у `main` | #1016 |
 | стендів на диску | 104 |
-| незакомічених файлів | 3 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -27,8 +27,10 @@
 
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/CSTL_BUGS.md`
+- `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `CSTL NEWS VOVA/docs/QA_CONCEPT.md`
 - `_session-log/vova-2026-08-24b.md`
 - `supabase/functions/send-answer-push/index.ts`
@@ -37,11 +39,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `31981ce8` 25.08 11:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
+- `5d713382` 25.08 11:35 — Журнал, літопис і пульс: нічна тиша, B-33, звірка документів
 - `d004db6d` 25.08 11:30 — Сторож нічної тиші + B-33 закрито + чесність tests/README
 - `cdd54400` 25.08 11:23 — Документи: звірено з кодом три застарілі записи
 - `86d27e33` 25.08 11:13 — Нічна тиша 22:00-08:00 для типів 1 і 3 (QA_CONCEPT §12)
-- `a77a0af4` 25.08 10:47 — Журнал: #1016/#5049 і передача другому акаунту
-- `ddcf0c6a` 25.08 10:44 — Merge remote-tracking branch 'origin/main' into claude/startuem-upyy76
 
 <!-- AUTO:END -->
 
