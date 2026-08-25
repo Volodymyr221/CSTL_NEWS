@@ -8,7 +8,7 @@
 
 import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
          looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
-import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
+import { currentUserId, isLoggedIn, requireAuth, onAuthChange } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName,
   fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
@@ -70,6 +70,11 @@ let commentPaging = new Map();// post_id → { hasMore, oldestTs } — стан 
 let commentError = new Map(); // post_id → true, якщо остання спроба завантажити впала
 let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
+// 🔴 ЧИЇМИ ОЧИМА ЧИТАЛИ ДАНІ. `undefined` = ще не читали жодного разу.
+// Потрібно, щоб відрізнити «вхід справді змінився» від повторної події про ТУ САМУ
+// людину: `onAuthChange` шлеться кілька разів поспіль (відновлення сесії, оновлення
+// токена, прогрів профілю), і без цієї звірки застосунок ганяв би дані по колу.
+let loadedForUid;
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
 let loaded = false;
 // Пости, які приїхали живою синхронізацією, поки людина читає стрічку. У список їх НЕ
@@ -154,6 +159,7 @@ async function loadData() {
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
   if (uids.length) await fetchAvatars(uids);
+  loadedForUid = currentUserId();
   loaded = true;
 }
 
@@ -1911,13 +1917,8 @@ function openComments(postId, focusCommentId = null) {
         </div>
         <div class="fd-com-list"></div>
         <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
-        <div class="fd-com-as" hidden>
-          <span class="fd-com-as-lab">Відповідати як</span>
-          <button class="fd-com-as-btn" data-com-as="me" type="button"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt">Від себе</span></button>
-          <button class="fd-com-as-btn" data-com-as="page" type="button"><span class="fd-com-as-dot"></span><span class="fd-com-as-txt"></span></button>
-        </div>
         <div class="fd-com-compose">
-          <span class="fd-com-ava fd-com-myava">${myAva}</span>
+          <button class="fd-com-ava fd-com-myava" type="button" data-com-as-toggle>${myAva}</button>
           <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
           <button class="fd-com-send" type="button">${IC_SEND}</button>
         </div>
@@ -1928,46 +1929,66 @@ function openComments(postId, focusCommentId = null) {
   const replyBar = sheet.querySelector('.fd-com-replybar');
   const replyTo = sheet.querySelector('.fd-com-replyto');
 
-  // ── ВІД ЧИЙОГО ІМЕНІ ВІДПОВІДАЄМО ──────────────────────────────────────────
-  // Перемикач бачить ЛИШЕ член команди цієї сторінки. Для всіх інших рядок схований
-  // і поле лишається таким, яким було, — тобто нового елемента вони не бачать узагалі.
-  // 🔑 Вигляд узятий у композера поста (`.fd-comp-as`, «Публікувати як»): це та сама
-  // за змістом дія, і другої мови для неї заводити не треба.
+  // 🔴 ВИБІР ГОЛОСУ ЖИВЕ НА ОБЛИЧЧІ, А НЕ ОКРЕМОЮ СМУГОЮ (переписано 25.08 після
+  // скарги Вови: «поле вводу не піднімається доверху, воно зупиняється знизу»).
+  //
+  // ПЕРША РЕДАКЦІЯ мала окремий рядок «Відповідати як [Від себе] [OLYKA CASTLE]»
+  // між смугою відповіді і полем вводу — тобто ТРЕТІЙ поверх у стосі, який стоїть
+  // під клавіатурою. На 390pt клавіатура забирає ~336px, і кожен зайвий поверх там
+  // коштує дорожче, ніж будь-де в застосунку.
+  //
+  // 🛑 ЧОМУ НЕ СТАВ ЛАГОДИТИ МАТЕМАТИКУ МОДУЛЯ. `core/keyboard.js` — зона, де два
+  // виправлення поспіль уже провалились (PR #638 і #641, HOT_RULES №9 і №10), і
+  // правило звідти однозначне: не добудовувати поверх, а прибирати причину.
+  // ⚠️ Чесно: у Chromium стос ВЛАЗИВ (список стискався рівно на 41px), тобто
+  // відтворити скаргу браузером не вийшло. Але це якраз той випадок, про який
+  // HOT_RULES №9 попереджає прямо — «Chromium не відтворює клавіатуру iOS», і
+  // зелений браузерний тест тут не доказ. Тому прибрано сам поверх.
+  //
+  // 🔑 НОВИЙ ВИГЛЯД НІЧОГО НЕ КОШТУЄ ПО ВИСОТІ: обличчя ліворуч від поля вже
+  // показувало, хто говорить. Тепер по ньому ще й тапають. Варіантів рівно ДВА,
+  // тож меню не потрібне — тап перемикає. Підказка в полі каже це словами.
   const пост = posts.find(p => p.id === postId);
   const сторінка = пост ? pages.find(p => p.id === пост.page_id) : null;
   const мояКоманда = !!сторінка && myPageIds.has(сторінка.id);
-  const asRow = sheet.querySelector('.fd-com-as');
-  if (мояКоманда) asRow.querySelector('[data-com-as="page"] .fd-com-as-txt').textContent = сторінка.name || 'Спільнота';
+  const avaBtn = sheet.querySelector('[data-com-as-toggle]');
   // Поточний голос. `?? null` а не `||`: 0 не буває id сторінки, але звичка з `||`
   // рано чи пізно з'їдає законне значення.
   const asPageId = () => (мояКоманда ? (commentAsChoice.get(postId) ?? null) : null);
-  // Активний голос видно ТРЬОМА способами одразу — підсвічена кнопка, обличчя біля поля
-  // і підказка в полі. Один сигнал легко проґавити, а ціна помилки тут несиметрична:
-  // випадково сказане від імені спільноти назад не забереш.
+
   const paintAs = () => {
-    // Під час ПРАВКИ вибору немає: голос заморожено самою базою (тригер
-    // `page_comments_guard_update`), тож показувати перемикач означало б обіцяти дію,
-    // яка впаде помилкою. Ховаємо — так само, як ховаємо його від не-команди.
-    asRow.hidden = !мояКоманда || !!editTarget;
     const on = asPageId() != null;
-    asRow.querySelectorAll('[data-com-as]').forEach(b =>
-      b.classList.toggle('is-on', (b.dataset.comAs === 'page') === on));
-    const ava = sheet.querySelector('.fd-com-myava');
-    if (ava) ava.innerHTML = on
-      ? avatarHtml(сторінка.avatar_url, сторінка.name, 'fd-com-ava-img')
-      : avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
+    if (avaBtn) {
+      avaBtn.innerHTML = on
+        ? avatarHtml(сторінка.avatar_url, сторінка.name, 'fd-com-ava-img')
+        : avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
+      // Позначка «це можна перемкнути» — лише тому, хто справді може. Для решти
+      // обличчя лишається тим самим підписом, що й було: нової кнопки вони не бачать.
+      avaBtn.classList.toggle('fd-com-myava--switch', мояКоманда);
+      avaBtn.classList.toggle('fd-com-myava--page', on);
+      avaBtn.setAttribute('aria-label', !мояКоманда ? 'Ваше фото'
+        : on ? `Відповідаєте як ${сторінка.name}. Торкніться, щоб відповідати від себе`
+             : 'Відповідаєте від себе. Торкніться, щоб відповідати від імені спільноти');
+    }
     const inp = sheet.querySelector('.fd-com-input');
     // ⚠️ Назву спільноти в підказку НЕ підставляємо: імена сторінок тут довгі
     // («КЦ «ЦЕНТР КУЛЬТУРИ, СПОРТУ ТА ТУРИЗМУ ОЛИЦЬКОЇ МІСЬКОЇ РАДИ»»), і підказка
     // перетворилась би на обрізаний хвіст. Хто саме говорить — каже обличчя поруч.
     if (inp && !editTarget) inp.placeholder = on ? 'Відповідь від імені спільноти…' : 'Додати коментар…';
   };
-  asRow.addEventListener('click', e => {
-    const b = e.target.closest('[data-com-as]');
-    if (!b || !мояКоманда) return;
-    commentAsChoice.set(postId, b.dataset.comAs === 'page' ? сторінка.id : null);
+
+  avaBtn?.addEventListener('click', () => {
+    if (!мояКоманда) return;
+    const було = asPageId() != null;
+    commentAsChoice.set(postId, було ? null : сторінка.id);
     paintAs();
-    sheet.querySelector('.fd-com-input')?.focus();
+    // 🔑 Перемикання — рідкісна і важлива дія, і вона міняє те, ЧИЇМ голосом
+    // прозвучить текст. Обличчя маленьке, тож підтверджуємо словами: без цього
+    // легко не помітити, що тапнув, і надіслати не від того імені.
+    showToast(було ? 'Відповідаєте від себе' : `Відповідаєте як ${сторінка.name}`, 2200);
+    // Фокус НЕ чіпаємо: `keepFocusOnButtons` тримає його в полі, і клавіатура
+    // лишається на місці. Будь-який рух розкладки тут забрав би ціль з-під пальця
+    // (HOT_RULES №10 — саме на цьому вже відкочували роботу 26.07).
   });
 
   replyTarget = null;
@@ -3677,4 +3698,65 @@ export async function initFeed() {
   // Блим при цьому знімає не пауза, а `paintIfChanged` у `renderFeed` — пауза лише
   // прибирає зайві походи в мережу.
   onReturn('shotam', () => { loadData().then(renderFeed); });
+
+  // ── 🔴 ВХІД ЗМІНИВСЯ — ПЕРЕЧИТАТИ ДАНІ (25.08) ────────────────────────────
+  //
+  // 🔴 СКАРГА ВОВИ: «пропала можливість писати пости в усі спільноти, де я адмін…
+  // це в мене вже стається другий чи третій раз». Композер повертався сам через
+  // якийсь час — і це була головна підказка.
+  //
+  // ЩО НАСПРАВДІ ЛАМАЛОСЬ. `initAuth()` в `app.js` викликається БЕЗ `await`, тобто
+  // відновлення сесії йде своїм ходом. Якщо `loadData()` встигав спрацювати раніше,
+  // `isLoggedIn()` ще давав false — і `fetchMyEditablePageIds()` навіть не кликався:
+  // `myPageIds` лишався ПОРОЖНІМ на всю сесію. А на ньому висять і композер
+  // «Написати пост…», і меню «⋯» на екрані спільноти. Тобто власник спільноти
+  // бачив її як сторонній.
+  //
+  // 🔑 ЧОМУ ЦЕ ПОМІЧАЛОСЬ НЕ ЗАВЖДИ: перегони. Виграє то одне, то інше — звідси
+  // «другий чи третій раз», а не «завжди». І само «лікувалось» переходом на іншу
+  // вкладку й назад, бо `onReturn` вище перечитував дані вже з відновленою сесією.
+  // 🛑 Саме тому старий коментар «після входу зʼявиться композер» був НЕПРАВДОЮ
+  // рівно в тому випадку, коли людина зі Стрічки нікуди не йде: подія повернення
+  // на вкладку не настає ніколи, і чекати її нема сенсу.
+  //
+  // 🔑 ЧОМУ САМЕ `onAuthChange`, А НЕ `await initAuth()` У `app.js`: цей шлях уже
+  // працює в ШЕСТИ вкладках (`buses`, `board-chat`, `home-caps`, `community-blocks`,
+  // `news`, `board-discussions`) — Стрічка була ЄДИНОЮ, яка на вхід не реагувала
+  // взагалі. Тобто ми не вигадуємо механізм, а прибираємо пропуск. Робити ж
+  // завантаження застосунку залежним від мережевого виклику — це той самий клас
+  // ризику, що `serviceWorker.ready`: воно не падає, воно ВИСНЕ.
+  //
+  // ⚠️ Звірка з `loadedForUid` обовʼязкова: подія шлеться кілька разів поспіль про
+  // ТУ САМУ людину (відновлення сесії → оновлення токена → прогрів профілю), і без
+  // неї кожен старт тягнув би стрічку з мережі 2-3 рази підряд.
+  onAuthChange(() => {
+    if (currentUserId() === loadedForUid) return;   // та сама людина — читати нема чого
+    loadData().then(() => {
+      renderFeed();
+      // Екран спільноти вже відкритий (гість зайшов у спільноту, потім увійшов у
+      // застосунок) — композер на ньому намальовано за СТАРИМИ правами. Дороблюємо
+      // на місці: чіпати шар і історію браузера заради цього не можна — саме там
+      // проєкт уже двічі обпікався.
+      patchOpenScreenRights();
+    });
+  });
+}
+
+// Домалювати композер на вже відкритому екрані спільноти, якщо права зʼявились
+// після його побудови. Навмисно робить РІВНО ОДНУ річ і нічого не перебудовує:
+// повторне відкриття екрана зачепило б `openLayer` і жест «назад».
+function patchOpenScreenRights() {
+  const screen = document.querySelector('.fd-screen[data-page]');
+  if (!screen) return;
+  const pageId = Number(screen.dataset.page);
+  if (!myPageIds.has(pageId)) return;                       // прав немає — нема чого домальовувати
+  if (screen.querySelector('.fd-compose-open')) return;      // уже на місці
+  const list = screen.querySelector('.fd-screen-list');
+  if (!list) return;
+  const btn = document.createElement('button');
+  btn.className = 'fd-compose-open';
+  btn.type = 'button';
+  btn.innerHTML = `${IC_IMG}<span>Написати пост…</span>`;
+  btn.addEventListener('click', () => openComposer(pageId));
+  list.parentNode.insertBefore(btn, list);
 }

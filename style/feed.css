@@ -918,40 +918,44 @@
   cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-com-replyx svg { width: 15px; height: 15px; }
 
-/* ── ВІД ЧИЙОГО ІМЕНІ ВІДПОВІДАЄМО (25.08) ──────────────────────────────────
-   Живе між смугою «Відповідь для…» і полем вводу, тобто читається як частина НИЗУ,
-   а не як черговий коментар — рівно та сама задача, що вже вирішена для .fd-com-replybar,
-   і рівно тими самими трьома дрібницями: власне тло, лінія-волосинка згори, мʼяка тінь.
-   Без тла список просвічував би крізь рядок при прокрутці.
-   ⚠️ Вигляд кнопок — той самий, що в композера поста (.fd-comp-as): це та сама за
-   змістом дія, і другої мови для неї в застосунку бути не має. Розміри трохи менші —
-   тут рядок стоїть під клавіатурою, де кожні 4px висоти видно. */
-.fd-com-as:not([hidden]) { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
-  padding: 6px 4px; background: var(--fd-surface);
-  border-top: 1px solid var(--fd-divider);
-  box-shadow: 0 -6px 12px -6px rgba(22, 24, 28, 0.16);
-  position: relative; z-index: 1; }
-/* Підпис зникає першим: на 390pt довга назва спільноти важливіша за слово «як». */
-.fd-com-as-lab { font-size: 12.5px; color: var(--fd-muted); flex: none; }
-/* 🔴 `flex: none` НЕ ДЛЯ КРАСИ. Без нього flex стискав ОБИДВІ кнопки, і на 390pt
-   «Від себе» худнула до 53px — тобто напис на ній різало, хоч він короткий і місця
-   вимагає стільки ж завжди. Стискатись має рівно та кнопка, чий текст справді
-   довгий і змінний (назва спільноти), і вона нижче. Заміряно стендом. */
-.fd-com-as-btn {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
-  padding: 5px 10px; border: 1px solid var(--fd-divider); border-radius: 999px;
-  background: var(--fd-surface); color: var(--fd-muted); font: inherit; font-size: 13px;
-  cursor: pointer;
+/* ── ВІД ЧИЙОГО ІМЕНІ ВІДПОВІДАЄМО (25.08, друга редакція) ──────────────────
+   🔴 ПЕРША РЕДАКЦІЯ БУЛА ОКРЕМОЮ СМУГОЮ «Відповідати як [Від себе] [СПІЛЬНОТА]»
+   між `.fd-com-replybar` і `.fd-com-compose`. Скарга Вови: «поле вводу не
+   піднімається доверху, воно зупиняється знизу». Це був ТРЕТІЙ поверх у стосі,
+   що стоїть під клавіатурою, а там на 390pt лишається ~172px на все.
+   🛑 Лікували НЕ математику `core/keyboard.js` — це зона, де два виправлення
+   поспіль уже провалились (HOT_RULES №9 і №10). Прибрали сам поверх.
+   🔑 Вибір переїхав на обличчя ліворуч від поля: воно й так показувало, хто
+   говорить, а варіантів рівно два — тож тап перемикає, і меню не потрібне.
+   ➡️ Висота стосу під клавіатурою повернулась до тієї, що була до цієї роботи. */
+.fd-com-myava {
+  border: 0; padding: 0; background: none; cursor: default;
+  display: block; position: relative; flex: none;
 }
-/* Довгі назви сторінок («КЦ «ЦЕНТР КУЛЬТУРИ, СПОРТУ ТА ТУРИЗМУ…»») інакше рвуть
-   рядок і виштовхують другу кнопку за екран. Обрізаємо саме ТЕКСТ, не кнопку:
-   кружечок стану має лишатись видимим завжди — він і є відповідь «хто говорить». */
-.fd-com-as-btn:last-child { flex: 0 1 auto; min-width: 0; overflow: hidden; }
-.fd-com-as-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fd-com-as-dot { width: 11px; height: 11px; flex: none; border-radius: 50%;
-  border: 2px solid var(--fd-divider); background: transparent; }
-.fd-com-as-btn.is-on { color: var(--fd-accent); border-color: var(--fd-accent); background: rgba(114,47,55,0.06); }
-.fd-com-as-btn.is-on .fd-com-as-dot { border-color: var(--fd-accent); background: var(--fd-accent); }
+/* Позначка «це можна перемкнути» — лише для команди сторінки. Стоїть ПОВЕРХ
+   обличчя і власної висоти рядку не додає (`position: absolute`). */
+.fd-com-myava--switch { cursor: pointer; }
+/* 🔑 ЗОНА ДОТИКУ 44px ПРИ ОБЛИЧЧІ 34px. Це не косметика: тап міняє те, ЧИЇМ голосом
+   прозвучить текст, а промах тут коштує дорого — надіслати від імені спільноти те,
+   що хотів сказати від себе, назад не забереш. Розширюємо ПСЕВДОЕЛЕМЕНТОМ, а не
+   відступами: інакше виросла б висота стосу під клавіатурою — рівно те, що ми
+   щойно прибрали. */
+.fd-com-myava--switch::before {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+}
+.fd-com-myava--switch::after {
+  content: ''; position: absolute; right: -1px; bottom: -1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--fd-surface) center / 7px 7px no-repeat;
+  box-shadow: 0 0 0 1.5px var(--fd-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+/* Говоримо від імені спільноти — позначка в кольорі бренду, щоб стан було видно
+   не лише за фото (логотип спільноти можна й не впізнати з першого разу). */
+.fd-com-myava--page::after {
+  box-shadow: 0 0 0 1.5px var(--fd-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
 
 /* Бейдж біля імені: «Спільнота» (говорить сама сторінка) або «Адмін» (говорить
    людина з її команди). Свідомо ТИХИЙ — це уточнення до імені, а не заголовок.
