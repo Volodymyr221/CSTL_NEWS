@@ -8,7 +8,7 @@
 
 import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
          looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
-import { currentUserId, isLoggedIn, requireAuth, onAuthChange } from '../core/auth.js';
+import { currentUserId, isLoggedIn, requireAuth, onAuthChange, authReady } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName,
   fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
@@ -137,6 +137,19 @@ function orderPages(list) {
 
 // ── Завантаження даних ──────────────────────────────────────────────────────
 async function loadData() {
+  // 🔴 СПЕРШУ ДІЗНАЄМОСЬ, ХТО МИ — ПОТІМ ЧИТАЄМО ДАНІ (25.08).
+  //
+  // Нижче ВІСІМ запитів, і ПʼЯТЬ із них питають «а що з цього моє»: мої лайки, мої
+  // лайки коментарів, мої сторінки, мої підписки, чернетки. Якщо сесія ще не
+  // відновилась, `currentUserId()` віддає `null` — і кожен із цих пʼяти чесно
+  // відповідає про ГОСТЯ. Саме це Вова й бачив: власний лайк не підсвічений,
+  // «⋯» немає, вибору голосу немає.
+  //
+  // 🔑 Одне очікування тут прибирає всі пʼять симптомів РАЗОМ, бо причина в них
+  // одна. Це не затримка «про всяк випадок»: `authReady()` завершується миттєво,
+  // щойно сесія відновлена (а зазвичай вона читається з памʼяті пристрою), і має
+  // власну межу часу — зависнути тут не можна за побудовою.
+  await authReady();
   // Чернетки ШІ-агента тягнемо ЛИШЕ для залогінених: база й так віддасть їх
   // тільки редакторам сторінки, але зайвий запит для гостя — марна затримка на
   // екрані, який він бачить першим.

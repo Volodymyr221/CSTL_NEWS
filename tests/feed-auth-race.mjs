@@ -25,9 +25,10 @@
 //
 // 🔴 КОНТРОЛЬ: BUNDLE_REV=origin/main node tests/feed-auth-race.mjs
 // На коді до фіксу перевірки 1-4 мусять УПАСТИ.
+import { chromium } from 'playwright';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { projectFile, ROOT } from './_lib.mjs';
+import { projectFile, ROOT, launch } from './_lib.mjs';
 
 const REV = process.env.BUNDLE_REV || '';
 const res = [];
@@ -42,6 +43,15 @@ ok('feed.js імпортує onAuthChange', /import \{[^}]*onAuthChange[^}]*\} f
 ok('на зміну входу Стрічка ПЕРЕЧИТУЄ дані',
    /onAuthChange\(\(\) => \{[\s\S]{0,400}?loadData\(\)/.test(feed));
 
+// 2-БІС. 🔴 ГОЛОВНИЙ ІНВАРІАНТ ПІСЛЯ ПЕРЕПИСУВАННЯ 25.08: Стрічка ЧЕКАЄ факт «хто я»
+//    ДО того, як читати дані. Без цього підписка лишалась би «лікарем після факту» —
+//    спершу малюємо вигляд гостя, потім перемальовуємо. Саме це Вова й бачив.
+const тіло = (feed.match(/async function loadData\(\)[\s\S]*?Promise\.all/) || [''])[0];
+ok('loadData ЧЕКАЄ «хто я» ДО читання даних',
+   /await authReady\(\)/.test(тіло), тіло ? 'тіло знайдено' : 'loadData не знайдено');
+ok('feed.js імпортує саму гарантію',
+   /import \{[^}]*authReady[^}]*\} from '\.\.\/core\/auth\.js'/.test(feed));
+
 // 3. 🔑 Звірка з попереднім входом. Без неї фікс сам стає вадою: подія шлеться
 //    кілька разів поспіль про ТУ САМУ людину (відновлення сесії → оновлення
 //    токена → прогрів профілю), і стрічка тяглася б з мережі 2-3 рази на старт.
@@ -55,6 +65,87 @@ const patch = (feed.match(/function patchOpenScreenRights\(\)[\s\S]*?\n\}/) || [
 ok('домальовка композера НЕ чіпає шар/історію',
    patch.length > 0 && !/openLayer|closeLayer|openPageScreen/.test(patch),
    patch ? 'функція є, шар не чіпає' : 'функції немає');
+
+console.log('\n── ГАРАНТІЯ «ХТО Я» ВИКОНУЄТЬСЯ НАСПРАВДІ (не регулярка)');
+
+// 🔑 ЦЕ ГОЛОВНА ЧАСТИНА СТЕНДА. Вище — інваріанти в тексті коду; тут ми БЕРЕМО
+// справжній `auth.js`, підсовуємо йому підроблену базу і ВИКОНУЄМО три сценарії,
+// які й вирішують, чи буде вада. Регулярка не відрізнила б робочу гарантію від
+// написаної з помилкою — а саме така помилка й коштувала б повернення скарги.
+// ⚠️ Беремо `auth.js` ТІЄЇ САМОЇ ревізії, що й решта стенда. Інакше контрольний
+// прогін виконував би свіжу гарантію і світився зеленим над кодом, де її немає, —
+// «контроль, який не може впасти» у цьому проєкті вже траплявся (17.08).
+const authSrc = projectFile('src/core/auth.js', REV)
+  // Вирізаємо імпорти й робимо модуль інлайновим — рівно так само, як це вже
+  // робить стенд клавіатури з `core/keyboard.js`.
+  .replace(/^import .*$/gm, '')
+  .replace(/^export /gm, '');
+
+const сцена = (режим) => `<!doctype html><html><head><meta charset="utf-8"></head><body><script type="module">
+  const showToast = () => {};
+  const netErrorText = () => ''; const netCall = async () => ({ ok: true });
+  const releasePushDevice = async () => {};
+  // Підроблена база: три режими — сесія є, сесії нема, виклик ВИСНЕ назавжди.
+  const getSupabase = () => (${режим === 'нема-бази' ? 'null' : `({
+    auth: {
+      getSession: ${режим === 'висне'
+        ? 'async () => new Promise(() => {})'
+        : режим === 'гість'
+          ? 'async () => ({ data: { session: null } })'
+          : 'async () => ({ data: { session: { user: { id: "u-1" } } } })'},
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }),
+  })`});
+  ${authSrc}
+  window.__t0 = performance.now();
+  window.__ready = null;
+  authReady(400).then(() => { window.__ready = Math.round(performance.now() - window.__t0); });
+  initAuth();
+  window.__uid = () => currentUserId();
+  // Друге очікування вже після того, як факт відомий — має бути миттєвим.
+  window.__second = async () => { const t = performance.now(); await authReady(400); return Math.round(performance.now() - t); };
+</script></body></html>`;
+
+const b2 = await launch(chromium);
+const прогнати = async (режим) => {
+  const p = await b2.newPage();
+  await p.setContent(сцена(режим));
+  await p.waitForTimeout(700);
+  // На старому коді гарантії немає взагалі — модуль впаде на `authReady is not
+  // defined`. Це не збій стенда, а очікуваний результат контролю, тож ловимо.
+  const r = await p.evaluate(async () => {
+    try { return { ready: window.__ready, uid: window.__uid ? window.__uid() : null,
+                   second: window.__second ? await window.__second() : null }; }
+    catch (_) { return { ready: null, uid: null, second: null }; }
+  });
+  await p.close();
+  return r;
+};
+
+const людина = await прогнати('людина');
+const гість  = await прогнати('гість');
+const висне  = await прогнати('висне');
+const безБази = await прогнати('нема-бази');
+await b2.close();
+
+console.log(`   сесія є:      готово через ${людина.ready}мс · uid=${людина.uid} · друге очікування ${людина.second}мс`);
+console.log(`   гість:        готово через ${гість.ready}мс · uid=${гість.uid}`);
+console.log(`   виклик висне: готово через ${висне.ready}мс (межа 400) · uid=${висне.uid}`);
+console.log(`   бази немає:   готово через ${безБази.ready}мс · uid=${безБази.uid}`);
+
+// 🔴 Головне: коли гарантія завершилась, «хто я» ВЖЕ відомо. Саме цього бракувало.
+ok('сесія є → на момент готовності uid уже відомий', людина.uid === 'u-1', `uid=${людина.uid}`);
+ok('готовність настає швидко, а не по межі часу', людина.ready != null && людина.ready < 300, `${людина.ready}мс`);
+ok('гість — теж відповідь, а не очікування', гість.ready != null && гість.ready < 300, `${гість.ready}мс`);
+// 🛑 Найдорожча перевірка: завислий виклик НЕ сміє підвісити вкладку назавжди.
+// Це той самий клас, що `serviceWorker.ready` — воно не падає, воно ВИСНЕ.
+ok('завислий виклик НЕ вішає вкладку — межа часу спрацьовує',
+   висне.ready != null && висне.ready >= 350 && висне.ready < 700, `${висне.ready}мс`);
+ok('бази немає → гість одразу, без чекання межі',
+   безБази.ready != null && безБази.ready < 300, `${безБази.ready}мс`);
+// Повторне очікування вже після факту має коштувати нуль.
+ok('друге очікування миттєве (факт уже відомий)', людина.second <= 30, `${людина.second}мс`);
 
 console.log('\n── ПРАВИЛО КЛАСУ: хто кешує МОЇ права — той їх і перечитує');
 
@@ -72,6 +163,18 @@ for (const f of readdirSync(tabsDir).filter(n => n.endsWith('.js'))) {
 }
 ok('кожен, хто кешує мої права, підписаний на зміну входу',
    винні.length === 0, винні.length ? `без підписки: ${винні.join(', ')}` : 'порушників немає');
+
+// 🔑 І ДРУГА ПОЛОВИНА ТОГО САМОГО ПРАВИЛА. Підписка робить показ правдивим ПІСЛЯ
+// зміни входу; гарантія робить правдивим ПЕРШИЙ показ. Одного без іншого мало:
+// без підписки не побачиш входу посеред сесії, без гарантії блимне вигляд гостя.
+const безГарантії = [];
+for (const f of readdirSync(tabsDir).filter(n => n.endsWith('.js'))) {
+  const src = readFileSync(join(tabsDir, f), 'utf8');
+  if (ФУНКЦІЇ_ПРАВ.test(src) && !/authReady/.test(src)) безГарантії.push(f);
+}
+ok('кожен, хто кешує мої права, ЧЕКАЄ факт перед першим показом',
+   безГарантії.length === 0,
+   безГарантії.length ? `без гарантії: ${безГарантії.join(', ')}` : 'порушників немає');
 
 // Контроль самого правила: воно мусить УМІТИ спрацювати. Інакше зелений рядок
 // нічого не вартий — саме так у проєкті вже був «контроль, який не може впасти».
