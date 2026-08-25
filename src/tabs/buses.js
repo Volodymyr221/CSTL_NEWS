@@ -5,7 +5,7 @@ import {
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
 import { freshUserId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
-import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
+import { isLoggedIn, currentUserId, requireAuth, onAuthChange, authReady } from '../core/auth.js';
 import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { ICONS } from '../core/icons.js';
 import { SHEET_EASE } from '../core/sheet-motion.js';
@@ -269,7 +269,11 @@ async function flushPendingUnsub() {
 // Ключ per-uid — відстеження прив'язане до акаунта (анонім/чужий акаунт не бачить).
 function trackKey() { return TRACK_KEY + ':' + (currentUserId() || ''); }
 
-function loadTrackedRoute() {
+async function loadTrackedRoute() {
+  // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» (беклог, пункт 0). Ключ сховища тут теж
+  // персональний (`trackKey()` = ключ + `uid`), тож до відповіді ми і читаємо не той
+  // ключ, і одразу нижче вирішуємо «гість → нічого персонального».
+  await authReady();
   if (!isLoggedIn()) { trackedRoutes = []; return; }   // гість → нічого персонального
   try {
     const today = getTodayISO();
@@ -2197,13 +2201,21 @@ function selfHealPushSubscriptions() {
 // Ініціалізація даних відстеження (викликається з app.js при старті). Раніше також
 // малювала кнопку-хедер+модалку — прибрано Б7.3, лишилось завантаження+синхрон+банер.
 export function initSavedRoutesHeader() {
-  loadTrackedRoute();
+  // ⚠️ Без `await`: функція кличеться з `init()` поруч із `initBuses()` і нічого не
+  // малює сама. Гарантія вже всередині `loadTrackedRoute()` — коли вона відповість,
+  // дзвіночок банера підхопить свій стан подією нижче.
+  loadTrackedRoute().then(() => updateBannerBell());
   // Банер «сповіщення про рейс активовано» ділить той самий запис — синхронізуємо дзвіночок.
   window.addEventListener('cstl-bus-track-changed', updateBannerBell);
   // Вхід/вихід → перезавантажити відстеження (per-uid) + підтягнути з БД (крос-девайс).
   // Гість → trackedRoutes порожні.
   onAuthChange(async () => {
-    loadTrackedRoute();
+    // 🛑 `await` ОБОВʼЯЗКОВИЙ, і це не косметика від того, що функція стала
+    // асинхронною. `hydrateTrackedFromDB()` ДОПИСУЄ в `trackedRoutes` рейси з інших
+    // пристроїв і наприкінці зберігає список. Без очікування він побачив би список
+    // ДО завантаження (порожній), дописав у нього своє і зберіг — тобто локальні
+    // відстеження цього телефона просто зникли б із памʼяті пристрою.
+    await loadTrackedRoute();
     await hydrateTrackedFromDB();
     if (document.getElementById('bus-list')) { renderSmartRow(); renderRouteList(); }
     window.dispatchEvent(new CustomEvent('cstl-bus-track-changed'));
@@ -2215,8 +2227,28 @@ export async function initBuses() {
   if (!el) return;
 
   loadPrefs();
-  loadTrackedRoute();
-  selfHealPushSubscriptions();   // перепідписати втрачені push (тихо, лише якщо дозвіл є)
+  // 🔴 25.08 — ПЕРСОНАЛЬНА ЧАСТИНА ОКРЕМОЮ ГІЛКОЮ, І ЦЕ НЕ СТИЛЬ.
+  //
+  // 🛑 `await` тут, перед усім тілом, був би вадою: Автобуси — ЄДИНА вкладка, що
+  // малюється з локального файлу і працює офлайн. Поставити її залежність від
+  // відновлення сесії означало б у найгіршому разі тримати розклад порожнім до межі
+  // часу — тобто зламати офлайн заради підсвітки. Розклад НЕ персональний; чекати
+  // мусить лише те, що персональне.
+  //
+  // 🔴 ЩО САМЕ ЛОМАЛОСЬ, І ЧОМУ ЦЕ НАЙТИХІША З УСІХ ЗНАЙДЕНИХ СЬОГОДНІ ВАД.
+  // `selfHealPushSubscriptions()` перепідписує втрачені push і кличеться РІВНО ТУТ,
+  // один раз за запуск. Він ходить по `trackedRoutes` — а той на холодному старті
+  // порожній, бо ще невідомо, хто зайшов. Тобто цикл крутився ВХОЛОСТУ, і другого
+  // шансу не було: `onAuthChange` нижче перечитує відстеження, але самолікування
+  // звідти НЕ кличе.
+  // ➡️ Наслідок для людини: підписка на «твій рейс виїхав» тихо лишалась мертвою —
+  // ні помилки, ні тосту, просто сповіщення не приходить. Рівно той клас, що
+  // «єдиний шлях, який МОВЧКИ не працює» (HOT_RULES №12).
+  loadTrackedRoute().then(() => {
+    selfHealPushSubscriptions();   // перепідписати втрачені push (тихо, лише якщо дозвіл є)
+    // Список уже намальований розкладом — тепер у ньому проступає ВІДСТЕЖУВАНЕ.
+    if (document.getElementById('bus-list')) { renderSmartRow(); renderRouteList(); }
+  });
   flushPendingUnsub();           // догнати скасування що не пройшли (напр. були офлайн)
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)

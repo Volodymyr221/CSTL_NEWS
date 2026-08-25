@@ -71,7 +71,7 @@
 import { escapeHtml, lineMetrics, fitLine, getCoords } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, fetchAllComments, fetchMyFeedReplies, isSupabaseReady } from '../core/supabase.js';
-import { isLoggedIn, currentUserId, getProfile, onAuthChange } from '../core/auth.js';
+import { isLoggedIn, currentUserId, getProfile, onAuthChange, authReady } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen, feedSeenTs, markFeedSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
@@ -1352,6 +1352,21 @@ export async function renderHomeCaps() {
   if (!el) return;
   wireCapsRefresh();
   const gen = ++_gen;
+
+  // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» ДО ЗБИРАННЯ РОЛЕЙ (беклог, пункт 0).
+  //
+  // 🔑 ТУТ ЦЕ КОШТУЄ БІЛЬШЕ, НІЖ ДЕ-ІНДЕ, І ПРИЧИНА В ПРАВИЛІ «МАКСИМУМ 3».
+  // Чотири ролі з шести персональні (`myCapsule`, `msgCapsule`, `answersCapsule`,
+  // `feedCapsule`) — кожна першою дією питає «хто я» і чесно віддає `null`, поки
+  // відповіді немає. Слоти тоді дістаються НЕперсональним («ЗАРАЗ», «НОВЕ»), а
+  // за мить, коли вхід відновиться, підписка перемальовує смугу — і рядки
+  // МІНЯЮТЬСЯ МІСЦЯМИ в людини на очах.
+  // 🛑 Тобто вада тут не «щось не показалось», а видима перебудова верхньої смуги
+  // першого екрана. Запобіжник `_paint` від неї не рятує: розмітка справді інша.
+  // ⏱ Ролі й так ідуть у мережу нижче — очікування факту нічого не додає до часу,
+  // зате робить перший показ тим самим, що й другий.
+  await authReady();
+  if (gen !== _gen) return;   // поки чекали, приїхав свіжіший виклик — цей уже застарів
 
   // allSettled, а не all: падіння однієї ролі не має забирати з екрана решту.
   const результати = await Promise.allSettled([myCapsule(), nowCapsule(), newCapsule(), msgCapsule(), answersCapsule(), feedCapsule()]);

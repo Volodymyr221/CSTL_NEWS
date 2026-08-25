@@ -54,7 +54,7 @@
 // делегування `[data-switch-tab]`.
 
 import { escapeHtml } from '../core/utils.js';
-import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
+import { isLoggedIn, currentUserName, onAuthChange, authReady } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
 import { renderHomeCaps } from './home-caps.js';
 import { renderHomeFund } from './home-fund.js';
@@ -281,6 +281,20 @@ export function initCommunity() {
   refreshAccountButtons();
   if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
   updateGreetingName();
+  // 🔴 25.08 — ПРИВІТАННЯ Й АВАТАР ПЕРЕПИТУЮТЬСЯ, ЩОЙНО «ХТО Я» СТАЄ ФАКТОМ
+  // (беклог, пункт 0).
+  //
+  // 🛑 `initCommunity()` НЕ стає асинхронною навмисно: `renderSkeleton()` — це
+  // ПЕРШИЙ екран застосунку, і поставити його в чергу за відновленням сесії
+  // означало б проміняти блимання імені на порожній екран. Тому скелет малюється
+  // негайно, а правда доганяє окремою гілкою.
+  //
+  // 🔑 І ЦЕ НЕ ДУБЛЬ ПІДПИСКИ ВИЩЕ. `initAuth()` шле `onAuthChange` ВСЕРЕДИНІ
+  // `try` — тобто при збої мережі подія не приходить ЖОДНОГО разу, а гарантія
+  // відповідає завжди («не змогли дізнатись» теж відповідь). Без цього рядка
+  // людина з поганим звʼязком лишалась би з «Доброго дня, громадо» і порожнім
+  // кружечком аватара до кінця сесії.
+  authReady().then(() => { updateGreetingName(); refreshAccountButtons(); });
 
   // Блоки вантажаться паралельно — кожен оновлює свою секцію, коли готовий.
   // Помилка одного не ламає інші (кожен має власний catch).
