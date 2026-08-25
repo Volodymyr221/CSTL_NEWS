@@ -28,8 +28,13 @@
 
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { fetchPages, fetchLatestPostPerPage, isSupabaseReady } from '../core/supabase.js';
+import { startAutoCarousel } from '../core/auto-carousel.js';
 
 const MAX_CIRCLES = 6;
+// Зупинка чинної каруселі. Тримається в модулі, бо блок перемальовується не один раз
+// (повернення у вкладку, оновлення даних), і без цього кожен рендер лишав би по таймеру
+// та спостерігачу на попередній, уже викинутій доріжці.
+let _stopCarousel = null;
 // Скільки годин допис вважається «новим» — рівно доба. Кільце на кружечку має
 // означати «зайди подивись», а не світитись тижнями.
 const FRESH_H = 24;
@@ -39,13 +44,19 @@ function initial(name) {
   return n ? n[0].toUpperCase() : '•';
 }
 
-// Текст допису для картки: два-три рядки, обрізані по межі слова.
-function preview(text) {
+// Текст допису для картки, обрізаний ПО МЕЖІ СЛОВА.
+// 🔑 Стеля залежить від того, є в допису фото чи ні (25.08): без фото текст лишається
+// сам на картці й дістає і більше місця, і більший кегль, тож 150 символів залишили б
+// половину картки порожньою. З фото він навпаки мусить бути коротким — це підпис до
+// знімка, а не сам допис.
+function preview(text, limit) {
   const t = (text || '').replace(/\s+/g, ' ').trim();
-  if (t.length <= 150) return t;
-  const cut = t.slice(0, 150);
+  if (t.length <= limit) return t;
+  const cut = t.slice(0, limit);
   const sp = cut.lastIndexOf(' ');
-  return (sp > 90 ? cut.slice(0, sp) : cut) + '…';
+  // Межу слова шукаємо лише в останній третині: інакше на тексті без пробілів
+  // (одне довге слово) обрізка з'їла б дві третини рядка.
+  return (sp > limit * 0.6 ? cut.slice(0, sp) : cut) + '…';
 }
 
 function circleHtml(page, fresh) {
@@ -63,17 +74,34 @@ function circleHtml(page, fresh) {
 // `page` передається окремо, бо повний запис спільноти (з `fetchPages`) має
 // поля, яких вкладений `pages(...)` допису не віддає. Без нього — падаємо на
 // вкладений запис, щоб функція лишалась придатною і поза віджетом.
+// 🔴 25.08 — ДВІ ФОРМИ КАРТКИ ОДНАКОВОЇ ВИСОТИ.
+// Скарга Вови: «пост обрізається, треба вертикально збільшити». Але просто підняти
+// висоту не можна: з кроку 4 картки їдуть каруселлю, а слайди різної висоти змушували б
+// віджет стрибати на кожному переході — саме те, чого Вова просив уникнути («плавно,
+// без ривків»).
+//
+// 🔑 ЧОМУ НЕ «ОДНА ФОРМА З ФІКСОВАНОЮ ВИСОТОЮ». Допис із фото і допис із самим текстом
+// різняться не на відсотки, а в рази (заміряно на чинній картці: 302px проти 123px).
+// Одна форма означала б, що допис без знімка отримує півкартки порожнечі — рівно вада,
+// яку вже лікували в PR #943 («картка без фото не тримає порожнечі»).
+//
+// ✅ ЗАМІСТЬ ЦЬОГО — форма підбирається під вміст, а висота лишається спільною:
+//   `--photo` — текст коротким підписом (2 рядки), знімок забирає весь залишок висоти;
+//   `--text`  — знімка немає, тож текст дістає БІЛЬШИЙ КЕГЛЬ і всі рядки картки.
+// Так обидві виглядають повними, і жодна не тримає порожнечі.
 function postHtml(p, page = null) {
   page = page || p.pages || {};
   const name = page.name || 'Громада';
-  const txt = preview(p.text);
   const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
+  // 90 проти 320 — не круглі числа «на око»: на 390pt рядок картки тримає ~40 символів,
+  // тобто це рівно 2 рядки підпису під знімком і 8 рядків суцільного тексту.
+  const txt = preview(p.text, img ? 90 : 320);
   const ava = page.avatar_url
     ? `<img src="${escapeHtml(page.avatar_url)}" alt="">`
     : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;
 
   return `
-    <article class="hm-card hm-card--tap hm-fd-post">
+    <article class="hm-card hm-card--tap hm-fd-post hm-fd-post--${img ? 'photo' : 'text'}">
       <span class="hm-fd-p-head">
         <span class="hm-fd-p-av">${ava}</span>
         <span class="hm-fd-p-who">
@@ -84,6 +112,46 @@ function postHtml(p, page = null) {
       ${txt ? `<span class="hm-fd-p-txt">${escapeHtml(txt)}</span>` : ''}
       ${img ? `<span class="hm-fd-p-img"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ''}
     </article>`;
+}
+
+// 🔴 25.08 — ВИДІЛЕННЯ АКТИВНОЇ СПІЛЬНОТИ І СЛАЙД — ОДИН РУХ, А НЕ ДВА.
+// Замовлення Вови: «виділення плавно стає на місце, без ривків… збільшується наступна
+// спільнота і виділяється паралельно» зі зміною допису.
+//
+// 🔑 ДРУГОГО ТАЙМЕРА ТУТ НЕМАЄ НАВМИСНО. Спокуса була поставити свій відлік на ряд
+// кружечків «щоб вони йшли синхронно» — але два незалежні відліки синхронними НЕ
+// лишаються: варто людині гортнути пальцем, і кружечок показує одну спільноту, а картка
+// вже іншу. Тому джерело правди одне — реальне положення доріжки; кружечок лише
+// ВІДПОВІДАЄ на нього.
+//
+// 🔴 ЧОМУ ВИДІЛЕННЯ — ЦЕ ГАСІННЯ РЕШТИ, А НЕ ПІДСВІЧУВАННЯ ОДНОГО (рішення Вови 25.08).
+// Бордове кільце вже зайняте змістом — воно означає «є новий допис за добу», і Вова
+// відмовився його віддавати. А перша спільнота в ряду ЗАВЖДИ має це кільце (вона ж
+// писала останньою), тож бордове виділення поверх бордового кільця дало б НУЛЬ видимої
+// зміни рівно на першому слайді — тому, який бачать найчастіше.
+// ✅ Тому активний лишається яскравим, а решта гасне: контраст іде по всьому ряду,
+// працює однаково на всіх слайдах, і малюється прозорістю — тобто на відеокарті, без
+// перерахунку розкладки. Саме це й дає «без ривків».
+function stopFeedCarousel() {
+  if (_stopCarousel) { _stopCarousel(); _stopCarousel = null; }
+}
+
+function startFeedCarousel(body) {
+  if (_stopCarousel) { _stopCarousel(); _stopCarousel = null; }
+
+  const track = body.querySelector('.hm-fd-track');
+  const circles = [...body.querySelectorAll('.hm-fd-c')];
+  if (!track || !circles.length) return;
+
+  _stopCarousel = startAutoCarousel(track, {
+    slideSel: ':scope > .hm-fd-slide',
+    onSlide: i => {
+      circles.forEach((c, j) => c.classList.toggle('hm-fd-c--on', j === i));
+      // Ознака на самому ряду вмикає гасіння неактивних. Без неї ряд до першого
+      // спрацювання стояв би тьмяним увесь, а на одній спільноті — тьмяним назавжди.
+      body.querySelector('.hm-fd-circles')?.classList.add('hm-fd-circles--live');
+    },
+  });
 }
 
 export async function renderHomeFeed() {
@@ -103,7 +171,7 @@ export async function renderHomeFeed() {
       fetchPages(),
       fetchLatestPostPerPage(MAX_CIRCLES),
     ]);
-    if (!latest.length) { sec.hidden = true; body.innerHTML = ''; return; }
+    if (!latest.length) { stopFeedCarousel(); sec.hidden = true; body.innerHTML = ''; return; }
 
     // Дані спільноти беремо з `pages`: там є `avatar_url` у повному вигляді, а
     // вкладений `pages(...)` допису дає лише частину полів.
@@ -119,7 +187,7 @@ export async function renderHomeFeed() {
       .map(post => ({ post, page: byId.get(String(post.page_id)) || post.pages || {} }))
       .filter(s => s.page);
 
-    if (!slides.length) { sec.hidden = true; body.innerHTML = ''; return; }
+    if (!slides.length) { stopFeedCarousel(); sec.hidden = true; body.innerHTML = ''; return; }
 
     // Кільце «є нове» лишається тим, чим було — позначкою «зайди подивись» за
     // останню добу. Порядок спільнот її НЕ замінює: перша в ряду це «писала
@@ -128,11 +196,18 @@ export async function renderHomeFeed() {
     const isFresh = post => new Date(post.created_at).getTime() >= edge;
 
     sec.hidden = false;
+    // 🔑 ОДИН СПИСОК → ДВА ЯРУСИ. Кружечки і слайди будуються з того самого `slides`,
+    // тож «третій кружечок» і «третій слайд» це за визначенням та сама спільнота.
     body.innerHTML =
       `<div class="hm-fd-circles">${slides.map(s => circleHtml(s.page, isFresh(s.post))).join('')}</div>` +
-      postHtml(slides[0].post, slides[0].page);
+      `<div class="hm-fd-track">${
+        slides.map(s => `<div class="hm-fd-slide">${postHtml(s.post, s.page)}</div>`).join('')
+      }</div>`;
     body.classList.add('hm-appear');
+
+    startFeedCarousel(body);
   } catch {
+    stopFeedCarousel();
     sec.hidden = true;
     body.innerHTML = '';
   }
