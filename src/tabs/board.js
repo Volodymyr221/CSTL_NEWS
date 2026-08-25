@@ -2496,8 +2496,16 @@ function attachBoardDelegation() {
 
   document.addEventListener('click', e => {
     // Тап по картці питання → повноекранний екран питання (core/layers.js)
+    // 🔴 25.08 — `[data-av-uid]` У ВИНЯТКАХ. Доведено приладом
+    // `tests/tools/qa-card-tap-probe.mjs`: тап по АВАТАРУ в картці списку
+    // відкривав ОДРАЗУ ДВОЄ — картку профілю І екран питання. Обидва слухачі
+    // висять на `document` і жоден не спиняє поширення, тож спрацьовували разом.
+    // 🔑 Це була вада ще ДО того, як імена стали тап-цілями: аватар отримує
+    // `data-av-uid` від `avatarCircle` і мав її з першого дня картки.
+    // ➡️ Тап по людині відкриває ЛЮДИНУ, тап по решті картки — питання.
     const chatCard = e.target.closest('[data-question-open]');
     if (chatCard && !e.target.closest('.qa-screen')
+        && !e.target.closest('[data-av-uid]')
         && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')
         && !e.target.closest('[data-like-id]')) {
       const id = Number(chatCard.dataset.questionOpen);
