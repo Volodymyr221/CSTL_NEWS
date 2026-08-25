@@ -15,38 +15,27 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-uh2hzo` |
-| останній коміт людини | `d4b707c4` 25.08 14:21 — docs: пульс — авто-блок після коміту |
+| останній коміт людини | `47f7f1a9` 25.08 14:23 — Злиття origin/main (#1023) + передача: пульс і літопис зведені |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260825-1405` |
 | останній PR у `main` | #1023 |
 | стендів на диску | 107 |
-| незакомічених файлів | 13 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-25 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-08-24b.md`
 - `_session-log/vova-2026-08-25b.md`
-- `bundle.js`
-- `src/tabs/board-discussions.js`
-- `src/tabs/board.js`
-- `src/tabs/home-caps.js`
-- `style/board.css`
-- `sw.js`
-- `tests/qa-unread.mjs`
-- `tests/tab-dots.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `47f7f1a9` 25.08 14:23 — Злиття origin/main (#1023) + передача: пульс і літопис зведені
 - `d4b707c4` 25.08 14:21 — docs: пульс — авто-блок після коміту
 - `bbac1bca` 25.08 14:21 — docs: пульс — запас у бюджеті
 - `2fec34a2` 25.08 14:21 — docs: пульс після коміту передачі
 - `77237ae7` 25.08 14:20 — docs: передача в новий чат — 25.08.2026
-- `4fce1efe` 25.08 14:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-uh2hzo
 
 <!-- AUTO:END -->
 
