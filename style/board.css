@@ -4259,6 +4259,24 @@ textarea.cm-board-input.bm-invalid {
   border-left: 2px solid var(--qa-line); pointer-events: none;
 }
 
+/* 🔴 25.08 — «ЩЕ N ВІДПОВІДЕЙ» / «СХОВАТИ ВІДПОВІДІ».
+   Слово Вови: «чому відповіді на коментарі не згортаються так як в стрічці? Це
+   ж по факту система та сама… візьми все те саме і перемісти сюди».
+   Вигляд узятий із `.fd-com-more` — та сама дія має говорити тією самою мовою.
+   🔑 Кнопка лежить УСЕРЕДИНІ `.qa-branch`, тож автоматично отримує гачок на
+   лінії й потрапляє під правило «стовбур наскрізь між сусідніми». Поклади її
+   поза гілкою — лінія обірвалась би на останній видимій відповіді, а кнопка
+   висіла б збоку, ні до чого не приєднана. */
+.qa-more {
+  font-size: 13px; font-weight: 600; color: var(--qa-ink-3);
+  background: none; border: 0; padding: 2px 0; cursor: pointer;
+  font-family: inherit; min-height: 32px; text-align: left;
+}
+.qa-more:active { color: var(--red); }
+/* Обгортка кнопки — без власного аватара, тож гачок має дотягнутись до тексту.
+   Вирівнюємо по тій самій вертикалі, де стоять аватари відповідей (34px рядок). */
+.qa-branch--btn { display: flex; align-items: center; min-height: 34px; }
+
 .qa-answer--sub .qa-answer-ava .bd-avatar { width: 30px; height: 30px; font-size: 13px; }
 
 /* ── ПІДСВІТКА ВІДПОВІДІ, ДО ЯКОЇ ПРИВЕЛО СПОВІЩЕННЯ (крок А4, 23.08) ───────

@@ -32,6 +32,7 @@ import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
          adoptLegacyScopedKey } from '../core/board-shared.js';
 import { fetchSeenThreads, markThreadSeenRemote } from '../core/supabase.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
+import { revealInScroller } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
@@ -180,6 +181,20 @@ function rootAnswers(postId) {
   return items.filter(rootPredicate(items));
 }
 
+// До якої ГІЛКИ належить коментар (id її кореня). Той самий підйом, що в
+// `answersHtml`, і навмисно тим самим предикатом — двох описів «що таке корінь»
+// у файлі бути не повинно.
+function rootIdOf(postId, commentId) {
+  const items = activeComments(postId);
+  const isRoot = rootPredicate(items);
+  const byId = new Map(items.map(c => [qaKey(c.id), c]));
+  let cur = byId.get(qaKey(commentId));
+  for (let крок = 0; крок < 32 && cur && !isRoot(cur); крок++) {
+    cur = byId.get(qaKey(cur.reply_to_id));
+  }
+  return cur ? cur.id : commentId;
+}
+
 // Найновіша КОРЕНЕВА відповідь — те, що показує картка питання у списку.
 // 🛑 Береться МАКСИМУМОМ ЗА ЧАСОМ, а не як останній елемент масиву. Масив
 // приходить відсортованим (`fetchAllComments` … `order created_at asc`), але
@@ -289,6 +304,31 @@ const RATE_SCOPE = 'disc';
 // Відмінювання «відповідь / відповіді / відповідей» за числом (1 / 2-4 / 5+, з
 // урахуванням 11-14). ⚠️ Заступило `msgWord` («повідомлення») — слова «повідомлення»
 // в цій зоні більше немає ніде, і це навмисно: воно й тягло за собою месенджер.
+// 🔴 25.08 — ЗГОРТАННЯ ГІЛОК, ПЕРЕНЕСЕНЕ ЗІ «СТРІЧКИ».
+//
+// Слово Вови: «чому відповіді на коментарі не згортаються так як в стрічці? Це
+// ж по факту система та сама, логіка та сама, візьми все те саме і перемісти
+// сюди на відповіді».
+//
+// 🔑 Він має рацію буквально: у «Стрічці» механізм існує з 26.07 і там же
+// вилікувані дві пастки прокрутки. Тому це ПЕРЕНЕСЕННЯ, а не нова робота —
+// числа й правила взяті звідти, де їх уже приймали пальцем.
+//
+// 🛑 СТАН ЖИВЕ В ПАМʼЯТІ МОДУЛЯ, А НЕ В DOM. Список відповідей перемальовується
+// цілком при кожній дії (своїй і чужій, realtime), тож у розмітці цей стан не
+// пережив би жодного оновлення.
+const expandedQaThreads = new Set();
+// Скільки відповідей видно до згортання. 1 — рішення Вови від 26.07 для
+// «Стрічки»: «зменши показ відповіді на коментар до 1 коментаря, а далі якщо є
+// то кнопка показати більше». Другого числа не заводимо.
+const QA_REPLIES_VISIBLE = 1;
+
+// 🔴 КЛЮЧІ НАБОРУ — ЗАВЖДИ РЯДКИ. `comments.id` у базі це `bigint`, тобто в JS
+// приходить ЧИСЛОМ, а з `dataset` вертається РЯДКОМ. Якби я поклав у набір
+// число, а питав рядком, `has()` не збігся б НІКОЛИ — гілка розгорталась би на
+// один рендер і мовчки згорталась назад. Тому одна форма скрізь.
+const qaKey = (id) => String(id);
+
 function answerWord(n) {
   const mod10 = n % 10, mod100 = n % 100;
   if (mod10 === 1 && mod100 !== 11) return 'відповідь';
@@ -490,9 +530,31 @@ function answersHtml(post) {
       </article>`;
   };
 
+  // 🔑 КНОПКА — САМА Є ЕЛЕМЕНТОМ ГІЛКИ (`.qa-branch`), як у «Стрічці». Це не
+  // косметика: завдяки цьому вона отримує свій гачок на лінії-звʼязувачі і
+  // потрапляє під правило «стовбур наскрізь між сусідніми». Поклади її поза
+  // гілкою — лінія обірвалась би на останній видимій відповіді, а кнопка
+  // висіла б збоку, ні до чого не приєднана.
+  const кнопкаЗгортання = (rootId, сховано, розгорнуто, усього) => {
+    if (сховано > 0) {
+      return `<div class="qa-branch qa-branch--btn"><button class="qa-more" type="button" data-more-parent="${rootId}">Ще ${сховано} ${answerWord(сховано)}</button></div>`;
+    }
+    // ⚠️ `усього > QA_REPLIES_VISIBLE` обовʼязково: без цієї умови ЄДИНА
+    // відповідь, раз розгорнута, більше не згорталась би — кнопки «Сховати»
+    // для неї не зʼявлялось. Та сама причина, що записана у `feed.js`.
+    if (розгорнуто && усього > QA_REPLIES_VISIBLE) {
+      return `<div class="qa-branch qa-branch--btn"><button class="qa-more" type="button" data-less-parent="${rootId}">Сховати відповіді</button></div>`;
+    }
+    return '';
+  };
+
   const html = roots.map(r => {
     const subs = subsOf.get(r.id) || [];
-    const гілка = subs.map(s => `<div class="qa-branch">${answer(s, true)}</div>`).join('');
+    const розгорнуто = expandedQaThreads.has(qaKey(r.id));
+    const видимі = розгорнуто ? subs : subs.slice(0, QA_REPLIES_VISIBLE);
+    const сховано = subs.length - видимі.length;
+    const гілка = видимі.map(s => `<div class="qa-branch">${answer(s, true)}</div>`).join('')
+                + кнопкаЗгортання(r.id, сховано, розгорнуто, subs.length);
     return `<div class="qa-thread${subs.length ? ' qa-thread--branched' : ''}">${answer(r, false)}${гілка}</div>`;
   }).join('');
 
@@ -792,6 +854,8 @@ function qaHeadHtml(post) {
 export function openChatModal(post, focusCommentId = null) {
   if (_chatModalEl) return;
   _chatOpenPostId = post.id;
+  // Зайшов у питання — гілки знову згорнуті (як у «Стрічці», Facebook, Instagram).
+  expandedQaThreads.clear();
 
   const screen = document.createElement('div');
   screen.className = 'qa-screen';
@@ -869,6 +933,12 @@ export function openChatModal(post, focusCommentId = null) {
   _discReplyTo = null; _discEditing = null;
   const bodyEl = screen.querySelector('.qa-body');
   bodyEl?.addEventListener('click', (e) => {
+    // 🔴 РОЗГОРНУТИ / ЗГОРНУТИ ГІЛКУ — перенесено зі «Стрічки» разом із двома
+    // вилікуваними там пастками прокрутки (див. `expandQaThread` нижче).
+    const more = e.target.closest('[data-more-parent]');
+    if (more) { expandQaThread(more.dataset.moreParent); return; }
+    const less = e.target.closest('[data-less-parent]');
+    if (less) { collapseQaThread(less.dataset.lessParent); return; }
     const r = e.target.closest('[data-answer-reply]');
     if (r) { const c = findDiscComment(r.dataset.answerReply); if (c) startDiscReply(c); return; }
     const ed = e.target.closest('[data-answer-menu]');
@@ -978,6 +1048,45 @@ function rerenderCommentsBlock(postId, { scroll = false } = {}) {
   updateChatHeaderCount(postId);
   refreshChatCardPreview(postId);
   if (scroll) scrollToMyAnswer();
+}
+
+// 🔴 РОЗГОРНУТИ ГІЛКУ («Ще N відповідей»).
+// Вміст лише РОСТЕ, і нові рядки вставляються НИЖЧЕ кнопки — тобто все, що вище
+// неї, зрушити фізично не може. Знімаємо і повертаємо `scrollTop` як страховку
+// на випадок, коли між двома рендерами realtime щось видалив і стара позиція
+// вийшла за новий максимум. Той самий підхід, що у «Стрічці».
+function expandQaThread(rootId) {
+  const body = document.querySelector('.qa-body');
+  const st = body ? body.scrollTop : 0;
+  expandedQaThreads.add(qaKey(rootId));
+  rerenderCommentsBlock(_chatOpenPostId);
+  if (body) body.scrollTop = st;
+}
+
+// 🔴 ЗГОРНУТИ ГІЛКУ («Сховати відповіді»). ⚠️ ТУТ утримання позиції справді
+// НЕОБХІДНЕ, на відміну від розгортання: вміст МЕНШАЄ, тож стара прокрутка
+// виходить за новий максимум, браузер зрізає її сам, і список смикається.
+//
+// 🔑 ТРИМАЄМОСЬ ЗА САМУ КНОПКУ, А НЕ ЗА КОРІНЬ ГІЛКИ. У «Стрічці» пробували
+// корінь — і це не працює за побудовою: кнопка стоїть у кінці гілки, тож коли
+// людина прокрутила донизу, після згортання прокрутці просто НЕМА КУДИ
+// рухатись, щоб повернути далекий корінь на місце (там заміряли розбіжність
+// 464px). Кнопка ж — це те місце, де щойно був палець.
+//
+// Другий рубіж — `revealInScroller`: якщо прокрутка вперлась у межу і кнопка
+// все одно виїхала, підтягуємо її у видиму зону. Інакше людина натисла б
+// «Сховати» і не побачила результату власної дії.
+function collapseQaThread(rootId) {
+  const body = document.querySelector('.qa-body');
+  const before = body?.querySelector(`[data-less-parent="${rootId}"]`)?.getBoundingClientRect().top;
+  expandedQaThreads.delete(qaKey(rootId));
+  rerenderCommentsBlock(_chatOpenPostId);
+  if (!body || before == null) return;
+  const after = body.querySelector(`[data-more-parent="${rootId}"]`);
+  if (!after) return;
+  const delta = after.getBoundingClientRect().top - before;
+  if (Math.abs(delta) >= 1) body.scrollTop += delta;
+  revealInScroller(body, after);
 }
 
 let _discReplyTo = null;   // коментар на який відповідаємо
@@ -1395,6 +1504,13 @@ export function attachDiscussionsDelegation() {
     const list = commentsByPost.get(postId) || [];
     list.push(tempComment);
     commentsByPost.set(postId, list);
+    // 🔴 ВІДПОВІВ У ЗГОРНУТУ ГІЛКУ — РОЗГОРТАЄМО ЇЇ ДО ПЕРЕМАЛЮВАННЯ.
+    // Інакше власна відповідь сховалась би під «Ще N», і вийшло б «я написав, а
+    // нічого не зʼявилось». Пастка вже спрацьовувала у «Стрічці» — переносимо
+    // разом із рештою механізму, а не чекаємо, поки вона спрацює вдруге.
+    // ⚠️ Розгортаємо КОРІНЬ гілки, а не сам `replyId`: відповідь на вкладену
+    // репліку лягає в гілку її кореня, тож розгортати треба саме його.
+    if (replyId) expandedQaThreads.add(qaKey(rootIdOf(postId, replyId)));
     if (input) input.value = '';
     clearDiscCompose();
     // `scroll: true` — це ВЛАСНА дія: людина щойно відповіла і має побачити свою
