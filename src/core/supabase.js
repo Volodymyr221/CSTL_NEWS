@@ -2236,6 +2236,71 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
   return data || [];
 }
 
+// ── ОСТАННІЙ ДОПИС КОЖНОЇ СПІЛЬНОТИ (25.08) ─────────────────────────────────
+// Для віджета Стрічки на Громаді: ряд спільнот упорядкований за тим, ХТО ПИСАВ
+// ОСТАННІМ, і під кожною — саме її останній допис.
+//
+// 🔴 ЧОМУ НЕ `fetchPagePosts(null, N)`, ЯК БУЛО ДО ЦЬОГО.
+// Той запит бере N найсвіжіших постів УСІЄЇ стрічки, а не по одному з кожної
+// спільноти. Досить одній активній спільноті написати N разів поспіль — і у
+// вибірці не лишиться нікого іншого, тобто віджет «спільноти громади» покаже
+// одну спільноту. Сьогодні цього не видно (постів мало), на живих даних вилізе
+// в перший же активний день — а виглядатиме як «віджет чомусь завис».
+//
+// 🔑 ДВА ЗАПИТИ, І ДРУГИЙ ДЕШЕВИЙ.
+//   1. ЗОНД — тільки `id, page_id, created_at`. Три маленькі поля, тож навіть
+//      кілька сотень рядків важать копійки. З нього видно ТОЧНИЙ порядок
+//      спільнот за свіжістю і id потрібних дописів.
+//   2. ДОБІРКА — повні дані рівно тих кількох дописів, які підуть на екран.
+// Альтернатива «один запит на спільноту» дала б стільки походів у мережу,
+// скільки спільнот, і на головній це найдорожче місце.
+//
+// ⚠️ Порядок рахуємо САМІ, а не покладаємось на `.order()` бази: групування по
+// спільнотах усе одно відбувається тут, і два джерела порядку рано чи пізно
+// розійшлись би. Заразом це робить функцію придатною для стенда, де заглушка
+// нічого не сортує.
+export async function fetchLatestPostPerPage(maxPages = 6, scan = 300) {
+  if (!supa) return [];
+
+  // 1. Зонд. Фільтри ті самі, що у `fetchPagePosts`: невидалені й опубліковані —
+  // інакше в порядок спільнот пролізла б чужа чернетка ШІ-агента.
+  const probe = await supa.from('page_posts')
+    .select('id, page_id, created_at')
+    .is('deleted_at', null)
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(scan);
+  if (probe.error) { console.warn('[supabase] fetchLatestPostPerPage:', probe.error.message); return []; }
+
+  const rows = (probe.data || []).filter(r => r && r.page_id != null && r.created_at);
+  const ts = r => new Date(r.created_at).getTime();
+
+  // Останній допис кожної спільноти. Проходимо весь зонд і лишаємо найсвіжіший
+  // рядок на кожен `page_id` — це не залежить від того, чи база вже впорядкувала.
+  const latest = new Map();
+  for (const r of rows) {
+    const was = latest.get(r.page_id);
+    if (!was || ts(r) > ts(was)) latest.set(r.page_id, r);
+  }
+
+  const top = [...latest.values()].sort((a, b) => ts(b) - ts(a)).slice(0, maxPages);
+  if (!top.length) return [];
+
+  // 2. Добірка. `.in('id', …)` — рівно ті дописи, що підуть на екран.
+  const ids = top.map(r => r.id);
+  let picked = await supa.from('page_posts').select(POST_COLS_OFFICIAL).in('id', ids);
+  if (picked.error) {
+    // Той самий запобіжник, що у `fetchPagePosts`: відсутня колонка `official`
+    // (міграція ще не накотилась) не сміє лишити віджет порожнім.
+    picked = await supa.from('page_posts').select(POST_COLS).in('id', ids);
+    if (picked.error) { console.warn('[supabase] fetchLatestPostPerPage:', picked.error.message); return []; }
+  }
+
+  // Порядок віддаємо СВІЙ — за свіжістю, а не той, у якому база повернула рядки.
+  const byId = new Map((picked.data || []).map(r => [String(r.id), r]));
+  return top.map(r => byId.get(String(r.id))).filter(Boolean);
+}
+
 // ── ЧЕРНЕТКИ ШІ-АГЕНТА СПІЛЬНОТИ (20.08) ────────────────────────────────────
 // Агент пише пости зі `status = 'draft'`, і читач їх не бачить: так каже політика
 // читання бази. Ця функція дістає їх для того, хто МАЄ право їх вичитувати.
@@ -2709,6 +2774,10 @@ export async function fetchMyEditablePageIds() {
 // ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
 //    у будь-якому разі — людський текст. Поля `select` не міняв.
 const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
+// Те саме плюс синя галочка спільноти. Окремим рядком, а не аргументом: у місцях,
+// де колонки `official` може ще не бути, потрібен запасний запит БЕЗ неї, і два
+// готові рядки читаються краще за складання select-а на льоту.
+const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url, official)';
 
 export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };

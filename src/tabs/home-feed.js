@@ -27,7 +27,7 @@
 // «життя громади» без жодного допису каже гірше, ніж його відсутність.
 
 import { escapeHtml, formatTime } from '../core/utils.js';
-import { fetchPages, fetchPagePosts, isSupabaseReady } from '../core/supabase.js';
+import { fetchPages, fetchLatestPostPerPage, isSupabaseReady } from '../core/supabase.js';
 
 const MAX_CIRCLES = 6;
 // Скільки годин допис вважається «новим» — рівно доба. Кільце на кружечку має
@@ -60,8 +60,11 @@ function circleHtml(page, fresh) {
     </span>`;
 }
 
-function postHtml(p) {
-  const page = p.pages || {};
+// `page` передається окремо, бо повний запис спільноти (з `fetchPages`) має
+// поля, яких вкладений `pages(...)` допису не віддає. Без нього — падаємо на
+// вкладений запис, щоб функція лишалась придатною і поза віджетом.
+function postHtml(p, page = null) {
+  page = page || p.pages || {};
   const name = page.name || 'Громада';
   const txt = preview(p.text);
   const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
@@ -91,30 +94,43 @@ export async function renderHomeFeed() {
   if (!isSupabaseReady()) { sec.hidden = true; return; }
 
   try {
-    // Один запит на канали і один на пости — більше головній не потрібно.
-    // Пости беремо з запасом (12), щоб порахувати, у яких каналів є свіже.
-    const [pages, posts] = await Promise.all([
+    // 🔴 25.08 — ДЖЕРЕЛО ЗМІНИЛОСЬ: раніше тут стояв `fetchPagePosts(null, 12)`,
+    // тобто 12 найсвіжіших дописів УСІЄЇ стрічки. Порядок спільнот із цього не
+    // виводився — кружечки шикувались за `sort_order` і лише «ті, у кого є нове»
+    // піднімались догори гуртом. Тепер джерело одне: останній допис КОЖНОЇ
+    // спільноти (розбір — `fetchLatestPostPerPage` у `core/supabase.js`).
+    const [pages, latest] = await Promise.all([
       fetchPages(),
-      fetchPagePosts(null, 12),
+      fetchLatestPostPerPage(MAX_CIRCLES),
     ]);
-    if (!posts.length) { sec.hidden = true; body.innerHTML = ''; return; }
+    if (!latest.length) { sec.hidden = true; body.innerHTML = ''; return; }
 
-    // Які канали писали за останню добу — саме вони отримають кільце.
-    const freshBy = new Set();
+    // Дані спільноти беремо з `pages`: там є `avatar_url` у повному вигляді, а
+    // вкладений `pages(...)` допису дає лише частину полів.
+    const byId = new Map(pages.map(pg => [String(pg.id), pg]));
+
+    // 🔑 ОДИН СПИСОК — ОДИН ПОРЯДОК. Кружечок і допис під ним це одна й та сама
+    // одиниця, тож вони не можуть розійтись у принципі: розсинхрон між рядом і
+    // карткою був би не багом верстки, а другим джерелом правди (клас B-27).
+    // ⚠️ Спільнота БЕЗ дописів у віджет не входить зовсім — не тому, що вона
+    // «менш важлива», а тому, що впорядкування за свіжістю не має для неї ключа,
+    // і показувати її означало б поставити її в довільне місце.
+    const slides = latest
+      .map(post => ({ post, page: byId.get(String(post.page_id)) || post.pages || {} }))
+      .filter(s => s.page);
+
+    if (!slides.length) { sec.hidden = true; body.innerHTML = ''; return; }
+
+    // Кільце «є нове» лишається тим, чим було — позначкою «зайди подивись» за
+    // останню добу. Порядок спільнот її НЕ замінює: перша в ряду це «писала
+    // останньою», а це може бути й тиждень тому, якщо тиждень ніхто не писав.
     const edge = Date.now() - FRESH_H * 3600 * 1000;
-    for (const p of posts) {
-      if (new Date(p.created_at).getTime() >= edge) freshBy.add(p.page_id);
-    }
-
-    // Порядок кружечків: спершу ті, у кого є нове (заради цього людина й
-    // дивиться), далі решта у своєму порядку сортування.
-    const ordered = [...pages].sort((a, b) => (freshBy.has(b.id) ? 1 : 0) - (freshBy.has(a.id) ? 1 : 0));
-    const circles = ordered.slice(0, MAX_CIRCLES);
+    const isFresh = post => new Date(post.created_at).getTime() >= edge;
 
     sec.hidden = false;
     body.innerHTML =
-      (circles.length ? `<div class="hm-fd-circles">${circles.map(pg => circleHtml(pg, freshBy.has(pg.id))).join('')}</div>` : '') +
-      postHtml(posts[0]);
+      `<div class="hm-fd-circles">${slides.map(s => circleHtml(s.page, isFresh(s.post))).join('')}</div>` +
+      postHtml(slides[0].post, slides[0].page);
     body.classList.add('hm-appear');
   } catch {
     sec.hidden = true;
