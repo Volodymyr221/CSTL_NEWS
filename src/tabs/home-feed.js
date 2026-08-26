@@ -29,6 +29,7 @@
 import { escapeHtml, formatTime } from '../core/utils.js';
 import { fetchPages, fetchLatestPostPerPage, isSupabaseReady } from '../core/supabase.js';
 import { startAutoCarousel } from '../core/auto-carousel.js';
+import { openFeedPage } from './feed.js';
 
 const MAX_CIRCLES = 6;
 // Зупинка чинної каруселі. Тримається в модулі, бо блок перемальовується не один раз
@@ -104,7 +105,7 @@ function circleHtml(page, fresh) {
     : `<span class="hm-fd-c-tx">${escapeHtml(initial(name))}</span>`;
   // `title` і `aria-label` несуть ПОВНУ назву — скорочення живе лише на екрані.
   return `
-    <span class="hm-fd-c${fresh ? ' hm-fd-c--new' : ''}" title="${escapeHtml(name)}">
+    <span class="hm-fd-c${fresh ? ' hm-fd-c--new' : ''}" data-fd-page="${escapeHtml(String(page.id ?? ''))}" title="${escapeHtml(name)}">
       <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${inner}</span></span>
       <span class="hm-fd-c-name" aria-label="${escapeHtml(name)}">${escapeHtml(короткa)}</span>
     </span>`;
@@ -140,7 +141,8 @@ function postHtml(p, page = null) {
     : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;
 
   return `
-    <article class="hm-card hm-card--tap hm-fd-post hm-fd-post--${img ? 'photo' : 'text'}">
+    <article class="hm-card hm-card--tap hm-fd-post hm-fd-post--${img ? 'photo' : 'text'}"
+      data-fd-page="${escapeHtml(String(p.page_id ?? ''))}" data-fd-post="${escapeHtml(String(p.id ?? ''))}">
       <span class="hm-fd-p-head">
         <span class="hm-fd-p-av">${ava}</span>
         <span class="hm-fd-p-who">
@@ -253,10 +255,31 @@ export async function renderHomeFeed() {
 
   if (!sec.dataset.wired) {
     sec.dataset.wired = '1';
-    // Тап у будь-яке місце блока → Стрічка. Глибокого переходу «саме цей пост»
-    // немає навмисно: він у Стрічці однаково перший, а окремий маршрут означав
-    // би другу логіку відкриття поста поруч із наявною.
-    sec.addEventListener('click', () => {
+    // 🔴 25.08 — ТАП ВЕДЕ ТУДИ, ЩО ПІД ПАЛЬЦЕМ, А НЕ «ПРОСТО У СТРІЧКУ».
+    // 🗣️ Скарга Вови: «натискаю на цю спільноту, і мене просто закидає в стрічку. А має
+    // закидати в стрічку і після закидання в стрічку відкривати цю спільноту… нажимаю на
+    // пост — має відкривати спільноту і цей пост, на цей пост наводитись».
+    //
+    // 🛑 Тут стояв прямо протилежний коментар («глибокого переходу немає навмисно: пост
+    // у Стрічці однаково перший»). Він був правдою для СТАРОГО віджета, де внизу висів
+    // рівно один найсвіжіший допис усієї стрічки. Відколи блок став каруселлю по
+    // спільнотах, четвертий слайд — це вже не «перший пост Стрічки», і тап, що кидав у
+    // загальний список, губив саме те, на що людина дивилась.
+    //
+    // 🔑 Три цілі, від точнішої до загальнішої: допис → його спільнота з наведенням на
+    // нього · кружечок → просто його спільнота · будь-де ще → Стрічка, як було.
+    sec.addEventListener('click', e => {
+      const пост = e.target.closest('[data-fd-post]');
+      if (пост) {
+        const pageId = Number(пост.dataset.fdPage);
+        const postId = Number(пост.dataset.fdPost);
+        if (pageId) { openFeedPage(pageId, postId || null); return; }
+      }
+      const коло = e.target.closest('[data-fd-page]');
+      if (коло) {
+        const pageId = Number(коло.dataset.fdPage);
+        if (pageId) { openFeedPage(pageId); return; }
+      }
       if (typeof window.switchTab === 'function') window.switchTab('shotam');
     });
   }
