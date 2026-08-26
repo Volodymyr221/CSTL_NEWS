@@ -161,6 +161,13 @@ async function сцена(hash) {
   await blockExternal(page);
   if (OLD_BUNDLE) await page.route('**/bundle.js', r =>
     r.fulfill({ body: OLD_BUNDLE, contentType: 'text/javascript; charset=utf-8' }));
+  // 🔴 26.08 — ГЛУШИМО СПРАВЖНІЙ SDK. Він переїхав із чужого CDN у нашу теку
+  // `vendor/`, тобто в пісочниці тепер УСПІШНО завантажується — і перезаписує
+  // підставного клієнта, поставленого через `addInitScript`. Доти цього не було
+  // видно лише тому, що CDN був недосяжний і справжній SDK просто не приїжджав.
+  await page.route('**/vendor/supabase-js*', r => r.fulfill({
+    contentType: 'text/javascript', body: '/* підставний клієнт у addInitScript */',
+  }));
   await page.addInitScript(stub);
   await page.goto(`${site.url}/index.html${hash}`, { waitUntil: 'domcontentloaded' });
   return { page, close: () => ctx.close() };

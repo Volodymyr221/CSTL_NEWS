@@ -9,7 +9,7 @@
 // Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
-import { getSupabase, netErrorText, netCall, releasePushDevice, setAnalyticsUid } from './supabase.js';
+import { getSupabase, sdkLoaded, netErrorText, netCall, releasePushDevice, setAnalyticsUid } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
@@ -149,7 +149,20 @@ export async function initAuth() {
 // (detectSessionInUrl) і onAuthStateChange оновить _user.
 export async function signInWithGoogle() {
   const supa = getSupabase();
-  if (!supa) { showToast('Немає звʼязку з сервером', 3000, 'error'); return; }
+  // 🔴 26.08 — ДВІ РІЗНІ ПРИЧИНИ ПЕРЕСТАЛИ ГОВОРИТИ ОДНИМИ СЛОВАМИ.
+  // 🗣️ Вова зі скріна: «Немає звʼязку з сервером» у Safari — при живому інтернеті,
+  // бо новини на тому ж екрані завантажились.
+  // 🛑 Тост брехав не навмисно: він казав про мережу, а бракувало ФАЙЛУ бібліотеки.
+  // Людина після такого шукає проблему в звʼязку і не знаходить — бо її там немає.
+  // 🔑 Той самий клас, що з журналом збоїв: «не сталося» і «сталося, але ми не
+  // побачили» мусять бути РІЗНІ повідомлення.
+  if (!supa) {
+    showToast(sdkLoaded()
+      ? 'Сервер недоступний. Спробуй ще раз за хвилину'
+      : 'Не завантажилась частина застосунку. Онови сторінку',
+      4000, 'error');
+    return;
+  }
   const redirectTo = window.location.origin + window.location.pathname;
   // 🔴 24.08 — `prompt: 'select_account'`: ГОOGLE ЗАВЖДИ ПИТАЄ, ЯКИМ АКАУНТОМ ЗАЙТИ.
   //

@@ -29,7 +29,12 @@ const p = await b.newPage({ viewport: { width: 390, height: 844 }, isMobile: tru
 
 // База НЕДОСЯЖНА — рівно те, що буває при збої мережі або лежачому Supabase.
 // Бібліотеку з CDN теж рубаємо: саме її відсутність і робить клієнта порожнім.
-await p.route('**://cdn.jsdelivr.net/npm/@supabase/supabase-js**', r => r.abort());
+// 🔴 26.08 — обидві адреси: SDK переїхав із чужого CDN у нашу теку `vendor/`, і
+// перехоплення, прибите до старої, мовчки перестало б глушити базу — стенд «офлайн»
+// перевіряв би сцену з живим клієнтом. Стару лишаємо для контрольних прогонів.
+for (const шлях of ['**://cdn.jsdelivr.net/npm/@supabase/supabase-js**', '**/vendor/supabase-js*']) {
+  await p.route(шлях, r => r.abort());
+}
 await p.route('**://*.supabase.co/**', r => r.abort());
 await p.route('**://api.open-meteo.com/**', r => r.abort());
 
