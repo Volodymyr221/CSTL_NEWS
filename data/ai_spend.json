@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787730952541,
+      "mission": "olyka:story:костел-пресвятої-трійці-перлина",
+      "model": "claude-opus-5",
+      "input_tokens": 4707,
+      "output_tokens": 342,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0321,
+      "note": "Костел Пресвятої Трійці — перлина барокової Олики"
+    },
+    {
       "ts": 1787729234449,
       "mission": "holiday:🇺🇦 День знань",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0087,
       "note": ""
-    },
-    {
-      "ts": 1784277450208,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 590,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0104,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 6.6325,
-    "runs": 105,
+    "cost_usd": 6.6646,
+    "runs": 106,
     "web_searches": 81
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 1.5229,
-      "runs": 27,
+      "cost_usd": 1.555,
+      "runs": 28,
       "web_searches": 18
     }
   },
-  "updated_ts": 1787729234449
+  "updated_ts": 1787730952541
 }
