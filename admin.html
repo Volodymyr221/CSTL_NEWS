@@ -1468,6 +1468,33 @@ function failureRows(data) {
     </div>`;
   }).join('') + '</div>';
 }
+// 🔴 26.08 — ГОДИНИ МАЛЮЮТЬСЯ ОКРЕМО ВІД РЕШТИ, І ЦЕ НЕ ПРИДИРКА.
+// 🗣️ Вова: «чого воно не від 0:00 і до 23:00… чого воно знову розкидано?»
+// 🛑 Це була МОЯ недоробка: джерело даних я замінив, а рендер лишив `barRows`, який
+// сортує за КІЛЬКІСТЮ — правильно для розділів («що популярніше»), і неправильно для
+// годин. Доба це ВІСЬ: у неї є природний порядок, і 13 не «важливіша» за 14 через те,
+// що там більше подій. Відсортований за спаданням список годин читається як загадка —
+// саме на це Вова й показав (концепція §18).
+// 🔑 Тому: усі 24 години підряд, 0→23, і порожні ТЕЖ. Порожня година — це інформація
+// («о 4 ранку не заходить ніхто»), а не рядок, який можна прибрати.
+function hourRows(byHour) {
+  const дані = byHour || {};
+  const значення = [];
+  // Ключі з бази приходять рядками ('13'), але приймаємо й числові — на випадок,
+  // якщо джерело колись зміниться.
+  for (let h = 0; h < 24; h++) значення.push(Number(дані[String(h)] ?? дані[h] ?? 0));
+  const max = Math.max(1, ...значення);
+  const сума = значення.reduce((a, b) => a + b, 0);
+  if (!сума) return '<div class="empty">Поки немає даних.</div>';
+  return '<div class="spend-log">' + значення.map((v, h) => `
+    <div class="spend-row" style="${v === 0 ? 'opacity:.45' : ''}">
+      <span class="spend-row-date" style="min-width:52px">${String(h).padStart(2, '0')}:00</span>
+      <span class="spend-row-meta" style="flex:1;margin:0 10px">
+        <span style="display:block;height:8px;border-radius:4px;background:var(--red);opacity:.25;width:${Math.round(v / max * 100)}%"></span>
+      </span>
+      <span class="spend-row-cost">${v}</span>
+    </div>`).join('') + '</div>';
+}
 function barRows(counts, labelMap) {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   if (!entries.length) return '<div class="empty">Поки немає даних.</div>';
@@ -1507,9 +1534,18 @@ async function renderAnalytics(el) {
   for (const [tab, v] of Object.entries(sWeek.by_tab || {})) {
     tabBars[`${TAB_LABELS_UK[tab] || tab} · ${v.visitors} відвід.`] = v.views;
   }
+  // 🔴 26.08 — РЯДОК «—» ПРИБРАНО З РОЗБИВКИ ПРИСТРОЇВ.
+  // 🗣️ Вова зі скріна: «що це таке третій рядок у пристроях?»
+  // 📐 Заміряно: це були 13 `db_refusal` + 1 `js_error` — тобто ЗБОЇ. Вони не несуть
+  // поля `device` (у їхній `meta` лише код і текст помилки), тож усе без пристрою
+  // злиплось в один рядок і виглядало як ТРЕТІЙ ТИП ПРИСТРОЮ.
+  // 🛑 Це вада мого ж RPC: розбивка «Пристрій» рахувала ВСІ події. Тепер вона рахує
+  // лише ті, що справді мають пристрій, — і починає відповідати на своє питання.
+  // ⚠️ Збої від цього не зникають: вони живуть у власному розділі, де їм і місце.
   const devBars = {};
   const DEV_UK = { mobile: 'Телефон', desktop: 'Комп’ютер', tablet: 'Планшет' };
   for (const [d, v] of Object.entries(sWeek.by_device || {})) {
+    if (d === '—') continue;
     devBars[`${DEV_UK[d] || d} · ${v.visitors} відвід.`] = v.events;
   }
 
@@ -1561,8 +1597,8 @@ async function renderAnalytics(el) {
     <div class="section-title" style="margin-top:22px">Пристрій (7 днів)</div>
     ${barRows(devBars)}
 
-    <div class="section-title" style="margin-top:22px">Час доби (7 днів, година за Києвом)</div>
-    ${barRows(sWeek.by_hour)}
+    <div class="section-title" style="margin-top:22px">Час доби (7 днів, за Києвом)</div>
+    ${hourRows(sWeek.by_hour)}
 
     ${prof ? `
       <div class="section-title" style="margin-top:22px">Населені пункти (профілі, ${prof.total_profiles})</div>
