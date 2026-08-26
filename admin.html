@@ -485,6 +485,47 @@
     }
     .art-chip.active { background: var(--brand-grad-sm); color: #fff; border-color: transparent; }
     .art-preview { border-top: 1px dashed #e0dccb; margin: 8px 0; padding-top: 8px; }
+
+    /* ── Вікно деталей аналітики (нижній аркуш) ──────────────────────────────
+       🗣️ Вова: «задній фон скролиться, і свайпом я не можу закрити цю модалку…
+       заблокуй, щоб задній екран не рухався, це модальне вікно».
+       🔑 Ті самі числа й поведінка, що в аркушах застосунку (`core/sheet-motion.js`):
+       крива `cubic-bezier(0.32, 0.72, 0, 1)`, поріг 90px, кидок від 0.45 px/мс.
+       🛑 Спільний модуль сюди підключити НЕ МОЖНА: `admin.html` — окрема сторінка
+       зі своїм JS, вона не бере `bundle.js`. Тому це порт, і в ньому свідомо
+       збережено головні уроки оригіналу (замок на жест, зона шапки), а не лише
+       рух пальця. */
+    #an-detail {
+      position: fixed; inset: 0; z-index: 9000; display: none;
+      align-items: flex-end; justify-content: center;
+      background: rgba(0,0,0,.45);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #an-detail.open { display: flex; }
+    #an-detail-box {
+      background: #fff; width: 100%; max-width: 720px;
+      max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      border-radius: 18px 18px 0 0; padding: 0 16px 28px;
+      box-shadow: 0 -8px 32px rgba(0,0,0,.18);
+      will-change: transform;
+    }
+    /* Рисочка — обіцянка свайпу. Без неї жест є, але про нього ніхто не здогадається. */
+    #an-detail-grip {
+      width: 38px; height: 4px; border-radius: 2px; background: #d5d5d5;
+      margin: 8px auto 6px;
+    }
+    /* Шапка липка: у довгому списку випадків кнопка «Закрити» не має їхати геть. */
+    #an-detail-head {
+      position: sticky; top: 0; background: #fff; z-index: 1;
+      display: flex; align-items: center; gap: 10px;
+      padding: 4px 0 12px; border-bottom: 1px solid #eee; margin-bottom: 12px;
+    }
+    #an-detail-title { flex: 1; font-size: 15px; font-weight: 700; }
+    #an-detail-close {
+      flex: 0 0 auto; border: 0; background: #eee; color: #333;
+      border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit; min-height: 40px;
+    }
   </style>
 </head>
 <body>
@@ -1546,31 +1587,163 @@ async function fetchFailureCases(period) {
 // ── Вікно деталей ─────────────────────────────────────────────────────────────
 // 🔑 Одне вікно на всі тапи екрана. Друге таке саме поруч розійшлося б із першим —
 // у цьому проєкті таке вже було з двома копіями антиспаму.
+//
+// 🗣️ Вова 26.08 (вечір, зі скріна): «задній фон, він скролиться, і свайпом я не можу
+// закрити цю модалку… зроби можливість свайпом закрити… заблокуй, щоб задній екран не
+// рухався, тому що це модальне вікно, це неправильно, і зроби так в ВСІХ варіаціях».
+// ✅ «Усі варіації» виконуються самі собою: тап по числу, по вкладці, по селу, по
+// пристрою і по збою відкривають ОДНУ цю функцію. Правка в одному місці — і скрізь.
+//
+// 🔑 Числа й поведінка ті самі, що в аркушах застосунку (`core/sheet-motion.js`):
+// поріг 90px, кидок від 0.45 px/мс, крива `cubic-bezier(0.32, 0.72, 0, 1)`.
+// 🛑 Спільний модуль сюди підключити НЕ МОЖНА: `admin.html` — самостійна сторінка зі
+// своїм JS, вона не бере `bundle.js`. Це порт, і в ньому свідомо збережено головні
+// УРОКИ оригіналу, а не лише рух пальця (див. коментарі в `attachSheetDismiss`).
+const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const SHEET_DIST = 90;      // px — «дотягнув повільно»
+const SHEET_FLICK = 0.45;   // px/мс — кидок закриває навіть коротким рухом
+const SHEET_FLICK_MIN = 12; // px — але не від випадкового тремтіння пальця
+
+let _detailUnlock = null;   // функція розблокування сторінки, поки вікно відкрите
+let _detailBuilt = false;
+
+// 🔴 ЗАМОК СТОРІНКИ. `overflow: hidden` на body для iOS НЕ ДОСИТЬ — Safari однаково
+// прокручує документ під фіксованим шаром. Тому body стає `position: fixed` зі зсувом
+// на поточну позицію, а при відкритті вікна позиція повертається назад. Той самий
+// підхід, що `lockBodyScroll()` у застосунку.
+function lockPageScroll() {
+  const b = document.body.style;
+  const scrollY = window.scrollY || 0;
+  const prev = { position: b.position, top: b.top, left: b.left, right: b.right, width: b.width, overflow: b.overflow };
+  b.position = 'fixed';
+  b.top = `-${scrollY}px`;
+  b.left = '0';
+  b.right = '0';
+  b.width = '100%';
+  b.overflow = 'hidden';
+  return () => {
+    b.position = prev.position; b.top = prev.top; b.left = prev.left;
+    b.right = prev.right; b.width = prev.width; b.overflow = prev.overflow;
+    window.scrollTo(0, scrollY);
+  };
+}
+
+function buildDetail() {
+  const m = document.createElement('div');
+  m.id = 'an-detail';
+  m.innerHTML = '<div id="an-detail-box">'
+    + '<div id="an-detail-grip"></div>'
+    + '<div id="an-detail-head"><b id="an-detail-title"></b>'
+    + '<button id="an-detail-close" aria-label="Закрити">Закрити</button></div>'
+    + '<div id="an-detail-body"></div></div>';
+  document.body.appendChild(m);
+
+  // Закриття і по тлу, і по кнопці: на телефоні промах повз вікно — звичайна річ,
+  // а сторінка, яку неможливо закрити тапом мимо, читається як зависла.
+  m.addEventListener('click', e => {
+    if (e.target === m || e.target.id === 'an-detail-close') closeDetail();
+  });
+  // ⌨️ Escape — адмінку відкривають і з компʼютера, де свайпу немає взагалі.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && m.classList.contains('open')) closeDetail();
+  });
+
+  attachDetailSwipe(m.querySelector('#an-detail-box'));
+  _detailBuilt = true;
+  return m;
+}
+
+// 🔴 СВАЙП ВНИЗ ЗАКРИВАЄ. Порт `attachSheetDismiss()` з двома уроками, кожен з яких
+// куплений окремим багом у застосунку:
+//   1. ЗОНА ШАПКИ. Граб за рисочку/заголовок закриває навіть коли список прокручено —
+//      інакше з довгого списку випадків не вийти, не догорнувши його вгору.
+//   2. ЗАМОК НА ЖЕСТ. Жест, який хоч раз БУВ прокруткою, до відпускання пальця вже НЕ
+//      може стати закриттям. Без цього шапка відривалась від тіла аркуша на iOS у мить,
+//      коли контент доходив до верху ПОСЕРЕД жесту.
+function attachDetailSwipe(panel) {
+  let startY = 0, dragging = false, dy = 0, wasScrolling = false;
+  let lastY = 0, lastT = 0, v = 0;
+
+  panel.addEventListener('touchstart', e => {
+    const y = e.touches[0].clientY;
+    const inHeader = (y - panel.getBoundingClientRect().top) < 64;
+    if (!inHeader && panel.scrollTop > 0) return;
+    startY = y; dragging = true; dy = 0; wasScrolling = false;
+    lastY = y; lastT = performance.now(); v = 0;
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const y = e.touches[0].clientY;
+    dy = y - startY;
+    if (dy <= 0) { panel.style.transform = ''; return; }   // вгору — віддаємо скролу
+    if (panel.scrollTop > 0) {
+      // Ще прокручений: хай нативний скрол доведе до верху, а точку відліку
+      // переставляємо, щоб зсув потім почався без стрибка.
+      wasScrolling = true; panel.style.transform = '';
+      startY = y; dy = 0; lastY = y; lastT = performance.now();
+      return;
+    }
+    if (wasScrolling) { panel.style.transform = ''; return; }
+    // passive:false + preventDefault — блокує нативний скрол, поки тягнемо аркуш.
+    e.preventDefault();
+    const t = performance.now();
+    if (t > lastT) v = (y - lastY) / (t - lastT);
+    lastY = y; lastT = t;
+    panel.style.transition = 'none';
+    panel.style.transform = `translateY(${dy}px)`;
+  }, { passive: false });
+
+  panel.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    const закрити = dy > SHEET_DIST || (v > SHEET_FLICK && dy > SHEET_FLICK_MIN);
+    if (закрити) { closeDetail(); return; }
+    // Не дотягнув — повертаємо на місце тією ж кривою, що й у застосунку.
+    panel.style.transition = `transform .26s ${SHEET_EASE}`;
+    panel.style.transform = '';
+    dy = 0;
+  });
+}
+
+function closeDetail() {
+  const m = document.getElementById('an-detail');
+  if (!m || !m.classList.contains('open')) return;
+  const box = m.querySelector('#an-detail-box');
+  const шлях = Math.max(window.innerHeight - box.getBoundingClientRect().top, 1);
+  box.style.transition = `transform .24s ${SHEET_EASE}`;
+  box.style.transform = `translateY(${шлях}px)`;
+  m.style.transition = 'opacity .24s linear';
+  m.style.opacity = '0';
+  setTimeout(() => {
+    m.classList.remove('open');
+    m.style.opacity = ''; m.style.transition = '';
+    box.style.transition = ''; box.style.transform = '';
+    // 🔑 Замок знімаємо ТУТ, а не на початку анімації: інакше сторінка під вікном
+    // смикнулась би на своє місце просто на очах, поки аркуш ще їде.
+    if (_detailUnlock) { _detailUnlock(); _detailUnlock = null; }
+  }, 240);
+}
+
 function openDetail(title, html) {
-  let m = document.getElementById('an-detail');
-  if (!m) {
-    m = document.createElement('div');
-    m.id = 'an-detail';
-    m.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);'
-      + 'display:flex;align-items:flex-end;justify-content:center';
-    m.innerHTML = '<div id="an-detail-box" style="background:#fff;width:100%;max-width:720px;'
-      + 'max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px">'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
-      + '<b id="an-detail-title" style="flex:1;font-size:15px"></b>'
-      + '<button id="an-detail-close" style="border:0;background:#eee;border-radius:8px;'
-      + 'padding:6px 12px;cursor:pointer;font-size:14px">Закрити</button></div>'
-      + '<div id="an-detail-body"></div></div>';
-    document.body.appendChild(m);
-    // Закриття і по тлу, і по кнопці: на телефоні промах повз вікно — звичайна річ,
-    // і сторінка, яку неможливо закрити тапом мимо, читається як зависла.
-    m.addEventListener('click', e => {
-      if (e.target === m || e.target.id === 'an-detail-close') m.style.display = 'none';
-    });
-  }
+  const m = _detailBuilt ? document.getElementById('an-detail') : buildDetail();
   m.querySelector('#an-detail-title').textContent = title;
   m.querySelector('#an-detail-body').innerHTML = html;
+  // ⚠️ Функцію кличуть ДВІЧІ поспіль (спершу «Завантаження…», потім дані). Замок і
+  // поява мають статись рівно раз — інакше друга спроба зафіксувала б уже зсунуту
+  // сторінку і після закриття та поїхала б у нікуди.
+  if (!m.classList.contains('open')) {
+    _detailUnlock = lockPageScroll();
+    m.classList.add('open');
+    const box = m.querySelector('#an-detail-box');
+    box.style.transition = 'none';
+    box.style.transform = 'translateY(100%)';
+    requestAnimationFrame(() => {
+      box.style.transition = `transform .3s ${SHEET_EASE}`;
+      box.style.transform = '';
+    });
+  }
   m.querySelector('#an-detail-box').scrollTop = 0;
-  m.style.display = 'flex';
 }
 
 // ── Список людей у вікні ──────────────────────────────────────────────────────
@@ -1769,8 +1942,13 @@ async function renderAnalytics(el) {
 
     <div class="section-title" style="margin-top:24px">🤖 AI-висновок</div>
     <div class="card" style="margin-bottom:16px">
-      <button class="login-btn" id="ai-refresh-btn" style="width:auto;padding:8px 18px">Оновити статистику</button>
-      <p style="font-size:12px;color:#999;margin-top:8px" id="ai-refresh-hint">Аналізує статистику за 7 днів через Claude — коштує невелику суму за виклик, тому не автоматично.</p>
+      <button class="login-btn" id="ai-refresh-btn" style="width:auto;padding:8px 18px">Пояснити цифри</button>
+      <p style="font-size:12px;color:#999;margin-top:8px" id="ai-refresh-hint">
+      Читає <b>ті самі</b> агрегати, що на цьому екрані (сьогодні · 7 днів · місяць,
+      розділення заходів, села, збої) і пояснює їх людською мовою.<br>
+      🛑 Він знає, що <b>запуску ще не було</b>, тому не робитиме висновків про
+      «аудиторію» на кількох акаунтах — це пряме правило в його завданні.<br>
+      ⏱ Не автоматично: кожен виклик коштує грошей, тож рахуємо лише коли дивишся.</p>
       <div id="ai-refresh-result" style="margin-top:10px;white-space:pre-wrap;font-size:13.5px;line-height:1.55"></div>
     </div>
   `;
@@ -1870,7 +2048,7 @@ async function renderAnalytics(el) {
     const hintEl = document.getElementById('ai-refresh-hint');
     btn.disabled = true;
     const prevText = btn.textContent;
-    btn.textContent = 'Аналізую…';
+    btn.textContent = 'Читаю цифри…';
     resultEl.textContent = '';
     try {
       const { data, error } = await supa.functions.invoke('ai-analytics-summary');
