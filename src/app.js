@@ -6,7 +6,7 @@ import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка�
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';
-import { initAuth, currentUserId, refreshOwnProfile } from './core/auth.js';
+import { initAuth, authReady, currentUserId, refreshOwnProfile } from './core/auth.js';
 import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
 import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
@@ -602,6 +602,19 @@ async function init() {
   // «подивився вкладку» — інакше будь-яка воронка починалася б із середини.
   // ⚠️ Контекст шлемо ЛИШЕ тут, а не в кожній події: він не змінюється протягом
   // заходу, а дублювати його 11 тисяч разів означало б платити за це щоразу.
+  // 🔴 26.08 (вечір) — ЧЕКАЄМО НА ВІДПОВІДЬ «ХТО Я» ПЕРЕД ЗАПИСОМ ЗАХОДУ.
+  // 🛑 Це вада, знайдена читанням порядку виклику, а не здогадом: `initAuth()` вище
+  // викликається БЕЗ `await`, а `passDevLock()` повертається з `localStorage`, тобто
+  // синхронно. Отже до цього рядка ми доходили раніше, ніж `supa.auth.getSession()`
+  // встигав по мережі відповісти, і `currentUserId()` віддавав `null` НАВІТЬ ЗАЛОГІНЕНІЙ
+  // людині. Наслідок: кожен захід писався «гостем» — тобто головне число Вови
+  // («унікальні користувачі», «хто саме заходив») було приречене показувати нуль людей.
+  // 📐 Відбиток у базі: у ВСІХ 16 подій `session_start` (26.08) `user_id` порожній, тоді
+  // як `tab_view` при перемиканні вкладок — уже з `user_id`. Різниця саме в моменті.
+  // 🔑 `authReady()` має власну межу часу (2.5 с) і завершується і на збої теж, тож
+  // гість не чекає дарма, а запис не підвисає взагалі ніколи.
+  await authReady();
+
   const _ua = _uaBits();
   logEvent(currentUserId() || getAnonId(), 'session_start', {
     tab: currentTab,

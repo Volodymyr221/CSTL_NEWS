@@ -2200,36 +2200,12 @@ export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
     .then(({ error }) => { if (error) console.warn('[supabase] logEvent:', error.message); });
 }
 
-// Агрегати для дашборду адмінки (лише is_admin() — див. RLS). period: кількість
-// днів назад ('all' → без фільтру дат). Повертає null при помилці/непідключенні.
-export async function fetchAnalyticsSummary(periodDays = 7) {
-  if (!supa) return null;
-  let q = supa.from('analytics_events').select('visitor_id, event_type, tab, meta, created_at');
-  if (periodDays !== 'all') {
-    const since = new Date(Date.now() - periodDays * 86400000).toISOString();
-    q = q.gte('created_at', since);
-  }
-  const { data, error } = await q.limit(20000);
-  if (error) {
-    console.warn('[supabase] fetchAnalyticsSummary:', error.message);
-    return null;
-  }
-  const rows = data || [];
-  const uniqueVisitors = new Set(rows.map(r => r.visitor_id)).size;
-  const byTab = {};
-  const byDevice = {};
-  const byHour = {};
-  let pwaInstalls = 0;
-  for (const r of rows) {
-    if (r.event_type === 'tab_view' && r.tab) byTab[r.tab] = (byTab[r.tab] || 0) + 1;
-    if (r.event_type === 'pwa_install') pwaInstalls++;
-    const device = r.meta?.device;
-    if (device) byDevice[device] = (byDevice[device] || 0) + 1;
-    const hour = new Date(r.created_at).getHours();
-    byHour[hour] = (byHour[hour] || 0) + 1;
-  }
-  return { totalEvents: rows.length, uniqueVisitors, byTab, byDevice, byHour, pwaInstalls };
-}
+// 🗑 `fetchAnalyticsSummary()` ПРИБРАНА 26.08 (вечір) — мертвий код і водночас пастка.
+// Вона тягнула сирі події в браузер (`.limit(20000)`) і рахувала їх тут, тобто несла в
+// собі рівно ту стелю `db-max-rows` (1000), через яку екран показував «35 унікальних»
+// замість 736. Адмінка на неї вже не спиралась (рахує `admin_analytics_overview()`), і
+// жоден інший файл її не імпортував — але лишити її означало б тримати напоготові
+// готовий спосіб повернути ту саму брехню наступним дотиком.
 
 
 // ============================================================================
