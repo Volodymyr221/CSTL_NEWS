@@ -1502,24 +1502,27 @@ async function renderAnalytics(el) {
 
     <div class="section-title" style="margin-top:22px">📊 Статистика застосунку</div>
     <div class="spend-cards">
-      <article class="card"><div class="spend-lbl">Відвідувачів сьогодні</div><div class="spend-big">${sToday ? sToday.visitors : '—'}</div><div class="spend-sub">${sToday ? sToday.events : '—'} подій</div></article>
-      <article class="card"><div class="spend-lbl">Відвідувачів за 7 днів</div><div class="spend-big">${sWeek.visitors}</div><div class="spend-sub">${sWeek.events} подій</div></article>
-      <article class="card"><div class="spend-lbl">Відвідувачів усього</div><div class="spend-big">${sAll ? sAll.visitors : '—'}</div><div class="spend-sub">${sAll ? sAll.events : '—'} подій · ${sAll ? sAll.pwa_installs : '—'} встановлень PWA</div></article>
+      <article class="card"><div class="spend-lbl">Людей сьогодні</div><div class="spend-big">${sToday ? sToday.users : '—'}</div><div class="spend-sub">${sToday ? sToday.events : '—'} подій · ${sToday ? sToday.guests : '—'} гостьових пристроїв</div></article>
+      <article class="card"><div class="spend-lbl">Людей за 7 днів</div><div class="spend-big">${sWeek.users}</div><div class="spend-sub">${sWeek.events} подій · ${sWeek.guests} гостьових пристроїв</div></article>
+      <article class="card"><div class="spend-lbl">Людей усього</div><div class="spend-big">${sAll ? sAll.users : '—'}</div><div class="spend-sub">${sAll ? sAll.events : '—'} подій · ${sAll ? sAll.pwa_installs : '—'} встановлень PWA</div></article>
     </div>
 
     <div class="card" style="border-left:3px solid #b8860b;margin-top:10px">
       <b>Що саме тут порахували.</b>
       <p style="font-size:12px;color:#999;margin-top:6px;line-height:1.5">
-      🛑 <b>Це ВІДВІДУВАЧІ, а не користувачі.</b> У подіях немає ні <code>user_id</code>, ні
-      <code>session_id</code> — лише <code>visitor_id</code>, куди пишеться
-      <code>uid</code> залогіненого <b>або</b> випадковий анонімний id. Тобто одна людина
-      до входу і після входу рахується <b>двічі</b>, а з другого пристрою — втретє.<br>
-      📐 За весь час: <b>${sAll ? sAll.visitors : '—'}</b> відвідувачів, з них мають профіль
-      <b>${sAll ? sAll.with_profile : '—'}</b>, а <b>${sAll ? sAll.one_hit : '—'}</b> мали
-      рівно <b>одну</b> подію (відкрив і зник — так поводяться прев'ю посилань і сканери,
-      не люди). Поверталися іншого дня: <b>${sAll ? sAll.returning : '—'}</b>.<br>
-      ➡️ Тому велике число вгорі — це <b>не аудиторія</b>. Найближче до аудиторії —
-      «поверталися іншого дня».</p>
+      <b>«Люди»</b> — це унікальні <b>акаунти</b> (<code>user_id</code>). Єдина чесна
+      одиниця, за якою можна щось вирішувати.<br>
+      <b>«Гостьові пристрої»</b> — окреме число і <b>не люди</b>: один чоловік із двох
+      браузерів дає два, а сканер посилань — по одному на кожне відкриття.<br>
+      📐 За весь час: <b>${sAll ? sAll.users : '—'}</b> людей проти
+      <b>${sAll ? sAll.guests : '—'}</b> гостьових пристроїв, і з тих пристроїв
+      <b>${sAll ? sAll.one_hit : '—'}</b> мали рівно <b>одну</b> подію — відкрив і зник.
+      Поверталися іншого дня: <b>${sAll ? sAll.returning : '—'}</b>.<br>
+      🛑 До 26.08 екран показував <b>суму</b> цих двох сутностей одним числом
+      («${sAll ? sAll.visitors : '—'} унікальних») — тому й здавалось, що аудиторія велика.
+      ➡️ Найближче до реальної аудиторії — «поверталися іншого дня».<br>
+      ⏱ <b>Сесії</b> (${sWeek.sessions} за 7 днів) рахуються лише з 26.08 — до того їх у
+      системі не існувало, і вигадувати історію заднім числом не стали.</p>
     </div>
 
     <div class="section-title" style="margin-top:22px">🤖 AI-висновок</div>

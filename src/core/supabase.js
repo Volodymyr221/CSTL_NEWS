@@ -2128,13 +2128,58 @@ export function setAnalyticsEnabled(on) {
   } catch (_) {}
 }
 
+// 🔴 26.08 — ОДИН ЗАХІД У ЗАСТОСУНОК = ОДНА СЕСІЯ.
+// Живе в `sessionStorage`, а не в `localStorage`, і це головне рішення: саме
+// `sessionStorage` обнуляється, коли людина закриває застосунок, і переживає
+// перемикання вкладок усередині — тобто його час життя збігається з тим, що людина
+// називає «зайшов». `localStorage` дав би одну вічну «сесію» на пристрій.
+// ⚠️ На iOS у PWA `sessionStorage` переживає згортання застосунку — тобто повернення
+// через годину лишиться ТІЄЮ САМОЮ сесією. Це відоме звуження: чесніше показувати
+// трохи менше сесій, ніж рахувати кожне визирання в екран за новий захід.
+const SESSION_ID_KEY = 'cstl-analytics-session';
+
+function currentSessionId() {
+  try {
+    let id = sessionStorage.getItem(SESSION_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID ? crypto.randomUUID() : 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+      sessionStorage.setItem(SESSION_ID_KEY, id);
+    }
+    return id;
+  } catch { return null; }
+}
+
 export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
   if (!supa || !visitorId) return;
   // Сторож стоїть ТУТ, а не у викликачів: точок виклику вже три (дві у `app.js`,
   // одна в `boot.js`), і четверта неминуче забула б перевірку.
   if (!analyticsEnabled()) return;
+
+  // 🔴 26.08 — «ХТО» РОЗДІЛЕНО НА ДВА ПОЛЯ, І ЦЕ НЕ КОСМЕТИКА.
+  // Раніше в `visitor_id` лягало `currentUserId() || getAnonId()`, тобто в одну колонку
+  // йшли і UUID акаунта, і випадковий id гостя. Наслідок, заміряний на живій базі:
+  // одна людина до входу і після входу давала ДВА «унікальні», а 736 «унікальних»
+  // насправді були 11 акаунтів + 725 анонімних пристроїв (з них 628 з однією подією).
+  // 🔑 `user_id` тепер ЄДИНА чесна одиниця «людина»; `anon_id` — окремо, для гостя.
+  // 🛑 `visitor_id` пишемо як писали: на ньому тримається журнал збоїв («скільки різних
+  // пристроїв зачепило»), і ламати робочу діагностику заради чистоти схеми не можна.
+  // 🛑 РОЗРІЗНЯЄМО ПОРІВНЯННЯМ З `getAnonId()`, А НЕ ВИКЛИКОМ `currentUserId()`.
+  // Спокуса була покликати `currentUserId()` прямо тут — але вона живе в `auth.js`, а
+  // `auth.js` уже імпортує цей файл: вийшло б кільце імпортів. Заразом це зберігає
+  // домовленість, записану поруч рядком вище: «хто саме» вирішує ВИКЛИКАЧ, а `logEvent`
+  // лише розкладає це по колонках.
+  // ⚠️ Порівняння надійне саме тому, що `getAnonId()` — єдине джерело анонімного id у
+  // застосунку: усе, що НЕ дорівнює йому, прийшло з `currentUserId()`.
+  const анонім = visitorId === getAnonId();
+  const uid = анонім ? null : visitorId;
   supa.from('analytics_events')
-    .insert({ visitor_id: visitorId, event_type: type, tab, meta })
+    .insert({
+      visitor_id: visitorId,
+      user_id: uid || null,
+      anon_id: анонім ? visitorId : null,
+      session_id: currentSessionId(),
+      event_type: type, tab, meta,
+    })
     .then(({ error }) => { if (error) console.warn('[supabase] logEvent:', error.message); });
 }
 
