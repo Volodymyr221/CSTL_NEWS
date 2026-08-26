@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1787738355641,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10842,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0327,
+      "note": ""
+    },
+    {
+      "ts": 1787738352796,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 4453,
+      "cache_read": 56582,
+      "cache_write": 40594,
+      "web_searches": 6,
+      "found": 3,
+      "cost_usd": 0.296,
+      "note": ""
+    },
+    {
       "ts": 1787730952541,
       "mission": "olyka:story:костел-пресвятої-трійці-перлина",
       "model": "claude-opus-5",
@@ -753,38 +779,12 @@
       "found": 1,
       "cost_usd": 0.0088,
       "note": ""
-    },
-    {
-      "ts": 1784277487841,
-      "mission": "holiday:🌰 Горіховий Спас",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 572,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0098,
-      "note": ""
-    },
-    {
-      "ts": 1784277465233,
-      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
-      "model": "claude-sonnet-5",
-      "input_tokens": 435,
-      "output_tokens": 491,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0087,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 6.6646,
-    "runs": 106,
-    "web_searches": 81
+    "cost_usd": 6.9933,
+    "runs": 108,
+    "web_searches": 87
   },
   "months": {
     "2026-07": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 1.555,
-      "runs": 28,
-      "web_searches": 18
+      "cost_usd": 1.8837,
+      "runs": 30,
+      "web_searches": 24
     }
   },
-  "updated_ts": 1787730952541
+  "updated_ts": 1787738355641
 }
