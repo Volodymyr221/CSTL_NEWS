@@ -1,6 +1,6 @@
 // boot.js — ініціалізація PWA і Service Worker
 
-import { logEvent, getAnonId } from './supabase.js';
+import { logEvent, getAnonId, analyticsUid } from './supabase.js';
 import { currentUserId } from './auth.js';
 
 // PWA manifest — статичний у index.html (<link rel="manifest" href="manifest.json">).
@@ -91,7 +91,10 @@ function reportJsError(kind, msg, src, line, col) {
     if (_seenErrors.has(підпис)) return;
     _seenErrors.add(підпис);
     _errorsLogged++;
-    logEvent(getAnonId(), 'js_error', {
+    // 🔴 26.08 — акаунт, якщо він є (замовлення Вови: «позначай імʼя акаунта»).
+    // `analyticsUid()` — місток із `core/supabase.js`, який наповнює `auth.js`; прямий
+    // виклик `currentUserId()` тут дав би кільце імпортів.
+    logEvent(analyticsUid() || getAnonId(), 'js_error', {
       meta: { kind, msg: текст, at: `${файл}:${line || 0}:${col || 0}` },
     });
   } catch (_) { /* діагностика не сміє стати другою помилкою */ }
