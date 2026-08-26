@@ -25,6 +25,7 @@ import {
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
   submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, nameSlot,
   liveName, liveFirstName,
+  logEvent,   // аналітика подій дій (26.08); getAnonId уже імпортований вище
 } from '../core/supabase.js';
 import { ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -1891,6 +1892,11 @@ export function attachDiscussionsDelegation() {
       // «не доїхало» від «доїхало, а відповідь загубилась» → міг з'явитись дубль.
       const tag = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
       const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId, clientTag: tag });
+      // Подія лише при підтвердженому успіху — див. пояснення у `tabs/feed.js`.
+      if (result && result.ok !== false && !result.error) {
+        logEvent(currentUserId() || getAnonId(), 'question_answer',
+                 { tab: 'discussions', meta: { post_id: postId, is_reply: !!replyId } });
+      }
       if (!result.ok) {
         // Помилка — забираємо optimistic коментар
         const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
