@@ -156,7 +156,7 @@ ${JSON.stringify(дані, null, 2)}
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1400,
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -165,8 +165,35 @@ ${JSON.stringify(дані, null, 2)}
       return json({ error: 'Anthropic API: ' + errText.slice(0, 300) }, 502);
     }
     const aiData = await aiRes.json();
-    const text = aiData?.content?.[0]?.text || 'AI не повернув відповідь.';
+
+    // 🔴 26.08 (вечір) — ЧИТАЄМО ВСІ ТЕКСТОВІ БЛОКИ, А НЕ `content[0]`.
+    // 🗣️ Перший живий натиск Вови дав «AI не повернув відповідь» при відповіді 200: ключ
+    // на місці, Anthropic відповів успішно, а текст на екран не доїхав.
+    // 🛑 Причина в тому, що `content` — це МАСИВ БЛОКІВ РІЗНОГО ТИПУ, і текстовий у ньому
+    // не обовʼязково перший. Брати `content[0].text` означало мовчки віддати `undefined`
+    // щоразу, коли модель поставила попереду блок іншого типу.
+    // ⚠️ Наслідок був найгіршого ґатунку: ані помилки, ані тексту — глухе «не повернув»,
+    // з якого неможливо зрозуміти, ЩО саме сталось. Той самий клас, що з журналом збоїв:
+    // «нічого не сталось» і «сталось, але ми не побачили» виглядали однаково.
+    const блоки = Array.isArray(aiData?.content) ? aiData.content : [];
+    const text = блоки
+      .filter((b: any) => b && b.type === 'text' && typeof b.text === 'string')
+      .map((b: any) => b.text).join('\n').trim();
     const usage = aiData?.usage || null;
+
+    if (!text) {
+      // 🔑 Порожньо — це діагноз, а не тупик. Називаємо, ЩО прийшло: чим модель
+      // завершила і які блоки віддала. Без цих двох полів наступний крок був би здогадом.
+      return json({
+        error: 'Anthropic відповів, але тексту в відповіді немає. '
+             + `Причина зупинки: ${aiData?.stop_reason || 'невідома'}. `
+             + `Блоки: ${блоки.map((b: any) => b?.type).join(', ') || 'жодного'}. `
+             + (aiData?.stop_reason === 'max_tokens'
+                 ? 'Схоже, стеля відповіді вичерпалась ще до тексту — треба підняти max_tokens.'
+                 : 'Скинь цей рядок у чат, розберемо.'),
+        usage,
+      }, 502);
+    }
 
     return json({ ok: true, summary_text: text, usage, raw: дані });
   } catch (e: any) {
