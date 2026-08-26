@@ -1454,63 +1454,131 @@ async function fetchFailures(period) {
 function failureText(data) {
   const gs = (data && data.groups) || [];
   if (!gs.length) return 'Збоїв не зафіксовано.';
-  const шапка = `ЗБОЇ CSTL LIFE · період: ${data.period} · усього випадків: ${data.total}\n`
-    + `знято: ${new Date(data.generated_at).toLocaleString('uk-UA')}\n`;
-  return шапка + gs.map((g, i) => {
+  // 🔴 26.08 (ніч) — СТАН ПОЛОМКИ В ТЕКСТІ, А НЕ ЛИШЕ НА ЕКРАНІ.
+  // 🗣️ Вова копіює цей текст і шле його мені. Якщо полагоджене лежить упереміш із живим,
+  // наступна сесія знову візьметься лагодити те, що вже полагоджене, — і витратить на це
+  // цілий блок роботи. Тому активні йдуть ПЕРШИМИ, закриті окремим списком у кінці.
+  const живі = gs.filter(g => !g.resolved);
+  const закриті = gs.filter(g => g.resolved);
+  const шапка = `ЗБОЇ CSTL LIFE · період: ${data.period}\n`
+    + `активних випадків: ${data.active_total ?? data.total}`
+    + (закриті.length ? ` · полагоджених поломок: ${закриті.length}` : '')
+    + (data.regressed_n ? ` · ПОВЕРНУЛИСЬ ПІСЛЯ ВИПРАВЛЕННЯ: ${data.regressed_n}` : '')
+    + `\nзнято: ${new Date(data.generated_at).toLocaleString('uk-UA')}\n`;
+  const блок = (g, i) => {
     const хто = (g.accounts || []).length
       ? (g.accounts || []).map(a => `${a.name} (${a.count})`).join(', ')
       : '—';
     return [
       ``,
-      `${i + 1}. [${g.kind}] ${g.code}`,
+      `${i + 1}. [${g.kind}] ${g.code}${g.regressed ? '  ⚠️ ПОВЕРНУВСЯ ПІСЛЯ ВИПРАВЛЕННЯ' : ''}`,
       `   ${g.message}`,
       g.where ? `   місце: ${g.where}` : null,
       `   випадків: ${g.count} · акаунтів: ${g.accounts_n} · гостьових пристроїв: ${g.guests}`,
       `   у кого: ${хто}`,
       `   уперше: ${new Date(g.first_at).toLocaleString('uk-UA')}`,
       `   востаннє: ${new Date(g.last_at).toLocaleString('uk-UA')}`,
+      g.resolved_at ? `   позначено полагодженим: ${new Date(g.resolved_at).toLocaleString('uk-UA')}` : null,
     ].filter(Boolean).join('\n');
-  }).join('\n');
+  };
+  return шапка
+    + (живі.length ? живі.map(блок).join('\n') : '\nАктивних збоїв немає.')
+    + (закриті.length
+        ? `\n\n── ПОЛАГОДЖЕНІ (не траплялись після позначки) ──\n`
+          + закриті.map(блок).join('\n')
+        : '');
 }
 
+// 🔴 26.08 (ніч) — ЗБОЇ РОЗДІЛЕНО НА ЖИВІ Й ЗАКРИТІ.
+// 🗣️ Вова: «оці збої висять, ми їх виправили».
+// 🛑 Журнал показував усе за 30 днів і не відрізняв «болить прямо зараз» від «було три
+// дні тому й давно полагоджено». Наслідок гірший за незручність: коли в списку постійно
+// висять мертві рядки, око перестає їх читати — і живий, пʼятий, теж не побачить.
+// **Журнал, який завжди червоний, дорівнює журналу, якого немає.**
+// 🔑 Позначка «полагоджено» — НЕ видалення й НЕ обіцянка: вона записує момент, а далі
+// вирішує факт. Трапилось після позначки — рядок САМ повертається нагору з поміткою
+// «повернувся». Кнопка, яка ховає збій назавжди, була б способом обманути себе.
 function failureRows(data) {
   const gs = (data && data.groups) || [];
+  const пояснення = '<p style="font-size:12px;color:#999;margin-top:6px">Сюди потрапляє двоє: '
+    + 'дії, які <b>база відхилила</b> (зламане правило доступу, тригер, дубль), і помилки '
+    + '<b>самого застосунку</b> в телефоні («натиснув — і нічого»).<br>'
+    + '🛑 <b>Порожньо ≠ все справно.</b> Обриви звʼязку сюди не пишуться навмисно (їх тисячі '
+    + 'і вони не наша поломка), а «мовчазний провал» — коли нічого не впало, просто нічого '
+    + 'не сталося — не бачить жоден журнал. Такі вади ловлять лише стенди й живі люди.</p>';
   if (!gs.length) {
     return '<div class="card" style="border-left:3px solid #2e7d32"><b>Збоїв немає.</b>'
-      + '<p style="font-size:12px;color:#999;margin-top:6px">Сюди потрапляє двоє: дії, які '
-      + '<b>база відхилила</b> (зламане правило доступу, тригер, дубль), і помилки '
-      + '<b>самого застосунку</b> в телефоні («натиснув — і нічого»).<br>'
-      + '🛑 <b>Порожньо ≠ все справно.</b> Обриви звʼязку сюди не пишуться навмисно (їх тисячі '
-      + 'і вони не наша поломка), а «мовчазний провал» — коли нічого не впало, просто нічого '
-      + 'не сталося — не бачить жоден журнал. Такі вади ловлять лише стенди й живі люди.</p></div>';
+      + пояснення + '</div>';
   }
+
+  const живі = gs.filter(g => !g.resolved);
+  const закриті = gs.filter(g => g.resolved);
+  const повернулись = живі.filter(g => g.regressed).length;
+
   const кнопка = '<button class="login-btn" id="copy-failures" style="width:auto;padding:8px 18px;margin-bottom:10px">'
     + '📋 Скопіювати всі збої</button>'
     + '<span id="copy-failures-ok" style="font-size:12px;color:#2e7d32;margin-left:10px"></span>'
     + '<p style="font-size:11.5px;color:#999;margin:0 0 8px">Натисни рядок — покаже кожен '
-    + 'випадок окремо: хто, пошта, що сталося і коли.</p>';
-  return кнопка + '<div class="spend-log">' + gs.map(g => {
-    // Імена — головне доповнення до поломки: саме вони дають зрозуміти, чи це «в усіх»,
-    // чи «в однієї людини на одному пристрої».
+    + 'випадок окремо: хто, пошта, що сталося і коли. Кнопка <b>✓</b> прибирає полагоджене '
+    + 'з цього списку — але якщо збій трапиться знову, він <b>повернеться сам</b>.</p>';
+
+  // Один рядок збою. `закритий` міняє колір і кнопку, решта однакова — щоб два види
+  // рядків не розійшлись у вигляді при наступній правці.
+  const рядок = (g, закритий) => {
     const хто = (g.accounts || []).length
       ? (g.accounts || []).map(a => `${escapeHtml(a.name)} <b>${a.count}</b>`).join(' · ')
       : (g.guests ? `<i>без акаунта — ${g.guests} ${g.guests === 1 ? 'пристрій' : 'пристроїв'}</i>` : '—');
+    const колір = g.regressed ? '#b8860b' : (закритий ? '#bbb' : 'var(--red)');
+    const дані = `data-kind="${escapeHtml(g.kind)}" data-code="${escapeHtml(g.code)}"`
+               + ` data-msg="${escapeHtml(g.message)}" data-where="${escapeHtml(g.where || '')}"`;
     return `
-    <div class="spend-row fail-tap" data-code="${escapeHtml(g.code)}" data-msg="${escapeHtml(g.message)}"
-         style="align-items:flex-start;border-left:3px solid var(--red);padding-left:10px;cursor:pointer">
+    <div class="spend-row fail-tap" ${дані}
+         style="align-items:flex-start;border-left:3px solid ${колір};padding-left:10px;
+                cursor:pointer;${закритий ? 'opacity:.62' : ''}">
       <span class="spend-row-meta" style="flex:1">
+        ${g.regressed ? '<span style="display:block;font-size:11.5px;color:#b8860b;font-weight:700">⚠️ повернувся після виправлення</span>' : ''}
         <span style="font-size:11px;color:#999">${escapeHtml(g.kind)}</span>
-        <b style="color:var(--red);display:block">${escapeHtml(g.code)}</b>
+        <b style="color:${колір};display:block">${escapeHtml(g.code)}</b>
         <span style="display:block;font-size:12px;color:#555;margin-top:2px">${escapeHtml(g.message)}</span>
         ${g.where ? `<span style="display:block;font-size:11px;color:#777;margin-top:2px">${escapeHtml(g.where)}</span>` : ''}
         <span style="display:block;font-size:11.5px;color:#444;margin-top:4px">👤 ${хто}</span>
         <span style="display:block;font-size:11px;color:#999;margin-top:2px">
           востаннє ${new Date(g.last_at).toLocaleString('uk-UA')}
+          ${g.resolved_at ? ` · позначено ${new Date(g.resolved_at).toLocaleString('uk-UA')}` : ''}
         </span>
       </span>
-      <span class="spend-row-cost">${g.count} ›</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="spend-row-cost">${g.count} ›</span>
+        <button class="fail-fix" ${дані} data-on="${закритий ? '0' : '1'}"
+                style="border:0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;
+                       font-family:inherit;background:${закритий ? '#eee' : '#e8f3e8'};
+                       color:${закритий ? '#666' : '#2e7d32'};white-space:nowrap">
+          ${закритий ? 'повернути' : '✓ полагоджено'}</button>
+      </span>
     </div>`;
-  }).join('') + '</div>';
+  };
+
+  // 🔑 «Активних немає» — окремий, ЗЕЛЕНИЙ екран, а не порожнє місце. Різниця між
+  // «нічого не зламано» і «ми просто нічого не показали» має бути видима.
+  const шапкаЖивих = живі.length
+    ? (повернулись
+        ? `<p style="font-size:12px;color:#b8860b;margin:0 0 8px"><b>⚠️ ${повернулись}
+           ${повернулись === 1 ? 'поломка повернулась' : 'поломки повернулись'} після
+           виправлення</b> — фікс не спрацював.</p>`
+        : '')
+    : '<div class="card" style="border-left:3px solid #2e7d32;margin-bottom:10px">'
+      + '<b>Активних збоїв немає.</b>' + пояснення + '</div>';
+
+  const блокЗакритих = закриті.length ? `
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-size:12.5px;color:#777;padding:6px 0">
+        Полагоджені (${закриті.length}) — не траплялись після позначки</summary>
+      <div class="spend-log" style="margin-top:6px">${закриті.map(g => рядок(g, true)).join('')}</div>
+    </details>` : '';
+
+  return кнопка + шапкаЖивих
+    + (живі.length ? '<div class="spend-log">' + живі.map(g => рядок(g, false)).join('') + '</div>' : '')
+    + блокЗакритих;
 }
 // 🔴 26.08 — ГОДИНИ МАЛЮЮТЬСЯ ОКРЕМО ВІД РЕШТИ, І ЦЕ НЕ ПРИДИРКА.
 // 🗣️ Вова: «чого воно не від 0:00 і до 23:00… чого воно знову розкидано?»
@@ -2122,6 +2190,26 @@ async function renderAnalytics(el) {
           </span>
         </div>`).join('') + '</div>'
         : '<div class="empty">Випадки цієї поломки не знайшлись — можливо, вони старші за 30 днів.</div>');
+  }));
+
+  // ✓ «Полагоджено» / «повернути». 🔑 Позначка не ховає збій назавжди: якщо він
+  // трапиться після неї, база сама поверне рядок нагору з поміткою «повернувся».
+  // ⚠️ `stopPropagation` обовʼязковий — рядок під кнопкою відкриває вікно деталей.
+  el.querySelectorAll('.fail-fix').forEach(кн => кн.addEventListener('click', async (ev) => {
+    ev.stopPropagation();
+    const d = кн.dataset;
+    кн.disabled = true;
+    const було = кн.textContent;
+    кн.textContent = '…';
+    const fn = d.on === '1' ? 'admin_failure_resolve' : 'admin_failure_unresolve';
+    const args = { p_kind: d.kind, p_code: d.code, p_message: d.msg, p_where: d.where || '' };
+    const { data, error } = await supa.rpc(fn, args);
+    if (error || (data && data.error)) {
+      кн.disabled = false; кн.textContent = '✗ не вийшло';
+      setTimeout(() => { кн.textContent = було; }, 2000);
+      return;
+    }
+    renderAnalytics(el);   // перемальовуємо: рядок їде у свій розділ
   }));
 
   // 🔑 Попередній висновок відкриваємо в ТОМУ САМОМУ вікні, що людей і збої. Третє
