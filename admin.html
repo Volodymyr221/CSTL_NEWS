@@ -1347,31 +1347,48 @@ async function renderSpend(el) {
 // SECURITY DEFINER admin_profile_stats() (не бачимо чужі сирі профілі,
 // тільки кошики). Кнопка «Оновити статистику» (AI-висновок) — Потік 2,
 // чекає ANTHROPIC_API_KEY у Supabase secrets, поки задизейблена.
+// 🔴 26.08 — ЯРЛИКИ БУЛИ ЗАСТАРІЛІ, І ЦЕ ЧИТАЛОСЬ ЯК «СТАРА ВКЛАДКА В АНАЛІТИЦІ».
+// `shotam` тут звався «Шо в селі», хоча вкладка давно «Стрічка»; `discussions`
+// (1610 подій, жива вкладка «Питання») у мапі не було ЗОВСІМ — тому на екрані стояв
+// сирий `discussions`, і виглядало це як залишок видаленого розділу. Вкладка жива,
+// неправильною була назва.
 const TAB_LABELS_UK = {
-  community: 'Громада', shotam: 'Шо в селі', board: 'Дошка', chat: 'Обговорення',
-  buses: 'Автобуси', power: 'Світло', account: 'Кабінет',
+  community: 'Громада', shotam: 'Стрічка', discussions: 'Питання', board: 'Дошка',
+  buses: 'Автобуси', power: 'Світло', account: 'Кабінет', chat: 'Обговорення (легасі)',
 };
-async function fetchAnalyticsEvents(sinceDays) {
-  let q = supa.from('analytics_events').select('visitor_id, event_type, tab, meta, created_at');
+// 🔴 26.08 — ЧИСЛА РАХУЄ БАЗА, А НЕ БРАУЗЕР. ГОЛОВНА ПРАВКА ЦЬОГО ЕКРАНА.
+//
+// Було: тягнули СИРІ події (`select(...).limit(20000)`) і рахували їх тут. Але PostgREST
+// має серверну стелю `db-max-rows` (1000), і клієнт її підняти НЕ МОЖЕ — тож на екран
+// ішли числа, пораховані по першій тисячі рядків, ще й без `ORDER BY`.
+// 📐 Заміряно 26.08 на живій базі: екран казав «унікальних усього 35» при **736**, «за
+// 7 днів 203» при **336**, «подій усього 1000» при **11 130**.
+// 🔑 Найкращий доказ був видний без бази: суми на екрані давали РІВНО 1000
+// (544+164+134+82+76 і 803+197) — це й був відбиток стелі, а не властивість даних.
+// 🛑 Звідси й парадокс «усього менше, ніж за 7 днів», на який показав Вова: для «весь
+// час» приходила тисяча НАЙСТАРІШИХ подій, де різних відвідувачів мало.
+// ✅ Тепер рахує `admin_analytics_overview()`. Правило «весь час ≥ 7 днів» більше не
+// треба нікуди вписувати — воно стало арифметично неможливим порушити.
+async function fetchAnalyticsOverview(period) {
+  const { data, error } = await supa.rpc('admin_analytics_overview', { p_period: period });
+  if (error || !data || data.error) return null;
+  return data;
+}
+
+// Збої лишаються сирими рядками — і це не суперечить правці вище: їх одиниці (13 за весь
+// час), запит вузький по `event_type`, тож стеля 1000 їх не ріже. А `meta` зі stack-ом
+// потрібна цілою — агрегувати її в базі означало б втратити саме те, заради чого журнал
+// збоїв існує.
+async function fetchFailureRows(sinceDays) {
+  let q = supa.from('analytics_events')
+    .select('visitor_id, event_type, tab, meta, created_at')
+    .in('event_type', ['db_refusal', 'js_error'])
+    .order('created_at', { ascending: false });
   if (sinceDays !== 'all') {
     q = q.gte('created_at', new Date(Date.now() - sinceDays * 86400000).toISOString());
   }
-  const { data, error } = await q.limit(20000);
+  const { data, error } = await q.limit(500);
   return error ? [] : (data || []);
-}
-function summarizeEvents(rows) {
-  const uniqueVisitors = new Set(rows.map(r => r.visitor_id)).size;
-  const byTab = {}, byDevice = {}, byHour = {};
-  let pwaInstalls = 0;
-  for (const r of rows) {
-    if (r.event_type === 'tab_view' && r.tab) byTab[r.tab] = (byTab[r.tab] || 0) + 1;
-    if (r.event_type === 'pwa_install') pwaInstalls++;
-    const device = r.meta && r.meta.device;
-    if (device) byDevice[device] = (byDevice[device] || 0) + 1;
-    const hour = new Date(r.created_at).getHours();
-    byHour[hour] = (byHour[hour] || 0) + 1;
-  }
-  return { total: rows.length, uniqueVisitors, byTab, byDevice, byHour, pwaInstalls };
 }
 
 // 🔴 22.08 — ЗБОЇ, ЯКІ БАЗА ВІДХИЛИЛА. Заведено після того, як RLS дві доби
@@ -1445,30 +1462,64 @@ function barRows(counts, labelMap) {
 }
 async function renderAnalytics(el) {
   el.innerHTML = '<div class="empty">Завантаження…</div>';
-  const [today, week, all, profStatsRes] = await Promise.all([
-    fetchAnalyticsEvents(1),
-    fetchAnalyticsEvents(7),
-    fetchAnalyticsEvents('all'),
+  const [sToday, sWeek, sAll, zbojiRows, profStatsRes] = await Promise.all([
+    fetchAnalyticsOverview('today'),
+    fetchAnalyticsOverview('7d'),
+    fetchAnalyticsOverview('all'),
+    fetchFailureRows(7),
     supa.rpc('admin_profile_stats'),
   ]);
-  const sToday = summarizeEvents(today);
-  const sWeek  = summarizeEvents(week);
-  const sAll   = summarizeEvents(all);
   const prof = (!profStatsRes.error && profStatsRes.data && !profStatsRes.data.error) ? profStatsRes.data : null;
+  if (!sWeek) {
+    el.innerHTML = '<div class="card" style="border-left:3px solid var(--red)"><b>Аналітика недоступна.</b>'
+      + '<p style="font-size:12px;color:#999;margin-top:6px">База не віддала агрегати — найімовірніше, '
+      + 'не накатана міграція <code>admin_analytics_overview</code> або цей акаунт не в таблиці '
+      + '<code>admins</code>.<br>🛑 Це <b>не</b> «нуль відвідувачів»: збій і порожнеча — різні екрани, '
+      + 'і плутати їх не можна.</p></div>';
+    return;
+  }
+
+  // 🔑 Підпис до кожного бару несе І перегляди, І відвідувачів — саме плутанина «544 це
+  // люди чи заходи?» була головною вадою старого екрана. Ключ мапи вже містить обидва
+  // числа, тож `barRows` лишається однією функцією (без другої копії поруч).
+  const tabBars = {};
+  for (const [tab, v] of Object.entries(sWeek.by_tab || {})) {
+    tabBars[`${TAB_LABELS_UK[tab] || tab} · ${v.visitors} відвід.`] = v.views;
+  }
+  const devBars = {};
+  const DEV_UK = { mobile: 'Телефон', desktop: 'Комп’ютер', tablet: 'Планшет' };
+  for (const [d, v] of Object.entries(sWeek.by_device || {})) {
+    devBars[`${DEV_UK[d] || d} · ${v.visitors} відвід.`] = v.events;
+  }
 
   // 🔑 Збої стоять ПЕРШИМИ, вище за будь-яку статистику: це єдиний блок, який
   // каже «щось зламано просто зараз». Внизу сторінки його б не побачили — а саме
   // непоміченість і була головною вадою, від якої цей блок заведено.
-  const zbojiTyzhden = summarizeFailures(week);
+  const zbojiTyzhden = summarizeFailures(zbojiRows);
   el.innerHTML = `
     <div class="section-title">🚨 Збої за 7 днів (база відхилила дію)</div>
     ${failureRows(zbojiTyzhden)}
 
     <div class="section-title" style="margin-top:22px">📊 Статистика застосунку</div>
     <div class="spend-cards">
-      <article class="card"><div class="spend-lbl">Унікальних сьогодні</div><div class="spend-big">${sToday.uniqueVisitors}</div><div class="spend-sub">${sToday.total} подій</div></article>
-      <article class="card"><div class="spend-lbl">Унікальних за 7 днів</div><div class="spend-big">${sWeek.uniqueVisitors}</div><div class="spend-sub">${sWeek.total} подій</div></article>
-      <article class="card"><div class="spend-lbl">Унікальних усього</div><div class="spend-big">${sAll.uniqueVisitors}</div><div class="spend-sub">${sAll.total} подій · ${sAll.pwaInstalls} встановлень PWA</div></article>
+      <article class="card"><div class="spend-lbl">Відвідувачів сьогодні</div><div class="spend-big">${sToday ? sToday.visitors : '—'}</div><div class="spend-sub">${sToday ? sToday.events : '—'} подій</div></article>
+      <article class="card"><div class="spend-lbl">Відвідувачів за 7 днів</div><div class="spend-big">${sWeek.visitors}</div><div class="spend-sub">${sWeek.events} подій</div></article>
+      <article class="card"><div class="spend-lbl">Відвідувачів усього</div><div class="spend-big">${sAll ? sAll.visitors : '—'}</div><div class="spend-sub">${sAll ? sAll.events : '—'} подій · ${sAll ? sAll.pwa_installs : '—'} встановлень PWA</div></article>
+    </div>
+
+    <div class="card" style="border-left:3px solid #b8860b;margin-top:10px">
+      <b>Що саме тут порахували.</b>
+      <p style="font-size:12px;color:#999;margin-top:6px;line-height:1.5">
+      🛑 <b>Це ВІДВІДУВАЧІ, а не користувачі.</b> У подіях немає ні <code>user_id</code>, ні
+      <code>session_id</code> — лише <code>visitor_id</code>, куди пишеться
+      <code>uid</code> залогіненого <b>або</b> випадковий анонімний id. Тобто одна людина
+      до входу і після входу рахується <b>двічі</b>, а з другого пристрою — втретє.<br>
+      📐 За весь час: <b>${sAll ? sAll.visitors : '—'}</b> відвідувачів, з них мають профіль
+      <b>${sAll ? sAll.with_profile : '—'}</b>, а <b>${sAll ? sAll.one_hit : '—'}</b> мали
+      рівно <b>одну</b> подію (відкрив і зник — так поводяться прев'ю посилань і сканери,
+      не люди). Поверталися іншого дня: <b>${sAll ? sAll.returning : '—'}</b>.<br>
+      ➡️ Тому велике число вгорі — це <b>не аудиторія</b>. Найближче до аудиторії —
+      «поверталися іншого дня».</p>
     </div>
 
     <div class="section-title" style="margin-top:22px">🤖 AI-висновок</div>
@@ -1479,13 +1530,13 @@ async function renderAnalytics(el) {
     </div>
 
     <div class="section-title">По вкладках (7 днів)</div>
-    ${barRows(sWeek.byTab, TAB_LABELS_UK)}
+    ${barRows(tabBars)}
 
     <div class="section-title" style="margin-top:22px">Пристрій (7 днів)</div>
-    ${barRows(sWeek.byDevice, { mobile: 'Телефон', desktop: 'Комп’ютер' })}
+    ${barRows(devBars)}
 
-    <div class="section-title" style="margin-top:22px">Час доби (7 днів, година)</div>
-    ${barRows(sWeek.byHour)}
+    <div class="section-title" style="margin-top:22px">Час доби (7 днів, година за Києвом)</div>
+    ${barRows(sWeek.by_hour)}
 
     ${prof ? `
       <div class="section-title" style="margin-top:22px">Населені пункти (профілі, ${prof.total_profiles})</div>
