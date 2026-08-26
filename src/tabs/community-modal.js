@@ -7,9 +7,9 @@
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
 import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea, formatPrice } from '../core/utils.js';
-import { submitPost, updateBoardPost, isSupabaseReady } from '../core/supabase.js';
+import { submitPost, updateBoardPost, isSupabaseReady, logEvent, getAnonId } from '../core/supabase.js';
 import { uploadBlobWithRetry } from '../core/upload.js';   // повтор upload при збої (blob уже стиснуто для прев'ю)
-import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
+import { isLoggedIn, currentUserName, getProfile, currentUserId } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
 import { createDraftStore } from '../core/draft.js';   // страховка від утрати набраного
@@ -678,6 +678,14 @@ export function openBoardModal(opts = {}) {
     let published = false;   // довірений автор (5+ схвалених) → пост опубліковано одразу
     if (isSupabaseReady()) {
       const result = await submitPost(payload);
+      // Подія лише при підтвердженому успіху — див. пояснення у `tabs/feed.js`.
+      // 🔑 `board_post_submit`, а не `create`: оголошення йде на МОДЕРАЦІЮ, тобто подія
+      // означає «людина подала», а не «на Дошці зʼявилось». Плутати ці два стани не
+      // можна — між ними стоїть рішення адміна.
+      if (result && !result.error) {
+        logEvent(currentUserId() || getAnonId(), 'board_post_submit',
+                 { tab: 'board', meta: { type: payload && payload.type ? payload.type : null } });
+      }
       if (!result.ok) {
         if (submitBtn) {
           submitBtn.disabled = false;

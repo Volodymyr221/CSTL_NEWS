@@ -21,6 +21,7 @@ import {
   saveUserPushDevice, notifyNewPagePost,
   fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
   nameSlot, nameSlotStatic,
+  logEvent, getAnonId,   // аналітика подій дій (26.08)
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -3392,6 +3393,12 @@ function openComposer(pageId, editPost = null) {
         ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
         : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
       if (res.ok) {
+        // 🔴 26.08 — ПОДІЯ ДІЇ, А НЕ ПЕРЕГЛЯДУ. Логуємо в точці ПІДТВЕРДЖЕНОГО успіху,
+        // а не при натисканні «Надіслати»: інакше в статистику потрапляли б спроби,
+        // які база відхилила (антиспам, RLS), і «створено дописів» стало б більшим за
+        // кількість дописів у самій Стрічці — тобто числа розійшлись би між собою.
+        logEvent(currentUserId() || getAnonId(), edit ? 'feed_post_edit' : 'feed_post_create',
+                 { tab: 'shotam', meta: { page_id: pageId, with_photo: finalUrls.length > 0 } });
         if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
         else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
         // 🔑 Чернетку прибираємо САМЕ ТУТ — після підтвердженого успіху. Пост уже

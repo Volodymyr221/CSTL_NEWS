@@ -32,6 +32,48 @@ let currentTab = 'community';
 // протягом сесії) — прикріплюємо до кожної події tab_view.
 const _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
 
+// 🔴 26.08 — КОНТЕКСТ ЗАХОДУ. Аудит показав, що аналітика не знала про людину нічого,
+// крім типу пристрою: розділів «PWA vs Browser», «Браузери» і «ОС» не було з чого
+// будувати взагалі. Рахуємо ОДИН раз на запуск і шлемо ОДНІЄЮ подією `session_start`.
+//
+// 🔑 PWA визначаємо через `display-mode`, а НЕ через User-Agent (пряма вимога Вови):
+// UA у PWA і в браузері однаковий, тож за ним це нерозрізненне в принципі.
+// `navigator.standalone` — окремо, бо старі iOS не підтримують `display-mode: standalone`.
+// ⚠️ Значень чотири (`browser` / `standalone` / `fullscreen` / `minimal-ui`), і ми
+// зберігаємо СИРЕ значення, а не зводимо до «PWA/так-ні»: звести можна будь-коли в
+// запиті, а розрізнити назад із «так/ні» — вже ніколи.
+function _appMode() {
+  try {
+    for (const m of ['standalone', 'fullscreen', 'minimal-ui']) {
+      if (window.matchMedia && window.matchMedia(`(display-mode: ${m})`).matches) return m;
+    }
+    if (navigator.standalone) return 'standalone';   // iOS до підтримки display-mode
+  } catch (_) {}
+  return 'browser';
+}
+
+// Браузер і ОС із User-Agent. 🛑 Свідомо грубо і без бібліотеки: нам треба відрізнити
+// Safari від Chrome, а не знати точну версію складання. Порядок перевірок має значення —
+// Edge і Chrome обидва містять «Chrome» у рядку, тож вужче йде першим.
+function _uaBits() {
+  const ua = navigator.userAgent || '';
+  const browser =
+    /Edg\//.test(ua)                        ? 'Edge'
+    : /OPR\/|Opera/.test(ua)                ? 'Opera'
+    : /Firefox\//.test(ua)                  ? 'Firefox'
+    : /Chrome\//.test(ua)                   ? 'Chrome'
+    : /Safari\//.test(ua)                   ? 'Safari'
+    : 'інший';
+  const os =
+    /iPhone|iPad|iPod/.test(ua)            ? 'iOS'
+    : /Android/.test(ua)                   ? 'Android'
+    : /Mac OS X/.test(ua)                  ? 'macOS'
+    : /Windows/.test(ua)                   ? 'Windows'
+    : /Linux/.test(ua)                     ? 'Linux'
+    : 'інша';
+  return { browser, os };
+}
+
 // 🔴 08.08 — ЗАПАМʼЯТАНА ПРОКРУТКА КОЖНОЇ ВКЛАДКИ (див. пояснення у `switchTab`).
 // Ключ — імʼя вкладки, значення — `scrollTop` на момент виходу з неї.
 // ⚠️ У памʼяті, а не в `sessionStorage`: це стан ОДНОГО сеансу роботи, і переживати
@@ -554,6 +596,17 @@ async function init() {
       handleTabHash();
     });
   }
+
+  // 🔴 26.08 — ПОДІЯ ЗАХОДУ. Одна на запуск застосунку, з усім контекстом одразу.
+  // 🔑 Стоїть ПЕРЕД `tab_view`, щоб у сесії перша подія була саме «зайшов», а не
+  // «подивився вкладку» — інакше будь-яка воронка починалася б із середини.
+  // ⚠️ Контекст шлемо ЛИШЕ тут, а не в кожній події: він не змінюється протягом
+  // заходу, а дублювати його 11 тисяч разів означало б платити за це щоразу.
+  const _ua = _uaBits();
+  logEvent(currentUserId() || getAnonId(), 'session_start', {
+    tab: currentTab,
+    meta: { device: _analyticsDevice, app_mode: _appMode(), browser: _ua.browser, os: _ua.os },
+  });
 
   // Аналітика: switchTab() рано виходить коли tab===currentTab, тому початковий
   // перегляд дефолтної вкладки (Громада, currentTab вже 'community') інакше
