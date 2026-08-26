@@ -1,21 +1,34 @@
 // supabase/functions/ai-analytics-summary/index.ts
-// Edge Function: AI-висновок статистики (Потік 2, byyou) — по кнопці «Оновити
-// статистику» в admin.html, НЕ за розкладом (cron) — економія: платиш лише
-// коли реально дивишся, не щодня/щогодини.
+// Edge Function: AI-висновок статистики — по кнопці в admin.html, НЕ за розкладом.
+// Платиш лише тоді, коли справді дивишся.
 //
-// Викликається клієнтом (admin.html, залогінений адмін):
-//   supa.functions.invoke('ai-analytics-summary')
-// verify_jwt = true → JWT викликача в запиті; перевіряємо що це справді
-// адмін (та сама таблиця admins що is_admin() у БД) — інакше будь-хто
-// залогінений міг би смітити платні виклики Claude API.
+// 🔴 ПЕРЕПИСАНО 26.08.2026 — ЦЕ БУЛО ВИПРАВЛЕННЯ БРЕХНІ, А НЕ РЕФАКТОРИНГ.
+// Функція рахувала агрегати САМА, тим самим способом, який того ж дня визнали хибним:
+//     .from('analytics_events').select(...).limit(20000)
+// PostgREST має серверну стелю `db-max-rows` (1000), і клієнт її підняти НЕ МОЖЕ.
+// Тобто AI отримував числа, пораховані по першій тисячі рядків із одинадцяти тисяч,
+// ще й без `ORDER BY` — і будував на них «висновки». Найгірше тут не помилка, а те,
+// що вона була НЕВИДИМА: текст виглядав розумно й упевнено.
+// 🗣️ Пряма вимога Вови до всього екрана: «в цій аналітиці має збиратися тільки правдива
+// інформація». AI, що коментує неправдиві числа, порушує її сильніше, ніж кривий підпис.
 //
-// Агрегати рахуємо ТУТ (service_role), НЕ довіряємо клієнтському payload —
-// щоб ніхто не роздув запит фейковими цифрами/довгим текстом.
+// ✅ ТЕПЕР ДЖЕРЕЛО ТЕ САМЕ, ЩО В ЕКРАНА: `admin_analytics_overview()`,
+// `admin_failures()`, `admin_profile_stats()` — рахує база на ПОВНОМУ наборі.
+// 🔑 Наслідок, заради якого це й зроблено: AI не може розійтися з екраном. Якби він
+// рахував по-своєму, Вова бачив би «6 людей» угорі й «336 відвідувачів» у висновку — і не
+// мав би способу зрозуміти, хто з двох бреше.
+//
+// 🔑 ЧОМУ RPC КЛИЧЕМО ВІД ІМЕНІ ВИКЛИКАЧА, А НЕ ПІД `service_role`. Усередині цих
+// функцій стоїть гейт `is_admin()`, який читає пошту з JWT. Під `service_role` жодного
+// JWT немає, і функція чесно віддала б `{"error":"not admin"}`.
+// ⚠️ Це НЕ послаблення: JWT ми вже перевірили вище (`auth.getUser`) і окремо звірили
+// пошту з таблицею `admins`. База робить ту саму перевірку вдруге, і це добре.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY         = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANTHROPIC_API_KEY         = Deno.env.get('ANTHROPIC_API_KEY')!;
 const MODEL = 'claude-sonnet-5';
@@ -39,51 +52,100 @@ serve(async (req) => {
     const caller = userData?.user;
     if (userErr || !caller) return json({ error: 'bad token' }, 401);
 
-    // Гейт: лише адмін (не будь-який залогінений) — платні виклики Claude.
+    // Гейт: лише адмін (не будь-який залогінений) — виклики Claude платні.
     const { data: adminRow } = await admin
       .from('admins').select('email').eq('email', caller.email).maybeSingle();
     if (!adminRow) return json({ error: 'not admin' }, 403);
 
     if (!ANTHROPIC_API_KEY) {
-      return json({ error: 'ANTHROPIC_API_KEY не налаштовано в Supabase secrets' }, 500);
+      // 🔑 Текст помилки — інструкція, а не діагноз. Ключ живе у GitHub Secrets (ним
+      // працює агент новин), а Edge Function читає ІНШЕ сховище — секрети Supabase.
+      // Це два різні місця, і саме тому кнопка мовчала: ключ «є», але не тут.
+      return json({
+        error: 'Ключ Anthropic не покладено в секрети Supabase. Це ОКРЕМЕ сховище від '
+             + 'GitHub Secrets, де лежить ключ агента новин — той самий ключ треба '
+             + 'додати ще й сюди: Supabase → Project Settings → Edge Functions → '
+             + 'Secrets → додати ANTHROPIC_API_KEY. Після цього кнопка запрацює без '
+             + 'жодних правок коду.',
+      }, 500);
     }
 
-    // Агрегати за 7 днів — той самий розріз що admin.html renderAnalytics(),
-    // рахуємо незалежно (service_role), не довіряємо клієнту.
-    const since = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { data: events } = await admin
-      .from('analytics_events')
-      .select('visitor_id, event_type, tab, meta, created_at')
-      .gte('created_at', since)
-      .limit(20000);
-    const rows = events || [];
-    const uniqueVisitors = new Set(rows.map((r: any) => r.visitor_id)).size;
-    const byTab: Record<string, number> = {};
-    const byDevice: Record<string, number> = {};
-    let pwaInstalls = 0;
-    for (const r of rows) {
-      if (r.event_type === 'tab_view' && r.tab) byTab[r.tab] = (byTab[r.tab] || 0) + 1;
-      if (r.event_type === 'pwa_install') pwaInstalls++;
-      const device = r.meta?.device;
-      if (device) byDevice[device] = (byDevice[device] || 0) + 1;
-    }
-    const { data: profStats } = await admin.rpc('admin_profile_stats');
+    // Той самий рахунок, що бачить екран. Від імені викликача — див. шапку.
+    // ⚠️ ЗАПОБІЖНИК НА КЛЮЧ. `SUPABASE_ANON_KEY` середовище Edge Functions підставляє
+    // саме, але покладатись на це наосліп не можна: якби його раптом не було,
+    // `createClient` отримав би `undefined`, і кнопка мовчки віддавала б «not admin» —
+    // тобто виглядала б як проблема доступу, а не як відсутній ключ. Тому запасний
+    // варіант: `service_role` як apikey, а роль однаково визначить JWT у заголовку
+    // `Authorization` — гейт `is_admin()` спрацює так само.
+    const apikey = SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY;
+    const asAdmin = createClient(SUPABASE_URL, apikey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const summary = {
-      period: '7 днів',
-      total_events: rows.length,
-      unique_visitors: uniqueVisitors,
-      pwa_installs: pwaInstalls,
-      by_tab: byTab,
-      by_device: byDevice,
-      profiles: profStats || {},
+    const [today, week, month, fails, prof] = await Promise.all([
+      asAdmin.rpc('admin_analytics_overview', { p_period: 'today' }),
+      asAdmin.rpc('admin_analytics_overview', { p_period: '7d' }),
+      asAdmin.rpc('admin_analytics_overview', { p_period: '30d' }),
+      asAdmin.rpc('admin_failures', { p_period: '30d' }),
+      asAdmin.rpc('admin_profile_stats'),
+    ]);
+
+    const зріз = (r: any) => (r && !r.error && r.data && !r.data.error) ? r.data : null;
+    const w = зріз(week);
+    if (!w) {
+      return json({ error: 'База не віддала агрегати. Найімовірніше не накатана міграція '
+                         + 'analytics_drilldown або цей акаунт не в таблиці admins.' }, 500);
+    }
+
+    // ⚠️ Шлемо AI не «все підряд», а рівно те, на що він може чесно відповісти. Кожне
+    // поле тут підписане так само, як на екрані, — інакше висновок говорив би однією
+    // мовою, а екран іншою.
+    const дані = {
+      сьогодні: коротко(зріз(today)),
+      за_7_днів: коротко(w),
+      за_30_днів: коротко(зріз(month)),
+      розділення_заходів_за_7_днів: {
+        додаток_чи_браузер: w.by_app_mode || {},
+        браузери: w.by_browser || {},
+        пристрої: w.by_device || {},
+        коментар: 'Ці три розбивки існують лише з ' + (w.modes_since || 'нещодавна')
+                + '. За старіші дні їх у базі немає взагалі, і домалювати їх неможливо: '
+                + 'у PWA і в браузері User-Agent однаковий.',
+      },
+      вкладки_за_7_днів: w.by_tab || {},
+      села_тих_хто_заходив_за_7_днів: w.by_settlement || {},
+      година_доби_за_7_днів_за_Києвом: w.by_hour || {},
+      анкети_профілів: зріз(prof) || {},
+      збої_за_30_днів: (зріз(fails)?.groups || []).slice(0, 10).map((g: any) => ({
+        вид: g.kind, код: g.code, текст: g.message,
+        випадків: g.count, різних_пристроїв: g.guests, акаунтів: g.accounts_n,
+      })),
     };
 
-    const prompt = `Ти аналітик локального медіа-застосунку CSTL NEWS (містечко Олика, Волинська область, Україна). Ось агреговані дані статистики за останні 7 днів (JSON):
+    const prompt = `Ти аналітик застосунку CSTL LIFE — це медіа-платформа й центр життя громади містечка Олика (Волинська область, Україна). Власника звати Вова.
 
-${JSON.stringify(summary, null, 2)}
+🔴 НАЙВАЖЛИВІШЕ, ЩО ТИ МУСИШ ЗНАТИ ПЕРЕД ТИМ, ЯК ЩОСЬ РАДИТИ:
+ЗАПУСКУ ЩЕ НЕ БУЛО. Застосунок закритий заслінкою розробки, сторонні люди в нього не заходять. Усі акаунти в базі — це сам Вова, його другий акаунт і кілька знайомих. Тому:
+• НЕ роби висновків про «поведінку аудиторії», «популярність розділів» чи «залученість» — аудиторії ще не існує;
+• НЕ радь оптимізувати щось під цифри: вибірка з кількох людей не описує нікого;
+• «Нуль подій у розділі» означає «нуль користувачів», а НЕ «розділ не потрібен».
 
-Дай короткий аналіз (3-4 речення) і 2-3 конкретні практичні рекомендації власнику — простою українською мовою, без води, по суті. Формат відповіді: спершу аналіз одним абзацом, потім список рекомендацій з "•". Якщо даних дуже мало (напр. total_events < 10) — прямо скажи що зарано робити висновки, і порадь почекати накопичення даних.`;
+🔑 ЯК ЧИТАТИ ЦИФРИ (три РІЗНІ сутності, не плутай їх):
+• «люди» — унікальні акаунти. Єдина чесна одиниця, за якою можна щось вирішувати.
+• «гості» — анонімні ПРИСТРОЇ, а не люди. Один чоловік із двох браузерів дає два; прев'ю посилання в месенджері й пошукові сканери дають по одному на кожне відкриття. Більшість із них мають рівно одну подію — відкрив і зник.
+• «заходи» — скільки разів застосунок відкривали. Одна людина за день може дати десять заходів. Рахуються лише з 26.08.2026, тому в зрізі за 30 днів їх буде менше, ніж було насправді.
+
+Ось дані (JSON):
+
+${JSON.stringify(дані, null, 2)}
+
+Дай відповідь українською, простою мовою, без англійських термінів без пояснення. Структура рівно така:
+
+1. ЩО ЦЕ ЗА ЦИФРИ — 3-4 речення: переклади головні числа людською мовою, назви, скільки тут СПРАВЖНІХ людей і скільки шуму від сканерів.
+2. НА ЩО ВАРТО ЗВЕРНУТИ УВАГУ — 2-4 пункти через «•». Це можуть бути збої, дивні розбіжності між числами, або дірки в самому зборі даних. Технічну проблему називай прямо.
+3. ЩО РОБИТИ — 2-3 пункти через «•», КОНКРЕТНІ дії, здійсненні до запуску. Якщо чесна відповідь «поки нічого, дані ще ні про що не говорять» — так і напиши, це нормальна відповідь.
+
+🛑 Не вигадуй чисел, яких немає у даних. Якщо чогось не видно — скажи, що цього не видно, і чому.`;
 
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -94,7 +156,7 @@ ${JSON.stringify(summary, null, 2)}
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 700,
+        max_tokens: 1400,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -104,12 +166,24 @@ ${JSON.stringify(summary, null, 2)}
     }
     const aiData = await aiRes.json();
     const text = aiData?.content?.[0]?.text || 'AI не повернув відповідь.';
+    const usage = aiData?.usage || null;
 
-    return json({ ok: true, summary_text: text, raw: summary });
+    return json({ ok: true, summary_text: text, usage, raw: дані });
   } catch (e: any) {
     return json({ error: e.message }, 500);
   }
 });
+
+// Один і той самий набір полів на кожен період — щоб AI бачив динаміку, а не три
+// різні за формою знімки.
+function коротко(o: any) {
+  if (!o) return null;
+  return {
+    людей: o.users, гостьових_пристроїв: o.guests, заходів: o.sessions,
+    подій: o.events, поверталися_іншого_дня: o.returning,
+    з_однією_подією: o.one_hit, встановлень_PWA: o.pwa_installs, збоїв: o.failures,
+  };
+}
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
