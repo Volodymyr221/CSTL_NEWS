@@ -24,6 +24,7 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange, authReady } from '../core/auth.js';
+import { startAutoCarousel } from '../core/auto-carousel.js';
 // ⚠️ `geoGroupOf` прибрано з цього списку 11.08 разом із його єдиним ужитком:
 // стара стрічка плиток дописувала мітку розділу на КОЖНУ картку, бо в одному
 // вікні лежали новини з різних розділів. Тепер сторінка = один розділ, і його
@@ -1841,7 +1842,10 @@ function digestOf(arts) {
 //   • дотик пальцем → пауза (людина читає — не смикаємо під рукою).
 const NEWS_LINES_PER_PAGE = 2;   // тихих рядків під великою карткою
 const NEWS_CYCLE_MS = 7000;      // довше за капсули: тут треба встигнути прочитати
-let _newsTimer = null, _newsIO = null;
+// Зупинювач авто-гортання новин — те, що віддає `startAutoCarousel()`.
+// 🗑 Замінив пару `_newsTimer` / `_newsIO`: тримати таймер і спостерігач окремо
+// означало мати ДВА стани однієї каруселі й шанс погасити лише половину.
+let _stopNewsCarousel = null;
 
 // 🔴 ВЕЛИКА КАРТКА = НАЙСВІЖІША З ФОТО, а не просто найсвіжіша (11.08).
 //
@@ -1945,75 +1949,50 @@ function visibleNewsGroup() {
   return best.dataset.newsGroup || CM_NEWS_GROUP;
 }
 
-// Авто-гортання сторінок. Прокрутку робить сам браузер (`scrollTo` зі `smooth`),
-// а не наша анімація: так жест пальцем і авто-рух не борються за той самий
-// елемент — це вже коштувало окремого блока роботи 02.08 у модалці оголошення.
+// Авто-гортання сторінок новин.
+//
+// 🔴 26.08 — ПЕРЕВЕДЕНО НА СПІЛЬНИЙ `core/auto-carousel.js`. ЦЕ БУВ НАЗВАНИЙ БОРГ.
+// 25.08 модуль писався для віджета Стрічки, і тоді ж у його шапці чесно записали: «на
+// цей модуль карусель новин ЩЕ НЕ переведена, у проєкті співіснують дві реалізації».
+// Причина була поважна — у цьому файлі паралельно працювала друга сесія, і правка під
+// нею забрала б у неї роботу конфліктом злиття (HOT_RULES №13). Та гілка доїхала в
+// `main`, перешкода зникла — борг закрито.
+//
+// 🔑 ЧОМУ ЦЕ ВЗАГАЛІ ВАРТО БУЛО РОБИТИ. Дві копії одного механізму в цьому проєкті вже
+// розходились двічі: два списки антиспаму і дві копії розмітки шкали автобуса. Розходяться
+// вони не одразу, а в мить, коли одну з них полагодять, — і саме тому вада виглядає як
+// «полагодили, а в другому місці досі зламано».
+//
+// 📐 ЗВІРЕНО РЯДОК У РЯДОК ПЕРЕД ЗАМІНОЮ — обидві речі, яких немає в підручниках, у
+// модулі є: прокрутку робить БРАУЗЕР (`scrollTo` зі `smooth`), а поточний слайд
+// рахується за РЕАЛЬНИМ положенням прокрутки, а не власним лічильником. Плюс пауза поза
+// екраном, пауза на дотик і повага до «зменшити рух» — теж на місці.
+// ⚠️ Одна відмінність, і вона на краще: старий код при одній сторінці виходив ДО
+// малювання підпису, а модуль однаково кличе `onSlide(0)`. Екран від цього не міняється
+// (категорію вже намалював `paintNewsCat` вище, а перша крапка має `on` із розмітки),
+// зате споживач гарантовано дістає початковий стан.
+// 🛑 `pages` тут ніколи не порожній: `paintCmNews` виходить раніше на `!pages.length`.
 function startNewsCarousel(el, pages) {
-  clearInterval(_newsTimer); _newsTimer = null;
-  if (_newsIO) { _newsIO.disconnect(); _newsIO = null; }
+  // 🔑 Зупинка попереднього ОБОВʼЯЗКОВА і живе тут, а не в модулі: віджет
+  // перемальовується (повтор після збою, гасіння бейджа), і без цього рядка на тому
+  // самому треку працювало б два таймери. Раніше цю роль грали `_newsTimer`/`_newsIO`.
+  if (_stopNewsCarousel) { _stopNewsCarousel(); _stopNewsCarousel = null; }
 
   const track = el.querySelector('#hm-ntrack');
   const dots = [...el.querySelectorAll('.hm-ndots i')];
-  if (!track || pages.length < 2) return;
+  if (!track) return;
 
-  // 🔑 Одиниця гортання — СТОРІНКА (категорія), а не картка. До 11.08 у стрічці
-  // лежали дев'ять окремих плиток, і крапки доводилось перераховувати з індексу
-  // картки в індекс категорії. Тепер одне до одного: сторінка = крапка = розділ.
-  const cards = [...track.querySelectorAll('.hm-npage')];
-
-  // Яка сторінка зараз у вікні — рахуємо за реальним положенням прокрутки, а не
-  // за власним лічильником: людина могла гортнути пальцем, і лічильник
-  // розійшовся б із тим, що на екрані.
-  const visibleIndex = () => {
-    const left = track.scrollLeft;
-    let best = 0, bestD = Infinity;
-    cards.forEach((c, i) => {
-      const d = Math.abs(c.offsetLeft - track.offsetLeft - left);
-      if (d < bestD) { bestD = d; best = i; }
-    });
-    return best;
-  };
-  const sync = () => {
-    const i = visibleIndex();
-    paintNewsCat(pages[i] ? pages[i].group : pages[0].group);
-    dots.forEach((d, j) => d.classList.toggle('on', j === i));
-  };
-  let raf = 0;
-  track.addEventListener('scroll', () => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => { raf = 0; sync(); });
-  }, { passive: true });
-  sync();
-
-  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (still) return;
-
-  const step = () => {
-    if (document.hidden || track.dataset.paused === '1') return;
-    const next = visibleIndex() + 1;
-    const target = next >= cards.length ? cards[0] : cards[next];
-    track.scrollTo({ left: target.offsetLeft - track.offsetLeft, behavior: 'smooth' });
-  };
-  _newsTimer = setInterval(step, NEWS_CYCLE_MS);
-
-  let resume = null;
-  const pause = () => {
-    track.dataset.paused = '1';
-    clearTimeout(resume);
-    resume = setTimeout(() => { track.dataset.paused = '0'; resume = null; }, NEWS_CYCLE_MS * 2);
-  };
-  track.addEventListener('touchstart', pause, { passive: true });
-  track.addEventListener('pointerdown', pause);
-
-  if ('IntersectionObserver' in window) {
-    _newsIO = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (!en.isIntersecting) track.dataset.paused = '1';
-        else if (!resume) track.dataset.paused = '0';
-      });
-    }, { threshold: 0 });
-    _newsIO.observe(track);
-  }
+  // 🔑 Одиниця гортання — СТОРІНКА (категорія), а не картка. До 11.08 у стрічці лежали
+  // дев'ять окремих плиток, і крапки доводилось перераховувати з індексу картки в індекс
+  // категорії. Тепер одне до одного: сторінка = крапка = розділ.
+  _stopNewsCarousel = startAutoCarousel(track, {
+    slideSel: ':scope > .hm-npage',
+    cycleMs: NEWS_CYCLE_MS,
+    onSlide: i => {
+      paintNewsCat(pages[i] ? pages[i].group : pages[0].group);
+      dots.forEach((d, j) => d.classList.toggle('on', j === i));
+    },
+  });
 }
 
 // «N нових» у заголовку секції — на місці, де до 31.07 стояв фальшивий «LIVE».
