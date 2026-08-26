@@ -899,6 +899,24 @@ export async function focusFeedPost(id, commentId = null) {
   requestAnimationFrame(tryFocus);
 }
 
+// 🆕 25.08 — ВХІД ІЗ ВІДЖЕТА ГРОМАДИ: «Стрічка → сама спільнота», а не просто «Стрічка».
+// 🗣️ Скарга Вови: «натискаю на цю спільноту, і мене просто закидає в стрічку. А має
+// закидати в стрічку і після закидання в стрічку відкривати цю спільноту».
+// 🔑 Чому окрема функція, а не `switchTab` + `openPageScreen` на боці Громади:
+// `openPageScreen` тримає власний стан Стрічки (`pages`, `posts`, `myPageIds`), і кликати
+// його ззовні до того, як дані приїхали, означало б мовчазну відмову — екран просто не
+// відкрився б (`if (!page) return`). Тут же і чекання даних, і чекання заставки.
+export async function openFeedPage(pageId, focusPostId = null) {
+  // Вкладку перемикаємо ОДРАЗУ — той самий порядок, що у `focusFeedPost`: під заставкою
+  // цього не видно, зате коли вона зійде, застосунок уже стоїть на «Стрічці».
+  window.switchTab?.('shotam');
+  if (!loaded) { await loadData(); renderFeed(); }
+  // Показова частина чекає заставку — інакше відкриття й спалах згасли б непобаченими
+  // (урок 15.08, `core/splash.js`).
+  await whenSplashGone();
+  openPageScreen(pageId, false, focusPostId);
+}
+
 // ── Рендер: головна стрічка (Екран 1) ───────────────────────────────────────
 // 🔴 15.08 — ПЕРЕМАЛЬОВУЄМО, ЛИШЕ ЯКЩО РОЗМІТКА СПРАВДІ ІНША (скарга Вови про
 // блимання при поверненні на вкладку). Слухач `cstl-tab-changed` нижче кличе цю
@@ -2561,7 +2579,7 @@ function screenListHtml(tab, pagePosts) {
 // (опублікували пост / зберегли сторінку / видалили пост). Тоді запис в історії вже є,
 // і новий додавати не треба — інакше вони б накопичувались і жест «назад» довелося б
 // робити двічі. Див. core/layers.js.
-async function openPageScreen(pageId, reopen = false) {
+async function openPageScreen(pageId, reopen = false, focusPostId = null) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
   const canEdit = myPageIds.has(pageId);
@@ -2834,6 +2852,33 @@ async function openPageScreen(pageId, reopen = false) {
   document.body.appendChild(screen);
   wireClamps(screen);          // згортання довгих текстів — ЛИШЕ коли екран у документі
   requestAnimationFrame(() => screen.classList.add('open'));
+
+  // 🆕 25.08 — НАВЕСТИ НА КОНКРЕТНИЙ ДОПИС УСЕРЕДИНІ ЕКРАНА СПІЛЬНОТИ.
+  // Замовлення Вови: тап по допису у віджеті Громади має привести не «кудись у Стрічку»,
+  // а саме до цього допису в його спільноті.
+  // ⚠️ Чекаємо появи вузла кадрами, а не таймером: розмітка екрана вже в документі, але
+  // висоти ще міряються (`measure()` у `requestAnimationFrame`), і прокрутка, зроблена
+  // раніше за перемір, поїхала б не туди.
+  if (focusPostId != null) focusInsideScreen(screen, focusPostId);
+}
+
+// Прокрутити відкритий екран спільноти до допису і підсвітити його тим самим спалахом,
+// що й deep-link (`fd-card--flash`) — щоб «звідки я тут» читалось однаково скрізь.
+function focusInsideScreen(screen, postId) {
+  let tries = 0;
+  const step = () => {
+    const el = screen.querySelector(`[data-post="${postId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('fd-card--flash');
+      setTimeout(() => el.classList.remove('fd-card--flash'), 1600);
+      return;
+    }
+    // 🔑 Мовчазна відмова тут доречна: допис міг не долетіти у вибірку екрана, і людина
+    // однаково опинилась у правильній спільноті — тобто головне вже сталось.
+    if (++tries < 12) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 // Свайп-назад власними руками ПРИБРАНО 24.07 (скрін IMG_3559): жест від лівого краю —
