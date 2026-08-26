@@ -27,8 +27,37 @@ if (typeof window !== 'undefined' && window.supabase && SUPABASE_URL && SUPABASE
   });
 }
 
-export function getSupabase() {
+// 🔴 26.08 — ЛІНИВЕ СТВОРЕННЯ, А НЕ «ОДИН РАЗ І НАЗАВЖДИ».
+// 🗣️ Вова зі скріна (Safari, 22:42): «Немає звʼязку з сервером» при спробі входу.
+// 🛑 Клієнт створювався РІВНО ОДИН РАЗ — у мить завантаження цього модуля. Якщо
+// `window.supabase` тоді ще не було (сторонній скрипт не доїхав), `supa` лишався `null`
+// НАЗАВЖДИ: жоден пізніший виклик його вже не створював, і застосунок мовчки жив без
+// бази до перезавантаження сторінки.
+// 🔑 Тепер спроба повторюється при кожному зверненні, поки не вдасться. Це дешево
+// (одна перевірка `window.supabase`) і рятує випадок, коли SDK доїхав із запізненням.
+// ⚠️ Головну причину це не лікує — її вилікувано перенесенням SDK на свій домен
+// (`vendor/`, див. `index.html`). Тут — другий рубіж, на випадок будь-якої іншої
+// затримки: перший рубіж може впасти, і тоді має спрацювати другий.
+function створити() {
+  if (supa) return supa;
+  if (typeof window === 'undefined' || !window.supabase) return null;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true },
+  });
   return supa;
+}
+
+export function getSupabase() {
+  return supa || створити();
+}
+
+// 🔑 Чи існує сам SDK — окреме питання від «чи є звʼязок». Раніше екран не вмів їх
+// розрізнити й на обидва казав «Немає звʼязку з сервером», хоча в одному випадку мережа
+// цілком жива, а бракує файлу бібліотеки. Різні причини мусять давати різні слова —
+// інакше людина шукає проблему не там.
+export function sdkLoaded() {
+  return typeof window !== 'undefined' && !!window.supabase;
 }
 
 // 🔴 16.08 — UID З ЖИВОЇ СЕСІЇ, А НЕ З ПАМʼЯТІ МОДУЛЯ.
