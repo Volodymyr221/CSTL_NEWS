@@ -1572,12 +1572,35 @@ const APP_MODE_UK = {
 };
 const DEV_UK = { mobile: 'Телефон', desktop: 'Комп’ютер', tablet: 'Планшет', '—': 'невідомо' };
 
+// 🔴 26.08 — ПОРІВНЯННЯ ПЕРІОДІВ. Замовлення Вови: «щоб прогрес, регрес відслідковувати».
+// 🔑 Рахує БАЗА, а не браузер і не модель: відсотки й різниці — робота калькулятора.
+async function fetchComparison(period) {
+  const { data, error } = await supa.rpc('admin_analytics_comparison', { p_period: period });
+  if (error || !data || data.error) return null;
+  return data;
+}
+
 async function fetchAnalyticsPeople(scope, key) {
   const { data, error } = await supa.rpc('admin_analytics_people',
     { p_period: anPeriod, p_scope: scope, p_key: key });
   if (error || !data || data.error) return null;
   return data;
 }
+// 🔴 26.08 — ЖУРНАЛ AI-ВИСНОВКІВ.
+// 🗣️ Вова: «заблокував телефон, він зʼявився, і я розблокував, оновив його — і він
+// відразу пропав». Висновок жив ЛИШЕ в пам'яті відкритої сторінки, а кожен виклик
+// коштує грошей: випадковий дотик до екрана спалював гроші й забирав куплений текст.
+// 🔑 Тепер сторінка при відкритті показує ОСТАННІЙ збережений — безкоштовно і одразу.
+// Новий рахунок робиться тільки коли людина сама натисне.
+async function fetchAiReports(limit = 12) {
+  const { data, error } = await supa.from('analytics_ai_reports')
+    .select('id, created_at, summary_text, truncated, usage, author_email')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) return null;
+  return data || [];
+}
+
 async function fetchFailureCases(period) {
   const { data, error } = await supa.rpc('admin_failure_cases', { p_period: period });
   if (error || !data || data.error) return null;
@@ -1782,6 +1805,40 @@ function peopleHtml(d) {
     + 'з 26.08.2026, тож у старіших зрізах там буде 0.</p>';
 }
 
+// ── Зміна проти попереднього періоду ─────────────────────────────────────────
+// 🔑 ГОЛОВНЕ ПРАВИЛО: відсоток показуємо ЛИШЕ там, де він щось означає.
+// «5 людей стало 8» це +60%, і це число математично бездоганне й аналітично порожнє:
+// у базі 11 тестових акаунтів, один зайвий захід зміщує все. Зелена стрілка «+60%» тут
+// була б брехнею у формі правди. Тому на малих числах — тільки «+3», словами.
+// 🛑 `null` у попередньому періоді НЕ малюємо нулем: нуль означає «не було», null —
+// «не знаємо». Заходи існують лише з 26.08, і «зростання з нуля» тут було б вигадкою.
+const PERIOD_PREV_UK = { today: 'учора', '7d': 'минулого тижня', '30d': 'минулого місяця' };
+function зміна(m) {
+  if (!m) return '';
+  const було = PERIOD_PREV_UK[anPeriod] || 'попереднього періоду';
+  const знак = (n) => (n > 0 ? '+' : '') + n;
+  const тьмяно = 'font-size:11.5px;color:#999';
+  switch (m.signal) {
+    case 'збір_почався_пізніше':
+      return `<div style="${тьмяно}">збір почався пізніше — порівняти нема з чим</div>`;
+    case 'немає_даних':
+      return `<div style="${тьмяно}">не траплялось ні зараз, ні раніше</div>`;
+    case 'нове':
+      return `<div style="font-size:12px;color:#b8860b">${знак(m.absolute_change)} — раніше не було</div>`;
+    case 'без_змін':
+      return `<div style="${тьмяно}">без змін проти ${escapeHtml(було)}</div>`;
+    case 'недостатньо':
+      return `<div style="font-size:12px;color:#555">${знак(m.absolute_change)} до ${escapeHtml(було)}</div>`
+           + `<div style="${тьмяно}">було ${m.previous} · замало для висновку</div>`;
+    case 'мало':
+      return `<div style="font-size:12px;color:#555">${знак(m.absolute_change)} до ${escapeHtml(було)}</div>`
+           + `<div style="${тьмяно}">було ${m.previous}</div>`;
+    default:
+      return `<div style="font-size:12px;color:#555">${знак(m.absolute_change)} ·
+              ${знак(m.percent_change)}%</div>`
+           + `<div style="${тьмяно}">було ${m.previous} ${escapeHtml(було)}</div>`;
+  }
+}
 // ── Рядки, по яких можна тапнути ──────────────────────────────────────────────
 // 🔑 Вигляд той самий, що в `barRows`, але кожен рядок несе `data-scope`/`data-key` —
 // тобто адресу питання «покажи людей за цим числом». Другу копію рендера робити не
@@ -1804,11 +1861,13 @@ function tapRows(scope, entries) {
 
 async function renderAnalytics(el) {
   el.innerHTML = '<div class="empty">Завантаження…</div>';
-  const [зріз, збої, випадки, profStatsRes] = await Promise.all([
+  const [зріз, збої, випадки, profStatsRes, звіти, порівняння] = await Promise.all([
     fetchAnalyticsOverview(anPeriod),
     fetchFailures('30d'),
     fetchFailureCases('30d'),
     supa.rpc('admin_profile_stats'),
+    fetchAiReports(),
+    fetchComparison(anPeriod),
   ]);
   const prof = (!profStatsRes.error && profStatsRes.data && !profStatsRes.data.error) ? profStatsRes.data : null;
   if (!зріз) {
@@ -1848,6 +1907,54 @@ async function renderAnalytics(el) {
     .map(([k, v]) => ({ key: k, label: k, value: v.users, sub: `${v.events} подій` }))
     .sort((a, b) => b.value - a.value);
 
+  // Метрики порівняння. Порожній об'єкт, якщо міграції ще немає — тоді картки просто
+  // не показують зміни, а не малюють нулі.
+  const мк = (порівняння && порівняння.metrics) || {};
+  // 🔴 ПОПЕРЕДЖЕННЯ ПРО МАЛУ ВИБІРКУ МАЄ БУТИ ПОМІТНИМ, А НЕ ЗНОСКОЮ.
+  // 🗣️ Вимога Вови до всього екрана — «тільки правдива інформація». Найлегший спосіб
+  // збрехати тут — намалювати професійний дашборд зі стрілками над числами, за якими
+  // стоїть десяток тестових акаунтів. Тому попередження стоїть ПЕРЕД картками.
+  const малаВибірка = (зріз.users < 10) ? `
+    <div class="card" style="border-left:3px solid #b8860b;margin-bottom:10px">
+      <b>⚠️ Вибірка мала — висновки про аудиторію ненадійні.</b>
+      <p style="font-size:12px;color:#999;margin-top:6px">Запуску ще не було: у базі
+      ${зріз.users} ${зріз.users === 1 ? 'акаунт' : 'акаунтів'} за цей період, і це свої
+      люди. Відсотки на таких числах стрибають від одного зайвого заходу, тому нижче вони
+      показані <b>лише там, де чисел досить</b>, — решта підписана числом людей.</p>
+    </div>` : '';
+
+  // ── AI-висновок: показуємо ОСТАННІЙ ЗБЕРЕЖЕНИЙ одразу ──────────────────────
+  // 🔑 Це і є відповідь на «пропав після розблокування телефону»: сторінка більше не
+  // починає з порожнечі. Новий рахунок — тільки по натисканню, бо він платний.
+  const свіжий = (звіти && звіти.length) ? звіти[0] : null;
+  const аіТекст = свіжий ? escapeHtml(свіжий.summary_text) : '';
+  const аіПідпис = свіжий
+    ? `Показано висновок від <b>${new Date(свіжий.created_at).toLocaleString('uk-UA')}</b>`
+      + ' — він <b>збережений</b>, тож не зникне при поверненні на сторінку.<br>'
+      + 'Кнопка рахує <b>заново</b> на свіжих числах — кожен виклик коштує грошей.'
+    : (звіти === null
+        ? '🛑 Журнал висновків недоступний — не накатана міграція '
+          + '<code>analytics_ai_reports</code>. Кнопка працюватиме, але текст не збережеться.'
+        : 'Читає <b>ті самі</b> агрегати, що на цьому екрані (сьогодні · 7 днів · місяць,'
+          + ' розділення заходів, села, збої) і пояснює їх людською мовою.<br>'
+          + '🛑 Він знає, що <b>запуску ще не було</b>, тому не робитиме висновків про'
+          + ' «аудиторію» на кількох акаунтах — це пряме правило в його завданні.<br>'
+          + '⏱ Не автоматично: кожен виклик коштує грошей, тож рахуємо лише коли дивишся.');
+  // 🔑 Історія — не прикраса: два висновки поруч уже показують, що змінилось, і саме з
+  // них далі виросте порівняння періодів. Поки їх менше двох — розділу немає.
+  const аіІсторія = (звіти && звіти.length > 1) ? `
+      <div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px">
+        <div style="font-size:12px;color:#999;margin-bottom:6px">Попередні висновки —
+          натисни, щоб прочитати:</div>
+        ${звіти.slice(1).map(r => `
+          <div class="ai-past" data-id="${r.id}" style="cursor:pointer;padding:7px 0;
+               border-bottom:1px solid #f2f2f2;font-size:13px;display:flex;gap:8px">
+            <span style="flex:1">${new Date(r.created_at).toLocaleString('uk-UA')}
+              ${r.truncated ? '<span style="color:var(--red)"> · обрізаний</span>' : ''}</span>
+            <span style="color:#999">›</span>
+          </div>`).join('')}
+      </div>` : '';
+
   el.innerHTML = `
     <div class="section-title">🚨 Збої за 30 днів</div>
     ${failureRows(збої)}
@@ -1860,17 +1967,33 @@ async function renderAnalytics(el) {
       Перемикач керує <b>всім</b>, що нижче. Доба рахується за Києвом.</p>
 
     <div class="section-title">📊 Головне (${п})</div>
+    ${малаВибірка}
     <div class="spend-cards">
       <article class="card an-tap" data-scope="all" data-key="" style="cursor:pointer">
         <div class="spend-lbl">Людей (акаунтів)</div>
         <div class="spend-big">${зріз.users}</div>
+        ${зміна(мк.users)}
         <div class="spend-sub">натисни — хто саме ›</div></article>
       <article class="card"><div class="spend-lbl">Заходів</div>
         <div class="spend-big">${зріз.sessions}</div>
+        ${зміна(мк.sessions)}
         <div class="spend-sub">запусків застосунку${зріз.sessions_per_user ? ` · ${зріз.sessions_per_user} на людину` : ''}</div></article>
       <article class="card"><div class="spend-lbl">Гостьових пристроїв</div>
         <div class="spend-big">${зріз.guests}</div>
+        ${зміна(мк.guests)}
         <div class="spend-sub">${зріз.events} подій усього</div></article>
+    </div>
+    <div class="spend-cards" style="margin-top:10px">
+      <article class="card"><div class="spend-lbl">Подій</div>
+        <div class="spend-big">${зріз.events}</div>
+        ${зміна(мк.events)}</article>
+      <article class="card"><div class="spend-lbl">Дій у застосунку</div>
+        <div class="spend-big">${мк.actions ? мк.actions.current : 0}</div>
+        ${зміна(мк.actions)}
+        <div class="spend-sub">дописи · відповіді · оголошення</div></article>
+      <article class="card"><div class="spend-lbl">Збоїв</div>
+        <div class="spend-big">${мк.failures ? мк.failures.current : зріз.failures}</div>
+        ${зміна(мк.failures)}</article>
     </div>
 
     <div class="card" style="border-left:3px solid #b8860b;margin-top:10px">
@@ -1942,14 +2065,10 @@ async function renderAnalytics(el) {
 
     <div class="section-title" style="margin-top:24px">🤖 AI-висновок</div>
     <div class="card" style="margin-bottom:16px">
-      <button class="login-btn" id="ai-refresh-btn" style="width:auto;padding:8px 18px">Пояснити цифри</button>
-      <p style="font-size:12px;color:#999;margin-top:8px" id="ai-refresh-hint">
-      Читає <b>ті самі</b> агрегати, що на цьому екрані (сьогодні · 7 днів · місяць,
-      розділення заходів, села, збої) і пояснює їх людською мовою.<br>
-      🛑 Він знає, що <b>запуску ще не було</b>, тому не робитиме висновків про
-      «аудиторію» на кількох акаунтах — це пряме правило в його завданні.<br>
-      ⏱ Не автоматично: кожен виклик коштує грошей, тож рахуємо лише коли дивишся.</p>
-      <div id="ai-refresh-result" style="margin-top:10px;white-space:pre-wrap;font-size:13.5px;line-height:1.55"></div>
+      <button class="login-btn" id="ai-refresh-btn" style="width:auto;padding:8px 18px">Проаналізувати зміни</button>
+      <p style="font-size:12px;color:#999;margin-top:8px" id="ai-refresh-hint">${аіПідпис}</p>
+      <div id="ai-refresh-result" style="margin-top:10px;white-space:pre-wrap;font-size:13.5px;line-height:1.55">${аіТекст}</div>
+      ${аіІсторія}
     </div>
   `;
 
@@ -2005,6 +2124,17 @@ async function renderAnalytics(el) {
         : '<div class="empty">Випадки цієї поломки не знайшлись — можливо, вони старші за 30 днів.</div>');
   }));
 
+  // 🔑 Попередній висновок відкриваємо в ТОМУ САМОМУ вікні, що людей і збої. Третє
+  // вікно поруч розійшлося б із першими двома — у цьому проєкті таке вже було.
+  el.querySelectorAll('.ai-past').forEach(рядок => рядок.addEventListener('click', () => {
+    const r = (звіти || []).find(x => String(x.id) === рядок.dataset.id);
+    if (!r) return;
+    openDetail(`AI-висновок від ${new Date(r.created_at).toLocaleString('uk-UA')}`,
+      `<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.55">${escapeHtml(r.summary_text)}</div>`
+      + `<p style="font-size:11px;color:#999;margin-top:12px">Зроблено на числах того дня —
+         саме тому висновок лишається правдивим, навіть коли екран уже показує інші.</p>`);
+  }));
+
   // 📋 Копіювання всіх збоїв одним натиском (замовлення Вови 26.08).
   // ⚠️ Запасний шлях обовʼязковий: `navigator.clipboard` існує лише в захищеному
   // контексті (https), а адмінку відкривають і локально по http — там він відсутній.
@@ -2055,7 +2185,12 @@ async function renderAnalytics(el) {
       if (error) throw error;
       if (data && data.ok) {
         resultEl.textContent = data.summary_text;
-        hintEl.textContent = 'Оновлено щойно.';
+        // ⚠️ «Збережено» пишемо ЛИШЕ коли сервер це підтвердив. Інакше людина повернеться
+        // на сторінку по текст, якого там немає, — і другий раз заплатить за те саме.
+        hintEl.innerHTML = data.saved
+          ? 'Пораховано щойно і <b>збережено</b> — не зникне при поверненні на сторінку.'
+          : '⚠️ Пораховано щойно, але <b>зберегти не вдалось</b>: при поверненні на '
+            + 'сторінку цей текст зникне. Скопіюй його, якщо потрібен.';
       } else {
         resultEl.textContent = '❌ ' + ((data && data.error) || 'Невідома помилка');
       }
