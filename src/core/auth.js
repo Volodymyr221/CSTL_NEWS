@@ -9,7 +9,7 @@
 // Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
-import { getSupabase, netErrorText, netCall, releasePushDevice } from './supabase.js';
+import { getSupabase, netErrorText, netCall, releasePushDevice, setAnalyticsUid } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
@@ -128,6 +128,7 @@ export async function initAuth() {
   try {
     const { data } = await supa.auth.getSession();
     _user = data && data.session ? data.session.user : null;
+    setAnalyticsUid(_user ? _user.id : null);   // діагностика має знати, у кого зламалось
     emitAuthChange();
     warmProfile();
   } catch (e) { console.warn('[auth] getSession:', e && e.message); }
@@ -138,6 +139,7 @@ export async function initAuth() {
   settleAuth();
   supa.auth.onAuthStateChange((_event, session) => {
     _user = session ? session.user : null;
+    setAnalyticsUid(_user ? _user.id : null);
     emitAuthChange();
     warmProfile();
   });
@@ -214,6 +216,7 @@ export async function signOut() {
   await detachThisDevice();
   await supa.auth.signOut();
   _user = null;
+  setAnalyticsUid(null);
   _profileName = null;
   _profileAvatar = null;
   emitAuthChange();

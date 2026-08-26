@@ -1379,16 +1379,15 @@ async function fetchAnalyticsOverview(period) {
 // час), запит вузький по `event_type`, тож стеля 1000 їх не ріже. А `meta` зі stack-ом
 // потрібна цілою — агрегувати її в базі означало б втратити саме те, заради чого журнал
 // збоїв існує.
-async function fetchFailureRows(sinceDays) {
-  let q = supa.from('analytics_events')
-    .select('visitor_id, event_type, tab, meta, created_at')
-    .in('event_type', ['db_refusal', 'js_error'])
-    .order('created_at', { ascending: false });
-  if (sinceDays !== 'all') {
-    q = q.gte('created_at', new Date(Date.now() - sinceDays * 86400000).toISOString());
-  }
-  const { data, error } = await q.limit(500);
-  return error ? [] : (data || []);
+// 🔴 26.08 — ЗБОЇ ТЕЖ ІЗ БАЗИ, І ТЕПЕР ІЗ ІМЕНАМИ.
+// 🗣️ Замовлення Вови: «позначай імʼя акаунта, на якому це сталося… якщо в двох акаунтів,
+// то ще імʼя акаунта… і кількість їх».
+// 🔑 Групування робить `admin_failures()`: ключ це вид + код + текст + місце, а імена —
+// доповнення до поломки, а не заголовок. Питання лишається «що зламано і в скількох».
+async function fetchFailures(period) {
+  const { data, error } = await supa.rpc('admin_failures', { p_period: period });
+  if (error || !data || data.error) return null;
+  return data;
 }
 
 // 🔴 22.08 — ЗБОЇ, ЯКІ БАЗА ВІДХИЛИЛА. Заведено після того, як RLS дві доби
@@ -1403,27 +1402,39 @@ async function fetchFailureRows(sinceDays) {
 //   `js_error`   — впав сам застосунок у браузері («натиснув — і нічого»).
 // Другий вид до бази взагалі не доходить, тож без нього журнал бачив би лише
 // половину поломок.
-function summarizeFailures(rows) {
-  const groups = new Map();
-  for (const r of rows) {
-    if (r.event_type !== 'db_refusal' && r.event_type !== 'js_error') continue;
-    const vyd  = r.event_type === 'js_error' ? 'застосунок' : 'база';
-    const code = (r.meta && (r.meta.code || r.meta.kind)) || '—';
-    const msg  = (r.meta && r.meta.msg) || '';
-    const de   = (r.meta && r.meta.at) || '';
-    const key  = vyd + code + msg + de;
-    const g = groups.get(key)
-      || { vyd, code, msg, de, n: 0, prystroji: new Set(), ostannij: r.created_at };
-    g.n++;
-    g.prystroji.add(r.visitor_id);
-    if (r.created_at > g.ostannij) g.ostannij = r.created_at;
-    groups.set(key, g);
-  }
-  return [...groups.values()].sort((a, b) => b.n - a.n);
+// 🗑 `summarizeFailures()` ПРИБРАНА 26.08: групування переїхало в базу
+// (`admin_failures`), і клієнтська копія стала мертвою. Лишати її означало б тримати
+// друге, застаріле правило групування поруч із чинним — рівно те, від чого проєкт уже
+// страждав (дві копії антиспаму розійшлись).
+
+// 🔑 ОДНЕ ДЖЕРЕЛО ТЕКСТУ на екран і на буфер обміну: якби текст для копіювання
+// збирався окремо, він рано чи пізно розійшовся б із тим, що людина бачить, — і Вова
+// надсилав би на виправлення не те, на що дивиться.
+function failureText(data) {
+  const gs = (data && data.groups) || [];
+  if (!gs.length) return 'Збоїв не зафіксовано.';
+  const шапка = `ЗБОЇ CSTL LIFE · період: ${data.period} · усього випадків: ${data.total}\n`
+    + `знято: ${new Date(data.generated_at).toLocaleString('uk-UA')}\n`;
+  return шапка + gs.map((g, i) => {
+    const хто = (g.accounts || []).length
+      ? (g.accounts || []).map(a => `${a.name} (${a.count})`).join(', ')
+      : '—';
+    return [
+      ``,
+      `${i + 1}. [${g.kind}] ${g.code}`,
+      `   ${g.message}`,
+      g.where ? `   місце: ${g.where}` : null,
+      `   випадків: ${g.count} · акаунтів: ${g.accounts_n} · гостьових пристроїв: ${g.guests}`,
+      `   у кого: ${хто}`,
+      `   уперше: ${new Date(g.first_at).toLocaleString('uk-UA')}`,
+      `   востаннє: ${new Date(g.last_at).toLocaleString('uk-UA')}`,
+    ].filter(Boolean).join('\n');
+  }).join('\n');
 }
 
-function failureRows(list) {
-  if (!list.length) {
+function failureRows(data) {
+  const gs = (data && data.groups) || [];
+  if (!gs.length) {
     return '<div class="card" style="border-left:3px solid #2e7d32"><b>Збоїв немає.</b>'
       + '<p style="font-size:12px;color:#999;margin-top:6px">Сюди потрапляє двоє: дії, які '
       + '<b>база відхилила</b> (зламане правило доступу, тригер, дубль), і помилки '
@@ -1432,20 +1443,30 @@ function failureRows(list) {
       + 'і вони не наша поломка), а «мовчазний провал» — коли нічого не впало, просто нічого '
       + 'не сталося — не бачить жоден журнал. Такі вади ловлять лише стенди й живі люди.</p></div>';
   }
-  return '<div class="spend-log">' + list.map(g => `
+  const кнопка = '<button class="login-btn" id="copy-failures" style="width:auto;padding:8px 18px;margin-bottom:10px">'
+    + '📋 Скопіювати всі збої</button>'
+    + '<span id="copy-failures-ok" style="font-size:12px;color:#2e7d32;margin-left:10px"></span>';
+  return кнопка + '<div class="spend-log">' + gs.map(g => {
+    // Імена — головне доповнення до поломки: саме вони дають зрозуміти, чи це «в усіх»,
+    // чи «в однієї людини на одному пристрої».
+    const хто = (g.accounts || []).length
+      ? (g.accounts || []).map(a => `${escapeHtml(a.name)} <b>${a.count}</b>`).join(' · ')
+      : (g.guests ? `<i>без акаунта — ${g.guests} ${g.guests === 1 ? 'пристрій' : 'пристроїв'}</i>` : '—');
+    return `
     <div class="spend-row" style="align-items:flex-start;border-left:3px solid var(--red);padding-left:10px">
       <span class="spend-row-meta" style="flex:1">
-        <span style="font-size:11px;color:#999">${escapeHtml(g.vyd)}</span>
+        <span style="font-size:11px;color:#999">${escapeHtml(g.kind)}</span>
         <b style="color:var(--red);display:block">${escapeHtml(g.code)}</b>
-        <span style="display:block;font-size:12px;color:#555;margin-top:2px">${escapeHtml(g.msg)}</span>
-        ${g.de ? `<span style="display:block;font-size:11px;color:#777;margin-top:2px">${escapeHtml(g.de)}</span>` : ''}
+        <span style="display:block;font-size:12px;color:#555;margin-top:2px">${escapeHtml(g.message)}</span>
+        ${g.where ? `<span style="display:block;font-size:11px;color:#777;margin-top:2px">${escapeHtml(g.where)}</span>` : ''}
+        <span style="display:block;font-size:11.5px;color:#444;margin-top:4px">👤 ${хто}</span>
         <span style="display:block;font-size:11px;color:#999;margin-top:2px">
-          ${g.prystroji.size} ${g.prystroji.size === 1 ? 'пристрій' : 'пристроїв'} ·
-          востаннє ${new Date(g.ostannij).toLocaleString('uk-UA')}
+          востаннє ${new Date(g.last_at).toLocaleString('uk-UA')}
         </span>
       </span>
-      <span class="spend-row-cost">${g.n}</span>
-    </div>`).join('') + '</div>';
+      <span class="spend-row-cost">${g.count}</span>
+    </div>`;
+  }).join('') + '</div>';
 }
 function barRows(counts, labelMap) {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
@@ -1466,7 +1487,7 @@ async function renderAnalytics(el) {
     fetchAnalyticsOverview('today'),
     fetchAnalyticsOverview('7d'),
     fetchAnalyticsOverview('all'),
-    fetchFailureRows(7),
+    fetchFailures('30d'),
     supa.rpc('admin_profile_stats'),
   ]);
   const prof = (!profStatsRes.error && profStatsRes.data && !profStatsRes.data.error) ? profStatsRes.data : null;
@@ -1495,9 +1516,11 @@ async function renderAnalytics(el) {
   // 🔑 Збої стоять ПЕРШИМИ, вище за будь-яку статистику: це єдиний блок, який
   // каже «щось зламано просто зараз». Внизу сторінки його б не побачили — а саме
   // непоміченість і була головною вадою, від якої цей блок заведено.
-  const zbojiTyzhden = summarizeFailures(zbojiRows);
+  // 🔑 Період збоїв — 30 днів, а не 7: поломка, що сталась тричі за місяць, лишається
+  // поломкою, і втратити її через вузьке вікно було б гірше, ніж побачити зайвий рядок.
+  const zbojiTyzhden = zbojiRows;
   el.innerHTML = `
-    <div class="section-title">🚨 Збої за 7 днів (база відхилила дію)</div>
+    <div class="section-title">🚨 Збої за 30 днів (база відхилила дію або впав застосунок)</div>
     ${failureRows(zbojiTyzhden)}
 
     <div class="section-title" style="margin-top:22px">📊 Статистика застосунку</div>
@@ -1548,6 +1571,44 @@ async function renderAnalytics(el) {
       ${barRows(prof.by_age_bracket)}
     ` : `<p style="font-size:12px;color:#999;margin-top:12px">Розподіл по селах/віку недоступний — потрібна SQL-міграція scripts/supabase_analytics.sql (RPC admin_profile_stats).</p>`}
   `;
+
+  // 📋 Копіювання всіх збоїв одним натиском (замовлення Вови 26.08: «щоб я міг
+  // скопіювати однією кнопкою… скинув тобі, і ми виправили»).
+  // ⚠️ Запасний шлях обовʼязковий: `navigator.clipboard` існує лише в захищеному
+  // контексті (https), а адмінку відкривають і локально по http — там він відсутній, і
+  // кнопка мовчки не робила б нічого. Той самий клас, що з `crypto.subtle` у заслінці.
+  const copyBtn = document.getElementById('copy-failures');
+  if (copyBtn) copyBtn.addEventListener('click', async () => {
+    const текст = failureText(zbojiRows);
+    const ok = document.getElementById('copy-failures-ok');
+    let вдалось = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(текст);
+        вдалось = true;
+      }
+    } catch (_) { /* нижче запасний шлях */ }
+    if (!вдалось) {
+      // Старий, але працює скрізь: тимчасове поле + execCommand.
+      const ta = document.createElement('textarea');
+      ta.value = текст;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { вдалось = document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+    }
+    if (ok) {
+      ok.textContent = вдалось ? '✓ скопійовано' : '✗ не вдалось — виділіть текст нижче';
+      if (!вдалось) {
+        // Чесний запасний шлях: показуємо текст, щоб його можна було виділити руками.
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'white-space:pre-wrap;font-size:11px;background:#f5f5f5;padding:10px;border-radius:8px;margin-top:8px;user-select:all';
+        pre.textContent = текст;
+        copyBtn.parentElement.insertBefore(pre, copyBtn.nextSibling);
+      }
+      setTimeout(() => { if (вдалось && ok) ok.textContent = ''; }, 2500);
+    }
+  });
 
   // AI-висновок по кнопці (Потік 2) — supabase/functions/ai-analytics-summary.
   // Гейт адміна + рахунок агрегатів — на сервері (Edge Function), не тут.
