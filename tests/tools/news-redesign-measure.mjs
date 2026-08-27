@@ -15,10 +15,16 @@ const executablePath = chromiumPath();
 const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}) });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
-// Мережа назовні не потрібна: статті лежать у репозиторії. Чужі картинки НЕ ріжемо —
-// без них картка без фото і картка з фото зрівнялись би, а різниця тут і міряється.
+// Мережа назовні не потрібна: статті лежать у репозиторії.
 await page.route('**://*.supabase.co/**', r => r.abort());
 await page.route('**://api.open-meteo.com/**', r => r.abort());
+// 🔴 ЧУЖІ ФОТО ПІДМІНЮЄМО СВОЇМ, А НЕ РІЖЕМО. Хости джерел із цього середовища
+// недосяжні, і без підміни КОЖНА картка малювалась би запасним виглядом — тобто
+// вигляд «з фотографією», заради якого редизайн і робиться, ніколи не потрапляв
+// би в замір. Підміна дає обидва випадки чесно: фото є там, де воно є в даних.
+const фото = (await import('node:fs')).readFileSync('images/kino-castle.jpg');
+await page.route(/(img\.konkurent|uimg\.pravda|static\.rayon|rada\.info|upload\.wikimedia)/,
+  r => r.fulfill({ contentType: 'image/jpeg', body: фото }));
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(3000);
 await page.evaluate(() => window.switchTab && window.switchTab('community'));
@@ -48,8 +54,20 @@ const out = await page.evaluate(() => {
     'є фото': !!c.querySelector('img.nc-img'),
     'заголовок px': Math.round((c.querySelector('.nc-title') || {}).getBoundingClientRect?.().height || 0),
   }));
+  // 🔴 ЧИ ВЛАЗИТЬ ТЕКСТ У ВУАЛЬ. Вова: «чому все не влазить? Треба все бачити».
+  // Заголовок і анонс лежать ПОВЕРХ фотографії й читаються лише завдяки вуалі.
+  // Якщо текстовий блок переріс вуаль — верхній рядок опиняється на голому фото,
+  // і на світлому знімку його не видно взагалі. Міряємо наслідок, не висоту в CSS.
+  const вуаль = [...n.querySelectorAll('.nc--hero')].map(c => {
+    const b = c.querySelector('.nc-body'), v = c.querySelector('.nc-veil');
+    if (!b || !v) return null;
+    const hb = b.getBoundingClientRect().height, hv = v.getBoundingClientRect().height;
+    return { текст: Math.round(hb), вуаль: Math.round(hv), влазить: hb <= hv,
+             'чисте фото': Math.round(c.getBoundingClientRect().height - hb) };
+  }).filter(Boolean);
   const сторінка = n.querySelector('.hm-npage');
   return {
+    вуаль,
     блоки,
     картки,
     'висота сторінки каруселі': сторінка ? Math.round(сторінка.getBoundingClientRect().height) : 0,
@@ -67,6 +85,10 @@ out.блоки.sort((a, b) => b.висота - a.висота).forEach(b => {
 console.log('\n── Картки всередині віджета новин ──');
 out.картки.forEach(c => console.log(
   `   ${String(c.висота).padStart(4)}px  ${c.варіант.padEnd(10)} фото:${c['є фото'] ? 'є ' : 'НЕМА'}  заголовок ${c['заголовок px']}px`));
+console.log('\n── Текст поверх фото: чи влазить у вуаль ──');
+out.вуаль.forEach((v, i) => console.log(
+  `   картка ${i + 1}: текст ${String(v.текст).padStart(3)}px, вуаль ${String(v.вуаль).padStart(3)}px  ` +
+  `${v.влазить ? '✅ влазить' : '❌ ВИЛІЗАЄ'}  · чистого фото зверху ${v['чисте фото']}px`));
 console.log(`\n   сторінка каруселі: ${out['висота сторінки каруселі']}px`);
 console.log(`   уся Громада:       ${out['висота всієї Громади']}px`);
 console.log(`   новини від видимої зони: ${Math.round(100 * (out.блоки.find(b => b.блок === 'cm-news-board')?.висота || 0) / VIEW)}%\n`);
