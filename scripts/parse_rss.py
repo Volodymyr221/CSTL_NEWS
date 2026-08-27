@@ -435,7 +435,9 @@ FULL_ALGO_VERSION = 2
 # 4 (27.08, ніч) — провідне фото тіла знімається як дубль обкладинки за МІСЦЕМ, а не
 #     за адресою (Конкурент віддає той самий знімок під різними хешами). Стосується
 #     вже збережених статей → перебір.
-RICH_ALGO_VERSION = 4
+# 5 (27.08, ніч) — відносні посилання зводяться до КІНЦЕВОЇ адреси сторінки, а не до
+#     адреси запиту. Стосується всіх статей, узятих за адресою з редиректом → перебір.
+RICH_ALGO_VERSION = 5
 
 # 🔴 27.08 — ПОЛІРУВАННЯ ВЖЕ ЗБЕРЕЖЕНОЇ РОЗМІТКИ, БЕЗ ЖОДНОГО ЗАПИТУ В МЕРЕЖУ.
 #
@@ -455,7 +457,9 @@ RICH_ALGO_VERSION = 4
 # виконувався б щоразу (і файл переписувався б без потреби), або один раз і
 # назавжди — і наступне правило не дійшло б до вже збережених статей.
 # 2 (27.08, ніч) — знімаємо провідний `<figure>`, що дублює обкладинку.
-POLISH_VERSION = 2
+# 3 (27.08, ніч) — розгортаємо посилання статей із «хабів, що редиректять», поки
+#     стаття не перебрана новою базою (див. `_REDIRECT_HUBS`).
+POLISH_VERSION = 3
 
 _BLOCK_TAG_RE = re.compile(r"<(p|div|li|h[1-6])\b[^>]*>(.*?)</\1>", re.I | re.S)
 # Тег або ЦІЛЕ посилання: усередину `<a>…</a>` не заглядаємо, інакше отримали б
@@ -492,15 +496,36 @@ def _linkify_escaped(шматок: str) -> str:
 _LEAD_FIGURE_RE = re.compile(r"^\s*<figure>.*?</figure>", re.I | re.S)
 
 
-def polish_markup(вміст: str, cover: str = "") -> str:
+# 🔴 27.08 (ніч) — ВІДОМІ «ХАБИ», ЩО РЕДИРЕКТЯТЬ НА САЙТИ-ПОБРАТИМИ.
+# `pravda.com.ua` роздає у своїй стрічці й матеріали «Європейської»/«Економічної»
+# правди через власні адреси. До фіксу бази відносні посилання в таких статтях
+# зводились до `pravda.com.ua` — і вели на ІНШУ статтю (скарга Вови).
+# 🛑 Поки стаття не перебрана новими правилами, її посилання НЕ ВАРТО показувати:
+# слова Вови — «або це пофіксити, або взагалі не обманювати людей». Текст
+# лишається цілим, зникає лише натискність. Перебір поверне посилання правильними.
+# ⚠️ Список навмисно вузький: рвати справні посилання решти джерел, аби «про всяк
+# випадок», означало б зіпсувати те, що працює.
+_REDIRECT_HUBS = {"pravda.com.ua"}
+_LINK_TAG_RE = re.compile(r"<a\b[^>]*>(.*?)</a>", re.I | re.S)
+
+
+def _host(url: str) -> str:
+    return re.sub(r"^www\.", "", urllib.parse.urlparse(url or "").netloc.lower())
+
+
+def polish_markup(вміст: str, cover: str = "", посилання_надійні: bool = True) -> str:
     """Прибирає навігацію джерела, дубль обкладинки і робить адреси натискними.
 
     Без мережі: нічого не перезбирає, лише чистить те, що вже написано.
+    `посилання_надійні=False` — розгортає `<a>` у текст (див. `_REDIRECT_HUBS`).
     """
     if not вміст:
         return вміст
     if cover:
         вміст = _LEAD_FIGURE_RE.sub("", вміст, count=1)
+    if not посилання_надійні:
+        # Текст посилання лишається — зникає тільки натискність.
+        return _LINK_TAG_RE.sub(lambda m: m.group(1), вміст)
     # 1. Блоки, що складаються з самої навігації («« повернутися», «до списку»).
     вміст = _BLOCK_TAG_RE.sub(
         lambda m: "" if _лише_навігація(strip_html(m.group(2))) else m.group(0), вміст)
@@ -527,7 +552,11 @@ def polish_stored_articles(articles: list) -> int:
         if a.get("_polish") == POLISH_VERSION:
             continue
         було = a.get("content") or ""
-        стало = polish_markup(було, a.get("image") or "")
+        # Посилання з «хаба, що редиректить» надійні лише після перебору новими
+        # правилами (RICH_ALGO_VERSION 5): до того їхня база була хибна.
+        надійні = (_host(a.get("sourceUrl")) not in _REDIRECT_HUBS
+                   or a.get("_richAlgo") == RICH_ALGO_VERSION)
+        стало = polish_markup(було, a.get("image") or "", надійні)
         a["_polish"] = POLISH_VERSION
         if стало != було:
             a["content"] = стало
@@ -1773,6 +1802,37 @@ def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = ""
     return _split_runon_html("".join(parts))   # відновити склеєні RSS-ом межі абзаців
 
 
+# 🔴 27.08 — ЯКЕ ВИДАННЯ НАСПРАВДІ НАПИСАЛО СТАТТЮ.
+# Скарга Вови: у нас підписано «Українська правда», а «Читати оригінал» відкриває
+# «Європейську правду». Причина та сама, що й з посиланнями: RSS УП віддає адресу
+# `pravda.com.ua/…`, яка редиректить на сайт-побратим. Підпис брав назву З СТРІЧКИ,
+# тобто називав видавця, який матеріал лише переопублікував.
+# 🛑 Виправляємо лише те, що ЗНАЄМО: домен із мапи. Невідомий домен лишає підпис
+# як був — здогад про чуже імʼя гірший за неточність, бо виглядає як факт.
+_OUTLETS = {
+    "pravda.com.ua": "Українська правда",
+    "eurointegration.com.ua": "Європейська правда",
+    "epravda.com.ua": "Економічна правда",
+    "life.pravda.com.ua": "УП. Життя",
+    "tabloid.pravda.com.ua": "УП. Таблоїд",
+    "konkurent.ua": "Конкурент",
+    "volynpost.com": "Волинь Post",
+    "rayon.in.ua": "Район",
+}
+
+
+def outlet_of(url: str) -> str:
+    """Назва видання за адресою, або порожньо, якщо домен нам невідомий."""
+    host = re.sub(r"^www\.", "", urllib.parse.urlparse(url or "").netloc.lower())
+    return _OUTLETS.get(host, "")
+
+
+def справжнє_джерело(було: str, кінцева: str) -> str:
+    """Підпис джерела з урахуванням редиректу. Не знаємо домену — не чіпаємо."""
+    нове = outlet_of(кінцева)
+    return нове or (було or "")
+
+
 def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | None:
     """Лише текст статті — сумісна обгортка над `fetch_article_page`.
 
@@ -1783,8 +1843,20 @@ def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | 
 
 
 def fetch_article_page(url: str, title: str = "",
-                       cover_url: str = "") -> tuple[str | None, str]:
-    """Сторінка статті → (БАГАТИЙ HTML тіла або None, обкладинка або "").
+                       cover_url: str = "") -> tuple[str | None, str, str]:
+    """Сторінка статті → (БАГАТИЙ HTML тіла або None, обкладинка або "", КІНЦЕВА адреса).
+
+    🔴 27.08 (ніч) — ТРЕТЄ ЗНАЧЕННЯ ЗАВЕДЕНО ЧЕРЕЗ РЕАЛЬНУ ВАДУ, І ВОНА БУЛА
+    НАЙГІРШОГО РОДУ: посилання в тілі вели на ЧУЖУ статтю, виглядаючи справними.
+    📐 Знайшов Вова: у новині «Україна та Румунія проведуть зустріч щодо
+    нацменшин» слова «день румунської мови» вели на «Ціна на газ… 2019».
+    🔑 Причина: RSS «Української правди» дає адресу `pravda.com.ua/news/…`, яка
+    РЕДИРЕКТИТЬ на `eurointegration.com.ua`. Сторінку ми читали правильну, а
+    відносні посилання (`/news/2026/03/12/7233078/`) зводили до адреси ЗАПИТУ —
+    тобто до `pravda.com.ua`. Той самий шлях на іншому сайті мережі «Правди» це
+    ІНША стаття, і людина потрапляла казна-куди.
+    🛑 Найпідступніше: посилання виглядало живим і вело на справжню статтю —
+    просто не ту. Ні помилки, ні 404, ні порожньої сторінки.
 
     Викликається коли RSS дає лише анонс (<600 символів).
     title — заголовок з RSS: clean_article_text зрізає його дубль на початку
@@ -1802,7 +1874,7 @@ def fetch_article_page(url: str, title: str = "",
     """
     # Анти-SSRF: тягнемо лише з публічних адрес (внутрішні заблоковано).
     if not is_allowed_url(url):
-        return None, ""
+        return None, "", url
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": BROWSER_UA,
@@ -1814,17 +1886,20 @@ def fetch_article_page(url: str, title: str = "",
         # SAFE_OPENER перевіряє редиректи (щоб 3xx не відвів на приватну адресу).
         with SAFE_OPENER.open(req, timeout=12) as r:
             raw = r.read()
+            # 🔑 Адреса ПІСЛЯ редиректів. Саме вона — база для відносних посилань
+            # і саме вона каже, чиє це видання насправді.
+            url = r.geturl() or url
     except Exception as e:
         if DEBUG_FETCH:
             print(f"[FETCH] {url[:70]} — ЗАВАНТАЖЕННЯ ВПАЛО: {type(e).__name__}: {e}")
-        return None, ""
+        return None, "", url
     if DEBUG_FETCH:
         print(f"[FETCH] {url[:70]} — завантажено {len(raw)} байт")
 
     try:
         from bs4 import BeautifulSoup
     except ImportError:
-        return None, ""
+        return None, "", url
 
     domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
     soup = BeautifulSoup(raw, "html.parser")
@@ -1859,7 +1934,7 @@ def fetch_article_page(url: str, title: str = "",
                 if DEBUG_FETCH:
                     print(f"[FETCH] {url[:70]} — OK селектор '{sel}'")
                 rich, hero = зібрати(el)
-                return rich[:8000], hero
+                return rich[:8000], hero, url
 
     # Fallback (readability-стиль): контейнер із найбільшою масою тексту в <p>.
     # Не обмежуємось верхнім рівнем — тіло статті зазвичай ВКЛАДЕНЕ (через це старий
@@ -1911,12 +1986,12 @@ def fetch_article_page(url: str, title: str = "",
         if len(strip_html(rich)) > 300:
             if DEBUG_FETCH:
                 print(f"[FETCH] {url[:70]} — OK фолбек (<p>-маса {best_mass})")
-            return rich[:8000], hero
+            return rich[:8000], hero, url
 
     if DEBUG_FETCH:
         print(f"[FETCH] {url[:70]} — НЕ ЗНАЙДЕНО тіла (домен {domain}, {len(candidates)} кандидатів)")
     # Тіла не знайшли — але обкладинку видавець оголосив, і вона однаково наша.
-    return None, og
+    return None, og, url
 
 
 # 🔴 27.08 — СКІЛЬКИ ПІКСЕЛІВ У ФОТО, ЯКЕ МИ СТАВИМО ОБКЛАДИНКОЮ.
@@ -2590,7 +2665,8 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             # змінна пережила б попередню ітерацію, і стаття отримала б обкладинку
             # СУСІДНЬОЇ. Тиха вада найгіршого роду: дані виглядають цілими.
             image = extract_image(entry)
-            page_html, hero = fetch_article_page(link, title, image or "") if link else (None, "")
+            page_html, hero, кінцева = (fetch_article_page(link, title, image or "")
+                                        if link else (None, "", link))
             # RSS обкладинки не дав — беремо оголошену на сторінці (Волинь Post:
             # 0 із 62 статей мали фото саме тому, що ми дивились лише в RSS).
             if hero and not image:
@@ -2647,6 +2723,14 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 _pt = _pub.get("title") if isinstance(_pub, dict) else None
                 if _pt:
                     src_name = _pt
+            # 🔴 27.08 — РЕДИРЕКТ КАЖЕ ПРАВДУ ПРО ВИДАВЦЯ. RSS «Української правди»
+            # роздає й матеріали сайтів-побратимів (`eurointegration`, `epravda`)
+            # через власні адреси, які редиректять. Підпис брав назву стрічки, тож
+            # стаття «Європейської правди» виходила під чужим імʼям.
+            # ⚠️ Тільки для стрічок видань: у Google News назву видавця дає сама
+            # стрічка (вище), і вона точніша за домен.
+            elif кінцева and кінцева != link:
+                src_name = справжнє_джерело(src_name, кінцева)
 
             # Нечітка дедуплікація в межах розділу (Крок 2)
             section = section_of(geo)
@@ -2768,10 +2852,17 @@ def rehydrate_short_articles(existing_articles: list) -> int:
                 if hero:
                     a["image"] = hero
             else:
-                new_html, hero = fetch_article_page(url, a.get("title", ""), a.get("image") or "")
+                new_html, hero, кінцева = fetch_article_page(
+                    url, a.get("title", ""), a.get("image") or "")
                 if hero and not a.get("image"):
                     a["image"] = hero
                     covered += 1
+                # Редирект каже правду про видавця — виправляємо підпис і в
+                # уже збережених статтях (див. `справжнє_джерело`).
+                if кінцева and кінцева != url:
+                    справжнє = справжнє_джерело(a.get("source") or "", кінцева)
+                    if справжнє and справжнє != a.get("source"):
+                        a["source"] = справжнє
         except Exception:
             new_html = None
         # 🔑 Рішення ухвалює ТА САМА функція, що й на свіжому розборі. До 12.08 тут
