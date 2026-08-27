@@ -522,7 +522,12 @@ function decodeEntities(str) {
 // є. Легасі-плоский текст (старі статті) → розбиваємо по \n\n на <p> з escapeHtml.
 function renderArticleBody(content) {
   const raw = content || '';
-  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br)\b/i.test(raw)) return raw;
+  // ⚠️ `a` у переліку з 27.08. Тіло статті майже завжди має `<p>`, тож без нього
+  // теж працювало б — але перелік описує, ЩО МИ ВВАЖАЄМО багатим HTML, і лишати
+  // в ньому дірку означало б, що наступна зміна розмітки мовчки провалиться в
+  // гілку «плоский легасі-текст» і поїде через `escapeHtml`, тобто посилання
+  // покажеться людині як текст із кутовими дужками.
+  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br|a)\b/i.test(raw)) return raw;
   const text = decodeEntities(raw);
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (!paragraphs.length) return '';
