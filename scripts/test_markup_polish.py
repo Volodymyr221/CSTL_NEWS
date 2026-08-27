@@ -1,0 +1,131 @@
+# -*- coding: utf-8 -*-
+"""СТОРОЖ РОЗМІТКИ СТАТТІ — посилання, навігація джерела, розмір обкладинки.
+
+🔴 Заведено 27.08.2026 після скарги Вови по статті кабінету «Всесвітній день
+прибирання 2026»: адреси голим текстом, «« повернутися» в кінці і мила
+фотографія. Три різні механізми — тому й перевірок три групи.
+
+🔑 Стенд міряє НАСЛІДОК на справжніх даних: остання група ганяє полірування по
+тілу статті **1000012 з `data/articles.json`**, тобто по тому самому тексту, що
+Вова бачив на екрані. Синтетичний приклад довів би лише те, що функція працює на
+прикладі, який я сам і склав.
+
+⚠️ МЕЖІ: мережі тут немає. `image_size` перевіряється на байтах заголовків, а
+`best_cover` — з підміненою лічилкою розміру. Що чужий сервер справді віддасть
+ці байти, доводить лише прогін у CI (з пісочниці зовнішні хости дають 403).
+"""
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import parse_rss as pr  # noqa: E402
+
+ok_count = fail_count = 0
+
+
+def ok(назва, умова, деталь=""):
+    global ok_count, fail_count
+    if умова:
+        ok_count += 1
+        print(f"✅ {назва}" + (f"  — {деталь}" if деталь else ""))
+    else:
+        fail_count += 1
+        print(f"❌ {назва}  — {деталь}")
+
+
+# ── 1. ГОЛА АДРЕСА БЕЗ СХЕМИ ────────────────────────────────────────────────
+т = ("Зареєструватися: https://letsdoitukraine.org/2026/08/wcd2026/. "
+     "Результати за посиланням:letsdoitukraine.org/digitalcleanup. "
+     "Мапа: recyclingpoints.org")
+h = pr._linkify(т)
+ok("повна адресa стала посиланням", 'href="https://letsdoitukraine.org/2026/08/wcd2026/"' in h)
+ok("адреса без схеми — теж", 'href="https://letsdoitukraine.org/digitalcleanup"' in h)
+ok("і домен без шляху — теж", 'href="https://recyclingpoints.org"' in h)
+ok("всі три адреси, не менше", h.count("<a href=") == 3, str(h.count("<a href=")))
+# 🛑 Контроль на жадібність: те, що НЕ адреса, лишається текстом.
+ok("пошта не стає посиланням", "<a" not in pr._linkify("пишіть на pochta@ukr.net"),
+   pr._linkify("пишіть на pochta@ukr.net"))
+ok("назва файлу не стає посиланням", "<a" not in pr._linkify("відкрий index.html"))
+ok("скорочення не стає посиланням", "<a" not in pr._linkify("ст.12 вул.Незалежності"))
+ok("хвіст речення не з'їдається адресою",
+   pr._linkify("дивись recyclingpoints.org.").endswith("</a>."),
+   pr._linkify("дивись recyclingpoints.org."))
+
+# ── 2. НАВІГАЦІЯ ДЖЕРЕЛА ────────────────────────────────────────────────────
+for напис in ("« повернутися", "повернутися", "‹ Назад", "До списку новин", "Усі новини →"):
+    ok(f"навігацію «{напис}» відсіяно", pr._вердикт_блоку(напис, False, "") == "skip")
+# 🛑 Головна перевірка групи: слово «повернутися» в живому реченні — НЕ навігація.
+# Саме через це правило не можна класти в `_TAIL_RE` (вона ріже текст від збігу).
+ok("речення зі словом «повернутися» лишається",
+   pr._вердикт_блоку("Люди хочуть повернутися додому вже цього року", False, "") == "ok")
+ok("речення зі словом «назад» лишається",
+   pr._вердикт_блоку("Мешканці просять повернути назад зупинку", False, "") == "ok")
+
+# ── 3. ПОЛІРУВАННЯ ЗБЕРЕЖЕНОЇ РОЗМІТКИ ──────────────────────────────────────
+вихід = pr.polish_markup(
+    '<p>Мапа: recyclingpoints.org та <a href="https://x.org/a">готове посилання</a>.</p>'
+    '<p>« повернутися</p>')
+ok("навігаційний блок прибрано", "повернутися" not in вихід, вихід)
+ok("гола адреса стала посиланням", 'href="https://recyclingpoints.org"' in вихід)
+ok("наявне посилання не подвоєно", вихід.count('href="https://x.org/a"') == 1)
+ok("посилання в посиланні не з'явилось", "<a" not in вихід.split('<a href="https://x.org/a">')[1].split("</a>")[0])
+ok("полірування ідемпотентне", pr.polish_markup(вихід) == вихід)
+ok("порожній вміст не падає", pr.polish_markup("") == "")
+
+# ── 4. ТА САМА СТАТТЯ, ЩО БАЧИВ ВОВА ────────────────────────────────────────
+статті = json.loads((Path(__file__).resolve().parents[1] / "data/articles.json").read_text(encoding="utf-8"))
+ст = next((a for a in статті if a.get("id") == 1000012), None)
+if ст is None:
+    ok("стаття 1000012 у файлі (пропущено — її вже витіснило за віком)", True, "skip")
+else:
+    після = pr.polish_markup(ст.get("content") or "")
+    ok("🔴 у статті Вови «« повернутися» більше немає", "повернутися" not in після)
+    ok("🔴 і всі три адреси натискні", після.count('<a href="https://letsdoitukraine.org') == 2
+       and 'href="https://recyclingpoints.org"' in після,
+       str(після.count("<a href=")))
+    ok("🔴 текст статті не втрачено",
+       len(pr.strip_html(після)) >= len(pr.strip_html(ст["content"])) - 20,
+       f'{len(pr.strip_html(після))} проти {len(pr.strip_html(ст["content"]))}')
+
+# ── 5. РОЗМІР ОБКЛАДИНКИ ────────────────────────────────────────────────────
+png = b"\x89PNG\r\n\x1a\n" + (13).to_bytes(4, "big") + b"IHDR" + \
+      (1280).to_bytes(4, "big") + (720).to_bytes(4, "big") + b"\x08\x02\x00\x00\x00"
+jpg = b"\xff\xd8\xff\xe0" + (16).to_bytes(2, "big") + b"JFIF\x00" + b"\x00" * 9 + \
+      b"\xff\xc0" + (17).to_bytes(2, "big") + b"\x08" + (480).to_bytes(2, "big") + \
+      (640).to_bytes(2, "big") + b"\x03" + b"\x00" * 9
+gif = b"GIF89a" + (300).to_bytes(2, "little") + (200).to_bytes(2, "little")
+webp = b"RIFF" + b"\x00" * 4 + b"WEBP" + b"VP8 " + b"\x00" * 4 + b"\x00" * 3 + \
+       b"\x9d\x01\x2a" + (900).to_bytes(2, "little") + (600).to_bytes(2, "little")
+ok("PNG зміряно", pr._розмір_з_байтів(png) == (1280, 720), str(pr._розмір_з_байтів(png)))
+ok("JPEG зміряно", pr._розмір_з_байтів(jpg) == (640, 480), str(pr._розмір_з_байтів(jpg)))
+ok("GIF зміряно", pr._розмір_з_байтів(gif) == (300, 200), str(pr._розмір_з_байтів(gif)))
+ok("WebP зміряно", pr._розмір_з_байтів(webp) == (900, 600), str(pr._розмір_з_байтів(webp)))
+ok("сміття не видає себе за розмір", pr._розмір_з_байтів(b"not-an-image") is None)
+
+# ── 6. ВИБІР ОБКЛАДИНКИ ─────────────────────────────────────────────────────
+РОЗМІРИ = {
+    "https://s/small.jpg": (480, 320),
+    "https://s/big.jpg": (1600, 900),
+    "https://s/mid.jpg": (900, 600),
+    "https://s/ok.jpg": (1200, 800),
+}
+справжній = pr.image_size
+pr.image_size = lambda u: РОЗМІРИ.get(u)
+тіло = '<p>Текст</p><figure><img src="https://s/mid.jpg" alt=""></figure>' \
+       '<figure><img src="https://s/big.jpg" alt=""></figure>'
+ok("великої обкладинки не чіпаємо", pr.best_cover("https://s/ok.jpg", тіло) == "https://s/ok.jpg")
+ok("🔴 замалу міняємо на найширше фото тіла",
+   pr.best_cover("https://s/small.jpg", тіло) == "https://s/big.jpg",
+   pr.best_cover("https://s/small.jpg", тіло))
+ok("без фото в тілі лишаємо як було",
+   pr.best_cover("https://s/small.jpg", "<p>Текст</p>") == "https://s/small.jpg")
+# 🛑 «Не знаю розміру» — не привід міняти вибір видавця на здогад.
+pr.image_size = lambda u: None
+ok("нічого не зміряли — вибір видавця лишається",
+   pr.best_cover("https://s/small.jpg", тіло) == "https://s/small.jpg")
+pr.image_size = справжній
+
+print()
+print(f"{'✅' if fail_count == 0 else '❌'} {ok_count}/{ok_count + fail_count} перевірок пройдено")
+sys.exit(1 if fail_count else 0)

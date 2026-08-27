@@ -434,6 +434,91 @@ FULL_ALGO_VERSION = 2
 #     значків і обкладинки. Змінює розмітку вже збережених статей → перебір.
 RICH_ALGO_VERSION = 3
 
+# 🔴 27.08 — ПОЛІРУВАННЯ ВЖЕ ЗБЕРЕЖЕНОЇ РОЗМІТКИ, БЕЗ ЖОДНОГО ЗАПИТУ В МЕРЕЖУ.
+#
+# Скарга Вови по статті кабінету («Всесвітній день прибирання»): адреси голим
+# текстом і «« повернутися» в кінці. Самолікування розмітки (`RICH_ALGO_VERSION`)
+# її НЕ бере — на початку `rehydrate_short_articles` стоїть `if a.get("exclusive")`,
+# а `sync_cms.py` ставить `exclusive: True` кожній статті кабінету. Тобто **жодна
+# стаття агента ніколи не перебиралась би** новими правилами.
+#
+# 🛑 ЧОМУ НЕ «ПРОСТО ЗНЯТИ ТУ ЗАБОРОНУ». Ексклюзив — це і тексти, які Вова пише
+# САМ. Перезбирання зі сторінки джерела затерло б його роботу чужим текстом, і
+# це була б втрата, а не виправлення. Тому тут інший інструмент: ми не йдемо в
+# мережу і не міняємо ЗМІСТ — лише робимо натискним те, що вже написано, і
+# прибираємо чужу навігацію. Такий прохід безпечний для будь-якої статті.
+#
+# ⚠️ Версія потрібна з тієї ж причини, що й у розмітки: без неї прохід або
+# виконувався б щоразу (і файл переписувався б без потреби), або один раз і
+# назавжди — і наступне правило не дійшло б до вже збережених статей.
+POLISH_VERSION = 1
+
+_BLOCK_TAG_RE = re.compile(r"<(p|div|li|h[1-6])\b[^>]*>(.*?)</\1>", re.I | re.S)
+# Тег або ЦІЛЕ посилання: усередину `<a>…</a>` не заглядаємо, інакше отримали б
+# посилання в посиланні (та сама пастка, що й у `_inline_one`).
+_TAG_OR_LINK_RE = re.compile(r"<a\b[^>]*>.*?</a>|<[^>]+>", re.I | re.S)
+
+
+def _linkify_escaped(шматок: str) -> str:
+    """Адреси в УЖЕ екранованому тексті → посилання. Решту не чіпаємо.
+
+    Відрізняється від `_linkify` рівно тим, що НЕ екранує текст повторно: сюди
+    приходить готовий HTML, і друге екранування показало б людині `&amp;lt;`.
+    """
+    out, last = [], 0
+    for поч, кін, сира in _bare_urls(шматок):
+        if поч < last:
+            continue
+        href = _href_for(сира)
+        if not href:
+            continue
+        out.append(шматок[last:поч])
+        out.append('<a href="' + html.escape(href, quote=True) + '"'
+                   ' target="_blank" rel="noopener">' + сира + "</a>")
+        last = кін
+    out.append(шматок[last:])
+    return "".join(out)
+
+
+def polish_markup(вміст: str) -> str:
+    """Прибирає навігацію джерела і робить голі адреси натискними. Без мережі."""
+    if not вміст:
+        return вміст
+    # 1. Блоки, що складаються з самої навігації («« повернутися», «до списку»).
+    вміст = _BLOCK_TAG_RE.sub(
+        lambda m: "" if _лише_навігація(strip_html(m.group(2))) else m.group(0), вміст)
+    # 2. Той самий напис у тексті БЕЗ розмітки — останнім рядком.
+    if "<" not in вміст:
+        рядки = вміст.rstrip().split("\n")
+        while рядки and _лише_навігація(рядки[-1]):
+            рядки.pop()
+        вміст = "\n".join(рядки)
+    # 3. Голі адреси — поза тегами і поза наявними посиланнями.
+    out, last = [], 0
+    for m in _TAG_OR_LINK_RE.finditer(вміст):
+        out.append(_linkify_escaped(вміст[last:m.start()]))
+        out.append(m.group(0))
+        last = m.end()
+    out.append(_linkify_escaped(вміст[last:]))
+    return "".join(out)
+
+
+def polish_stored_articles(articles: list) -> int:
+    """Полірує розмітку збережених статей. Повертає кількість змінених."""
+    змінено = 0
+    for a in articles:
+        if a.get("_polish") == POLISH_VERSION:
+            continue
+        було = a.get("content") or ""
+        стало = polish_markup(було)
+        a["_polish"] = POLISH_VERSION
+        if стало != було:
+            a["content"] = стало
+            змінено += 1
+    if змінено:
+        print(f"✨ Розмітку відполіровано: {змінено} статей (посилання, навігація джерела)")
+    return змінено
+
 
 def _norm_for_compare(t: str) -> str:
     """Текст до порівняння: без розмітки, регістру, пунктуації і пробілів."""
@@ -1122,6 +1207,60 @@ def _safe_href(raw: str, base_url: str = "") -> str:
 _BARE_URL_RE = re.compile(r'https?://[^\s<>"\'\u00ab\u00bb]+', re.I)
 _URL_TAIL = '.,;:!?)»"\''
 
+# 🔴 27.08 (другий захід) — АДРЕСА БЕЗ `https://` ТЕЖ АДРЕСА.
+# Скарга Вови зі знімка статті про день прибирання: у тексті три адреси, і лише
+# перша написана повністю. `_BARE_URL_RE` вимагає схему, тож
+# `letsdoitukraine.org/digitalcleanup` і `recyclingpoints.org` лишались голим
+# текстом — тобто фікс живих посилань спрацював рівно на третині випадків.
+#
+# 🛑 ЧОМУ СПИСОК ДОМЕНІВ, А НЕ «БУДЬ-ЩО.БУДЬ-ЩО». Взірець виду `\w+\.\w{2,}`
+# ловить не адреси, а звичайний текст: «index.html», «ст.12», назви файлів,
+# ініціали. Тому доменна зона береться з переліку — він короткий, покриває все,
+# що реально трапляється в наших джерелах, і росте на вимогу.
+# ⚠️ Пошта (`ім'я@домен.org`) — НЕ адреса сторінки: лівий бік лишився б голим
+# текстом, а посилання вело б на неіснуючу сторінку. Тому `@` перед збігом
+# вимикає його (той самий лукбехайнд відсікає і продовження довшої адреси).
+_TLD = (
+    "ua|com|org|net|info|gov|edu|biz|io|me|tv|eu|pl|de|co|app|news|online|site|"
+    "shop|blog|link|press|team|life|club|space|website|store|pro|top|xyz"
+)
+_BARE_HOST_RE = re.compile(
+    r'(?<![\w@./-])'                       # не всередині слова, не пошта, не хвіст адреси
+    r'((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:' + _TLD + r')'
+    r'(?:\.ua)?'                           # `com.ua`, `gov.ua`, `org.ua`
+    r'(?:/[^\s<>"\'\u00ab\u00bb]*)?)',      # шлях — не обовʼязковий
+    re.I,
+)
+
+
+def _bare_urls(text: str):
+    """Усі адреси в тексті — і повні, і без схеми — як (початок, кінець, сира).
+
+    Один прохід на обидва види: інакше друга регулярка знайшла б хвіст першої
+    (`letsdoitukraine.org/...` усередині `https://letsdoitukraine.org/...`) і
+    ми отримали б посилання в посиланні.
+    """
+    знайдені = []
+    зайнято = []
+    for m in _BARE_URL_RE.finditer(text):
+        сира = _trim_url_tail(m.group(0))
+        знайдені.append((m.start(), m.start() + len(сира), сира))
+        зайнято.append((m.start(), m.end()))
+    for m in _BARE_HOST_RE.finditer(text):
+        if any(a <= m.start() < b for a, b in зайнято):
+            continue                      # це хвіст повної адреси, вже враховано
+        сира = _trim_url_tail(m.group(1))
+        if "." not in сира.split("/")[0]:
+            continue
+        знайдені.append((m.start(), m.start() + len(сира), сира))
+    знайдені.sort()
+    return знайдені
+
+
+def _href_for(сира: str) -> str:
+    """Адреса з тексту → безпечний href. Без схеми домислюємо `https://`."""
+    return _safe_href(сира if "://" in сира else "https://" + сира)
+
 
 def _trim_url_tail(u: str) -> str:
     while u and u[-1] in _URL_TAIL:
@@ -1135,15 +1274,16 @@ def _linkify(text: str, base_url: str = "") -> str:
     """Голий текст → HTML, де адреси стали посиланнями. Текст ЕКРАНУЄТЬСЯ, адреса
     проходить ту саму перевірку, що й узята з тега (`_safe_href`)."""
     out, last = [], 0
-    for m in _BARE_URL_RE.finditer(text):
-        сира = _trim_url_tail(m.group(0))
-        href = _safe_href(сира)
+    for поч, кін, сира in _bare_urls(text):
+        if поч < last:
+            continue
+        href = _href_for(сира)
         if not href:
             continue
-        out.append(html.escape(text[last:m.start()]))
+        out.append(html.escape(text[last:поч]))
         out.append('<a href="' + html.escape(href, quote=True) + '"'
                    ' target="_blank" rel="noopener">' + html.escape(сира) + "</a>")
-        last = m.start() + len(сира)
+        last = кін
     out.append(html.escape(text[last:]))
     return "".join(out)
 
@@ -1378,6 +1518,34 @@ _LEAD_TIME_RE = re.compile(
 _AD_SLOT_RE = re.compile(r"\d{3}\s*[x×*]\s*\d{2,3}|У\s+новині\s*#|\.com_\d", re.I)
 
 
+# 🔴 27.08 — «« ПОВЕРНУТИСЯ» В КІНЦІ СТАТТІ (скарга Вови зі знімка).
+# Це кнопка «назад» самого сайту-джерела (rada.info), яка стоїть УСЕРЕДИНІ
+# контейнера новини. `_TAIL_RE` її не бачила, `_NOISE_RE` теж — у неї немає ні
+# класу-шуму, ні характерного маркера хвоста.
+# 🛑 І САМЕ ТОМУ ЇЇ НЕ МОЖНА ДОДАВАТИ В `_TAIL_RE`: «повернутися» — звичайне
+# українське слово («люди хочуть повернутися додому»), а `_TAIL_RE` РІЖЕ ТЕКСТ
+# від першого збігу. Одне речення з цим словом усередині статті — і ми втратили
+# б половину новини. Тому правило вузьке: блок мусить складатись із самої
+# навігації ЦІЛКОМ (стрілки й лапки не рахуються) і бути коротким.
+# ⚠️ Вердикт `skip`, а не `stop`: «назад» трапляється й посеред верстки, і
+# зупиняти на ньому збір означало б обрізати статтю на випадковому місці.
+_NAV_ONLY_RE = re.compile(
+    r"^(?:повернути(?:ся|сь)|назад|до\s+списку(?:\s+новин)?|усі\s+новини|"
+    r"всі\s+новини|читати\s+всі\s+новини|на\s+головну|до\s+архіву|"
+    r"переглянути\s+всі)$",
+    re.I,
+)
+# Символи-стрілки й лапки навколо напису — не частина слова.
+_NAV_TRIM = " \t\r\n«»‹›<>←→⟵⟶|·•-–—"
+
+
+def _лише_навігація(raw: str) -> bool:
+    т = (raw or "").strip(_NAV_TRIM).strip()
+    if not т or len(т) > 40:
+        return False
+    return bool(_NAV_ONLY_RE.match(т))
+
+
 def _вердикт_блоку(raw: str, перший: bool, tnorm: str) -> str:
     """Що робити з текстовим блоком: `stop` (далі футер), `skip`, `ok`.
 
@@ -1388,6 +1556,8 @@ def _вердикт_блоку(raw: str, перший: bool, tnorm: str) -> str:
         return "stop"                      # службовий хвіст: теги/«читайте також»/промо
     if _AD_SLOT_RE.search(raw):
         return "skip"
+    if _лише_навігація(raw):
+        return "skip"                      # «« повернутися», «до списку новин»
     if not перший:
         return "ok"
     norm = re.sub(r"\W+", "", raw.lower())
@@ -1696,6 +1866,101 @@ def fetch_article_page(url: str, title: str = "",
         print(f"[FETCH] {url[:70]} — НЕ ЗНАЙДЕНО тіла (домен {domain}, {len(candidates)} кандидатів)")
     # Тіла не знайшли — але обкладинку видавець оголосив, і вона однаково наша.
     return None, og
+
+
+# 🔴 27.08 — СКІЛЬКИ ПІКСЕЛІВ У ФОТО, ЯКЕ МИ СТАВИМО ОБКЛАДИНКОЮ.
+#
+# Скарга Вови по статті кабінету: «чому ця фотографія в такій поганій якості?».
+# Обкладинку ми беремо з `og:image` сторінки-джерела і **не міряємо ніяк** — ні
+# мінімальної ширини, ні порівняння з фото в тілі. А показуємо її на всю ширину
+# модалки: ~358 CSS-точок × щільність екрана 3 ≈ **1074 справжніх пікселі**.
+# Файл, вужчий за це, браузер розтягує — і саме це видно як «мило».
+# 🔑 Той самий клас, що `tests/avatar-quality.mjs` (23.08): пікселів менше, ніж
+# місця під них. Різниця лише в тому, що аватар ми готуємо самі, а тут файл чужий
+# — отже єдине, що ми можемо, це ОБРАТИ кращий із наявних.
+#
+# ⚠️ Розмір читаємо з ЗАГОЛОВКА файлу, не качаючи його цілком: перших ~32 КБ
+# вистачає всім чотирим форматам. Інакше перевірка коштувала б мегабайти на
+# статтю і не влізла б у бюджет прогону.
+_MIN_COVER_W = 800
+
+
+def _розмір_з_байтів(b: bytes):
+    """(ширина, висота) із заголовка PNG/GIF/JPEG/WebP або None."""
+    try:
+        if b[:8] == b"\x89PNG\r\n\x1a\n" and b[12:16] == b"IHDR":
+            return (int.from_bytes(b[16:20], "big"), int.from_bytes(b[20:24], "big"))
+        if b[:6] in (b"GIF87a", b"GIF89a"):
+            return (int.from_bytes(b[6:8], "little"), int.from_bytes(b[8:10], "little"))
+        if b[:4] == b"RIFF" and b[8:12] == b"WEBP":
+            if b[12:16] == b"VP8X":
+                ш = int.from_bytes(b[24:27], "little") + 1
+                в = int.from_bytes(b[27:30], "little") + 1
+                return (ш, в)
+            if b[12:16] == b"VP8 ":
+                return (int.from_bytes(b[26:28], "little") & 0x3FFF,
+                        int.from_bytes(b[28:30], "little") & 0x3FFF)
+            if b[12:16] == b"VP8L":
+                бітів = int.from_bytes(b[21:25], "little")
+                return ((бітів & 0x3FFF) + 1, ((бітів >> 14) & 0x3FFF) + 1)
+        if b[:2] == b"\xff\xd8":
+            i = 2
+            while i + 9 < len(b):
+                if b[i] != 0xFF:
+                    i += 1
+                    continue
+                маркер = b[i + 1]
+                if маркер in (0xD8, 0x01) or 0xD0 <= маркер <= 0xD7:
+                    i += 2
+                    continue
+                довжина = int.from_bytes(b[i + 2:i + 4], "big")
+                # SOF0..SOF15, крім службових DHT(C4)/JPGA(C8)/DAC(CC)
+                if 0xC0 <= маркер <= 0xCF and маркер not in (0xC4, 0xC8, 0xCC):
+                    return (int.from_bytes(b[i + 7:i + 9], "big"),
+                            int.from_bytes(b[i + 5:i + 7], "big"))
+                i += 2 + довжина
+    except Exception:
+        return None
+    return None
+
+
+def image_size(url: str):
+    """(ширина, висота) картинки за адресою або None. Тягне лише заголовок."""
+    if not url or not is_allowed_url(url):
+        return None
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": BROWSER_UA, "Range": "bytes=0-32767",
+        })
+        with SAFE_OPENER.open(req, timeout=10) as r:
+            b = r.read(32768)
+    except Exception:
+        return None
+    return _розмір_з_байтів(b)
+
+
+def best_cover(cover: str, body_html: str, need_w: int = _MIN_COVER_W) -> str:
+    """Обкладинка, у якої вистачає пікселів. Інакше — найширше фото з тіла.
+
+    🛑 Порядок саме такий: `og:image` лишається ПЕРШИМ кандидатом, бо його обрав
+    сам видавець — це головне фото матеріалу, а не випадковий знімок із тексту.
+    Ми міняємо його ЛИШЕ тоді, коли він фізично замалий, і лише на ширше фото.
+    ⚠️ Якщо не змогли зміряти жодного (мережа, чужий формат) — лишаємо як було:
+    «не знаю розміру» не привід міняти вибір видавця на здогад.
+    """
+    свій = image_size(cover) if cover else None
+    if свій and свій[0] >= need_w:
+        return cover
+    кандидати = re.findall(r'<img[^>]+src="([^"]+)"', body_html or "", re.I)
+    найкращий, найширше = cover, (свій[0] if свій else 0)
+    for u in кандидати[:6]:                     # стеля запитів на статтю
+        u = html.unescape(u)
+        if u == cover:
+            continue
+        р = image_size(u)
+        if р and р[0] > найширше:
+            найкращий, найширше = u, р[0]
+    return найкращий
 
 
 def fetch_og_image(url: str) -> str | None:
@@ -2676,8 +2941,12 @@ def main():
     # (модифікує existing_articles на місці — прибирає плашку «Читати повністю»).
     rehydrated = rehydrate_short_articles(existing_articles)
 
+    # 🔑 Полірування — ОКРЕМИЙ прохід і без мережі: воно стосується й ексклюзивів
+    # кабінету, яких самолікування не торкається принципово (див. POLISH_VERSION).
+    polished = polish_stored_articles(existing_articles)
+
     # Зберегти articles.json
-    if new_articles or rehydrated:
+    if new_articles or rehydrated or polished:
         # Свіжі статті вже розібрані ЧИННИМИ правилами розмітки — позначаємо їх
         # одразу, інакше самолікування на наступному ж прогоні пішло б перебирати
         # те, що щойно розібрало, і витрачало б бюджет на порожню роботу.
@@ -2685,6 +2954,7 @@ def main():
         # службове, і тримати три його копії означало б три шанси забути одну.
         for _a in new_articles:
             _a.setdefault("_richAlgo", RICH_ALGO_VERSION)
+            _a.setdefault("_polish", POLISH_VERSION)
         all_articles = new_articles + existing_articles
         report_fulltext_quality(all_articles)
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
