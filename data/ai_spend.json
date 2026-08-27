@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1787824312687,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10628,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0321,
+      "note": ""
+    },
+    {
+      "ts": 1787824310092,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 3869,
+      "cache_read": 55976,
+      "cache_write": 37080,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.2739,
+      "note": ""
+    },
+    {
       "ts": 1787738355641,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -753,38 +779,12 @@
       "found": 1,
       "cost_usd": 0.0087,
       "note": ""
-    },
-    {
-      "ts": 1784362935570,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 482,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0085,
-      "note": ""
-    },
-    {
-      "ts": 1784362922576,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 505,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0088,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 6.9933,
-    "runs": 108,
-    "web_searches": 87
+    "cost_usd": 7.2993,
+    "runs": 110,
+    "web_searches": 93
   },
   "months": {
     "2026-07": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 1.8837,
-      "runs": 30,
-      "web_searches": 24
+      "cost_usd": 2.1897,
+      "runs": 32,
+      "web_searches": 30
     }
   },
-  "updated_ts": 1787738355641
+  "updated_ts": 1787824312687
 }
