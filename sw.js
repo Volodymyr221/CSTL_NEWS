@@ -1,7 +1,16 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260826-1357';
+const CACHE_NAME = 'cstl-20260827-0706';
+
+// 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
+// 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш
+// качається заново. SDK Supabase важить 212 КБ — на десяток деплоїв за вечір це два
+// мегабайти мобільного трафіку на кожному телефоні за файл, який не змінився.
+// 🔑 Ім'я файлу містить ВЕРСІЮ, тож вміст за цією адресою незмінний назавжди — його
+// можна кешувати вічно і ніколи не перевіряти. Оновлення версії дає нове ім'я.
+// ⚠️ Цей кеш НЕ чиститься при активації (див. `activate` нижче) — у цьому й суть.
+const VENDOR_CACHE = 'cstl-vendor-v1';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -74,7 +83,10 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        // ⚠️ `VENDOR_CACHE` навмисно переживає активацію: він тримає файли з версією в
+        // імені, які не змінюються. Прибрати його тут означало б качати 212 КБ SDK
+        // заново на кожен деплой — рівно те, від чого його й винесли.
+        keys.filter(k => k !== CACHE_NAME && k !== VENDOR_CACHE).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );
@@ -104,6 +116,24 @@ self.addEventListener('fetch', e => {
           return r;
         })
         .catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // 🔴 Сторонні бібліотеки (`vendor/*`) — cache-first У ВЛАСНОМУ ВІЧНОМУ КЕШІ.
+  // 🛑 Це не оптимізація, а виправлення справжньої вади: доти SDK Supabase вантажився з
+  // чужого CDN, а сторонні запити нижче йдуть «тільки мережа». Один невдалий запит — і
+  // застосунок лишався без бази до перезавантаження сторінки, ще й мовчки.
+  // 🔑 Вміст за цією адресою незмінний (версія в імені), тому кеш можна не перевіряти.
+  if (url.pathname.includes('/vendor/')) {
+    e.respondWith(
+      caches.open(VENDOR_CACHE).then(c => c.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(r => {
+          if (r.ok) c.put(e.request, r.clone());
+          return r;
+        });
+      }))
     );
     return;
   }

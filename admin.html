@@ -549,7 +549,10 @@
 <div class="toast" id="toast"></div>
 
 <!-- Supabase JS SDK з CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- 🔴 26.08 — той самий локальний SDK, що й у застосунку (див. index.html).
+     🛑 Адмінка мала ТУ САМУ ваду: не доїхав чужий CDN — і вона не працює взагалі,
+     мовчки. Тут це навіть гірше, бо саме сюди дивляться, коли щось зламалось. -->
+<script src="vendor/supabase-js-2.112.4.min.js"></script>
 
 <script>
 // ════════════════════════════════════════════════════════════════════════

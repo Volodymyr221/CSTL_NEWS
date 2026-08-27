@@ -91,7 +91,10 @@ await p.addInitScript(([порожня]) => {
   };
 }, [ПОРОЖНЯ]);
 
-await p.route('**cdn.jsdelivr.net/**', r => r.fulfill({ contentType: 'text/javascript', body: '/* підмінено */' }));
+// 🔴 26.08 — глушимо SDK за обома адресами: він переїхав із CDN у `vendor/`.
+for (const шлях of ['**cdn.jsdelivr.net/**', '**/vendor/supabase-js*']) {
+  await p.route(шлях, r => r.fulfill({ contentType: 'text/javascript', body: '/* підмінено */' }));
+}
 await p.goto(`http://127.0.0.1:${порт}/admin.html`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('.tile-grid, .queue', { timeout: 8000 }).catch(() => {});
 await p.waitForTimeout(400);
