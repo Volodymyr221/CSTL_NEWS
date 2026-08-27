@@ -1157,33 +1157,38 @@ def _inline_html(node, base_url: str = "", у_посиланні: bool = False) 
     яка стоїть ТЕКСТОМ усередині посилання, отримала б власний `<a>` — тобто
     посилання в посиланні, чого в HTML не буває і що браузер розплутує по-своєму.
     """
+    return "".join(_inline_one(ch, base_url, у_посиланні) for ch in node.children)
+
+
+def _inline_one(ch, base_url: str = "", у_посиланні: bool = False) -> str:
+    """ОДИН вузол за тим самим аллоулистом, що й `_inline_html`.
+
+    Винесено окремо 27.08: потоковий збирач `_flow_to_html` обходить вузли сам
+    (у старій верстці абзац рветься на `<br>`, а не на тегу), тож йому потрібно
+    розібрати саме ЕЛЕМЕНТ, а `_inline_html` розбирає його ДІТЕЙ. Без цього
+    `<a>` віддав би лише свій текст — тобто посилання знову зникло б.
+    """
     from bs4 import NavigableString, Tag
-    out = []
-    for ch in node.children:
-        if isinstance(ch, NavigableString):
-            out.append(html.escape(str(ch)) if у_посиланні
-                       else _linkify(str(ch), base_url))
-        elif isinstance(ch, Tag):
-            if ch.name in ("strong", "b"):
-                out.append("<strong>" + _inline_html(ch, base_url, у_посиланні) + "</strong>")
-            elif ch.name in ("em", "i"):
-                out.append("<em>" + _inline_html(ch, base_url, у_посиланні) + "</em>")
-            elif ch.name == "br":
-                out.append("<br>")
-            elif ch.name == "a":
-                inner = _inline_html(ch, base_url, True)
-                href = _safe_href(ch.get("href") or "", base_url)
-                # ⚠️ Адреса не пройшла перевірку — лишаємо ТЕКСТ, а не викидаємо
-                # його разом із посиланням: людина має дочитати речення.
-                if href and inner.strip():
-                    out.append(
-                        '<a href="' + html.escape(href, quote=True) + '"'
-                        ' target="_blank" rel="noopener">' + inner + "</a>")
-                else:
-                    out.append(inner)
-            else:
-                out.append(_inline_html(ch, base_url, у_посиланні))   # span/… — розгортаємо
-    return "".join(out)
+    if isinstance(ch, NavigableString):
+        return html.escape(str(ch)) if у_посиланні else _linkify(str(ch), base_url)
+    if not isinstance(ch, Tag):
+        return ""
+    if ch.name in ("strong", "b"):
+        return "<strong>" + _inline_html(ch, base_url, у_посиланні) + "</strong>"
+    if ch.name in ("em", "i"):
+        return "<em>" + _inline_html(ch, base_url, у_посиланні) + "</em>"
+    if ch.name == "br":
+        return "<br>"
+    if ch.name == "a":
+        inner = _inline_html(ch, base_url, True)
+        href = _safe_href(ch.get("href") or "", base_url)
+        # ⚠️ Адреса не пройшла перевірку — лишаємо ТЕКСТ, а не викидаємо
+        # його разом із посиланням: людина має дочитати речення.
+        if href and inner.strip():
+            return ('<a href="' + html.escape(href, quote=True) + '"'
+                    ' target="_blank" rel="noopener">' + inner + "</a>")
+        return inner
+    return _inline_html(ch, base_url, у_посиланні)   # span/… — розгортаємо
 
 
 # Межа втраченого абзацу: кінець речення (. ! ? » ” ") ВПРИТУЛ до великої кирилиці
@@ -1336,6 +1341,17 @@ def _same_photo(a: str, b: str) -> bool:
     return bool(a) and bool(b) and ключ(a) == ключ(b)
 
 
+def _first_photo(el, base_url: str = "") -> str:
+    """Перше фото контейнера, що пройшло відсів, або порожньо. Обкладинку шукаємо
+    ДО складання тіла: знайдений знімок треба одразу виключити з тіла, інакше він
+    стоятиме і вгорі статті, і в тексті."""
+    for im in el.find_all("img"):
+        u = _photo_url(im, base_url)
+        if u:
+            return u
+    return ""
+
+
 def _figure_html(im, base_url: str, cover_url: str) -> str:
     """`<img>` (можливо, всередині `<figure>`) → наш блок фото. Порожньо — якщо
     фото не пройшло відсів або це обкладинка, яка вже стоїть угорі статті."""
@@ -1353,6 +1369,118 @@ def _figure_html(im, base_url: str, cover_url: str) -> str:
             + "</figure>")
 
 
+# Провідний службовий блок: короткий штамп дати/часу на початку тіла.
+_LEAD_TIME_RE = re.compile(
+    r"\d{1,2}[:.]\d{2}\b"
+    r"|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|черв|липн|серпн|вересн|жовтн|листопад|грудн)"
+    r"|^\s*(?:Сьогодні|Вчора|Позавчора)\b", re.I)
+# Рекламні слоти-сміття (volynpost: «op13-Volynpost.com_650x60 У новині #3 650*60»).
+_AD_SLOT_RE = re.compile(r"\d{3}\s*[x×*]\s*\d{2,3}|У\s+новині\s*#|\.com_\d", re.I)
+
+
+def _вердикт_блоку(raw: str, перший: bool, tnorm: str) -> str:
+    """Що робити з текстовим блоком: `stop` (далі футер), `skip`, `ok`.
+
+    Спільний суддя для обох збирачів тіла — блокового (`_blocks_to_html`) і
+    потокового (`_flow_to_html`). Одні правила в двох копіях розійшлись би.
+    """
+    if _TAIL_RE.search(raw):
+        return "stop"                      # службовий хвіст: теги/«читайте також»/промо
+    if _AD_SLOT_RE.search(raw):
+        return "skip"
+    if not перший:
+        return "ok"
+    norm = re.sub(r"\W+", "", raw.lower())
+    if tnorm and norm.startswith(tnorm) and len(norm) - len(tnorm) <= 20:
+        return "skip"                      # дубль заголовка статті першим абзацом
+    if len(raw) < 40 and _LEAD_TIME_RE.search(raw):
+        return "skip"                      # «Сьогодні, 15:09», «08.07.2026, 14:00»
+    if not _LEAD_NAV_RE.sub("", raw).strip():
+        return "skip"                      # самі крихти меню («Правила Реклама Контакти»)
+    return "ok"
+
+
+# 🔴 27.08 — СТАРА ВЕРСТКА: ТЕКСТ ГОЛИЙ У <div>, АБЗАЦИ ЧЕРЕЗ <br>.
+#
+# 🗣️ Вова про статтю «Потяги через Луцьк» (Волинь Post): «Чому в цій статті
+# немає фото та клікабельного посилання?»
+# 📐 Заміряно по `data/articles.json`, і це не одна стаття, а ціле джерело:
+#     Волинь Post   62 статті —   0 з фото,  0 з посиланням
+#     Конкурент    143 статті — 143 з фото, 18 з посиланням
+#     Укр. правда  157 статей — 121 з фото, 26 з посиланням
+# 🔎 Причина: Волинь Post верстає тіло голим текстом у <div> з <br>. Блоковий
+# збирач шукає p/h*/li/blockquote і не знаходить ЖОДНОГО — тож вмикався запасний
+# ПЛОСКИЙ шлях: `_paragraphs_fallback` бере `get_text()` (тобто стирає <a>), а
+# далі `html.escape` (тобто й гола адреса не стане посиланням).
+# 🛑 Гірше: варто такій сторінці мати <img>, і список блоків уже НЕ порожній —
+# плоский шлях не вмикається, і функція повертає сам `<figure>` без тексту. Далі
+# поріг `len(strip_html(...)) > 300` не проходить, і стаття втрачає повний текст
+# ЦІЛКОМ. Відтворено на макеті верстки: з фото — 0 символів тіла.
+#
+# ➡️ Тому запасний шлях тепер не плоский, а такий самий багатий: той самий
+# `_inline_one` (посилання + голі адреси), той самий `_figure_html` (фото стає в
+# порядку документа), той самий `_вердикт_блоку`. Межа абзацу — <br>/<hr> або
+# блоковий вузол, тобто те саме правило, що й у `_paragraphs_fallback`.
+def _flow_to_html(el, title: str = "", base_url: str = "", cover_url: str = "") -> str:
+    """Тіло без блокових тегів → наш HTML. Абзац рветься на <br> і на блоках."""
+    from bs4 import NavigableString, Tag
+    tnorm = re.sub(r"\W+", "", title.lower()) if title else ""
+    parts, buf = [], []
+    текстових = 0
+    стоп = False
+
+    def flush():
+        nonlocal текстових, стоп
+        inner = "".join(buf).strip()
+        buf.clear()
+        if стоп or not inner:
+            return
+        raw = strip_html(inner).strip()
+        if not raw:
+            return
+        вердикт = _вердикт_блоку(raw, текстових == 0, tnorm)
+        if вердикт == "stop":
+            стоп = True
+            return
+        if вердикт == "skip":
+            return
+        parts.append(f"<p>{inner}</p>")
+        текстових += 1
+
+    def walk(node):
+        for ch in node.children:
+            if стоп:
+                return
+            if isinstance(ch, NavigableString):
+                txt = re.sub(r"\s+", " ", str(ch))
+                if txt.strip():
+                    buf.append(_linkify(txt, base_url))
+                elif buf:
+                    buf.append(" ")          # межа слів, а не абзацу
+                continue
+            if not isinstance(ch, Tag):
+                continue
+            if ch.name == "img":
+                блок = _figure_html(ch, base_url, cover_url)
+                if блок:
+                    flush()
+                    if not стоп:
+                        parts.append(блок)
+            elif ch.name in ("br", "hr"):
+                flush()
+            elif ch.name in _INLINE_TAGS:
+                buf.append(_inline_one(ch, base_url))
+            else:                            # блоковий вузол — межа абзацу
+                flush()
+                walk(ch)
+                flush()
+
+    walk(el)
+    flush()
+    # Самі фото без жодного рядка тексту — це не стаття, а обгортка сторінки.
+    return "".join(parts) if текстових else ""
+
+
 def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = "") -> str:
     """Тіло статті → БЕЗПЕЧНИЙ HTML зі збереженням структури (підзаголовки, списки
     •, абзаци, жирний/курсив) — як в оригіналі (варіант A, БЕЗ фото). Аллоулист
@@ -1364,12 +1492,14 @@ def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = ""
     заголовка й провідний часовий штамп. Запобіжна довжина ~7500."""
     tnorm = re.sub(r"\W+", "", title.lower()) if title else ""
     parts, li_buf, total = [], [], 0
+    текстових = 0            # скільки блоків ТЕКСТУ зібрано (фото не рахуються)
 
     def flush_li():
-        nonlocal total
+        nonlocal total, текстових
         if li_buf:
             block = "<ul>" + "".join(f"<li>{x}</li>" for x in li_buf) + "</ul>"
             parts.append(block); total += len(block); li_buf.clear()
+            текстових += 1
 
     # ⚠️ `img` у переліку — і саме тут, а не окремим проходом: `find_all` віддає
     # вузли В ПОРЯДКУ ДОКУМЕНТА, тож фото само стає на своє місце між абзацами.
@@ -1391,10 +1521,10 @@ def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = ""
         raw = b.get_text(" ", strip=True)
         if not raw:
             continue
-        if _TAIL_RE.search(raw):          # службовий хвіст (теги/«читайте також»/промо) — стоп
+        вердикт = _вердикт_блоку(raw, текстових == 0, tnorm)
+        if вердикт == "stop":             # службовий хвіст (теги/«читайте також»/промо)
             break
-        # Рекламні слоти-сміття (volynpost: «op13-Volynpost.com_650x60 У новині #3 650*60»)
-        if re.search(r"\d{3}\s*[x×*]\s*\d{2,3}|У\s+новині\s*#|\.com_\d", raw, re.I):
+        if вердикт == "skip":
             continue
         inner = _inline_html(b, base_url).strip()
         if not inner:
@@ -1402,45 +1532,56 @@ def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = ""
         if b.name == "li":
             li_buf.append(inner); continue
         flush_li()
-        norm = re.sub(r"\W+", "", raw.lower())
         if b.name in ("h2", "h3", "h4"):
-            if tnorm and norm == tnorm:
+            if tnorm and re.sub(r"\W+", "", raw.lower()) == tnorm:
                 continue                  # дубль заголовка статті
             block = f"<h3>{inner}</h3>"
         elif b.name == "blockquote":
             block = f"<blockquote>{inner}</blockquote>"
         else:
-            # перший абзац: пропустити дубль заголовка / провідний час-штамп
-            if not parts and tnorm and norm.startswith(tnorm) and len(norm) - len(tnorm) <= 20:
-                continue
-            # Провідний короткий блок-дата/час («21 липня, 22:42», «Сьогодні, 15:09»,
-            # «08.07.2026, 14:00», голий «15:09») — службове сміття, не тіло.
-            if (not parts and len(raw) < 40 and re.search(
-                    r"\d{1,2}[:.]\d{2}\b"
-                    r"|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|черв|липн|серпн|вересн|жовтн|листопад|грудн)"
-                    r"|^\s*(?:Сьогодні|Вчора|Позавчора)\b", raw, re.I)):
-                continue
             block = f"<p>{inner}</p>"
         parts.append(block); total += len(block)
+        текстових += 1
     flush_li()
 
-    if not parts:                          # блоків нема (голі div) — запасний плоский варіант
-        fb = clean_article_text(_paragraphs_fallback(el), title)
-        return _split_runon_html("".join(f"<p>{html.escape(p)}</p>" for p in fb.split("\n\n") if p.strip()))
+    # 🛑 Умова саме «нема ТЕКСТУ», а не «нема блоків»: у старій верстці єдиний
+    # <img> робив список непорожнім, запасний шлях не вмикався — і стаття
+    # поверталась самим фото, тобто втрачала тіло цілком (Волинь Post, 27.08).
+    if not текстових:                      # блокових тегів нема (голі div з <br>)
+        return _split_runon_html(_flow_to_html(el, title, base_url, cover_url))
     return _split_runon_html("".join(parts))   # відновити склеєні RSS-ом межі абзаців
 
 
 def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | None:
-    """Завантажує повний текст статті зі сторінки статті.
+    """Лише текст статті — сумісна обгортка над `fetch_article_page`.
+
+    Її звуть із AI-редактора (`ai_news_agent.py`, `editor/images/og.py`), яким
+    обкладинка звідси не потрібна. Сам парсер бере пару.
+    """
+    return fetch_article_page(url, title, cover_url)[0]
+
+
+def fetch_article_page(url: str, title: str = "",
+                       cover_url: str = "") -> tuple[str | None, str]:
+    """Сторінка статті → (БАГАТИЙ HTML тіла або None, обкладинка або "").
 
     Викликається коли RSS дає лише анонс (<600 символів).
     title — заголовок з RSS: clean_article_text зрізає його дубль на початку
     тіла (сторінки видавців повторюють <h1>+час у контейнері — Вова 14.07).
-    Повертає текст або None якщо не вдалося.
+
+    🔴 27.08 — ОБКЛАДИНКУ БЕРЕМО ТУТ, А НЕ ОКРЕМИМ ЗАПИТОМ.
+    📐 Волинь Post: 0 із 62 статей мали фото. Причина не в сайті — ми брали
+    обкладинку ЛИШЕ з RSS (`extract_image`: media:content/enclosure), а це
+    джерело їх у стрічці не віддає. `fetch_og_image` у парсері не звався жодного
+    разу — його писали для AI-редактора.
+    🔑 Сторінку ми качаємо однаково, тож og:image читається з ТОГО САМОГО супу.
+    Немає og — беремо перше фото тіла, що пройшло відсів (те саме правило, що
+    вже діє для rayon). Знайдене фото одразу виключаємо з тіла, щоб воно не
+    стояло двічі.
     """
     # Анти-SSRF: тягнемо лише з публічних адрес (внутрішні заблоковано).
     if not is_allowed_url(url):
-        return None
+        return None, ""
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": BROWSER_UA,
@@ -1455,17 +1596,20 @@ def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | 
     except Exception as e:
         if DEBUG_FETCH:
             print(f"[FETCH] {url[:70]} — ЗАВАНТАЖЕННЯ ВПАЛО: {type(e).__name__}: {e}")
-        return None
+        return None, ""
     if DEBUG_FETCH:
         print(f"[FETCH] {url[:70]} — завантажено {len(raw)} байт")
 
     try:
         from bs4 import BeautifulSoup
     except ImportError:
-        return None
+        return None, ""
 
     domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
     soup = BeautifulSoup(raw, "html.parser")
+    # ⚠️ og:image читаємо ДО чистки шуму: нижче ми видаляємо вузли за класами, і
+    # <meta> у <head> зачепити не мусимо — але покладатись на це не варто.
+    og = _og_image(soup, url)
 
     # Видаляємо шум: скрипти, реклами, навігацію, коментарі
     for tag in soup.find_all(["script", "style", "nav", "header", "footer",
@@ -1477,6 +1621,14 @@ def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | 
         if _NOISE_RE.search(cls):
             tag.decompose()
 
+    # Обкладинка = оголошена видавцем, інакше перше фото тіла. Тіло складаємо,
+    # виключивши те фото, що стане обкладинкою: RSS-ове, якщо воно є (його
+    # виставить `extract_image`), інакше наше.
+    def зібрати(el):
+        hero = og or _first_photo(el, url)
+        rich = _blocks_to_html(el, title, base_url=url, cover_url=(cover_url or hero))
+        return rich, hero
+
     selectors = ARTICLE_SELECTORS.get(domain, []) + _GENERIC_SELECTORS
     for sel in selectors:
         el = soup.select_one(sel)
@@ -1485,7 +1637,8 @@ def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | 
             if len(clean_article_text(_blocks_to_text(el), title)) > 300:
                 if DEBUG_FETCH:
                     print(f"[FETCH] {url[:70]} — OK селектор '{sel}'")
-                return _blocks_to_html(el, title, base_url=url, cover_url=cover_url)[:8000]
+                rich, hero = зібрати(el)
+                return rich[:8000], hero
 
     # Fallback (readability-стиль): контейнер із найбільшою масою тексту в <p>.
     # Не обмежуємось верхнім рівнем — тіло статті зазвичай ВКЛАДЕНЕ (через це старий
@@ -1533,15 +1686,16 @@ def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | 
 
     if candidates:
         best_mass, best_el = max(candidates, key=lambda x: x[0])
-        rich = _blocks_to_html(best_el, title, base_url=url, cover_url=cover_url)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
+        rich, hero = зібрати(best_el)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
         if len(strip_html(rich)) > 300:
             if DEBUG_FETCH:
                 print(f"[FETCH] {url[:70]} — OK фолбек (<p>-маса {best_mass})")
-            return rich[:8000]
+            return rich[:8000], hero
 
     if DEBUG_FETCH:
         print(f"[FETCH] {url[:70]} — НЕ ЗНАЙДЕНО тіла (домен {domain}, {len(candidates)} кандидатів)")
-    return None
+    # Тіла не знайшли — але обкладинку видавець оголосив, і вона однаково наша.
+    return None, og
 
 
 def fetch_og_image(url: str) -> str | None:
@@ -1563,13 +1717,23 @@ def fetch_og_image(url: str) -> str | None:
     except ImportError:
         return None
     soup = BeautifulSoup(raw, "html.parser")
+    return _og_image(soup, url) or None
+
+
+def _og_image(soup, base_url: str) -> str:
+    """Оголошена видавцем обкладинка сторінки (og:image/twitter:image) або порожньо.
+
+    Окремо від `fetch_og_image` рівно тому, що суп у нас ВЖЕ є: сторінку статті
+    ми качаємо однаково, і другий запит по неї коштував би половину бюджету
+    (`FETCH_BUDGET` = 40 сторінок на прогін).
+    """
     for prop in ("og:image", "og:image:url", "twitter:image", "twitter:image:src"):
         tag = soup.find("meta", attrs={"property": prop}) or soup.find("meta", attrs={"name": prop})
         if tag and tag.get("content"):
-            img = sanitize_image_url(urllib.parse.urljoin(url, tag["content"].strip()))
+            img = sanitize_image_url(urllib.parse.urljoin(base_url, tag["content"].strip()))
             if img:
                 return img
-    return None
+    return ""
 
 
 def _parse_date_uk(text: str) -> int | None:
@@ -1902,12 +2066,7 @@ def fetch_rayon_article(url: str, title: str = "", cover_url: str = "") -> tuple
 
     # 🔑 Обкладинку шукаємо ДО складання тіла: знайдений знімок треба одразу
     # виключити з тіла, інакше він стоятиме і вгорі, і в тексті.
-    hero = ""
-    for im in art.find_all("img"):
-        u = _photo_url(im, url)
-        if u:
-            hero = u
-            break
+    hero = _first_photo(art, url)
     text = _blocks_to_html(art, title, base_url=url, cover_url=(hero or cover_url))
     return (text[:8000] if len(text) > 40 else ""), author, hero
 
@@ -2115,7 +2274,11 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             # змінна пережила б попередню ітерацію, і стаття отримала б обкладинку
             # СУСІДНЬОЇ. Тиха вада найгіршого роду: дані виглядають цілими.
             image = extract_image(entry)
-            page_html = fetch_full_article(link, title, image or "") if link else None
+            page_html, hero = fetch_article_page(link, title, image or "") if link else (None, "")
+            # RSS обкладинки не дав — беремо оголошену на сторінці (Волинь Post:
+            # 0 із 62 статей мали фото саме тому, що ми дивились лише в RSS).
+            if hero and not image:
+                image = hero
             content, content_source = decide_content(rss_html, page_html, rss_summary)
             full_text = content_source == "page"
 
@@ -2232,7 +2395,7 @@ def rehydrate_short_articles(existing_articles: list) -> int:
     """
     MAX_TRIES_PER_ART = 3      # скільки прогонів пробуємо, поки не здамось
     FETCH_BUDGET      = 40     # стеля мережевих запитів на один прогін
-    upgraded = fetched = remarked = 0
+    upgraded = fetched = remarked = covered = 0
     for a in existing_articles:
         if a.get("exclusive"):
             continue
@@ -2289,7 +2452,10 @@ def rehydrate_short_articles(existing_articles: list) -> int:
                 if hero:
                     a["image"] = hero
             else:
-                new_html = fetch_full_article(url, a.get("title", ""), a.get("image") or "")
+                new_html, hero = fetch_article_page(url, a.get("title", ""), a.get("image") or "")
+                if hero and not a.get("image"):
+                    a["image"] = hero
+                    covered += 1
         except Exception:
             new_html = None
         # 🔑 Рішення ухвалює ТА САМА функція, що й на свіжому розборі. До 12.08 тут
@@ -2310,9 +2476,14 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         # чіпаємо взагалі.
         # ⚠️ Поріг саме «не коротше»: якщо видання перебудувало сторінку або стаття
         # зникла, ми радше лишимо наявний текст, ніж замінимо його недогризком.
+        # 🔑 Міряємо БЕЗ пробілів. Різні збирачі ставлять різну кількість пробілів
+        # навколо тегів (той самий абзац із посиланням дає то 336, то 337 символів
+        # — заміряно). За суворим «не коротше» стаття зривалась би на пробілі й
+        # витрачала спробу; за змістом же пробіл не є текстом, який можна втратити.
+        стисло = lambda t: re.sub(r"\s+", "", t)
         if якщо_лише_розмітка:
             новий_плоский = strip_html(new_html or "")
-            if new_html and len(новий_плоский) >= len(plain):
+            if new_html and len(стисло(новий_плоский)) >= len(стисло(plain)):
                 a["content"] = new_html
                 a["_richAlgo"] = RICH_ALGO_VERSION
                 a.pop("_richTries", None)
@@ -2322,7 +2493,7 @@ def rehydrate_short_articles(existing_articles: list) -> int:
             continue
 
         merged, src = decide_content(a.get("content") or "", new_html, a.get("excerpt") or "")
-        if src == "page" and len(strip_html(merged)) >= len(plain):
+        if src == "page" and len(стисло(strip_html(merged))) >= len(стисло(plain)):
             a["content"]  = merged            # excerpt лишаємо плоским (для картки)
             a["fullText"] = True
             a["contentSource"] = "page"
@@ -2332,16 +2503,19 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         else:
             a["contentSource"] = "rss"
             a["_fullTries"] = int(a.get("_fullTries", 0)) + 1
-    if upgraded or remarked or fetched:
+    if upgraded or remarked or covered or fetched:
         print(f"↻ Re-hydrate: доповнено {upgraded} статей повним текстом, "
-              f"перебрано розмітку в {remarked} (мережевих спроб: {fetched})")
+              f"перебрано розмітку в {remarked}, знайдено обкладинок {covered} "
+              f"(мережевих спроб: {fetched})")
     # 🛑 ПОВЕРТАЄМО ВСІ ЗМІНЕНІ, А НЕ ЛИШЕ ДОПОВНЕНІ. Це число — єдина ознака, за
     # якою `main()` вирішує, чи взагалі зберігати `articles.json`. Якби тут лишилось
     # саме `upgraded`, прогін, який перебрав розмітку сотні статей і нічого не
     # «доповнив», ТИХО викинув би всю цю роботу: тексти оновились у памʼяті, файл
     # не записався, наступний прогін почав би спочатку. Симптом виглядав би як
     # «посилання чомусь не зʼявляються», а причина була б за кілометр від них.
-    return upgraded + remarked
+    # ⚠️ `covered` — з тієї самої причини: стаття, якій прогін дістав ЛИШЕ
+    # обкладинку, іншого лічильника не має.
+    return upgraded + remarked + covered
 
 
 def report_fulltext_quality(articles: list) -> None:
