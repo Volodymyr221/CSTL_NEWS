@@ -19,7 +19,11 @@ const { ok, done } = reporter();
 const { url, stop } = await serve();
 const executablePath = chromiumPath();
 const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}) });
-const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+// 🔴 SERVICE WORKER ВИМКНЕНО, і це не дрібниця. Запити застосунку йдуть ЧЕРЕЗ
+// нього, а `page.route` їх не бачить: підміна не спрацьовує, фото «не доїжджає»,
+// і стенд показує вигляд без фото там, де насправді все справне. Зловлено 27.08 —
+// перехоплення рахувало 0 запитів фото при явно поставленій підміні.
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
 const page = await ctx.newPage();
 
 const АДРЕСА = 'https://www.facebook.com/olykarada/posts/123';
@@ -28,6 +32,7 @@ const АДРЕСА = 'https://www.facebook.com/olykarada/posts/123';
 // браузер спокійно переносить по них САМ. Перевірка виходила зеленою навіть без
 // наших стилів, тобто не доводила нічого. Тут — суцільний токен, який розірвати
 // нема по чому: рівно те, що дають скорочувачі посилань і соцмережі.
+const ФОТО   = 'https://static.rayon.in.ua/Page/1/aaa.jpg';
 const ДОВГА  = 'https://example.com/' + 'aB9xQ7zK2mN5pR8sT1vW4yZ6cE3gJ0hL'.repeat(3);
 let idСтатті = null;
 
@@ -39,6 +44,8 @@ await page.route('**/data/articles.json', async r => {
   idСтатті = arts[0].id;
   arts[0].content =
     '<p>В Олиці інтерактивний тренінг на тему «Культурний код».</p>' +
+    // Фото в тілі — рівно та розмітка, яку тепер віддає парсер (крок 2Б-1).
+    `<figure><img src="${ФОТО}" alt=""><figcaption>Учасники тренінгу</figcaption></figure>` +
     `<p>Про це <a href="${АДРЕСА}" target="_blank" rel="noopener">повідомили</a> ` +
     'на фейсбук-сторінці Олицької міської ради.</p>' +
     // Текстом посилання буває сама адреса — видання ставлять їх так постійно.
@@ -46,6 +53,10 @@ await page.route('**/data/articles.json', async r => {
     `<p>Джерело: <a href="${ДОВГА}" target="_blank" rel="noopener">${ДОВГА}</a></p>`;
   await r.fulfill({ contentType: 'application/json', body: JSON.stringify(arts) });
 });
+// Фото статті підмінюємо своїм: хост джерела з цього середовища недосяжний, і без
+// підміни ми міряли б лише випадок «фото не доїхало», а не той, заради якого все.
+const байти = (await import('node:fs')).readFileSync('images/kino-castle.jpg');
+await page.route('**static.rayon.in.ua/**', r => r.fulfill({ contentType: 'image/jpeg', body: байти }));
 await page.route('**://*.supabase.co/**', r => r.abort());
 await page.route('**://api.open-meteo.com/**', r => r.abort());
 
@@ -165,6 +176,54 @@ const тап = await page.evaluate(() => new Promise(res => {
   setTimeout(() => res({ дійшов: false }), 800);
 }));
 ok('🔴 тап по посиланню доходить (жест модалки його не зʼїдає)', тап.дійшов, JSON.stringify(тап));
+
+// ── ФОТО В ТІЛІ СТАТТІ (27.08) ──────────────────────────────────────────────
+// 🔑 Міряємо те, що бачить ЛЮДИНА: фото намалювалось, підпис на місці, і тап по
+// ньому відкриває наш повноекранний переглядач — той самий, що у «Стрічці».
+const ф = await page.evaluate(() => {
+  const im = document.querySelector('.article-body figure img');
+  if (!im) return { є: false };
+  const s = getComputedStyle(im);
+  return {
+    є: true,
+    ширина: Math.round(im.getBoundingClientRect().width),
+    тіло: Math.round(document.querySelector('.article-body').getBoundingClientRect().width),
+    підпис: (document.querySelector('.article-body figcaption') || {}).textContent || '',
+    радіус: s.borderTopLeftRadius,
+    атрибути: [...im.attributes].map(x => x.name).sort(),
+  };
+});
+ok('фото в тілі намалювалось', ф.є, ф.є ? `${ф.ширина}px` : 'немає');
+ok('фото на всю ширину тіла статті', ф.є && Math.abs(ф.ширина - ф.тіло) <= 1,
+   `${ф.ширина} проти ${ф.тіло}`);
+ok('підпис під фото на місці', /Учасники/.test(ф.підпис), ф.підпис);
+ok('🛑 у фото лише наші атрибути', JSON.stringify(ф.атрибути) === JSON.stringify(['alt', 'src']),
+   JSON.stringify(ф.атрибути));
+ok('фото має наш радіус, як обкладинка', parseFloat(ф.радіус) > 0, ф.радіус);
+
+// 🔴 ТАП ПО ФОТО → НАШ ПЕРЕГЛЯДАЧ. Міряємо наслідок: у документі зʼявився шар
+// перегляду з тим самим знімком. Це і є «беремо зміст, показуємо своїм».
+await page.click('.article-body figure img');
+await page.waitForTimeout(500);
+const перегляд = await page.evaluate(() => {
+  const v = document.querySelector('.fd-viewer');
+  return { є: !!v, фото: v ? (v.querySelector('img') || {}).src : '' };
+});
+ok('🔴 тап по фото відкриває повноекранний перегляд', перегляд.є, JSON.stringify(перегляд));
+ok('🔴 і в ньому саме те фото', перегляд.фото.includes('aaa.jpg'), перегляд.фото);
+
+// 🔴 ФОТО НЕ ДОЇХАЛО → ЗНІМАЄТЬСЯ РАЗОМ ІЗ ПІДПИСОМ.
+// Інакше під порожнім місцем висить підпис, який уже нічого не описує — для
+// людини це «загублене фото», а не «фото немає». Спіймано цим же стендом.
+const сирота = await page.evaluate(() => {
+  const fig = document.querySelector('.article-body figure');
+  if (!fig) return { незастосовно: true };
+  fig.querySelector('img').dispatchEvent(new Event('error', { bubbles: false }));
+  return { блокЛишився: !!document.querySelector('.article-body figure'),
+           підписЛишився: !!document.querySelector('.article-body figcaption') };
+});
+ok('🔴 бите фото знімається РАЗОМ із підписом, не лишає його сиротою',
+   !!сирота && !сирота.блокЛишився && !сирота.підписЛишився, JSON.stringify(сирота));
 
 await browser.close();
 await stop();

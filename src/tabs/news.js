@@ -1,6 +1,7 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 import { registerScope, readSeen, writeSeen } from '../core/board-shared.js';
+import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний зі «Стрічкою»)
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
@@ -225,6 +226,12 @@ function attachNewsListeners() {
 export function handleImgError(e) {
   const img = e.target;
   if (!img || img.tagName !== 'IMG') return;
+  // 🔴 27.08 — ФОТО В ТІЛІ СТАТТІ ЗНІМАЄТЬСЯ РАЗОМ ІЗ ПІДПИСОМ.
+  // Спіймано стендом: обробник прибирав саму картинку, а `<figcaption>` лишався —
+  // тобто під порожнім місцем висів підпис «Учасники тренінгу», який тепер нічого
+  // не описує. Для людини це виглядає як загублене фото, а не як його відсутність.
+  const блок = img.closest('.article-body figure');
+  if (блок) { блок.remove(); return; }
   const картка = img.closest('.nc');
   if (картка) картка.classList.add('nc--noimg');
   img.remove();
@@ -522,7 +529,7 @@ function renderArticleBody(content) {
   // в ньому дірку означало б, що наступна зміна розмітки мовчки провалиться в
   // гілку «плоский легасі-текст» і поїде через `escapeHtml`, тобто посилання
   // покажеться людині як текст із кутовими дужками.
-  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br|a)\b/i.test(raw)) return raw;
+  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br|a|figure|img)\b/i.test(raw)) return raw;
   const text = decodeEntities(raw);
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (!paragraphs.length) return '';
@@ -619,6 +626,23 @@ export function openArticle(id) {
         : ''}
     </div>
   `;
+
+  // 🔴 27.08 — ТАП ПО ФОТО В ТІЛІ ВІДКРИВАЄ ЙОГО НА ВЕСЬ ЕКРАН.
+  // 🔑 Переглядач НЕ свій: `core/photo-viewer.js`, той самий, що у «Стрічці».
+  // Правило №14 — беремо з чужого сайту зміст, показуємо своїм.
+  // ⚠️ Слухач ДЕЛЕГОВАНИЙ і вішається на вміст модалки, який перемальовується на
+  // кожну статтю: вішати на кожне `<img>` означало б лишати мертві слухачі на
+  // вузлах, яких уже немає.
+  // ⚠️ Обкладинка (`.article-img`) сюди НЕ входить: вона поза `.article-body`.
+  if (!modalContent.dataset.photoWired) {
+    modalContent.dataset.photoWired = '1';
+    modalContent.addEventListener('click', e => {
+      const im = e.target.closest('.article-body figure img');
+      if (!im) return;
+      const усі = [...modalContent.querySelectorAll('.article-body figure img')];
+      openPhotoViewer(усі.map(x => x.src), усі.indexOf(im));
+    });
+  }
 
   // Батч 5.3: іконки зверху модалки (спільні кнопки — onclick перезаписуємо щоразу).
   const shareBtn  = document.getElementById('modal-share-btn');

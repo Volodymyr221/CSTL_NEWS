@@ -26,6 +26,7 @@ import {
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
+import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний)
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 // Спільна з Дошкою механіка «оновити список, не смикнувши екран» (див. core/list-patch.js).
 import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS,
@@ -406,26 +407,10 @@ function wireGalleries(root) {
   });
 }
 
-// Повноекранний перегляд фото (свайп між усіма фото поста).
-function openViewer(images, startIdx) {
-  if (!images.length) return;
-  const ov = document.createElement('div');
-  ov.className = 'fd-viewer';
-  ov.innerHTML = `
-    <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
-    <div class="fd-viewer-track">${images.map(u =>
-      `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join('')}</div>`;
-  // Той самий механізм, що й у решти шарів (core/layers.js): системний жест
-  // «назад» і кнопка браузера закривають перегляд фото, а не відкочують додаток.
-  const layer = openLayer(() => { ov.remove(); document.body.style.overflow = ''; });
-  const close = () => closeLayer(layer);
-  ov.querySelector('.fd-viewer-close').addEventListener('click', close);
-  ov.addEventListener('click', e => { if (e.target === ov || e.target.classList.contains('fd-viewer-slide')) close(); });
-  document.body.appendChild(ov);
-  document.body.style.overflow = 'hidden';
-  const track = ov.querySelector('.fd-viewer-track');
-  track.scrollLeft = (startIdx || 0) * track.clientWidth;   // відкрити на потрібному фото
-}
+// 🗑 27.08 — `openViewer` переїхав у `core/photo-viewer.js`: користувачів стало
+// двоє (пости Стрічки і фото в тілі статті), а друга копія в цьому проєкті вже
+// тричі розходилась із першою. Тут лишився лише виклик під старим іменем.
+const openViewer = openPhotoViewer;
 
 // Свайп-вниз закриває нижній лист — той самий філ, що в core/modal.js: граб від
 // шапки (перші ~64px) закриває ЗАВЖДИ; у тілі — лише коли скрол угорі (інакше це
