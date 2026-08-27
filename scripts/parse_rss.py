@@ -409,6 +409,28 @@ SIMILAR_RATIO  = 0.90     # текст зі сторінки ≈ анонс → 
 # збережених статей узагалі.
 FULL_ALGO_VERSION = 2
 
+# 🔴 27.08 — ВЕРСІЯ ПРАВИЛ РОЗМІТКИ, ОКРЕМА ВІД ВЕРСІЇ ПРАВИЛ ПОВНОТИ.
+#
+# 🗣️ Вова прислав скріни статті 12248: на сайті-джерелі слово «повідомили» —
+# клікабельне посилання, у нас голий текст; цитата в оригіналі одна, у нас
+# розірвана навпіл.
+# 📐 Полагодили — але парсер дедуплікує за URL, тож виправлення побачили б лише
+# НОВІ статті, а всі 400 наявних лишились би такими, як на скріні.
+#
+# 🔑 Зразок узято тут же, поруч: `FULL_ALGO_VERSION` заведено 12.08 рівно з цієї
+# причини, і в коментарі до нього написано — «наступна зміна правил має так само
+# дати статтям новий шанс, інакше через місяць ми знову ловитимемо той самий клас
+# помилки». Це і є та наступна зміна.
+#
+# ⚠️ ЧОМУ ОКРЕМЕ ЧИСЛО, А НЕ +1 ДО НАЯВНОГО. Повнота і розмітка — різні питання
+# про різні статті: повнота цікавить лише ті, що лишились анонсом, розмітка —
+# УСІ, зокрема давно повні. Спільне число означало б, що зміна правил розмітки
+# скидає лічильники спроб дотягнути повний текст (і навпаки), тобто два механізми
+# смикали б один одного без причини.
+# 🛑 Піднімати це число можна лише тоді, коли зміна робить розмітку СТАРИХ статей
+# іншою. Зайве підняття = 400 зайвих звернень до чужих сайтів.
+RICH_ALGO_VERSION = 1
+
 
 def _norm_for_compare(t: str) -> str:
     """Текст до порівняння: без розмітки, регістру, пунктуації і пробілів."""
@@ -450,9 +472,13 @@ def decide_content(rss_html: str, page_html: str | None, rss_summary: str) -> tu
     return rss_html, "rss"
 
 
-def get_full_content(entry, title: str = "") -> str:
+def get_full_content(entry, title: str = "", base_url: str = "") -> str:
     """Повний текст статті → БАГАТИЙ HTML (варіант A): з content:encoded зберігаємо
-    структуру (_blocks_to_html), інакше summary → абзаци. Повертає безпечний HTML."""
+    структуру (_blocks_to_html), інакше summary → абзаци. Повертає безпечний HTML.
+
+    ⚠️ `base_url` тут — посилання самого запису RSS. Воно потрібне рівно для того,
+    щоб відносні адреси всередині `content:encoded` («/news/999») стали
+    абсолютними: без нього посилання вело б на НАШ домен."""
     content_list = getattr(entry, "content", None)
     if content_list:
         valid = [c for c in content_list if isinstance(c, dict)]
@@ -462,7 +488,7 @@ def get_full_content(entry, title: str = "") -> str:
                 raw = best.get("value") or ""
                 if len(strip_html(raw)) > 150:
                     from bs4 import BeautifulSoup
-                    rich = _blocks_to_html(BeautifulSoup(raw, "html.parser"), title)
+                    rich = _blocks_to_html(BeautifulSoup(raw, "html.parser"), title, base_url=base_url)
                     if len(rich) > 60:
                         return rich[:8000]
     summ = strip_html(entry.get("summary") or entry.get("description") or "")
@@ -1035,9 +1061,53 @@ def _blocks_to_text(el) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
-def _inline_html(node) -> str:
-    """Вміст блоку → HTML лише з <strong>/<em>/<br> (решта тегів — розгортаємо в
-    текст). Текст ЕКРАНУЄТЬСЯ. Аллоулист за побудовою → жодних атрибутів/скриптів."""
+# 🔴 27.08 — ПЕРША АДРЕСА, ЯКУ МИ ВЗАГАЛІ ВПУСКАЄМО В ТІЛО СТАТТІ.
+#
+# 🗣️ Вова зі скрінів статті 12248: на сайті-джерелі «Про це **повідомили**» —
+# клікабельне посилання на фейсбук міськради, у нас це голий текст.
+# 📐 Заміряно: `<a` у тілі мали **0 із 400** статей, а через цей розбір пройшло
+# **381** — тобто ми стирали КОЖНЕ посилання в КОЖНІЙ статті.
+#
+# 🛑 ЧОМУ ЦЕ ВИМАГАЄ ОКРЕМОЇ ФУНКЦІЇ, А НЕ РЯДКА В АЛЛОУЛИСТІ. Досі безпека
+# `content` трималась на тому, що ми пишемо теги **без жодного атрибута** — тіло
+# йде на клієнті в `innerHTML` без санітизації, і це чинний контракт. `href` —
+# перший атрибут, який ми впускаємо, тож правило одне: **адресу пише парсер**, а
+# не джерело. Беремо сире значення, перевіряємо і складаємо своє.
+#
+# ⚠️ ЩО САМЕ ВІДКИДАЄМО І ЧОМУ:
+#   • не `http`/`https` (`javascript:`, `data:`, `vbscript:`) — виконуваний код;
+#   • керівні символи — ними ламають розбір атрибута («java\nscript:»);
+#   • якорі `#...` — вони вказують усередину ЧУЖОЇ сторінки, у нас ведуть нікуди;
+#   • `mailto:` / `tel:` — не шкідливі, але це дія («написати», «подзвонити»), а
+#     не джерело факту; у тілі новини вони лише збивають з пантелику.
+# 🔑 Відносні адреси («/news/999») робимо абсолютними: без цього посилання вело б
+# на НАШ домен — `castlelife.org/news/999`, тобто в нікуди.
+def _safe_href(raw: str, base_url: str = "") -> str:
+    if not raw:
+        return ""
+    u = raw.strip()
+    if not u or u.startswith("#"):
+        return ""
+    if any(ord(c) < 0x20 for c in u):
+        return ""
+    if base_url:
+        try:
+            u = urllib.parse.urljoin(base_url, u)
+        except Exception:
+            return ""
+    try:
+        p = urllib.parse.urlparse(u)
+    except Exception:
+        return ""
+    if p.scheme not in ("http", "https") or not p.netloc:
+        return ""
+    return u
+
+
+def _inline_html(node, base_url: str = "") -> str:
+    """Вміст блоку → HTML лише з <strong>/<em>/<br>/<a> (решта тегів — розгортаємо
+    в текст). Текст ЕКРАНУЄТЬСЯ, адреса посилання — теж, і лише після перевірки
+    (`_safe_href`). Аллоулист за побудовою → жодних чужих атрибутів."""
     from bs4 import NavigableString, Tag
     out = []
     for ch in node.children:
@@ -1045,13 +1115,24 @@ def _inline_html(node) -> str:
             out.append(html.escape(str(ch)))
         elif isinstance(ch, Tag):
             if ch.name in ("strong", "b"):
-                out.append("<strong>" + _inline_html(ch) + "</strong>")
+                out.append("<strong>" + _inline_html(ch, base_url) + "</strong>")
             elif ch.name in ("em", "i"):
-                out.append("<em>" + _inline_html(ch) + "</em>")
+                out.append("<em>" + _inline_html(ch, base_url) + "</em>")
             elif ch.name == "br":
                 out.append("<br>")
+            elif ch.name == "a":
+                inner = _inline_html(ch, base_url)
+                href = _safe_href(ch.get("href") or "", base_url)
+                # ⚠️ Адреса не пройшла перевірку — лишаємо ТЕКСТ, а не викидаємо
+                # його разом із посиланням: людина має дочитати речення.
+                if href and inner.strip():
+                    out.append(
+                        '<a href="' + html.escape(href, quote=True) + '"'
+                        ' target="_blank" rel="noopener">' + inner + "</a>")
+                else:
+                    out.append(inner)
             else:
-                out.append(_inline_html(ch))   # a/span/… — розгортаємо (лишається текст)
+                out.append(_inline_html(ch, base_url))   # span/… — розгортаємо
     return "".join(out)
 
 
@@ -1065,13 +1146,75 @@ _ABBR_TAIL = re.compile(
     r'ім|див|напр|тобто|та\s+ін)\.$', re.I)
 
 
+# 🔴 27.08 — ДЕ РІЗАТИ НЕ МОЖНА НІКОЛИ.
+#
+# Поки в тілі жили самі `<strong>`/`<em>`, найгірше від невдалого розрізу було
+# розірване виділення. З появою посилань ціна змінилась: розріз посеред
+# `<a href=…>…</a>` дає `<p>…<a href=x>Текст</p><p>Далі</a>…</p>` — зламану
+# розмітку. Браузер її «полагодить» по-своєму, і в людини посилання або
+# розтягнеться на наступні абзаци, або обірветься.
+#
+# 🔑 Заборонені відрізки рахуємо по САМОМУ рядку, а не «на око»:
+#   • будь-що між `<` і `>` — це нутрощі тега, там межі абзацу не буває взагалі;
+#   • усе між `<a …>` і `</a>` — посилання мусить лишитись цілим.
+# ⚠️ Обидва потрібні окремо: перший рятує від розрізу в атрибуті (в адресі
+# трапляються і крапки, і великі літери), другий — від розрізу в тексті посилання.
+_TAG_SPAN_RE    = re.compile(r'<[^>]*>')
+_ANCHOR_SPAN_RE = re.compile(r'<a\b[^>]*>.*?</a>', re.S | re.I)
+
+# 🔴 27.08 — ТРЕТЯ ЗАБОРОНЕНА ЗОНА: ВСЕРЕДИНІ ЛАПОК.
+#
+# 🗣️ Знайдено на живій статті 12248 зі скріна Вови. Цитата в оригіналі одна:
+#   «Було справді цікаво, пізнавально й дуже круто!І це лише початок…»
+# Фейсбук поставив там перенос рядка, rayon.in.ua склеїв його БЕЗ ПРОБІЛУ — і
+# розділювач чесно побачив «!» упритул до великої «І». За своїм правилом він мав
+# рацію; за змістом розрізав пряму мову навпіл, і в застосунку вона стала двома
+# абзацами, другий з яких починається з середини фрази.
+#
+# 🔑 ПРАВИЛО, А НЕ ЛАТКА: усередині відкритої прямої мови межі абзацу не буває.
+# Запобіжник «сегмент коротший за 40 символів» тут не рятував — там було 45.
+#
+# ⚠️ Пари беремо ЛИШЕ однозначні («…» і „…“). Прямі лапки (") тим самим знаком і
+# відкриваються, і закриваються, тож відрізок довелось би вгадувати за парністю —
+# а помилка вгадування тут дорожча за користь: вона мовчки заборонить розрізи в
+# усьому решті абзацу.
+_QUOTE_PAIRS = (("«", "»"), ("„", "“"))
+
+
+def _quote_spans(inner: str) -> list:
+    """Відрізки прямої мови. Незакрита лапка тягнеться до кінця рядка — так
+    консервативніше: краще лишити абзац цілим, ніж розрізати репліку."""
+    spans = []
+    for опен, клоуз in _QUOTE_PAIRS:
+        i = 0
+        while True:
+            a = inner.find(опен, i)
+            if a < 0:
+                break
+            b = inner.find(клоуз, a + 1)
+            spans.append((a, (b + 1) if b >= 0 else len(inner)))
+            i = (b + 1) if b >= 0 else len(inner)
+    return spans
+
+
+def _no_cut_spans(inner: str) -> list:
+    """Відрізки рядка, всередині яких розрізати абзац не можна."""
+    spans = [m.span() for m in _TAG_SPAN_RE.finditer(inner)]
+    spans += [m.span() for m in _ANCHOR_SPAN_RE.finditer(inner)]
+    spans += _quote_spans(inner)
+    return spans
+
+
 def _split_runon_paragraphs(inner: str) -> list:
     """Розбити внутрішній текст одного <p> на кілька, якщо RSS склеїв абзаци
-    (крапка впритул до великої літери, без пробілу). Захист: сегмент <40 симв.
-    або хвіст-скорочення → не межа."""
+    (крапка впритул до великої літери, без пробілу). Захист: сегмент <40 симв.,
+    хвіст-скорочення або позиція всередині тега/посилання → не межа."""
+    заборонено = _no_cut_spans(inner)
     pieces, last = [], 0
     for m in _RUNON_BOUNDARY.finditer(inner):
         i = m.start()
+        if any(a < i < b for a, b in заборонено):
+            continue
         seg = inner[last:i]
         if _ABBR_TAIL.search(seg.strip()[-10:]):
             continue
@@ -1094,11 +1237,14 @@ def _split_runon_html(html_str: str) -> str:
     return re.sub(r'<p>(.*?)</p>', repl, html_str, flags=re.S)
 
 
-def _blocks_to_html(el, title: str = "") -> str:
+def _blocks_to_html(el, title: str = "", base_url: str = "") -> str:
     """Тіло статті → БЕЗПЕЧНИЙ HTML зі збереженням структури (підзаголовки, списки
     •, абзаци, жирний/курсив) — як в оригіналі (варіант A, БЕЗ фото). Аллоулист
-    тегів: <p>/<h3>/<ul>/<li>/<strong>/<em>/<br>/<blockquote>, жодних атрибутів →
-    безпечно для innerHTML на клієнті. Ріже службовий хвіст (_TAIL_RE), дубль
+    тегів: <p>/<h3>/<ul>/<li>/<strong>/<em>/<br>/<blockquote>/<a>. Єдиний атрибут —
+    `href` у посилання, і його пише САМ парсер після перевірки (`_safe_href`), тож
+    для innerHTML на клієнті це лишається безпечним за побудовою.
+    `base_url` потрібен рівно для посилань: без нього відносна адреса «/news/999»
+    вела б на НАШ домен. Ріже службовий хвіст (_TAIL_RE), дубль
     заголовка й провідний часовий штамп. Запобіжна довжина ~7500."""
     tnorm = re.sub(r"\W+", "", title.lower()) if title else ""
     parts, li_buf, total = [], [], 0
@@ -1124,7 +1270,7 @@ def _blocks_to_html(el, title: str = "") -> str:
         # Рекламні слоти-сміття (volynpost: «op13-Volynpost.com_650x60 У новині #3 650*60»)
         if re.search(r"\d{3}\s*[x×*]\s*\d{2,3}|У\s+новині\s*#|\.com_\d", raw, re.I):
             continue
-        inner = _inline_html(b).strip()
+        inner = _inline_html(b, base_url).strip()
         if not inner:
             continue
         if b.name == "li":
@@ -1213,7 +1359,7 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
             if len(clean_article_text(_blocks_to_text(el), title)) > 300:
                 if DEBUG_FETCH:
                     print(f"[FETCH] {url[:70]} — OK селектор '{sel}'")
-                return _blocks_to_html(el, title)[:8000]
+                return _blocks_to_html(el, title, base_url=url)[:8000]
 
     # Fallback (readability-стиль): контейнер із найбільшою масою тексту в <p>.
     # Не обмежуємось верхнім рівнем — тіло статті зазвичай ВКЛАДЕНЕ (через це старий
@@ -1261,7 +1407,7 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
 
     if candidates:
         best_mass, best_el = max(candidates, key=lambda x: x[0])
-        rich = _blocks_to_html(best_el, title)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
+        rich = _blocks_to_html(best_el, title, base_url=url)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
         if len(strip_html(rich)) > 300:
             if DEBUG_FETCH:
                 print(f"[FETCH] {url[:70]} — OK фолбек (<p>-маса {best_mass})")
@@ -1606,7 +1752,7 @@ def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
         for el in art.select(sel):
             el.decompose()
 
-    text = _blocks_to_html(art, title)          # багатий HTML (варіант A)
+    text = _blocks_to_html(art, title, base_url=url)   # багатий HTML (варіант A)
     return (text[:8000] if len(text) > 40 else ""), author
 
 
@@ -1797,7 +1943,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
 
         try:
             # content — БАГАТИЙ HTML (get_full_content зберігає структуру + чистить)
-            rss_html = get_full_content(entry, title)
+            rss_html = get_full_content(entry, title, base_url=link)
             rss_summary = strip_html(entry.get("summary") or entry.get("description") or "")
 
             # 🔴 12.08 — НА СТОРІНКУ ХОДИМО ЗАВЖДИ, а не лише коли анонс короткий.
@@ -1912,14 +2058,33 @@ def rehydrate_short_articles(existing_articles: list) -> int:
     статтях і доповнюємо їх повним текстом на місці (той самий шлях
     fetch_full_article, що й для нових). Так плашка зникає, а статті лишаються.
 
-    Бюджет і лічильник спроб (_fullTries) захищають від нескінченних
-    повторів для джерел, з яких повний текст дістати не вдається.
+    🆕 27.08 — ДРУГА ПРИЧИНА ЗАЙТИ СЮДИ: змінились правила РОЗМІТКИ (посилання,
+    цілі цитати). Вона стосується всіх статей, зокрема давно повних, і має власну
+    версію (`RICH_ALGO_VERSION`) та власний лічильник спроб (`_richTries`).
+
+    Повертає кількість ЗМІНЕНИХ статей (доповнені + перебрані) — саме за цим
+    числом `main()` вирішує, чи зберігати файл.
+
+    Бюджет і лічильники спроб (_fullTries / _richTries) захищають від нескінченних
+    повторів для джерел, з яких текст дістати не вдається.
     """
     MAX_TRIES_PER_ART = 3      # скільки прогонів пробуємо, поки не здамось
     FETCH_BUDGET      = 40     # стеля мережевих запитів на один прогін
-    upgraded = fetched = 0
+    upgraded = fetched = remarked = 0
     for a in existing_articles:
-        if a.get("exclusive") or a.get("fullText"):
+        if a.get("exclusive"):
+            continue
+
+        # 🔴 27.08 — ДРУГА ПРИЧИНА ПЕРЕБРАТИ СТАТТЮ: ЗМІНИЛИСЬ ПРАВИЛА РОЗМІТКИ.
+        # Досі сюди заходили лише статті, що лишились анонсом. Але 27.08 парсер
+        # навчився зберігати посилання і не рвати пряму мову — а це стосується
+        # УСІХ статей, зокрема давно повних. Без цієї гілки виправлення побачили б
+        # тільки нові новини, а наявні 400 лишились би зі стертими посиланнями.
+        # ⚠️ Лічильник спроб тут ВЛАСНИЙ (`_richTries`): у статті, яка вже повна,
+        # невдача розмітки не має витрачати спроби дотягнути повний текст.
+        треба_розмітку = a.get("_richAlgo") != RICH_ALGO_VERSION
+        якщо_лише_розмітка = bool(a.get("fullText")) and треба_розмітку
+        if a.get("fullText") and not треба_розмітку:
             continue
 
         # 🔴 12.08 — СКИДАННЯ ЛІЧИЛЬНИКА ПРИ ЗМІНІ АЛГОРИТМУ.
@@ -1936,7 +2101,16 @@ def rehydrate_short_articles(existing_articles: list) -> int:
 
         plain = strip_html(a.get("content") or "")
         url = a.get("sourceUrl")
-        if not url or int(a.get("_fullTries", 0)) >= MAX_TRIES_PER_ART:
+        if not url:
+            continue
+        # ⚠️ Лічильник спроб читаємо ТОЙ, ЩО ВІДПОВІДАЄ ПРИЧИНІ ЗАХОДУ. Тут стояло
+        # просто `_fullTries` — і для статті, яка перебирається заради РОЗМІТКИ, це
+        # означало б, що її доля залежить від давніх невдач дотягнути повний текст.
+        # Сьогодні такого не буває (на успіху `_fullTries` знімається), тобто вада
+        # тиха й невидима — саме тому її варто закрити зараз, а не чекати, поки
+        # хтось змінить сусідню гілку і два лічильники почнуть смикати один одного.
+        лічильник = "_richTries" if якщо_лише_розмітка else "_fullTries"
+        if int(a.get(лічильник, 0)) >= MAX_TRIES_PER_ART:
             continue
         if fetched >= FETCH_BUDGET:
             continue
@@ -1956,20 +2130,52 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         # стояла власна копія правила (`>= 500`), і саме вона відкидала повні короткі
         # статті: fetch удавався, віддавав усю статтю — і її не зараховували.
         # Анонсом для порівняння служить те, що вже лежить у статті (`excerpt`).
+        # 🔴 27.08 — ДЛЯ ПЕРЕБОРУ РОЗМІТКИ СУДДЯ ІНШИЙ, І ЦЕ НЕ ДРІБНИЦЯ.
+        #
+        # Перша редакція віддавала рішення `decide_content` — тій самій функції, що
+        # й для дотягування повного тексту. Стенд одразу показав, що жодна стаття
+        # не перебирається, і причина виявилась змістовною: `decide_content` питає
+        # «чи сторінка дала щось НОВЕ, чи це той самий анонс», і на повній статті
+        # чесно відповідає «той самий текст» — бо це справді та сама стаття. Тобто
+        # функцію просили відповісти на питання, якого їй не ставили.
+        #
+        # 🔑 Тут питання одне: «чи вдалось узяти тіло зі сторінки і чи не стало воно
+        # коротшим». Повнота вже встановлена, `contentSource` уже «page» — їх не
+        # чіпаємо взагалі.
+        # ⚠️ Поріг саме «не коротше»: якщо видання перебудувало сторінку або стаття
+        # зникла, ми радше лишимо наявний текст, ніж замінимо його недогризком.
+        if якщо_лише_розмітка:
+            новий_плоский = strip_html(new_html or "")
+            if new_html and len(новий_плоский) >= len(plain):
+                a["content"] = new_html
+                a["_richAlgo"] = RICH_ALGO_VERSION
+                a.pop("_richTries", None)
+                remarked += 1
+            else:
+                a["_richTries"] = int(a.get("_richTries", 0)) + 1
+            continue
+
         merged, src = decide_content(a.get("content") or "", new_html, a.get("excerpt") or "")
         if src == "page" and len(strip_html(merged)) >= len(plain):
             a["content"]  = merged            # excerpt лишаємо плоским (для картки)
             a["fullText"] = True
             a["contentSource"] = "page"
+            a["_richAlgo"] = RICH_ALGO_VERSION   # текст щойно взято чинними правилами
             a.pop("_fullTries", None)
             upgraded += 1
         else:
             a["contentSource"] = "rss"
             a["_fullTries"] = int(a.get("_fullTries", 0)) + 1
-    if upgraded or fetched:
-        print(f"↻ Re-hydrate: доповнено {upgraded} статей повним текстом "
-              f"(мережевих спроб: {fetched})")
-    return upgraded
+    if upgraded or remarked or fetched:
+        print(f"↻ Re-hydrate: доповнено {upgraded} статей повним текстом, "
+              f"перебрано розмітку в {remarked} (мережевих спроб: {fetched})")
+    # 🛑 ПОВЕРТАЄМО ВСІ ЗМІНЕНІ, А НЕ ЛИШЕ ДОПОВНЕНІ. Це число — єдина ознака, за
+    # якою `main()` вирішує, чи взагалі зберігати `articles.json`. Якби тут лишилось
+    # саме `upgraded`, прогін, який перебрав розмітку сотні статей і нічого не
+    # «доповнив», ТИХО викинув би всю цю роботу: тексти оновились у памʼяті, файл
+    # не записався, наступний прогін почав би спочатку. Симптом виглядав би як
+    # «посилання чомусь не зʼявляються», а причина була б за кілометр від них.
+    return upgraded + remarked
 
 
 def report_fulltext_quality(articles: list) -> None:
@@ -2132,6 +2338,13 @@ def main():
 
     # Зберегти articles.json
     if new_articles or rehydrated:
+        # Свіжі статті вже розібрані ЧИННИМИ правилами розмітки — позначаємо їх
+        # одразу, інакше самолікування на наступному ж прогоні пішло б перебирати
+        # те, що щойно розібрало, і витрачало б бюджет на порожню роботу.
+        # 🔑 Одним місцем, а не в кожній із трьох гілок збирання статті: поле
+        # службове, і тримати три його копії означало б три шанси забути одну.
+        for _a in new_articles:
+            _a.setdefault("_richAlgo", RICH_ALGO_VERSION)
         all_articles = new_articles + existing_articles
         report_fulltext_quality(all_articles)
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
