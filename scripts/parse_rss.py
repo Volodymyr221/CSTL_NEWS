@@ -2086,8 +2086,6 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         якщо_лише_розмітка = bool(a.get("fullText")) and треба_розмітку
         if a.get("fullText") and not треба_розмітку:
             continue
-        if якщо_лише_розмітка and int(a.get("_richTries", 0)) >= MAX_TRIES_PER_ART:
-            continue
 
         # 🔴 12.08 — СКИДАННЯ ЛІЧИЛЬНИКА ПРИ ЗМІНІ АЛГОРИТМУ.
         # Без цього рядка вся ця робота була б НЕВИДИМОЮ: заміряно 12.08 — зі 107
@@ -2103,7 +2101,16 @@ def rehydrate_short_articles(existing_articles: list) -> int:
 
         plain = strip_html(a.get("content") or "")
         url = a.get("sourceUrl")
-        if not url or int(a.get("_fullTries", 0)) >= MAX_TRIES_PER_ART:
+        if not url:
+            continue
+        # ⚠️ Лічильник спроб читаємо ТОЙ, ЩО ВІДПОВІДАЄ ПРИЧИНІ ЗАХОДУ. Тут стояло
+        # просто `_fullTries` — і для статті, яка перебирається заради РОЗМІТКИ, це
+        # означало б, що її доля залежить від давніх невдач дотягнути повний текст.
+        # Сьогодні такого не буває (на успіху `_fullTries` знімається), тобто вада
+        # тиха й невидима — саме тому її варто закрити зараз, а не чекати, поки
+        # хтось змінить сусідню гілку і два лічильники почнуть смикати один одного.
+        лічильник = "_richTries" if якщо_лише_розмітка else "_fullTries"
+        if int(a.get(лічильник, 0)) >= MAX_TRIES_PER_ART:
             continue
         if fetched >= FETCH_BUDGET:
             continue
