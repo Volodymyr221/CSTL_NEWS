@@ -205,7 +205,7 @@ def cms_to_article(row, next_id):
         "id": next_id,
         "title": row.get("title", ""),
         "excerpt": (row.get("excerpt") or row.get("content") or "")[:400],
-        "content": pr.polish_markup(row.get("content", "")),
+        "content": pr.polish_markup(row.get("content", ""), row.get("image") or ""),
         "_polish": pr.POLISH_VERSION,
         "category": row.get("category") or "Суспільство",
         "geo": row.get("geo") or "Громада",
