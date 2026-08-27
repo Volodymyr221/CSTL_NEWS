@@ -96,7 +96,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "file=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$file\" == *.js ]]; then node --check \"$file\" && echo \"✓ синтаксис OK: $file\" || echo \"✗ ПОМИЛКА синтаксису: $file\"; fi"
+            "command": "file=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$file\" == *.js ]]; then node scripts/check-syntax.mjs \"$file\"; fi"
           },
           {
             "type": "command",
