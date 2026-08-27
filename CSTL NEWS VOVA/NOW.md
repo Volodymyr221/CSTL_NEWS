@@ -10,22 +10,23 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-26 21:03 UTC
+**Зріз на:** 2026-08-27 06:34 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-5nmz43` |
-| останній коміт людини | `9e1063b4` 26.08 20:52 — Пульс і кеш перед публікацією SDK |
+| останній коміт людини | `c8a8d758` 27.08 06:05 — docs(byyou): крок 6 — замір «після» [byyou] |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260826-2052` |
 | останній PR у `main` | #1044 |
 | стендів на диску | 112 |
-| незакомічених файлів | 0 ✅ |
-| журнал за 2026-08-26 | є ✅ |
+| незакомічених файлів | 2 ⚠️ |
+| журнал за 2026-08-27 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `.github/workflows/deploy.yml`
+- `.mcp.json`
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
@@ -36,24 +37,23 @@
 - `index.html`
 - `src/core/auth.js`
 - `src/core/supabase.js`
+- `src/tabs/community-blocks.js`
+- `src/tabs/news-hub.js`
+- `src/tabs/news.js`
+- `style/home.css`
+- `style/news-card.css`
+- `style/news.css`
 - `sw.js`
 - `tests/_board-fixture.mjs`
-- `tests/ad-report.mjs`
-- `tests/admin-shell.mjs`
-- `tests/board-offline.mjs`
-- `tests/notif-backstack.mjs`
-- `tests/notif-thread-coldstart.mjs`
-- `tests/sdk-local.mjs`
-- `tests/tools/admin-home-shot.mjs`
-- …ще 1
+- …ще 11
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9e1063b4` 26.08 20:52 — Пульс і кеш перед публікацією SDK
-- `3db028e4` 26.08 20:48 — docs(byyou): план потоку — редизайн блоку новин, крок 0 (брама старту)
-- `e791d2fd` 26.08 20:42 — SDK Supabase переїхав із чужого CDN на наш домен
-- `35be7e97` 26.08 18:58 — Пульс: авто-блок після злиття
-- `fb558579` 26.08 18:58 — Merge remote-tracking branch 'origin/main' into claude/startuem-5nmz43
+- `c8a8d758` 27.08 06:05 — docs(byyou): крок 6 — замір «після» [byyou]
+- `f68f5044` 27.08 05:30 — feat(новини): крок 5 — одна мова у віджеті й хабі [byyou]
+- `c141c9f9` 27.08 05:08 — feat(новини): крок 4 — картка без фото стала окремим станом [byyou]
+- `5395cbf4` 27.08 04:57 — docs(новини): крок 4 — три варіанти картки без фото на вибір [byyou]
+- `46b696ca` 27.08 04:54 — feat(новини): крок 3 — нижні рядки стали малими картками [byyou]
 
 <!-- AUTO:END -->
 
