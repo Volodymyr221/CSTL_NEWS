@@ -215,8 +215,12 @@ function attachNewsListeners() {
 export function handleImgError(e) {
   const img = e.target;
   if (!img || img.tagName !== 'IMG') return;
-  const hero = img.closest('.nc--hero');
-  if (hero) { hero.classList.add('nc--noimg'); img.remove(); return; }
+  // ⚠️ ОБИДВА ВЕЛИКІ ВАРІАНТИ, а не лише віджет: у хабі перша картка теж велика
+  // (`.nc--lead`, слот 358×200). Її власний захист «не роблю героєм без фото»
+  // працює в мить малювання, а фото відвалюється пізніше — і на знімку хаба вона
+  // мала 200px порожньої плити. Один рядок закриває обидва екрани.
+  const великa = img.closest('.nc--hero, .nc--lead');
+  if (великa) { великa.classList.add('nc--noimg'); img.remove(); return; }
   const ph = document.createElement('div');
   ph.className = img.className + ' img-fallback';
   img.replaceWith(ph);   // сам знак малює CSS (`.nc-img--mono, .nc-img.img-fallback`)

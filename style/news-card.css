@@ -147,7 +147,8 @@
   border-radius: var(--nc-img-r, 10px);
   width: var(--nc-img-w, 84px);
   height: var(--nc-img-h, 84px);
-  font-size: var(--nc-img-emoji, 26px);   /* 🏰 у плейсхолдері */
+  /* 🗑 26.08: `--nc-img-emoji` прибрано. Він задавав кегль 🏰 у плейсхолдері, а
+     з кроку 4 знак малює `background-image`, і текстового вмісту там немає. */
 }
 /* ⚠️ `display`/`object-fit` — ТІЛЬКИ на справжній `<img>`, і це не педантизм.
    Плейсхолдер битого фото носить ТІ САМІ класи (`handleImgError` копіює className,
@@ -190,7 +191,13 @@ img.nc-img { display: block; object-fit: cover; }
   background:
     radial-gradient(rgba(255, 255, 255, .09) 1px, transparent 1px) 0 0 / 14px 14px,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' fill-opacity='0.42' d='M3 21V9l3-2v2h2V6l4-3 4 3v3h2V7l3 2v12h-7v-5h-4v5H3z'/%3E%3C/svg%3E")
-      center / 46% no-repeat,
+      /* 🔴 РОЗМІР ЗІ СТЕЛЕЮ, А НЕ ЧИСТИЙ ВІДСОТОК. Перша редакція дала `46%` — і
+         в хабі, де слот великої картки 358×200, знак роздувся на пів екрана
+         (спіймано знімком, не міркуванням). Відсоток тут описував не те: знак
+         має бути ОДНАКОВО ПОМІТНИМ у слоті 56px і в слоті 358px, а не
+         пропорційним йому. `clamp` дає нижню й верхню межу, всередині —
+         пропорція. */
+      center / clamp(22px, 40%, 56px) no-repeat,
     linear-gradient(150deg, #7d353e, #4c1f25);
   color: transparent;   /* якщо колись прилетить текстовий вміст — не малюємо його */
   user-select: none;
@@ -261,8 +268,16 @@ img.nc-img { display: block; object-fit: cover; }
   --nc-img-w: 100%;
   --nc-img-h: 200px;
   --nc-img-r: 0;
-  --nc-img-emoji: 44px;
 }
+/* 🔴 26.08 — ВЕЛИКА КАРТКА ХАБА БЕЗ ФОТО ТЕЖ НЕ МАЄ СЛОТУ (те саме правило, що в
+   `.nc--hero.nc--noimg`).
+   ⚠️ ЗНАЙДЕНО ЗНІМКОМ, А НЕ МІРКУВАННЯМ. `markLead` не робить першу картку
+   великою, поки в новини немає фото, і в коментарі це названо захистом: «герой
+   без знімка це просто роздутий блок тексту». Захист неповний: він працює в мить
+   малювання, а фото відвалюється ПІЗНІШЕ — і на знімку хаба перша картка мала
+   200px порожньої бордової плити зі знаком. Тепер `handleImgError` вішає сюди
+   `.nc--noimg`, і слот зникає — картка лишається великою за текстом, без діри. */
+.nc--lead.nc--noimg .nc-img { display: none; }
 .nc--lead .nc-body { padding: 12px 13px 13px; }
 .nc--lead .nc-title { line-height: 1.24; letter-spacing: -0.4px; margin-bottom: 6px; }
 /* У «героя» анонс ПОКАЗУЄМО — це єдина картка, де для нього є місце, і саме він
@@ -305,7 +320,6 @@ img.nc-img { display: block; object-fit: cover; }
   --nc-meta-mb: 3px;
   --nc-img-w: 72px;
   --nc-img-h: 72px;
-  --nc-img-emoji: 22px;
 }
 .nc--mini .nc-title { margin-bottom: 4px; }
 /* 🔴 01.08 — У ВАРІАНТІ `mini` КАТЕГОРІЯ НЕ МАЛЮЄТЬСЯ.
@@ -602,7 +616,6 @@ img.nc-img { display: block; object-fit: cover; }
   --nc-img-w: 56px;
   --nc-img-h: 56px;
   --nc-img-r: 10px;
-  --nc-img-emoji: 20px;
 }
 .nc--line:active { background: var(--nc-line-press, rgba(255, 255, 255, .18)); }
 .nc--line .nc-title {
