@@ -206,13 +206,20 @@ function attachNewsListeners() {
 // Знайдено при підготовці варіантів редизайну: чужі RSS-джерела масово блокують
 // «гарячі посилання», тож у стрічці це не рідкість, а звичайний стан. Тепер той
 // самий обробник вішає і хаб — копії НЕ робимо.
+// 🆕 26.08 — ВЕЛИКА КАРТКА НЕ ОТРИМУЄ ПЛЕЙСХОЛДЕРА, А ПЕРЕХОДИТЬ У СТАН «БЕЗ ФОТО».
+// Підстава та сама, що в `renderHeroCard`: у великій картці порожнє місце під фото
+// це ~88px, і закрити їх намальованою заглушкою означає лишити діру, тільки
+// пофарбовану. Клас `.nc--noimg` віддає ці пікселі тексту — рівно як у статей, де
+// фото немає в даних. Для решти варіантів (рядок, хаб) плейсхолдер лишається:
+// там слот 56-84px, і прибрати його означало б зламати ритм списку.
 export function handleImgError(e) {
   const img = e.target;
   if (!img || img.tagName !== 'IMG') return;
+  const hero = img.closest('.nc--hero');
+  if (hero) { hero.classList.add('nc--noimg'); img.remove(); return; }
   const ph = document.createElement('div');
   ph.className = img.className + ' img-fallback';
-  ph.textContent = '🏰';
-  img.replaceWith(ph);
+  img.replaceWith(ph);   // сам знак малює CSS (`.nc-img--mono, .nc-img.img-fallback`)
 }
 
 // HTML стрічки новин. Порожньо → плейсхолдер.
@@ -394,19 +401,42 @@ function badgesHtml(a) {
 // анонсу (там вона одна з трьох у дайджесті, а не відкриває екран)». Це було
 // правдою, поки картка мала пропорцію 2:1 і місця під анонс справді не було.
 // Картка стала вищою — підстава зникла, і текст переписано, а не лишений лежати.
+// 🔴 26.08 — ВЕЛИКА КАРТКА БЕЗ ФОТО ЖИВЕ ЗА ІНШИМ ПРАВИЛОМ (крок 4, вибір Вови «А»).
+//
+// 📐 ЧОМУ ЦЕ ВЗАГАЛІ ОКРЕМИЙ СТАН, А НЕ КРАЙНІЙ ВИПАДОК. Заміряно по живих
+// `data/articles.json`: **114 з 400 статей = 29% не мають фото взагалі**, а серед
+// перших шести новин кожного розділу без фото 2-3 з 6. Тобто людина бачить цей
+// стан постійно, і плейсхолдер «місце під фото з монограмою» читався як
+// «зображення не завантажилось» — тобто застосунок виглядав зламаним там, де він
+// цілком справний. Той самий клас вади, за який 11.08 розділяли «збій» і
+// «порожньо», а 05.08 прибирали демо-оголошення Дошки.
+//
+// ➡️ РІШЕННЯ: якщо фото немає — немає й місця під нього. Ті ~88px, які в картці з
+// фотографією займає сама фотографія, віддані ТЕКСТУ: заголовок більший, анонс
+// довший, назва джерела виходить у верхній рядок. Відсутність фото перестає бути
+// дірою і стає більшим обсягом того, заради чого людина сюди прийшла.
+//
+// 🔑 ОДНА РОЗМІТКА НА ОБИДВА СТАНИ, а не два шаблони. Причина практична: фото може
+// бути в даних і НЕ ДОЇХАТИ (чужі RSS масово блокують гарячі посилання — на проді
+// це частіший випадок, ніж відсутність фото в даних). `handleImgError` тоді просто
+// вішає `.nc--noimg` на картку, і вона переходить у той самий стан без жодного
+// перемальовування. Два шаблони довелось би тримати синхронними вручну.
 function renderHeroCard(a) {
+  const джерело = escapeHtml(a.source || '');
   return `
-    <article class="nc nc--hero${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
-      ${a.image
-        ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">`
-        : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || '?').trim().charAt(0).toUpperCase())}</div>`}
+    <article class="nc nc--hero${a.image ? '' : ' nc--noimg'}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
+      <!-- Велика літера джерела на фоні. Видима ЛИШЕ без фото: там вона тримає
+           кадр, щоб картка не була рівною плитою кольору. -->
+      <span class="nc-mark" aria-hidden="true">${escapeHtml((a.source || '?').trim().charAt(0).toUpperCase())}</span>
       <!-- Затемнення знизу — не декор, а умова читабельності: заголовок білий, а
            яке прийде фото, ми не знаємо (світле небо трапляється постійно). -->
       <div class="nc-veil" aria-hidden="true"></div>
       <div class="nc-body">
+        <div class="nc-kicker">${джерело}</div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
-        <div class="nc-foot">${formatTime(a.ts)} · ${escapeHtml(a.source || '')}</div>
+        <div class="nc-foot">${formatTime(a.ts)}<span class="nc-fsrc"> · ${джерело}</span></div>
       </div>
     </article>
   `;
@@ -438,7 +468,7 @@ function renderLineCard(a) {
     <article class="nc nc--line" data-article-id="${a.id}">
       ${a.image
         ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">`
-        : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || '?').trim().charAt(0).toUpperCase())}</div>`}
+        : '<div class="nc-img nc-img--mono" aria-hidden="true"></div>'}
       <div class="nc-body">
         <h3 class="nc-title">${escapeHtml(a.title)}</h3>
         <div class="nc-foot">${escapeHtml(a.source || '')} · ${formatTime(a.ts)}</div>
@@ -454,15 +484,18 @@ function renderCard(a, variant) {
     <article class="nc nc--${variant}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
       ${a.image
         ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">`
-        // 🔴 01.08 — МОНОГРАМА ДЖЕРЕЛА замість порожнечі. Заміряно у віджеті:
-        // картки були 100 / 71 / 100 px, і саме середня (без фото) провалювалась
-        // на третину — око читає це як збій верстки, а не як ритм. Плейсхолдер
-        // тримає ту саму клітинку, тож висоти рівні незалежно від того, чи дало
-        // джерело картинку. Літера — перша з назви джерела, тобто плейсхолдер
-        // ще й КАЖЕ щось («В» = Волинь Post), а не малює сірий прямокутник.
+        // 🔴 01.08 — ПЛЕЙСХОЛДЕР ЗАМІСТЬ ПОРОЖНЕЧІ. Заміряно у віджеті: картки були
+        // 100 / 71 / 100 px, і саме середня (без фото) провалювалась на третину —
+        // око читає це як збій верстки, а не як ритм. Плейсхолдер тримає ту саму
+        // клітинку, тож висоти рівні незалежно від того, чи дало джерело картинку.
+        // 🆕 26.08 — ЗМІСТ ПЛЕЙСХОЛДЕРА ЗМІНИВСЯ (крок 4, вибір Вови «Б»). Була
+        // перша літера джерела; підстава звучала «плейсхолдер ще й КАЖЕ щось».
+        // На живому екрані вона казала не те: одна літера на кольоровій плитці
+        // читається як «тут мало бути фото», а не як знак. Тепер тут фірмовий знак
+        // CSTL, і малює його CSS (`.nc-img--mono`) — тому вузол порожній.
         // ⚠️ Клас `nc-img` лишається — усі розміри вже описані ним; відрізняє
         // лише модифікатор, інакше довелось би дублювати геометрію трьох варіантів.
-        : `<div class="nc-img nc-img--mono" aria-hidden="true">${escapeHtml((a.source || '?').trim().charAt(0).toUpperCase())}</div>`}
+        : '<div class="nc-img nc-img--mono" aria-hidden="true"></div>'}
       <div class="nc-body">
         <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
