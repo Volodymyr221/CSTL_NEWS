@@ -83,10 +83,24 @@ Edit без попереднього Read тепер блокує хук `.claud
 
 ---
 
-## 5. node --check + node build.js ПЕРЕД push.
+## 5. ПЕРЕВІРКА СИНТАКСИСУ + node build.js ПЕРЕД push.
 
 - ❌ Закомітив `.js` зміни, потім помітив SyntaxError у CI → деплой зламаний.
-- ✅ Після кожного Edit `.js` → `node --check файл.js`. Перед push → `node build.js` (тепер автоматично запускає `check-imports.js` перед esbuild).
+- ✅ Після кожного Edit `.js` → `node scripts/check-syntax.mjs файл.js`. Перед push → `node build.js` (він сам запускає `check-imports.js` перед esbuild).
+
+🛑 **`node --check` СЮДИ НЕ ПІДХОДИТЬ, І ЦЕ НЕ ПРИСКІПЛИВІСТЬ.** На файлах із
+`import`/`export` він не робить нічого і виходить з кодом **0** — тобто на всьому
+`src/` мовчки каже «помилок немає». Заміряно 27.08 на двох рядках:
+
+```
+printf 'const a = 1;\n# не коментар\n'        > /tmp/h.js && node --check /tmp/h.js  → код 1 ✅
+printf 'export const a = 1;\n# не коментар\n' > /tmp/m.js && node --check /tmp/m.js  → код 0 ❌
+```
+
+Різниця одна — `export`. Спіймано випадково: у `src/tabs/news.js` рядок коментаря
+почався з `#` замість `//` — зламаний JS — і перевірка сказала «все гаразд».
+➡️ `scripts/check-syntax.mjs` розбирає файл **тим самим esbuild**, що збирає
+`bundle.js`, тож перевірка і збірка бачать код однаково.
 
 Якщо `node build.js` падає — **НЕ комітити**. Виправляти і знову `node build.js` поки не пройде з exit 0.
 

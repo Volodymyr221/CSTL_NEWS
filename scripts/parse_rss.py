@@ -429,7 +429,9 @@ FULL_ALGO_VERSION = 2
 # смикали б один одного без причини.
 # 🛑 Піднімати це число можна лише тоді, коли зміна робить розмітку СТАРИХ статей
 # іншою. Зайве підняття = 400 зайвих звернень до чужих сайтів.
-RICH_ALGO_VERSION = 1
+# 2 (27.08, вечір) — навчились робити натискними ГОЛІ адреси в тексті. Це змінює
+# розмітку вже збережених статей, отже вони мають перебратись іще раз.
+RICH_ALGO_VERSION = 2
 
 
 def _norm_for_compare(t: str) -> str:
@@ -1104,24 +1106,71 @@ def _safe_href(raw: str, base_url: str = "") -> str:
     return u
 
 
-def _inline_html(node, base_url: str = "") -> str:
+# 🔴 27.08 — ГОЛА АДРЕСА В ТЕКСТІ ТЕЖ МАЄ БУТИ НАТИСКНОЮ.
+#
+# 🗣️ Вова зі скріна статті про гранти: «там є пряме посилання, але воно не
+# клікабельне — ми можемо зробити, щоб парсило відразу посилання?»
+# Видання пишуть їх просто текстом: «зареєструватися за посиланням:
+# https://forms.gle/pruSrwqq53XFsEFs9». Тега `<a>` там немає — отже й у нас не
+# було. Людина бачить адресу, тисне — і нічого.
+#
+# ⚠️ ХВІСТ РЕЧЕННЯ НЕ ЧАСТИНА АДРЕСИ. «…за посиланням: https://x.com/a.» — крапка
+# наприкінці належить реченню, а не посиланню, і в адресі вона дала б 404. Те саме
+# з `,` `)` `»` `;` `:`. Дужку відрізаємо лише НЕПАРНУ: у вікіпедійних адресах
+# дужки бувають усередині і там вони значущі.
+_BARE_URL_RE = re.compile(r'https?://[^\s<>"\'\u00ab\u00bb]+', re.I)
+_URL_TAIL = '.,;:!?)»"\''
+
+
+def _trim_url_tail(u: str) -> str:
+    while u and u[-1] in _URL_TAIL:
+        if u[-1] == ')' and u.count('(') > u.count(')'):
+            break          # дужка парна — вона всередині адреси, не хвіст речення
+        u = u[:-1]
+    return u
+
+
+def _linkify(text: str, base_url: str = "") -> str:
+    """Голий текст → HTML, де адреси стали посиланнями. Текст ЕКРАНУЄТЬСЯ, адреса
+    проходить ту саму перевірку, що й узята з тега (`_safe_href`)."""
+    out, last = [], 0
+    for m in _BARE_URL_RE.finditer(text):
+        сира = _trim_url_tail(m.group(0))
+        href = _safe_href(сира)
+        if not href:
+            continue
+        out.append(html.escape(text[last:m.start()]))
+        out.append('<a href="' + html.escape(href, quote=True) + '"'
+                   ' target="_blank" rel="noopener">' + html.escape(сира) + "</a>")
+        last = m.start() + len(сира)
+    out.append(html.escape(text[last:]))
+    return "".join(out)
+
+
+def _inline_html(node, base_url: str = "", у_посиланні: bool = False) -> str:
     """Вміст блоку → HTML лише з <strong>/<em>/<br>/<a> (решта тегів — розгортаємо
     в текст). Текст ЕКРАНУЄТЬСЯ, адреса посилання — теж, і лише після перевірки
-    (`_safe_href`). Аллоулист за побудовою → жодних чужих атрибутів."""
+    (`_safe_href`). Аллоулист за побудовою → жодних чужих атрибутів.
+
+    ⚠️ `у_посиланні` — прапорець «ми вже всередині `<a>`». Без нього гола адреса,
+    яка стоїть ТЕКСТОМ усередині посилання, отримала б власний `<a>` — тобто
+    посилання в посиланні, чого в HTML не буває і що браузер розплутує по-своєму.
+    """
     from bs4 import NavigableString, Tag
     out = []
     for ch in node.children:
         if isinstance(ch, NavigableString):
-            out.append(html.escape(str(ch)))
+            out.append(html.escape(str(ch)) if у_посиланні
+                       else _linkify(str(ch), base_url))
         elif isinstance(ch, Tag):
             if ch.name in ("strong", "b"):
-                out.append("<strong>" + _inline_html(ch, base_url) + "</strong>")
+                out.append("<strong>" + _inline_html(ch, base_url, у_посиланні) + "</strong>")
             elif ch.name in ("em", "i"):
-                out.append("<em>" + _inline_html(ch, base_url) + "</em>")
+                out.append("<em>" + _inline_html(ch, base_url, у_посиланні) + "</em>")
             elif ch.name == "br":
                 out.append("<br>")
             elif ch.name == "a":
-                inner = _inline_html(ch, base_url)
+                inner = _inline_html(ch, base_url, True)
                 href = _safe_href(ch.get("href") or "", base_url)
                 # ⚠️ Адреса не пройшла перевірку — лишаємо ТЕКСТ, а не викидаємо
                 # його разом із посиланням: людина має дочитати речення.
@@ -1132,7 +1181,7 @@ def _inline_html(node, base_url: str = "") -> str:
                 else:
                     out.append(inner)
             else:
-                out.append(_inline_html(ch, base_url))   # span/… — розгортаємо
+                out.append(_inline_html(ch, base_url, у_посиланні))   # span/… — розгортаємо
     return "".join(out)
 
 
