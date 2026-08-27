@@ -79,7 +79,7 @@ import { nearestSettlement, nearestServedStop, pickedPlace, lastPickedPlace, det
 import { getStopMins, nowMinutes, getRouteState, getCurrentPosition } from '../core/bus-schedule.js';
 import {
   parseRouteEndpoints, openSavedRouteOnBuses,
-  getSavedRoutesForUI, getBusPrefs, findStopOnRoute, routeCoversStops, normalizeStopName,
+  getSavedRoutesForUI, findStopOnRoute, routeCoversStops, normalizeStopName,
 } from './buses.js';
 import { canonicalPlace } from '../core/settlements.js';
 import { openAdModalStandalone } from './board.js';
@@ -532,15 +532,13 @@ async function nowCapsule() {
   // ⚠️ ТІЛЬКИ МІЙ. Скасування чужого рейсу — це новина, а не капсула. «Мій» =
   // відстежую АБО він іде з моєї зупинки в бік, який я обрав.
   {
-    const { from: prefFrom, to: prefTo } = getBusPrefs();
-    const звідки = prefFrom || myStop;
+    const звідки = myStop;
     const відстежую = new Set(getSavedRoutesForUI()
       .filter(t => t.trackDate === todayISO).map(t => t.routeId));
     let скасований = null;
     for (const r of routes) {
       if (r.status !== 'cancelled') continue;
-      const мій = відстежую.has(r.id)
-        || (boardable(r, звідки) && (!prefTo || routeCoversStops(r, звідки, prefTo)));
+      const мій = відстежую.has(r.id) || boardable(r, звідки);
       if (!мій) continue;
       const m = getStopMins(r, findStopOnRoute(r, звідки)?.name);
       if (m == null || m - nowMin < 0) continue;   // те, що вже минуло, нічого не змінює
@@ -548,7 +546,7 @@ async function nowCapsule() {
     }
     if (скасований) {
       const чч = м => `${String(Math.floor((((м % 1440) + 1440) % 1440) / 60)).padStart(2, '0')}:${String((((м % 1440) + 1440) % 1440) % 60).padStart(2, '0')}`;
-      const запасний = pickFor(звідки, prefTo || '');
+      const запасний = pickFor(звідки, '');
       const наступний = запасний
         ? `наступний о ${чч(getStopMins(запасний.r, findStopOnRoute(запасний.r, звідки)?.name))}`
         : 'інших рейсів сьогодні немає';
@@ -557,11 +555,11 @@ async function nowCapsule() {
         key: 'now', icon: ICONS.bus,
         rank: RANK.BUS_CANCELLED,
         labelVariants: [`РЕЙС О ${чч(скасований.m)} СКАСОВАНО`, 'РЕЙС СКАСОВАНО'],
-        valueVariants: [`${звідки} → ${prefTo || кінець || ''} · ${наступний}`.trim(), наступний],
+        valueVariants: [`${звідки} → ${кінець || ''} · ${наступний}`.trim(), наступний],
         aria: `Рейс о ${чч(скасований.m)} скасовано, ${наступний}`,
         tap: () => {
           if (typeof window.switchTab === 'function') window.switchTab('buses');
-          openSavedRouteOnBuses(скасований.r.id, todayISO, звідки, prefTo || '');
+          openSavedRouteOnBuses(скасований.r.id, todayISO, звідки, '');
         },
       };
     }
@@ -617,12 +615,19 @@ async function nowCapsule() {
   // зникав — і нижня гілка вважала, що на сьогодні НІЧОГО НЕМАЄ, хоча рейс є.
   // Тепер він не губиться: стеля лишається (вона тримає денну капсулу «рейс
   // через N хв» від передчасної появи), але сам факт «сьогодні ще буде» їде далі.
+  //
+  // 🔴 27.08 — ПОШУКОВИЙ ФІЛЬТР ВКЛАДКИ АВТОБУСИ СЮДИ БІЛЬШЕ НЕ ВХОДИТЬ.
+  // Скарга Вови: набрав у пошуку «Звідки: Дерно», нічого не відстежував — і на
+  // Громаді засвітилось «ЗАВТРА · О 07:32 · Дерно → Носовичі». Його слова:
+  // «користувач може шукати, забути скинути фільтр, і йому постійно буде світити
+  // Дерно — Носовичі». 🔑 Пошук — це ПИТАННЯ, а не вибір: людина дивиться, що
+  // взагалі їздить, і нічого про себе не заявляє. Капсула ж каже «моє» (§12), і
+  // єдина явна заява тут — «відстежувати». Тож джерел лишається два: мої
+  // відстежувані рейси і рейс через МОЮ зупинку (де я є або де живу).
   let далекийСьогодні = null;
   if (!hit) {
-    const { from, to } = getBusPrefs();
-    const b = (from || to)
-      ? pickFor(from || myStop, to)
-      : (pickFor(myStop, '') || (myStop !== HOME_STOP ? pickFor(HOME_STOP, '') : null));
+    const b = pickFor(myStop, '')
+      || (myStop !== HOME_STOP ? pickFor(HOME_STOP, '') : null);
     if (b && b.left <= SOON_MAX_MIN) hit = b;
     else if (b) далекийСьогодні = b;
   }
@@ -655,12 +660,11 @@ async function nowCapsule() {
   // роль та сама — це ДОВІДКА, а не заклик бігти. Що о 14:03, що завтра о 08:24
   // однаково не вимагають дії зараз, тож нового рівня в шкалу не заводимо.
   if (!hit) {
-    const { from: prefFrom, to: prefTo } = getBusPrefs();
-    const звідки = prefFrom || myStop;
+    const звідки = myStop;
 
     // Сьогоднішній кандидат уже порахований вище — другого перебору не робимо.
     let коли = 'ЗАВТРА';
-    let маршрут = null;      // { r, m, from } — m у хвилинах доби
+    let маршрут = null;      // { r, m, from, to } — m у хвилинах доби
     let датаТапу = tomorrowISO;
 
     if (далекийСьогодні) {
@@ -670,18 +674,36 @@ async function nowCapsule() {
         r: далекийСьогодні.r,
         m: nowMin + далекийСьогодні.left,   // час посадки = зараз + скільки лишилось
         from: далекийСьогодні.from,
+        to: далекийСьогодні.to || '',
       };
     } else {
-      for (const r of tomorrowRoutes) {
-        if (r.status === 'cancelled') continue;
-        const stop = findStopOnRoute(r, звідки);
-        if (!stop) continue;
-        const last = r.stops?.[r.stops.length - 1];
-        if (!last || stop.name === last.name) continue;   // кінцева — не посадка
-        if (prefTo && !routeCoversStops(r, звідки, prefTo)) continue;
-        const m = getStopMins(r, stop.name);
+      // 🔴 27.08 — ВІДСТЕЖУВАНИЙ РЕЙС НА ЗАВТРА ТЕЖ МІЙ. Скарга Вови: зберіг
+      // «Дерно → Рівне» на завтра, а капсула про нього мовчала — гілка «завтра»
+      // дивилась лише на розклад від моєї зупинки. Відстеження це найсильніша
+      // заява людини про свій рейс, і вона не має слабшати від того, що рейс не
+      // сьогодні. Бал лишається BUS_TOMORROW (10): завтрашній рейс не вимагає
+      // дії зараз, хоч би як його позначили.
+      for (const t of getSavedRoutesForUI()) {
+        if (t.trackDate !== tomorrowISO) continue;
+        const r = tomorrowRoutes.find(x => x.id === t.routeId);
+        if (!r || r.status === 'cancelled') continue;
+        const from = t.from || звідки;
+        const m = getStopMins(r, findStopOnRoute(r, from)?.name);
         if (m == null) continue;
-        if (!маршрут || m < маршрут.m) маршрут = { r, m, from: звідки };
+        if (!маршрут || m < маршрут.m) маршрут = { r, m, from, to: t.to || '' };
+      }
+      // Відстежуваного немає — показуємо перший рейс від МОЄЇ зупинки.
+      if (!маршрут) {
+        for (const r of tomorrowRoutes) {
+          if (r.status === 'cancelled') continue;
+          const stop = findStopOnRoute(r, звідки);
+          if (!stop) continue;
+          const last = r.stops?.[r.stops.length - 1];
+          if (!last || stop.name === last.name) continue;   // кінцева — не посадка
+          const m = getStopMins(r, stop.name);
+          if (m == null) continue;
+          if (!маршрут || m < маршрут.m) маршрут = { r, m, from: звідки, to: '' };
+        }
       }
     }
     if (!маршрут) return null;
@@ -689,7 +711,7 @@ async function nowCapsule() {
     const хв = ((маршрут.m % 1440) + 1440) % 1440;
     const час = `${String(Math.floor(хв / 60)).padStart(2, '0')}:${String(хв % 60).padStart(2, '0')}`;
     const кінець = кудиЇде(маршрут.r);
-    const куди = prefTo || кінець || 'Найближчий';
+    const куди = маршрут.to || кінець || 'Найближчий';
     return {
       key: 'now', icon: ICONS.bus,
       rank: RANK.BUS_TOMORROW,
@@ -699,7 +721,7 @@ async function nowCapsule() {
       valueVariants: [`${маршрут.from} → ${куди}`, куди],
       tap: () => {
         if (typeof window.switchTab === 'function') window.switchTab('buses');
-        openSavedRouteOnBuses(маршрут.r.id, датаТапу, маршрут.from, prefTo || '');
+        openSavedRouteOnBuses(маршрут.r.id, датаТапу, маршрут.from, маршрут.to || '');
       },
     };
   }
