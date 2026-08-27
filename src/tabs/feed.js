@@ -26,6 +26,7 @@ import {
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
+import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний)
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 // Спільна з Дошкою механіка «оновити список, не смикнувши екран» (див. core/list-patch.js).
 import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS,
@@ -49,7 +50,8 @@ const IC_SEND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // Іконка «Поділитися» у стилі Facebook — СУЦІЛЬНА (залита) стрілка вправо з хвостиком-
 // гачком донизу-вліво (як на фото від Вови). fill=currentColor тягне колір кнопки.
 const IC_SHARE  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round"><path d="M14 9V5.2c0 -.53 .64 -.8 1.02 -.42l7.2 7.2a.6 .6 0 0 1 0 .85l-7.2 7.2c-.38 .38 -1.02 .1 -1.02 -.42V16c-5 0 -8.5 1.6 -11 5.1 1 -5 4 -10 11 -11z"/></svg>';
-const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+// 🗑 27.08 — `IC_CLOSE` прибрано: його носив лише переглядач фото, а той переїхав
+// у `core/photo-viewer.js` разом зі своїм значком.
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 // Канцелярська кнопка (Tabler pin). ⚠️ НЕ беремо `ICONS.pin` з core/icons.js — там
@@ -406,26 +408,10 @@ function wireGalleries(root) {
   });
 }
 
-// Повноекранний перегляд фото (свайп між усіма фото поста).
-function openViewer(images, startIdx) {
-  if (!images.length) return;
-  const ov = document.createElement('div');
-  ov.className = 'fd-viewer';
-  ov.innerHTML = `
-    <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
-    <div class="fd-viewer-track">${images.map(u =>
-      `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join('')}</div>`;
-  // Той самий механізм, що й у решти шарів (core/layers.js): системний жест
-  // «назад» і кнопка браузера закривають перегляд фото, а не відкочують додаток.
-  const layer = openLayer(() => { ov.remove(); document.body.style.overflow = ''; });
-  const close = () => closeLayer(layer);
-  ov.querySelector('.fd-viewer-close').addEventListener('click', close);
-  ov.addEventListener('click', e => { if (e.target === ov || e.target.classList.contains('fd-viewer-slide')) close(); });
-  document.body.appendChild(ov);
-  document.body.style.overflow = 'hidden';
-  const track = ov.querySelector('.fd-viewer-track');
-  track.scrollLeft = (startIdx || 0) * track.clientWidth;   // відкрити на потрібному фото
-}
+// 🗑 27.08 — `openViewer` переїхав у `core/photo-viewer.js`: користувачів стало
+// двоє (пости Стрічки і фото в тілі статті), а друга копія в цьому проєкті вже
+// тричі розходилась із першою. Тут лишився лише виклик під старим іменем.
+const openViewer = openPhotoViewer;
 
 // Свайп-вниз закриває нижній лист — той самий філ, що в core/modal.js: граб від
 // шапки (перші ~64px) закриває ЗАВЖДИ; у тілі — лише коли скрол угорі (інакше це

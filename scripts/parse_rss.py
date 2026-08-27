@@ -429,9 +429,10 @@ FULL_ALGO_VERSION = 2
 # смикали б один одного без причини.
 # 🛑 Піднімати це число можна лише тоді, коли зміна робить розмітку СТАРИХ статей
 # іншою. Зайве підняття = 400 зайвих звернень до чужих сайтів.
-# 2 (27.08, вечір) — навчились робити натискними ГОЛІ адреси в тексті. Це змінює
-# розмітку вже збережених статей, отже вони мають перебратись іще раз.
-RICH_ALGO_VERSION = 2
+# 2 (27.08, вечір) — навчились робити натискними ГОЛІ адреси в тексті.
+# 3 (27.08, вечір) — фото в тілі статті: `<figure>` між абзацами, підпис, відсів
+#     значків і обкладинки. Змінює розмітку вже збережених статей → перебір.
+RICH_ALGO_VERSION = 3
 
 
 def _norm_for_compare(t: str) -> str:
@@ -1286,7 +1287,73 @@ def _split_runon_html(html_str: str) -> str:
     return re.sub(r'<p>(.*?)</p>', repl, html_str, flags=re.S)
 
 
-def _blocks_to_html(el, title: str = "", base_url: str = "") -> str:
+# 🔴 27.08 — ФОТО В ТІЛІ СТАТТІ (потік /byyou 2Б-1, контракт узгоджено з Вовою).
+#
+# 🗣️ «там є фото всередині статті» — на джерелі воно між абзацами, у нас його не
+# було взагалі. 📐 Заміряно: `<img>` у тілі мали 0 із 400 статей.
+#
+# 🔑 ПРАВИЛО №14: беремо ЗМІСТ, не оформлення. Парсер каже «це фото з підписом» —
+# як воно виглядає, вирішує наш CSS. Тому тут немає нічого про вигляд джерела.
+#
+# КОНТРАКТ БЛОКУ (узгоджено 27.08):
+#     <figure><img src="…" alt=""><figcaption>Підпис</figcaption></figure>
+#   • підпис УСЕРЕДИНІ блоку — інакше при обрізанні тексту він відірветься від
+#     свого фото і опише чуже;
+#   • `width`/`height` із джерела НЕ переносимо: вони часто брехливі, а розмір
+#     задає наш CSS;
+#   • `alt` порожній — змістовного опису ми не маємо, а підсунути туди заголовок
+#     означало б збрехати читалці екрана; порожній `alt` чесно каже «ілюстрація».
+_MIN_PHOTO_PX = 200      # менше — це логотип, аватарка автора або значок
+_ADS_URL_RE = re.compile(r'(?:^|[/_-])(?:logo|avatar|icon|banner|pixel|spacer|ads?)[/_.-]', re.I)
+
+
+def _photo_url(im, base_url: str = "") -> str:
+    """Адреса фото зі звичайного `<img>`, або порожньо — якщо це не фото статті.
+
+    ⚠️ Розмір знаємо ЛИШЕ тоді, коли джерело написало його в розмітці. Не написало
+    — фото проходить. Це свідомий розмін, названий Вові до коду: інакше довелось
+    би качати кожен файл, щоб зміряти, тобто десятки запитів на статтю.
+    """
+    src = (im.get("src") or im.get("data-src") or "").strip()
+    url = _safe_href(src, base_url)          # та сама перевірка, що для посилань
+    if not url:
+        return ""
+    for поле in ("width", "height"):
+        v = (im.get(поле) or "").strip().replace("px", "")
+        if v.isdigit() and int(v) < _MIN_PHOTO_PX:
+            return ""
+    if _ADS_URL_RE.search(urllib.parse.urlparse(url).path):
+        return ""
+    return url
+
+
+def _same_photo(a: str, b: str) -> bool:
+    """Чи це та сама картинка. Порівнюємо БЕЗ схеми і запиту: джерела люблять
+    віддавати ту саму адресу то з `http`, то з `https`, то з `?w=800`."""
+    def ключ(u):
+        p = urllib.parse.urlparse(u or "")
+        return (p.netloc.lower().removeprefix("www."), p.path)
+    return bool(a) and bool(b) and ключ(a) == ключ(b)
+
+
+def _figure_html(im, base_url: str, cover_url: str) -> str:
+    """`<img>` (можливо, всередині `<figure>`) → наш блок фото. Порожньо — якщо
+    фото не пройшло відсів або це обкладинка, яка вже стоїть угорі статті."""
+    url = _photo_url(im, base_url)
+    if not url or _same_photo(url, cover_url):
+        return ""
+    підпис = ""
+    fig = im.find_parent("figure")
+    if fig:
+        cap = fig.find("figcaption")
+        if cap:
+            підпис = html.escape(cap.get_text(" ", strip=True))[:300]
+    return ('<figure><img src="' + html.escape(url, quote=True) + '" alt="">'
+            + (f"<figcaption>{підпис}</figcaption>" if підпис else "")
+            + "</figure>")
+
+
+def _blocks_to_html(el, title: str = "", base_url: str = "", cover_url: str = "") -> str:
     """Тіло статті → БЕЗПЕЧНИЙ HTML зі збереженням структури (підзаголовки, списки
     •, абзаци, жирний/курсив) — як в оригіналі (варіант A, БЕЗ фото). Аллоулист
     тегів: <p>/<h3>/<ul>/<li>/<strong>/<em>/<br>/<blockquote>/<a>. Єдиний атрибут —
@@ -1304,9 +1371,19 @@ def _blocks_to_html(el, title: str = "", base_url: str = "") -> str:
             block = "<ul>" + "".join(f"<li>{x}</li>" for x in li_buf) + "</ul>"
             parts.append(block); total += len(block); li_buf.clear()
 
-    for b in el.find_all(["p", "h2", "h3", "h4", "li", "blockquote"]):
+    # ⚠️ `img` у переліку — і саме тут, а не окремим проходом: `find_all` віддає
+    # вузли В ПОРЯДКУ ДОКУМЕНТА, тож фото само стає на своє місце між абзацами.
+    # Окремий прохід довелось би зшивати з текстом вручну, і фото ілюструвало б не
+    # той абзац — тобто стаття почала б брехати.
+    for b in el.find_all(["p", "h2", "h3", "h4", "li", "blockquote", "img"]):
         if total > 7500:
             break
+        if b.name == "img":
+            block = _figure_html(b, base_url, cover_url)
+            if block:
+                flush_li()
+                parts.append(block); total += len(block)
+            continue
         if b.name != "li" and b.find_parent(["p", "h2", "h3", "h4", "blockquote"]):
             continue                      # вкладений блок — не дублюємо
         if b.name == "li" and b.find(["p"]):
@@ -1353,7 +1430,7 @@ def _blocks_to_html(el, title: str = "", base_url: str = "") -> str:
     return _split_runon_html("".join(parts))   # відновити склеєні RSS-ом межі абзаців
 
 
-def fetch_full_article(url: str, title: str = "") -> str | None:
+def fetch_full_article(url: str, title: str = "", cover_url: str = "") -> str | None:
     """Завантажує повний текст статті зі сторінки статті.
 
     Викликається коли RSS дає лише анонс (<600 символів).
@@ -1408,7 +1485,7 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
             if len(clean_article_text(_blocks_to_text(el), title)) > 300:
                 if DEBUG_FETCH:
                     print(f"[FETCH] {url[:70]} — OK селектор '{sel}'")
-                return _blocks_to_html(el, title, base_url=url)[:8000]
+                return _blocks_to_html(el, title, base_url=url, cover_url=cover_url)[:8000]
 
     # Fallback (readability-стиль): контейнер із найбільшою масою тексту в <p>.
     # Не обмежуємось верхнім рівнем — тіло статті зазвичай ВКЛАДЕНЕ (через це старий
@@ -1456,7 +1533,7 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
 
     if candidates:
         best_mass, best_el = max(candidates, key=lambda x: x[0])
-        rich = _blocks_to_html(best_el, title, base_url=url)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
+        rich = _blocks_to_html(best_el, title, base_url=url, cover_url=cover_url)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
         if len(strip_html(rich)) > 300:
             if DEBUG_FETCH:
                 print(f"[FETCH] {url[:70]} — OK фолбек (<p>-маса {best_mass})")
@@ -1725,7 +1802,12 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
             image = src if src.startswith("http") else base + src
 
         # Повний текст статті + автор (окремий fetch зі сторінки статті rayon)
-        content, author = fetch_rayon_article(href, title)
+        content, author, hero = fetch_rayon_article(href, title, image or "")
+        # 🔴 ОБКЛАДИНКА ЗІ СТАТТІ ПЕРЕВАЖАЄ НАД ПРЕВʼЮ СПИСКУ. Картка списку віддає
+        # знімок, підрізаний під плитку сітки; сторінка статті — той, який поставив
+        # редактор. Скарга Вови 27.08 («обрізалось та зіпсувалась якість») була
+        # саме про це. Превʼю лишається запасним: сторінка могла не відповісти.
+        image = hero or image
         excerpt = strip_html(content)[:400]
 
         # Фільтр релевантності громаді (Вова 21.07): тег «Олика» на rayon інколи
@@ -1761,8 +1843,15 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
     return articles
 
 
-def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
-    """Тіло статті rayon.in.ua + автор — за структурою сторінки статті.
+def fetch_rayon_article(url: str, title: str = "", cover_url: str = "") -> tuple[str, str, str]:
+    """Тіло статті rayon.in.ua + автор + ОБКЛАДИНКА — за структурою сторінки.
+
+    🔴 27.08 — ТРЕТЄ ЗНАЧЕННЯ, І ЗАРАДИ НЬОГО ВЕСЬ КРОК. Досі обкладинку брали з
+    КАРТКИ СПИСКУ новин (`card.select_one("img[src]")` у `parse_rayon_source`) —
+    тобто з превʼю плитки, заздалегідь підрізаного під сітку. 🗣️ Вова: «чого фото
+    спарсилось не все, обрізалось та зіпсувалась якість?» — ось звідки.
+    ➡️ Тепер обкладинка береться зі СТОРІНКИ СТАТТІ: перший знімок, що пройшов
+    відсів (`_photo_url`). Він же виключається з тіла, щоб не стояти двічі.
 
     Розмітка (зонд 21.07): картки/стаття в <article class="article">, метадані
     (автор/дата/перегляди/«Зберегти») — у блоці .articleContentInfo, автор саме в
@@ -1794,15 +1883,33 @@ def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
 
     # Прибираємо все НЕ-тілесне: метадані (автор/дата/перегляди/«Зберегти»),
     # заголовок, зображення+підписи, теги, поділитись, хлібні крихти, скрипти.
-    for sel in (".articleContentInfo", "h1", "figure", "figcaption", "picture", "img",
-                "[class*=caption]", "[class*=gallery]", "[class*=tag]",
+    # 🔴 27.08 — «ПРИБРАТИ СЛУЖБОВЕ» І «ПРИБРАТИ ФОТО» БУЛИ ОДНІЄЮ ДІЄЮ.
+    # У цьому списку разом зі справжнім сміттям (лічильники, «поділитись», теги)
+    # лежали `figure`, `figcaption`, `picture`, `img` і `[class*=caption]` — тобто
+    # фото статті та їхні підписи. Ми відкривали сторінку, бачили знімок і одразу
+    # його знищували; людині показувалась мініатюра зі списку новин.
+    # ➡️ Тепер два списки. Службове йде, фото лишається — далі його розбирає
+    # `_figure_html` за контрактом (відсів значків, обкладинки, чужих атрибутів).
+    # ⚠️ `[class*=gallery]` теж лишився в службовому: у rayon цей клас носить
+    # блок «схожі новини» (`.galleryCard`), а не галерея статті. Прибрати його
+    # звідси означало б затягнути в тіло чужі заголовки.
+    for sel in (".articleContentInfo", "h1",
+                "[class*=gallery]", "[class*=tag]",
                 "[class*=share]", "[class*=social]", "[class*=related]", "[class*=breadcrumb]",
                 "[class*=views]", "[class*=save]", "script", "style", "nav"):
         for el in art.select(sel):
             el.decompose()
 
-    text = _blocks_to_html(art, title, base_url=url)   # багатий HTML (варіант A)
-    return (text[:8000] if len(text) > 40 else ""), author
+    # 🔑 Обкладинку шукаємо ДО складання тіла: знайдений знімок треба одразу
+    # виключити з тіла, інакше він стоятиме і вгорі, і в тексті.
+    hero = ""
+    for im in art.find_all("img"):
+        u = _photo_url(im, url)
+        if u:
+            hero = u
+            break
+    text = _blocks_to_html(art, title, base_url=url, cover_url=(hero or cover_url))
+    return (text[:8000] if len(text) > 40 else ""), author, hero
 
 
 def gromada_url(path: str) -> str:
@@ -2001,7 +2108,14 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             # автоматично зараховувався як повна стаття. Саме так «Українська правда»
             # давала 15 статей із плашкою: анонс довгий, поріг пройдено, на сторінку
             # ніхто не сходив, а тексту в статті насправді набагато більше.
-            page_html = fetch_full_article(link, title) if link else None
+            # ⚠️ Обкладинку дістаємо ДО походу на сторінку: вона потрібна там, щоб
+            # те саме фото не зʼявилось у тілі ще раз (воно вже стоїть угорі статті).
+            # 🛑 Саме ТУТ, а не нижче: 27.08 я переставив цей рядок і на мить лишив
+            # `image` використаним ДО присвоєння. Помилки не було б видно — у циклі
+            # змінна пережила б попередню ітерацію, і стаття отримала б обкладинку
+            # СУСІДНЬОЇ. Тиха вада найгіршого роду: дані виглядають цілими.
+            image = extract_image(entry)
+            page_html = fetch_full_article(link, title, image or "") if link else None
             content, content_source = decide_content(rss_html, page_html, rss_summary)
             full_text = content_source == "page"
 
@@ -2062,7 +2176,6 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 continue  # схожа новина вже є в цьому розділі
 
             category = detect_category(title, excerpt)
-            image = extract_image(entry)
             entry_type = classify_entry(title, excerpt + " " + content)
 
             articles.append({
@@ -2168,11 +2281,15 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         try:
             domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
             if domain.endswith("rayon.in.ua"):
-                new_html, author = fetch_rayon_article(url, a.get("title", ""))
+                new_html, author, hero = fetch_rayon_article(url, a.get("title", ""), a.get("image") or "")
                 if author and not a.get("author"):
                     a["author"] = author
+                # Перебираючи стару статтю, заразом міняємо превʼю списку на
+                # обкладинку зі сторінки — тим самим шляхом, що й для нових.
+                if hero:
+                    a["image"] = hero
             else:
-                new_html = fetch_full_article(url, a.get("title", ""))
+                new_html = fetch_full_article(url, a.get("title", ""), a.get("image") or "")
         except Exception:
             new_html = None
         # 🔑 Рішення ухвалює ТА САМА функція, що й на свіжому розборі. До 12.08 тут
