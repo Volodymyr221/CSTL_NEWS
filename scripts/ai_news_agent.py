@@ -771,7 +771,7 @@ def _enrich(a: dict):
         # (тіло, обкладинка) з ТОГО САМОГО супу. Доти ми качали сторінку двічі —
         # окремо заради тексту і окремо заради `og:image`.
         try:
-            full, cover = pr.fetch_article_page(src)
+            full, cover, _ = pr.fetch_article_page(src)
         except Exception:
             full, cover = None, ""
         if full and len(full) > len(a.get("content") or ""):
