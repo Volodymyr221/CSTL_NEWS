@@ -1802,7 +1802,12 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
             image = src if src.startswith("http") else base + src
 
         # Повний текст статті + автор (окремий fetch зі сторінки статті rayon)
-        content, author = fetch_rayon_article(href, title, image or "")
+        content, author, hero = fetch_rayon_article(href, title, image or "")
+        # 🔴 ОБКЛАДИНКА ЗІ СТАТТІ ПЕРЕВАЖАЄ НАД ПРЕВʼЮ СПИСКУ. Картка списку віддає
+        # знімок, підрізаний під плитку сітки; сторінка статті — той, який поставив
+        # редактор. Скарга Вови 27.08 («обрізалось та зіпсувалась якість») була
+        # саме про це. Превʼю лишається запасним: сторінка могла не відповісти.
+        image = hero or image
         excerpt = strip_html(content)[:400]
 
         # Фільтр релевантності громаді (Вова 21.07): тег «Олика» на rayon інколи
@@ -1838,8 +1843,15 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
     return articles
 
 
-def fetch_rayon_article(url: str, title: str = "", cover_url: str = "") -> tuple[str, str]:
-    """Тіло статті rayon.in.ua + автор — за структурою сторінки статті.
+def fetch_rayon_article(url: str, title: str = "", cover_url: str = "") -> tuple[str, str, str]:
+    """Тіло статті rayon.in.ua + автор + ОБКЛАДИНКА — за структурою сторінки.
+
+    🔴 27.08 — ТРЕТЄ ЗНАЧЕННЯ, І ЗАРАДИ НЬОГО ВЕСЬ КРОК. Досі обкладинку брали з
+    КАРТКИ СПИСКУ новин (`card.select_one("img[src]")` у `parse_rayon_source`) —
+    тобто з превʼю плитки, заздалегідь підрізаного під сітку. 🗣️ Вова: «чого фото
+    спарсилось не все, обрізалось та зіпсувалась якість?» — ось звідки.
+    ➡️ Тепер обкладинка береться зі СТОРІНКИ СТАТТІ: перший знімок, що пройшов
+    відсів (`_photo_url`). Він же виключається з тіла, щоб не стояти двічі.
 
     Розмітка (зонд 21.07): картки/стаття в <article class="article">, метадані
     (автор/дата/перегляди/«Зберегти») — у блоці .articleContentInfo, автор саме в
@@ -1888,8 +1900,16 @@ def fetch_rayon_article(url: str, title: str = "", cover_url: str = "") -> tuple
         for el in art.select(sel):
             el.decompose()
 
-    text = _blocks_to_html(art, title, base_url=url, cover_url=cover_url)
-    return (text[:8000] if len(text) > 40 else ""), author
+    # 🔑 Обкладинку шукаємо ДО складання тіла: знайдений знімок треба одразу
+    # виключити з тіла, інакше він стоятиме і вгорі, і в тексті.
+    hero = ""
+    for im in art.find_all("img"):
+        u = _photo_url(im, url)
+        if u:
+            hero = u
+            break
+    text = _blocks_to_html(art, title, base_url=url, cover_url=(hero or cover_url))
+    return (text[:8000] if len(text) > 40 else ""), author, hero
 
 
 def gromada_url(path: str) -> str:
@@ -2261,9 +2281,13 @@ def rehydrate_short_articles(existing_articles: list) -> int:
         try:
             domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
             if domain.endswith("rayon.in.ua"):
-                new_html, author = fetch_rayon_article(url, a.get("title", ""), a.get("image") or "")
+                new_html, author, hero = fetch_rayon_article(url, a.get("title", ""), a.get("image") or "")
                 if author and not a.get("author"):
                     a["author"] = author
+                # Перебираючи стару статтю, заразом міняємо превʼю списку на
+                # обкладинку зі сторінки — тим самим шляхом, що й для нових.
+                if hero:
+                    a["image"] = hero
             else:
                 new_html = fetch_full_article(url, a.get("title", ""), a.get("image") or "")
         except Exception:
