@@ -2625,6 +2625,14 @@ textarea.cm-board-input.bm-invalid {
   align-items: baseline;
   gap: 8px;
 }
+/* 🔴 27.08 — ЛОКАЦІЯ БАГРЯНА, ЯК ЦІНА (замовлення Вови).
+   Було `#7A7A7A` — той самий сірий, що й опис вище, тож населений пункт зливався з
+   текстом і читався як його продовження. А це не проза, це ФАКТ про оголошення — і
+   на маркетплейсі другий за важливістю після ціни: «скільки» і «де».
+   🔑 Колір беремо той самий токен, що й ціна (`--news-accent`), а не свій відтінок —
+   інакше в одному рядку стояли б два «майже однакові» багряні.
+   ⚠️ Пін фарбується разом із текстом сам: у `PIN_ICON_SVG` стоїть
+   `stroke="currentColor"`, тож окремого правила для `svg` не треба. */
 #board-content .bd-ad-loc {
   flex: 1;
   min-width: 0;
@@ -2632,7 +2640,7 @@ textarea.cm-board-input.bm-invalid {
   align-items: center;
   gap: 3px;
   font-size: 11.5px;
-  color: #7A7A7A;
+  color: var(--news-accent, #722F37);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -2680,6 +2688,18 @@ textarea.cm-board-input.bm-invalid {
   width: 40px; height: 32px;
   display: flex; align-items: center; justify-content: center;
   border: 0; background: none;
+  /* 🔴 27.08 — ГАСИМО ЗАЛИШКИ ОВАЛУ ВІД `.bd-icon-btn` (замовлення Вови: «залишити
+     просто значок»). `border: 0` і `background: none` тут стояли й раніше, але овал
+     малювали ЩЕ ТРИ властивості базового класу, які ніхто не скасовував:
+     `border-radius: 50%` (на 40×32 це еліпс), `box-shadow` під ним і
+     `backdrop-filter: blur(4px)` — саме розмиття й давало видиму пляму на білій
+     картці, хоча ні рамки, ні заливки формально вже не було.
+     🔑 Урок: «прибрав рамку і фон» ≠ «прибрав кружечок». Обгортку тримає весь набір
+     разом, і скасовувати його треба цілком. */
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   color: #B0B0B0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
