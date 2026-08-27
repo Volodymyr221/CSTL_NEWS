@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787853110464,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 472,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0114,
+      "note": ""
+    },
+    {
       "ts": 1787824312687,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0094,
       "note": ""
-    },
-    {
-      "ts": 1784362947032,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 480,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0087,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 7.2993,
-    "runs": 110,
+    "cost_usd": 7.3107,
+    "runs": 111,
     "web_searches": 93
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 2.1897,
-      "runs": 32,
+      "cost_usd": 2.2011,
+      "runs": 33,
       "web_searches": 30
     }
   },
-  "updated_ts": 1787824312687
+  "updated_ts": 1787853110464
 }
