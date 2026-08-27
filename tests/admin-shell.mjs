@@ -89,7 +89,10 @@ async function поміряти({ зламати = false } = {}) {
               signOut: () => відповідь(null) },
       from: запит, rpc: () => відповідь([]) }) };
   });
-  await p.route('**cdn.jsdelivr.net/**', r => r.fulfill({ contentType: 'text/javascript', body: '' }));
+  // 🔴 26.08 — глушимо SDK за обома адресами: він переїхав із CDN у `vendor/`.
+for (const шлях of ['**cdn.jsdelivr.net/**', '**/vendor/supabase-js*']) {
+  await p.route(шлях, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
+}
   await p.goto(`http://127.0.0.1:${порт}/admin.html`, { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(500);
   if (зламати) await p.evaluate(() => { document.querySelector('.header').style.position = 'static'; });
