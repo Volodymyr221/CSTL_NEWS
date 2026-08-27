@@ -100,7 +100,11 @@ ok("версія алгоритму оголошена", isinstance(P.FULL_ALGO_
           "_fullTries": 3, "_fullAlgo": 1, "fullText": False}
 # Мережі в стенді немає — fetch поверне None, і стаття лишиться 'rss'. Нас цікавить
 # РІВНО одне: чи скинувся лічильник, тобто чи дістала стаття новий шанс.
-P.fetch_full_article = lambda url, title="": None
+# ⚠️ Підміняємо САМЕ те, що зве rehydrate. 27.08 функція розділилась:
+# `fetch_article_page` віддає пару (тіло, обкладинка), а `fetch_full_article`
+# лишилась тонкою обгорткою для AI-редактора. Підміна обгортки нічого б не
+# перехопила — стенд мовчки пішов би в мережу.
+P.fetch_article_page = lambda url, title="", cover_url="": (None, "")
 P.rehydrate_short_articles([стаття])
 ok("🔴 лічильник спроб скинуто при новій версії алгоритму",
    стаття.get("_fullAlgo") == P.FULL_ALGO_VERSION and стаття.get("_fullTries", 0) <= 1,
