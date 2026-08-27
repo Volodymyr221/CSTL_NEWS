@@ -875,8 +875,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(g)
     </article>
   `}function zb(t){return`
     <article class="nc nc--line" data-article-id="${t.id}">
-      <h3 class="nc-title">${p(t.title)}</h3>
-      <span class="nc-foot">${qt(t.ts)}</span>
+      ${t.image?`<img class="nc-img" src="${p(t.image)}" alt="" loading="lazy">`:`<div class="nc-img nc-img--mono" aria-hidden="true">${p((t.source||"?").trim().charAt(0).toUpperCase())}</div>`}
+      <div class="nc-body">
+        <h3 class="nc-title">${p(t.title)}</h3>
+        <div class="nc-foot">${p(t.source||"")} · ${qt(t.ts)}</div>
+      </div>
     </article>
   `}function Eb(t,e){return e==="hero"?xb(t):e==="line"?zb(t):`
     <article class="nc nc--${e}${t.exclusive?" exclusive":""}" data-article-id="${t.id}">
