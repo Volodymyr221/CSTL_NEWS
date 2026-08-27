@@ -1,0 +1,165 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Картка без фото — три варіанти</title>
+<style>
+  :root{
+    --wine:#722F37; --wine-d:#5a252c; --pad:20px; --r:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:400 15px system-ui,-apple-system,sans-serif;
+       background:#2a1e20;color:#fff;padding:0 0 40px}
+  /* фон Громади — темне фото + серпанок */
+  body::before{content:'';position:fixed;inset:0;z-index:0;
+    background:linear-gradient(160deg,#3a2a2c,#241a1c 60%,#1b1315);}
+  .wrap{position:relative;z-index:1;width:390px;margin:0 auto;padding:0 var(--pad)}
+  h2.лейбл{font:800 11px/1 system-ui;letter-spacing:.13em;text-transform:uppercase;
+    color:rgba(255,255,255,.55);margin:26px 0 4px}
+  p.підпис{font:400 12px/1.45 system-ui;color:rgba(255,255,255,.62);margin:0 0 12px}
+  .стос{display:flex;flex-direction:column;gap:8px}
+  .ряд{display:flex;flex-direction:column;gap:6px}
+
+  /* ── спільне ─────────────────────────────────────────── */
+  .к{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer}
+  .к--рядок{display:flex;align-items:center;gap:11px;padding:11px;border-radius:13px;
+    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16)}
+  .тіло{flex:1;min-width:0}
+  .заг{font:700 18px/1.28 system-ui;letter-spacing:-.015em;margin:0;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .опис{font:400 13.5px/1.42 system-ui;color:rgba(255,255,255,.90);margin:4px 0 0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .низ{margin-top:5px;font:400 12px/1 system-ui;color:rgba(255,255,255,.78)}
+  .р-заг{font:600 14.5px/1.32 system-ui;letter-spacing:-.1px;margin:0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .р-низ{margin-top:4px;font:400 11.5px/1 system-ui;color:rgba(255,255,255,.62);
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+  /* ══ А — ТЕКСТОВА: фото немає, отже місце віддане тексту ══ */
+  .А{aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:16px 15px 14px;
+    background:linear-gradient(150deg,#7d353e 0%,#5a252c 55%,#43191f 100%);
+    border:1px solid rgba(255,255,255,.10)}
+  .А .знак{position:absolute;top:-14px;right:-10px;font:800 132px/1 system-ui;
+    color:rgba(255,255,255,.055);pointer-events:none;user-select:none}
+  .А .кікер{font:800 10px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(255,255,255,.55);margin-bottom:8px}
+  .А .заг{font-size:21px;line-height:1.24;-webkit-line-clamp:3}
+  .А .опис{-webkit-line-clamp:4;color:rgba(255,255,255,.80);margin-top:8px}
+  .А-ряд{border-left:3px solid rgba(255,255,255,.30)}
+  .А-ряд .тіло{padding-left:2px}
+
+  /* ══ Б — ФІРМОВИЙ ЗНАК на місці фото ══ */
+  .Б{aspect-ratio:4/3}
+  .Б .поле{position:absolute;inset:0;
+    background:linear-gradient(150deg,#7d353e,#4c1f25);
+    display:grid;place-items:center;align-items:center;padding-bottom:74%}
+  .Б .поле svg{width:54px;height:54px;opacity:.42}
+  .Б .сітка{position:absolute;inset:0;opacity:.10;
+    background-image:radial-gradient(rgba(255,255,255,.9) 1px,transparent 1px);
+    background-size:14px 14px}
+  .Б .вуаль{position:absolute;left:0;right:0;bottom:0;height:74%;
+    background:linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(0,0,0,.30) 18%,
+      rgba(0,0,0,.62) 48%,rgba(0,0,0,.88) 100%)}
+  .Б .тіло-абс{position:absolute;left:0;right:0;bottom:0;padding:12px 14px 13px}
+  .Б-мін{width:56px;height:56px;border-radius:10px;flex:none;display:grid;place-items:center;
+    background:linear-gradient(150deg,#7d353e,#4c1f25)}
+  .Б-мін svg{width:26px;height:26px;opacity:.45}
+
+  /* ══ В — МОНОГРАМА ДЖЕРЕЛА, колір із назви ══ */
+  .В{aspect-ratio:4/3}
+  .В .поле{position:absolute;inset:0;display:grid;place-items:center;padding-bottom:74%}
+  .В .літера{font:800 68px/1 system-ui;color:rgba(255,255,255,.30)}
+  .В .вуаль{position:absolute;left:0;right:0;bottom:0;height:74%;
+    background:linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(0,0,0,.30) 18%,
+      rgba(0,0,0,.62) 48%,rgba(0,0,0,.88) 100%)}
+  .В .тіло-абс{position:absolute;left:0;right:0;bottom:0;padding:12px 14px 13px}
+  .В-мін{width:56px;height:56px;border-radius:10px;flex:none;display:grid;place-items:center;
+    font:800 24px/1 system-ui;color:rgba(255,255,255,.42)}
+</style></head><body>
+<div class="wrap">
+
+<h2 class="лейбл">Як зараз (те, на що скаржиться Вова)</h2>
+<p class="підпис">Місце під фото є, у ньому 🏰 — читається як «фото не завантажилось».</p>
+<div class="стос">
+  <article class="к Б" style="--x:0">
+    <div class="поле" style="background:linear-gradient(135deg,#722F37,#5a252c)">
+      <span style="font-size:30px;opacity:.5">🏰</span></div>
+    <div class="вуаль"></div>
+    <div class="тіло-абс">
+      <h3 class="заг">Хижак, якого майже неможливо побачити в дикій природі, потрапив в обʼєктив на Волині</h3>
+      <p class="опис">Ця тварина веде потайний спосіб життя та уникає людей.</p>
+      <div class="низ">2 год тому · Волинь Post</div>
+    </div>
+  </article>
+</div>
+
+<h2 class="лейбл">А · Текстова</h2>
+<p class="підпис">Місця під фото немає взагалі — воно віддане тексту: заголовок 21px, опис до 4 рядків. Відсутність фото стає перевагою, а не дірою.</p>
+<div class="стос">
+  <article class="к А">
+    <span class="знак">В</span>
+    <div class="кікер">Волинь Post</div>
+    <h3 class="заг">Хижак, якого майже неможливо побачити в дикій природі, потрапив в обʼєктив на Волині</h3>
+    <p class="опис">Ця тварина веде потайний спосіб життя та уникає людей. Помітити її вдається одиницям, і майже завжди — випадково.</p>
+    <div class="низ">2 год тому</div>
+  </article>
+  <div class="ряд">
+    <article class="к к--рядок А-ряд">
+      <div class="тіло">
+        <h4 class="р-заг">Ображала та відібрала гаманець: на Волині жінку оштрафували за домашнє насильство</h4>
+        <div class="р-низ">Волинь Post · 5 год тому</div>
+      </div>
+    </article>
+  </div>
+</div>
+
+<h2 class="лейбл">Б · Фірмовий знак</h2>
+<p class="підпис">Місце під фото лишається, але в ньому не «зламане фото», а свій знак: замок CSTL на бордовому градієнті з ледь помітною сіткою. Ритм блоку не ламається.</p>
+<div class="стос">
+  <article class="к Б">
+    <div class="поле">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M3 21V9l3-2v2h2V6l4-3 4 3v3h2V7l3 2v12h-7v-5h-4v5H3z"/></svg>
+    </div>
+    <div class="сітка"></div>
+    <div class="вуаль"></div>
+    <div class="тіло-абс">
+      <h3 class="заг">Хижак, якого майже неможливо побачити в дикій природі, потрапив в обʼєктив на Волині</h3>
+      <p class="опис">Ця тварина веде потайний спосіб життя та уникає людей.</p>
+      <div class="низ">2 год тому · Волинь Post</div>
+    </div>
+  </article>
+  <div class="ряд">
+    <article class="к к--рядок">
+      <div class="Б-мін"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3 21V9l3-2v2h2V6l4-3 4 3v3h2V7l3 2v12h-7v-5h-4v5H3z"/></svg></div>
+      <div class="тіло">
+        <h4 class="р-заг">Ображала та відібрала гаманець: на Волині жінку оштрафували за домашнє насильство</h4>
+        <div class="р-низ">Волинь Post · 5 год тому</div>
+      </div>
+    </article>
+  </div>
+</div>
+
+<h2 class="лейбл">В · Монограма джерела</h2>
+<p class="підпис">Колір береться з назви джерела: «Волинь Post» завжди один відтінок, «Конкурент» інший. Повторні джерела стають упізнаваними з одного погляду.</p>
+<div class="стос">
+  <article class="к В">
+    <div class="поле" style="background:linear-gradient(150deg,#2f5d6e,#173540)">
+      <span class="літера">В</span></div>
+    <div class="вуаль"></div>
+    <div class="тіло-абс">
+      <h3 class="заг">Хижак, якого майже неможливо побачити в дикій природі, потрапив в обʼєктив на Волині</h3>
+      <p class="опис">Ця тварина веде потайний спосіб життя та уникає людей.</p>
+      <div class="низ">2 год тому · Волинь Post</div>
+    </div>
+  </article>
+  <div class="ряд">
+    <article class="к к--рядок">
+      <div class="В-мін" style="background:linear-gradient(150deg,#6e4a2f,#3d2717)">К</div>
+      <div class="тіло">
+        <h4 class="р-заг">Рютте в Брюсселі 27 серпня зустрінеться з заступником шефа Пентагону</h4>
+        <div class="р-низ">Конкурент · 5 год тому</div>
+      </div>
+    </article>
+  </div>
+</div>
+
+</div></body></html>
