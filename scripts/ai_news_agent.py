@@ -767,15 +767,26 @@ def _enrich(a: dict):
                 a["image_type"] = "none"
     else:
         src = a.get("sourceUrl")
+        # 🔑 27.08 — ОДИН запит замість двох: `fetch_article_page` віддає пару
+        # (тіло, обкладинка) з ТОГО САМОГО супу. Доти ми качали сторінку двічі —
+        # окремо заради тексту і окремо заради `og:image`.
         try:
-            full = pr.fetch_full_article(src)
+            full, cover = pr.fetch_article_page(src)
         except Exception:
-            full = None
+            full, cover = None, ""
         if full and len(full) > len(a.get("content") or ""):
             a["content"] = full
         if not a.get("image"):
+            # 🔴 27.08 — ОБКЛАДИНКУ МІРЯЄМО, А НЕ ЛИШЕ БЕРЕМО. Скарга Вови:
+            # «чому фотографія в такій поганій якості?». Модалка показує фото на
+            # всю ширину (~358 CSS-точок × щільність 3 ≈ 1074 пікселі), а ми
+            # ставили `og:image` будь-якого розміру — вужчий файл браузер
+            # розтягує. `best_cover` лишає вибір видавця, якщо пікселів
+            # вистачає, і лише інакше шукає ширше фото в тілі статті.
             try:
-                a["image"] = _sanitize_image_url(pr.fetch_og_image(src))
+                обкладинка = cover or pr.fetch_og_image(src) or ""
+                обкладинка = pr.best_cover(обкладинка, a.get("content") or "")
+                a["image"] = _sanitize_image_url(обкладинка) if обкладинка else None
             except Exception:
                 a["image"] = None
         a["image_type"] = "source" if a.get("image") else "none"
