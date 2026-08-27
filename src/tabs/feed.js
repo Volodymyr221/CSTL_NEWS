@@ -50,7 +50,8 @@ const IC_SEND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // Іконка «Поділитися» у стилі Facebook — СУЦІЛЬНА (залита) стрілка вправо з хвостиком-
 // гачком донизу-вліво (як на фото від Вови). fill=currentColor тягне колір кнопки.
 const IC_SHARE  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round"><path d="M14 9V5.2c0 -.53 .64 -.8 1.02 -.42l7.2 7.2a.6 .6 0 0 1 0 .85l-7.2 7.2c-.38 .38 -1.02 .1 -1.02 -.42V16c-5 0 -8.5 1.6 -11 5.1 1 -5 4 -10 11 -11z"/></svg>';
-const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+// 🗑 27.08 — `IC_CLOSE` прибрано: його носив лише переглядач фото, а той переїхав
+// у `core/photo-viewer.js` разом зі своїм значком.
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 // Канцелярська кнопка (Tabler pin). ⚠️ НЕ беремо `ICONS.pin` з core/icons.js — там
