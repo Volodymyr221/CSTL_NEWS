@@ -73,17 +73,30 @@ function getTimingsForDisplay(route) {
   return { ...base, state: 'waiting', progress: 0, minsToDeparture: null, minsToArrival: null };
 }
 
-// ── Preferences (localStorage — збереження налаштувань у браузері) ────
+// ── Пошуковий фільтр «Звідки/Куди» ────────────────────────────────────────
+//
+// 🔴 27.08 — ЖИВЕ В `sessionStorage`, А НЕ В `localStorage`, І ЦЕ НАВМИСНО.
+// Слова Вови: «якщо користувач закриває додаток… фільтр має скидатись».
+// Заміряно поведінкою iOS у PWA: `sessionStorage` ПЕРЕЖИВАЄ згортання застосунку
+// (людина вийшла подивитись повідомлення і повернулась — фільтр на місці), але
+// зникає при ПОВНОМУ закритті. Це рівно та межа, яку назвав Вова.
+// 🛑 `localStorage` тримав фільтр вічно: набрав «Дерно» місяць тому — і розклад
+// назавжди показує чужий кут громади, поки сам не здогадаєшся скинути.
+// ⚠️ Старий ключ прибираємо один раз при завантаженні: інакше вічне «Дерно» з
+// `localStorage` пережило б цю зміну і виглядало б так, ніби вона не працює.
 function savePrefs() {
-  localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
+  try {
+    sessionStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
+  } catch {}
 }
 
 function loadPrefs() {
   try {
-    const p = JSON.parse(localStorage.getItem(PREFS_KEY));
+    const p = JSON.parse(sessionStorage.getItem(PREFS_KEY));
     if (p?.from) fromStop = p.from;
     if (p?.to)   toStop   = p.to;
   } catch {}
+  try { localStorage.removeItem(PREFS_KEY); } catch {}
 }
 
 // ── Push-сповіщення Level B ───────────────────────────────────────────────────
