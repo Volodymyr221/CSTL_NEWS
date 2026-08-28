@@ -20,6 +20,7 @@
 """
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -87,6 +88,134 @@ ok("усі теми історичної місії ведуть у сторін
    all(t.get("page_id") == 6 for t in теми_історії) if теми_історії else False,
    f"page_id: {sorted({t.get('page_id') for t in теми_історії})}")
 ok("теми бренду ведуть у сторінку 3", all(t.get("page_id") == 3 for t in теми_бренду) if теми_бренду else True)
+
+# ── 2Б. ФОТОАРХІВ — ЦЕНТРАЛЬНЕ ДЖЕРЕЛО OLYKA CASTLE (28.08) ────────────────
+# 🔴 Навіщо окремі перевірки. Знімок мусить пройти ТРИ рубежі, і кожен з них уже
+# один раз мовчки не спрацював: тема має його віддати, писар — не загубити, стік —
+# записати в базу. Саме на третьому й трималась вада: місія оголошувала пошук фото,
+# конвеєр його знаходив, а `page_draft` писав у базу ЛИШЕ текст. Наслідок було видно
+# не в коді, а на екрані — усі 5 постів агента стоять без жодного знімка.
+ФОТО = {"items": [{
+    "url": "https://example.org/olyka.jpg",
+    "place": "Олика, вулиця біля костелу",
+    "date": "2026-08-20",
+    "facts": ["Знімок зроблено ввечері.", "Звідси видно і костел, і дорогу до замку."],
+}, {
+    # 🛑 Знімок БЕЗ спостережень — не тема. Пост із нього був би підписом «красиво».
+    "url": "https://example.org/no-facts.jpg", "place": "Десь", "facts": [],
+}]}
+with tempfile.TemporaryDirectory() as тимч:
+    архів = Path(тимч) / "photos.json"
+    архів.write_text(json.dumps(ФОТО, ensure_ascii=False), encoding="utf-8")
+    старий_архів, plan_src.PHOTOS = plan_src.PHOTOS, архів
+    справжній = plan_src.load_state
+    plan_src.load_state = lambda: {"done": [], "kinds": {}, "missions": {}}
+    try:
+        фототеми = джерело.fetch({**бренд, "per_run": 99})
+    finally:
+        plan_src.PHOTOS, plan_src.load_state = старий_архів, справжній
+
+з_фото = [t for t in фототеми if t.get("image")]
+ok("🔴 фотоархів дає теми для OLYKA CASTLE", len(з_фото) == 1,
+   f"{len(з_фото)} тем зі знімком із {len(фототеми)}")
+ok("🛑 знімок БЕЗ спостережень темою не стає", not any(
+   "no-facts" in (t.get("image") or "") for t in фототеми))
+ok("тема несе сам знімок, а не запит на пошук",
+   з_фото[0].get("image", "").startswith("https://") if з_фото else False,
+   з_фото[0].get("image") if з_фото else "—")
+
+# 🔑 ДАЛІ МІРЯЄМО ПОВЕДІНКУ, А НЕ ТЕКСТ КОДУ. Перша версія цих двох перевірок
+# шукала рядок у сирці через `inspect.getsource` — тобто була грепом у масці стенда.
+# Такий стенд зеленіє від коментаря і не бачить, що виклик прибрали. Тому і модель,
+# і базу підміняємо підробкою і дивимось, ЩО ДО НИХ ДОЇХАЛО.
+import os                                              # noqa: E402
+import urllib.request                                  # noqa: E402
+from editor.writers import brand_writer as bw          # noqa: E402
+from editor.sinks import page_draft as pd              # noqa: E402
+
+
+class _Відповідь:
+    """Мінімальний двійник відповіді Anthropic — рівно те, що читає писар."""
+    def __init__(self, тіло): self._т = тіло.encode("utf-8")
+    def read(self): return self._т
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+
+ТЕМА_З_ФОТО = {"id": "photo:тест", "kind": "brand", "topic": "Фото: вулиця біля костелу",
+               "facts": ["Знімок зроблено ввечері."], "page_id": 3,
+               "image": "https://example.org/olyka.jpg"}
+
+старий_urlopen = urllib.request.urlopen
+старий_ключ = os.environ.get("ANTHROPIC_API_KEY")
+os.environ["ANTHROPIC_API_KEY"] = "test-key-not-used"
+urllib.request.urlopen = lambda req, timeout=None: _Відповідь(json.dumps(
+    {"content": [{"type": "text", "text": '{"text":"Пост.","self_check":"ок"}'}],
+     "usage": {"input_tokens": 1, "output_tokens": 1}}))
+try:
+    чернетка = bw.BrandWriter().write(ТЕМА_З_ФОТО, {"voice": "olyka_castle", "spend_prefix": "test:"})
+finally:
+    urllib.request.urlopen = старий_urlopen
+    if старий_ключ is None:
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+    else:
+        os.environ["ANTHROPIC_API_KEY"] = старий_ключ
+
+ok("🔴 писар несе знімок теми в чернетку",
+   чернетка is not None and чернетка.image == ТЕМА_З_ФОТО["image"],
+   (чернетка.image if чернетка else "чернетки немає"))
+
+# І найголовніше — стік мусить покласти знімок У ЗАПИТ ДО БАЗИ.
+відправлене = {}
+
+
+def _перехопити(req, timeout=None):
+    відправлене["тіло"] = json.loads(req.data.decode("utf-8"))
+    return _Відповідь(json.dumps([{"id": 999}]))
+
+
+чернетка.meta = {"page_id": 6, "plan_id": "photo:тест", "post_kind": "brand"}
+чернетка.mission = "olyka_castle"
+старий_ключ_бази = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "test-key"
+старий_mark = pd.mark_done
+pd.mark_done = lambda *a, **k: None          # памʼять справжнього агента не чіпаємо
+urllib.request.urlopen = _перехопити
+try:
+    pd.PageDraftSink().save(чернетка)
+finally:
+    urllib.request.urlopen = старий_urlopen
+    pd.mark_done = старий_mark
+    if старий_ключ_бази is None:
+        os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+    else:
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = старий_ключ_бази
+
+тіло = відправлене.get("тіло") or {}
+ok("🔴 стік КЛАДЕ фото в запит до бази (саме цього НЕ БУЛО до 28.08)",
+   тіло.get("image_url") == ТЕМА_З_ФОТО["image"] and тіло.get("image_urls") == [ТЕМА_З_ФОТО["image"]],
+   f"image_url={тіло.get('image_url')}")
+ok("і пише його в ПОТРІБНУ сторінку зі статусом чернетки",
+   тіло.get("page_id") == 6 and тіло.get("status") == "draft")
+
+# 🔬 КОНТРОЛЬ: чернетка БЕЗ фото не мусить вигадувати порожніх полів — інакше
+# запис у базу ніс би `image_url: null` і клієнт малював би порожнє місце.
+чернетка.image = None
+відправлене.clear()
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "test-key"
+pd.mark_done = lambda *a, **k: None
+urllib.request.urlopen = _перехопити
+try:
+    pd.PageDraftSink().save(чернетка)
+finally:
+    urllib.request.urlopen = старий_urlopen
+    pd.mark_done = старий_mark
+    if старий_ключ_бази is None:
+        os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+    else:
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = старий_ключ_бази
+ok("КОНТРОЛЬ: без фото полів фото в запиті немає взагалі",
+   "image_url" not in (відправлене.get("тіло") or {}))
 
 # ── 3. ПРОПОРЦІЯ РАХУЄТЬСЯ ОКРЕМО В КОЖНІЙ СПІЛЬНОТІ ───────────────────────
 # Сцена: у спільній памʼяті три «звичайні» пости, і ВСІ вони чужі — з історичної

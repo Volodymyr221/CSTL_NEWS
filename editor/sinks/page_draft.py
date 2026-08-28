@@ -49,6 +49,17 @@ class PageDraftSink(Sink):
             "show_author": False,
             "author_uid": None,
         }
+        # 🔴 28.08 — ФОТО ДОЇЖДЖАЄ В БАЗУ. Доти цього рядка НЕ БУЛО, і це була тиха
+        # вада: місія могла оголосити пошук картинки (`image: wikimedia`), конвеєр
+        # чесно її знаходив і клав у чернетку — а стік писав лише текст. Тобто
+        # налаштування працювало «на папері», а в стрічку йшов пост без фото.
+        # 🔑 Помітили не з коду, а з наслідку: усі 5 історичних постів, написаних
+        # агентом, стоять БЕЗ жодного знімка.
+        # ⚠️ Пишемо і `image_urls` теж: клієнт малює галерею саме з нього, а
+        # `image_url` лишається для одного кадру і для старих записів.
+        if getattr(draft, "image", None):
+            row["image_url"] = draft.image
+            row["image_urls"] = [draft.image]
         req = urllib.request.Request(
             f"{SUPA_URL}/rest/v1/page_posts",
             data=json.dumps(row).encode("utf-8"),
