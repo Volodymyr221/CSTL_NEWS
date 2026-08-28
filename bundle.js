@@ -1615,7 +1615,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(y)}  top0=${Math.round(g)
     <span class="hm-fd-c${e?" hm-fd-c--new":""}" data-fd-page="${p(String(t.id??""))}" title="${p(n)}">
       <span class="hm-fd-c-ring"><span class="hm-fd-c-av">${s}</span></span>
       <span class="hm-fd-c-name" aria-label="${p(n)}">${p(a)}</span>
-    </span>`}function aD(t,e=null){e=e||t.pages||{};let n=e.name||"Громада",a=t.image_url||(Array.isArray(t.image_urls)?t.image_urls[0]:null),s=tD(t.text,a?170:520,!!a),o=e.avatar_url?`<img src="${p(e.avatar_url)}" alt="">`:`<span class="hm-fd-p-tx">${p(bh(n))}</span>`;return`
+    </span>`}function aD(t,e=null){e=e||t.pages||{};let n=e.name||"Громада",a=t.image_url||(Array.isArray(t.image_urls)?t.image_urls[0]:null),s=tD(t.text,a?170:700,!!a),o=e.avatar_url?`<img src="${p(e.avatar_url)}" alt="">`:`<span class="hm-fd-p-tx">${p(bh(n))}</span>`;return`
     <article class="hm-card hm-card--tap hm-fd-post hm-fd-post--${a?"photo":"text"}"
       data-fd-page="${p(String(t.page_id??""))}" data-fd-post="${p(String(t.id??""))}">
       <span class="hm-fd-p-head">
