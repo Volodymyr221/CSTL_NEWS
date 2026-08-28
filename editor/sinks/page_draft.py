@@ -72,7 +72,10 @@ class PageDraftSink(Sink):
 
         # Памʼять оновлюємо ЛИШЕ після підтвердженого запису. Позначити раніше
         # означало б втратити тему назавжди при першій же мережевій помилці.
-        mark_done(plan_id, (draft.meta or {}).get("post_kind", ""))
+        # Місію передаємо, щоб пропорція постів рахувалась окремо в кожній
+        # спільноті (див. `_види` у `editor/sources/plan.py`).
+        mark_done(plan_id, (draft.meta or {}).get("post_kind", ""),
+                  getattr(draft, "mission", "") or "")
         new_id = (створено[0] if isinstance(створено, list) and створено else {}).get("id")
         print(f"  ✓ чернетка #{new_id} у сторінці {page_id} — чекає вичитки Вови")
         return True

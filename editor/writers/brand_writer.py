@@ -158,7 +158,13 @@ class BrandWriter(Writer):
                 текст += блок.get("text", "")
 
         usage = дані.get("usage", {}) or {}
-        spend.record(f"olyka:{item.get('id', '?')}", usage, 1,
+        # 🔴 27.08 — ПРЕФІКС КОШИКА БЕРЕТЬСЯ З МІСІЇ. Доти тут стояло зашите
+        # «olyka:», і з появою другої спільноти її витрати лягали б у кошик OLYKA
+        # CASTLE. Стеля витрат читається саме за префіксом (`spend.budget_block`),
+        # тож наслідок був би не косметичний: одна спільнота глушила б другу,
+        # вичерпавши чужий бюджет.
+        кошик = (cfg.get("spend_prefix") or "olyka:").strip()
+        spend.record(f"{кошик}{item.get('id', '?')}", usage, 1,
                      note=тема[:80], model=MODEL)
 
         готове = _json_з_відповіді(текст)
