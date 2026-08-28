@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787930400660,
+      "mission": "Історія №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 4,
+      "output_tokens": 9164,
+      "cache_read": 8814,
+      "cache_write": 39109,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.3468,
+      "note": ""
+    },
+    {
       "ts": 1787929567930,
       "mission": "Громада №1",
       "model": "claude-sonnet-5",
@@ -766,25 +779,12 @@
       "found": 1,
       "cost_usd": 0.0112,
       "note": ""
-    },
-    {
-      "ts": 1784451386502,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 568,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0098,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 7.8753,
-    "runs": 114,
-    "web_searches": 103
+    "cost_usd": 8.2221,
+    "runs": 115,
+    "web_searches": 109
   },
   "months": {
     "2026-07": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 2.7657,
-      "runs": 36,
-      "web_searches": 40
+      "cost_usd": 3.1125,
+      "runs": 37,
+      "web_searches": 46
     }
   },
-  "updated_ts": 1787929567930
+  "updated_ts": 1787930400660
 }
