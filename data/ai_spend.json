@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1787929567930,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10,
+      "output_tokens": 5639,
+      "cache_read": 93307,
+      "cache_write": 41190,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.3271,
+      "note": ""
+    },
+    {
       "ts": 1787929137424,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -766,25 +779,12 @@
       "found": 1,
       "cost_usd": 0.0098,
       "note": ""
-    },
-    {
-      "ts": 1784451372364,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 375,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0069,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 7.5482,
-    "runs": 113,
-    "web_searches": 97
+    "cost_usd": 7.8753,
+    "runs": 114,
+    "web_searches": 103
   },
   "months": {
     "2026-07": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 2.4386,
-      "runs": 35,
-      "web_searches": 34
+      "cost_usd": 2.7657,
+      "runs": 36,
+      "web_searches": 40
     }
   },
-  "updated_ts": 1787929137424
+  "updated_ts": 1787929567930
 }
