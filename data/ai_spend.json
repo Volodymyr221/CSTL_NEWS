@@ -1,123 +1,6 @@
 {
   "runs": [
     {
-      "ts": 1787906548114,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787906540342,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787906540260,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787906540164,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787906528003,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787905683997,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787905675541,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787905675461,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
-      "ts": 1787905664952,
-      "mission": "test:photo:тест",
-      "model": "claude-opus-5",
-      "input_tokens": 1,
-      "output_tokens": 1,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0,
-      "note": "Фото: вулиця біля костелу"
-    },
-    {
       "ts": 1787853110464,
       "mission": "holiday:🇺🇦 День знань",
       "model": "claude-sonnet-5",
@@ -779,11 +662,128 @@
       "found": 1,
       "cost_usd": 0.0131,
       "note": ""
+    },
+    {
+      "ts": 1784540578178,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 448,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.008,
+      "note": ""
+    },
+    {
+      "ts": 1784540568268,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 454,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0081,
+      "note": ""
+    },
+    {
+      "ts": 1784451422428,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 470,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
+      "ts": 1784451411045,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 436,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1784451399980,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 645,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0112,
+      "note": ""
+    },
+    {
+      "ts": 1784451386502,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 568,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0098,
+      "note": ""
+    },
+    {
+      "ts": 1784451372364,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 375,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0069,
+      "note": ""
+    },
+    {
+      "ts": 1784362975991,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 432,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0077,
+      "note": ""
+    },
+    {
+      "ts": 1784362962735,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 539,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0094,
+      "note": ""
     }
   ],
   "totals": {
     "cost_usd": 7.3107,
-    "runs": 120,
+    "runs": 111,
     "web_searches": 93
   },
   "months": {
@@ -794,9 +794,9 @@
     },
     "2026-08": {
       "cost_usd": 2.2011,
-      "runs": 42,
+      "runs": 33,
       "web_searches": 30
     }
   },
-  "updated_ts": 1787906548114
+  "updated_ts": 1787853110464
 }

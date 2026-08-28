@@ -146,6 +146,16 @@ class _Відповідь:
                "facts": ["Знімок зроблено ввечері."], "page_id": 3,
                "image": "https://example.org/olyka.jpg"}
 
+# 🔴 ЖУРНАЛ ВИТРАТ ВІДВОДИМО У ТИМЧАСОВИЙ ФАЙЛ. Перша версія цього стенда цього НЕ
+# робила — і писар справно записав девʼять фальшивих прогонів у СПРАВЖНІЙ
+# `data/ai_spend.json`, той самий, який показує адмінка. Сума нульова, але це вже
+# брехня в журналі грошей, і помітив я її лише на `git diff` перед PR.
+# 🔑 Урок класу: стенд, який зачіпає бойові дані, — не стенд, а тихий писар у прод.
+from editor.core import spend as _spend                 # noqa: E402
+_тимч_витрати = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+_тимч_витрати.close()
+старий_spend_path, _spend.SPEND_PATH = _spend.SPEND_PATH, Path(_тимч_витрати.name)
+
 старий_urlopen = urllib.request.urlopen
 старий_ключ = os.environ.get("ANTHROPIC_API_KEY")
 os.environ["ANTHROPIC_API_KEY"] = "test-key-not-used"
@@ -156,6 +166,8 @@ try:
     чернетка = bw.BrandWriter().write(ТЕМА_З_ФОТО, {"voice": "olyka_castle", "spend_prefix": "test:"})
 finally:
     urllib.request.urlopen = старий_urlopen
+    _spend.SPEND_PATH = старий_spend_path
+    os.unlink(_тимч_витрати.name)
     if старий_ключ is None:
         os.environ.pop("ANTHROPIC_API_KEY", None)
     else:
