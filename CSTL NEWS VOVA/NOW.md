@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-28 15:31 UTC
+**Зріз на:** 2026-08-28 17:42 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-2mp937` |
-| останній коміт людини | `dc876caa` 28.08 15:31 — Пульс, літопис і передача: агент Історії відпрацював уперше, NOW стиснуто заміром |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260828-1519` |
-| останній PR у `main` | #1067 |
+| останній коміт людини | `0396086d` 28.08 17:42 — Пульс і літопис: порожнеча в картці віджета, тост із причиною |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260828-1738` |
+| останній PR у `main` | #1071 |
 | стендів на диску | 115 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-28 | є ✅ |
@@ -25,30 +25,16 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/docs/КУДИ_ЩО_ПУБЛІКУЄТЬСЯ.md`
 - `_session-log/vova-2026-08-27c.md`
-- `admin.html`
-- `bundle.js`
-- `editor/plans/istoriya_hromady.json`
-- `scripts/ai_news_agent.py`
-- `scripts/test_history_routing.py`
-- `src/tabs/home-feed.js`
-- `style/home.css`
-- `sw.js`
-- `tests/admin-publish-truth.mjs`
-- `tests/home-feed-widget.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `dc876caa` 28.08 15:31 — Пульс, літопис і передача: агент Історії відпрацював уперше, NOW стиснуто заміром
-- `62e58b74` 28.08 15:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
-- `de50828d` 28.08 15:21 — Адмінка каже правду про публікацію і призначення; карта публікації
-- `d76f3fca` 28.08 15:20 — ai(news): памʼять+чернетки+витрати 28.08 15:20 UTC
-- `6842cde1` 28.08 15:13 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
+- `0396086d` 28.08 17:42 — Пульс і літопис: порожнеча в картці віджета, тост із причиною
+- `5988f815` 28.08 17:39 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
+- `1f5da1f5` 28.08 17:39 — Віджет Стрічки: коротка картка стискається за текстом, а не тягнеться на доріжку (#1071)
+- `35f76ea7` 28.08 17:38 — Віджет Стрічки: коротка картка стискається за текстом, а не тягнеться на доріжку
+- `effe4ff5` 28.08 15:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
 
 <!-- AUTO:END -->
 
