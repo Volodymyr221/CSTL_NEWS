@@ -188,6 +188,10 @@ class BrandWriter(Writer):
                 "plan_id": item.get("id"),
                 "page_id": item.get("page_id"),
                 "post_kind": item.get("kind"),
+                # Місце визначило ДЖЕРЕЛО (`plan.py`) — писар його лише переносить.
+                # Рахувати вдруге по написаному тексту означало б завести другу
+                # відповідь на те саме питання, і колись вони розійшлись би.
+                "місце": item.get("місце", ""),
                 "self_check": готове.get("self_check", ""),
                 "model": MODEL,
             },

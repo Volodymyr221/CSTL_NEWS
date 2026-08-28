@@ -86,7 +86,8 @@ class PageDraftSink(Sink):
         # Місію передаємо, щоб пропорція постів рахувалась окремо в кожній
         # спільноті (див. `_види` у `editor/sources/plan.py`).
         mark_done(plan_id, (draft.meta or {}).get("post_kind", ""),
-                  getattr(draft, "mission", "") or "")
+                  getattr(draft, "mission", "") or "",
+                  (draft.meta or {}).get("місце", ""))
         new_id = (створено[0] if isinstance(створено, list) and створено else {}).get("id")
         print(f"  ✓ чернетка #{new_id} у сторінці {page_id} — чекає вичитки Вови")
         return True
