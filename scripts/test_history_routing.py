@@ -162,6 +162,55 @@ with tempfile.TemporaryDirectory() as тимч:
     finally:
         ag.HISTORY_PLAN_PATH, ag.HISTORY_STATE_PATH = старий_план, старий_стан
 
+# ── 4Б. ПОВНИЙ КАБІНЕТ НЕ МАЄ КОШТУВАТИ ГРОШЕЙ (28.08) ────────────────────
+#
+# 🔴 ЖИВА РЕГРЕСІЯ, ЩО КОШТУВАЛА $0.33. Коли новини й історію розчіплювали, запобіжник
+# «кабінет повний → не платимо» розʼїхався: вихід перенесли, а економію ні. Місія
+# зверталась до моделі, платила — і результат викидався розкладкою наприкінці прогону.
+#
+# 🔑 МІРЯЄМО НЕ ЗМІННУ, А ФАКТ ВИТРАТИ: підміняємо `call_agent` лічильником і питаємо,
+# скільки разів до моделі звернулись. Перевірка на `ліміт == 0` зеленіла б і тоді, коли
+# виклик роблять деінде.
+import argparse  # noqa: E402
+
+виклики = {"скільки": 0}
+
+
+def _порахувати(prompt):
+    виклики["скільки"] += 1
+    return ("[]", {}, True)          # порожня, але успішна відповідь
+
+
+def прогін(кабінет_повний: bool, план_повний: bool) -> int:
+    """Скільки разів агент звернувся до моделі за таких умов."""
+    виклики["скільки"] = 0
+    збережене = (ag.call_agent, ag.count_cabinet_drafts, ag.history_plan_free_slots,
+                 ag.load_existing, ag.month_spend_usd, ag.day_spend_usd, ag.record_spend)
+    ag.call_agent = _порахувати
+    ag.count_cabinet_drafts = lambda: (ag.MAX_DRAFTS_TOTAL if кабінет_повний else 0)
+    ag.history_plan_free_slots = lambda: (0 if план_повний else ag.HISTORY_PLAN_KEEP)
+    ag.load_existing = lambda: []
+    ag.month_spend_usd = lambda: 0.0        # запобіжники витрат тут не міряємо
+    ag.day_spend_usd = lambda: 0.0
+    ag.record_spend = lambda *a, **k: 0.0
+    старий_argv = sys.argv[:]
+    sys.argv = ["ai_news_agent.py"]
+    try:
+        ag.main()
+    finally:
+        (ag.call_agent, ag.count_cabinet_drafts, ag.history_plan_free_slots,
+         ag.load_existing, ag.month_spend_usd, ag.day_spend_usd, ag.record_spend) = збережене
+        sys.argv = старий_argv
+    return виклики["скільки"]
+
+
+ok("🔴 ПОВНИЙ кабінет + ПОВНИЙ план = ЖОДНОГО виклику до моделі",
+   прогін(True, True) == 0, f"{прогін(True, True)} виклик(ів)")
+ok("🛑 повний кабінет НЕ глушить історію (вона має свій лічильник місця)",
+   прогін(True, False) > 0, f"{прогін(True, False)} виклик(ів)")
+ok("повний план історії не глушить новини", прогін(False, True) > 0,
+   f"{прогін(False, True)} виклик(ів)")
+
 # ── 5. КОНТРОЛЬ: перевірка мусить уміти впасти ─────────────────────────────
 # Якби історичні теми лишились у новинній місії, перша ж ознака протекла б.
 підробка = json.loads(json.dumps(cfg))
