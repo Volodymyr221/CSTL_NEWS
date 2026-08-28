@@ -178,10 +178,20 @@ class BrandWriter(Writer):
             content=пост,
             kind="page_post",
             status="draft",
+            # 🔴 28.08 — ФОТО З ТЕМИ ЙДЕ ДАЛІ. Пул `photos` віддає знімок разом із
+            # темою, і він мусить пережити писаря: конвеєр шукає картинку сам лише
+            # тоді, коли писар СВОЄЇ не дав. Без цього рядка власне фото Вови
+            # мовчки замінювалось би випадковим кадром із Wikimedia.
+            image=(item.get("image") or None),
+            image_type=("source" if item.get("image") else "none"),
             meta={
                 "plan_id": item.get("id"),
                 "page_id": item.get("page_id"),
                 "post_kind": item.get("kind"),
+                # Місце визначило ДЖЕРЕЛО (`plan.py`) — писар його лише переносить.
+                # Рахувати вдруге по написаному тексту означало б завести другу
+                # відповідь на те саме питання, і колись вони розійшлись би.
+                "місце": item.get("місце", ""),
                 "self_check": готове.get("self_check", ""),
                 "model": MODEL,
             },
