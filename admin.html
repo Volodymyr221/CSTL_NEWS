@@ -567,6 +567,50 @@ const userEl = document.getElementById('header-user');
 const emailEl = document.getElementById('header-email');
 const toastEl = document.getElementById('toast');
 
+// 🔴 28.08 — ЧЕСНА МІТКА ЗАМІСТЬ ОБІЦЯНКИ «1-2 ХВ».
+// Стаття у стані `ready` чекає, поки її забере воркфлов `cms-sync`. Обіцяти хвилину-дві
+// можна лише тоді, коли синк справді будиться. 📐 Заміряно 28.08: не будився взагалі
+// (немає секрету), а розклад мовчав 17 годин. Тому картка тепер показує РЕАЛЬНИЙ ЧАС
+// очікування, а після 10 хвилин прямо каже, що щось не так, і куди дивитись.
+// 🔑 Число береться з `updated_at` — моменту, коли натиснули «Опублікувати».
+function скількиЧекає(a) {
+  const т = Date.parse(a.updated_at || a.created_at || '');
+  if (!т) return null;
+  return Math.max(0, Math.round((Date.now() - т) / 60000));   // хвилин
+}
+
+function міткаОчікування(a) {
+  const хв = скількиЧекає(a);
+  if (хв === null) return '<span class="badge" style="background:#e0922a;color:#fff">⏳ чекає на синк</span>';
+  if (хв < 10) return `<span class="badge" style="background:#e0922a;color:#fff">⏳ чекає на синк · ${хв} хв</span>`;
+  // 🛑 Понад 10 хвилин — це вже не «трохи довше», а зупинений ланцюг. Кажемо прямо.
+  const годин = Math.floor(хв / 60);
+  const скільки = годин ? `${годин} год ${хв % 60} хв` : `${хв} хв`;
+  return `<span class="badge" style="background:#c0392b;color:#fff" title="Синк (cms-sync) не забрав статтю. Причини: немає секрету GITHUB_DISPATCH_TOKEN в Supabase → Edge Functions → Secrets, або GitHub кидає прогони за розкладом. Деталі — scripts/README_publish_now.md">🛑 ЗАСТРЯГЛО · чекає ${скільки}</span>`;
+}
+
+// 🔴 28.08 — «ПІДПИШИ, ЩО КУДИ ПУБЛІКУЄТЬСЯ» (пряме замовлення Вови).
+// Скарга: «незрозуміло, куди воно вийде». Тепер кожна картка це каже сама.
+// 🔑 Джерело правди — те саме правило, за яким розділено контент 28.08:
+// історичне → спільнота «Історія Громади», решта новин → стрічка новин.
+const ІСТОРИЧНІ_КАТЕГОРІЇ = ['істор', 'краєзнав'];
+
+function призначення(a) {
+  const кат = String(a.category || '').toLowerCase();
+  if (ІСТОРИЧНІ_КАТЕГОРІЇ.some(к => кат.includes(к))) {
+    return { текст: '🏛 → Історія Громади', колір: '#6b4a8a',
+             підказка: 'Історичний матеріал. За рішенням 28.08 такі не йдуть у новини — їхнє місце у спільноті «Історія Громади» у Стрічці.' };
+  }
+  if (a.type === 'event')
+    return { текст: '📅 → Події', колір: '#2b7a78',
+             підказка: 'Вийде в розділ подій на Громаді, а не у стрічку новин. Тип задається при створенні матеріалу.' };
+  if (a.type === 'holiday')
+    return { текст: '🎉 → Свята', колір: '#2b7a78',
+             підказка: 'Свято з календаря: вийде як святковий матеріал, окремо від новинної стрічки.' };
+  return { текст: '📰 → Новини', колір: '#31708f',
+           підказка: 'Вийде у стрічку новин застосунку після того, як синк (cms-sync) забере статтю з кабінету.' };
+}
+
 function showToast(msg, ms = 2500) {
   toastEl.textContent = msg;
   toastEl.classList.add('show');
@@ -765,10 +809,30 @@ async function publishArticle(id) {
 // Тепер публікація сама будить синк (`publish-now` → `workflow_dispatch`).
 // 🔑 Токен GitHub лишається в секретах Edge Function: у браузері він був би
 // видимий будь-кому з devtools, тобто ми віддали б чуже право запускати воркфлови.
-// ⚠️ Помилку НЕ показуємо і НЕ ламаємо публікацію: у базі стаття вже `ready`, і
-// розклад (`*/15`) однаково її забере. Це прискорення, а не умова публікації.
+// 🔴 28.08, ДРУГА ПРАВКА — ВІДПОВІДЬ ФУНКЦІЇ ТЕПЕР ЧИТАЄТЬСЯ.
+// Скарга Вови: «натиснув публікація, і воно постійно висить, виходить на сайт хвилину-дві,
+// і так з кожною новиною… чому воно так тупить».
+// 📐 Заміряно: `publish-now` повертає `{nudged:false, reason:'Немає секрету
+// GITHUB_DISPATCH_TOKEN'}` — тобто штовхання НЕ відбувається. А запасний розклад мертвий:
+// `cms-sync` востаннє працював о 01:03 при розкладі «кожні 15 хвилин», тобто мовчав 17 годин.
+// 🛑 І весь цей час картка бадьоро писала «виходить на сайт (1-2 хв)».
+// 🔑 ЦЕ І Є ГОЛОВНА ВАДА — не швидкість, а БРЕХНЯ. Помилку ковтав `catch (_)`, відповідь
+// ніхто не дивився, і система впевнено обіцяла те, чого не могла зробити.
+// ➡️ Правило: «не ламати публікацію» ≠ «мовчати». Не зміг штовхнути — скажи вголос.
+let станСинку = null;   // { nudged, reason } — останнє, що відповіла функція
+
 async function штовхнутиСинк() {
-  try { await supa.functions.invoke('publish-now'); } catch (_) { /* лишиться розкладу */ }
+  try {
+    const { data, error } = await supa.functions.invoke('publish-now');
+    станСинку = error ? { nudged: false, reason: 'Функція publish-now недоступна' }
+                      : (data || { nudged: false, reason: 'Порожня відповідь' });
+  } catch (e) {
+    станСинку = { nudged: false, reason: 'Функція publish-now не відповіла' };
+  }
+  if (станСинку && станСинку.nudged === false) {
+    showToast('⏳ Опубліковано в базі, але синк НЕ розбуджено: ' + (станСинку.reason || 'причина невідома'), 6000);
+  }
+  return станСинку;
 }
 async function unpublishArticle(id) {
   // updated_at теж оновлюємо — інакше зняття з публікації невидиме на картці
@@ -2393,7 +2457,8 @@ function renderArticles(el) {
         <article class="card">
           <div class="card-meta">
             <span class="badge" style="background:${st.color};color:#fff">${st.label}</span>
-            ${a.status === 'ready' ? '<span class="badge" style="background:#e0922a;color:#fff">⏳ виходить на сайт (1-2 хв)</span>' : ''}
+            ${a.status === 'ready' ? міткаОчікування(a) : ''}
+            ${(() => { const п = призначення(a); return `<span class="badge" style="background:${п.колір};color:#fff" title="${escapeHtml(п.підказка)}">${п.текст}</span>`; })()}
             ${isAI ? '<span class="badge" style="background:#4b3bd6;color:#fff">🤖 AI</span>' : ''}
             ${a.type && a.type !== 'news' && ART_TYPE_UK[a.type] ? `<span class="badge badge--type">${ART_TYPE_UK[a.type]}</span>` : ''}
             ${a.status === 'scheduled' && a.publish_at ? `<span class="badge" style="background:#7a5cc0;color:#fff">📅 ${escapeHtml(formatDate(a.publish_at))}</span>` : ''}
