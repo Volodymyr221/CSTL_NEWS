@@ -1,6 +1,30 @@
 {
   "posts": [
     {
+      "ts": 1787930401662,
+      "title": "Носовичі, Личани, Котів, Путилівка: чотири малі села і сліди давніх волостей",
+      "category": "Історія",
+      "sources": [
+        "https://uk.wikipedia.org/wiki/%D0%9D%D0%BE%D1%81%D0%BE%D0%B2%D0%B8%D1%87%D1%96",
+        "https://uk.wikipedia.org/wiki/%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8",
+        "https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%82%D1%96%D0%B2_(%D0%9B%D1%83%D1%86%D1%8C%D0%BA%D0%B8%D0%B9_%D1%80%D0%B0%D0%B9%D0%BE%D0%BD)",
+        "https://uk.wikipedia.org/wiki/%D0%9F%D1%83%D1%82%D0%B8%D0%BB%D1%96%D0%B2%D0%BA%D0%B0_(%D0%9B%D1%83%D1%86%D1%8C%D0%BA%D0%B8%D0%B9_%D1%80%D0%B0%D0%B9%D0%BE%D0%BD)",
+        "https://www.volynnews.com/news/all/perezhyly-odnu-viynu-i-zastaly-druhu-istoriyi-dovhozhytelok-iz-lutskoho-rayonu/"
+      ],
+      "key": "волостей давніх котів личани малі носовичі путилівка села сліди чотири"
+    },
+    {
+      "ts": 1787930401662,
+      "title": "Олицька ординація: як маєток Радзивіллів отримав особливий правовий статус",
+      "category": "Історія",
+      "sources": [
+        "https://uk.wikipedia.org/wiki/%D0%9E%D1%80%D0%B4%D0%B8%D0%BD%D0%B0%D1%86%D1%96%D1%8F",
+        "https://dir.ukrintei.ua/view/okd/2331189aa59e20d40fcb5fee08fcd51c",
+        "https://history.rayon.in.ua/topics/385762-volia-i-dolia-ianush-radzivill-ostannii-olitski-ordinat"
+      ],
+      "key": "маєток олицька ординація особливий отримав правовий радзивіллів статус"
+    },
+    {
       "ts": 1787929139186,
       "title": "Особистісний розвиток для підлітків: в Олицькій громаді запрошують до програми Generation+",
       "category": "молодь громади",
@@ -210,5 +234,5 @@
       "key": "генератор громада олицька отримала партнерів тайваню"
     }
   ],
-  "updated_ts": 1787929139186
+  "updated_ts": 1787930401662
 }
