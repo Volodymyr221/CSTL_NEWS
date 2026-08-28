@@ -69,12 +69,128 @@ def _req(method, url, body=None):
         return json.loads(raw) if raw else None
 
 
+# ── МАРШРУТ «ІСТОРІЯ ГРОМАДИ» ───────────────────────────────────────────────
+# 🔴 ЗАВЕДЕНО 28.08.2026, І ЦЕ ЗАКРИТТЯ ОБІЦЯНКИ, ЯКУ КОД НЕ ТРИМАВ.
+#
+# 28.08 контент розділили на три напрямки: новини — «що відбувається зараз»,
+# спільнота «Історія громади» — «що тут було колись». Того ж дня в кабінеті
+# зʼявився підпис на кожній картці, КУДИ вона вийде, і на історичній статті він
+# писав «🏛 → Історія Громади».
+#
+# 🛑 А синк про це розділення не знав НІЧОГО. `fetch_ready()` брав усе, де
+# `status=ready` і `type=news`, і клав у `data/articles.json` — тобто в НОВИНИ.
+# Заміряно на статті 31 «Жорнище»: категорія «Історія та краєзнавство», підпис у
+# кабінеті «→ Історія Громади», маршрут у коді — новини. Підпис був обіцянкою,
+# якої ніхто не виконував: рівно та сама вада, що й «виходить на сайт (1-2 хв)»
+# при непрацюючому штовханні, лише в іншому місці.
+#
+# 🔑 Тепер розділення живе В КОДІ, а не лише в підписі: історична стаття не
+# потрапляє в новинний потік узагалі, а їде в стрічку спільноти постом.
+# ⚠️ Ознака та сама, що в кабінеті («істор»/«краєзнав» у категорії) — навмисно,
+# бо дві копії одного правила в цьому проєкті вже розходились.
+ІСТОРИЧНІ_КАТЕГОРІЇ = ("істор", "краєзнав")
+СТОРІНКА_ІСТОРІЇ = 6          # `pages.id` спільноти «ІСТОРІЯ ГРОМАДИ»
+PAGE_POSTS = SUPABASE_URL + "/rest/v1/page_posts"
+
+
+def це_історія(row) -> bool:
+    к = (row.get("category") or "").lower()
+    return any(м in к for м in ІСТОРИЧНІ_КАТЕГОРІЇ)
+
+
 def fetch_ready():
+    """Готові статті ДЛЯ НОВИН — тобто без історичних (їхній маршрут інший)."""
     url = REST + "?status=eq.ready&type=eq.news&select=*&order=ts.asc"
     headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read() or "[]")
+        усі = json.loads(r.read() or "[]")
+    return [r for r in усі if not це_історія(r)]
+
+
+def fetch_ready_history():
+    """Готові ІСТОРИЧНІ статті — ті самі рядки, що їх відсіює `fetch_ready`."""
+    url = REST + "?status=eq.ready&type=eq.news&select=*&order=ts.asc"
+    headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=20) as r:
+        усі = json.loads(r.read() or "[]")
+    return [r for r in усі if це_історія(r)]
+
+
+def стаття_у_пост(row) -> str:
+    """Стаття кабінету → текст допису спільноти.
+
+    🔑 Рішення Вови 28.08: «Це не має бути стаття, це має бути пост як в інстаграмі
+    чи в фейсбуці». Тому ні розмітки, ні «читати далі» — заголовок стає першим
+    рядком, далі текст як є. `content` у кабінеті вже простий текст з абзацами
+    через порожній рядок (заміряно на статті 31), тож перетворювати нічого.
+    ⚠️ Заголовок НЕ викидаємо: у стрічці він читається як перший рядок допису, а
+    без нього губиться те, чим допис назвали.
+    """
+    заголовок = (row.get("title") or "").strip()
+    тіло = (row.get("content") or "").strip()
+    if заголовок and not тіло.startswith(заголовок):
+        return f"{заголовок}\n\n{тіло}" if тіло else заголовок
+    return тіло
+
+
+def публікувати_в_спільноту(row) -> bool:
+    """Кладе історичну статтю у стрічку спільноти ОПУБЛІКОВАНИМ дописом.
+
+    🔑 Саме `published`, а не `draft`. Чернетку кладе АГЕНТ (він пише сам, і його
+    треба перечитати перед показом). А сюди стаття приходить із кабінету, де
+    людина вже натиснула «Публікувати» — просити її схвалити те саме вдруге
+    означало б, що кнопка збрехала.
+    """
+    row_id = row.get("id")
+    тіло = стаття_у_пост(row)
+    if not тіло:
+        print(f"⚠ історична id={row_id}: порожній текст — пропускаю")
+        return False
+    пост = {
+        "page_id": СТОРІНКА_ІСТОРІЇ,
+        "text": тіло,
+        "status": "published",
+        "show_author": False,
+        "author_uid": None,
+    }
+    if row.get("image"):
+        пост["image_url"] = row["image"]
+        пост["image_urls"] = [row["image"]]
+    try:
+        req = urllib.request.Request(
+            PAGE_POSTS,
+            data=json.dumps(пост).encode("utf-8"),
+            headers={
+                "apikey": SERVICE_KEY,
+                "Authorization": "Bearer " + SERVICE_KEY,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as r:
+            створено = json.loads(r.read().decode("utf-8") or "[]")
+    except Exception as e:
+        print(f"⚠ історична id={row_id}: не поклалась у спільноту — {e}")
+        return False
+    новий = (створено[0] or {}).get("id") if створено else None
+    # 🛑 Позначаємо ТІЛЬКИ після того, як пост справді створено. Порядок тут той
+    # самий урок, що й у `позначити_доїхалі`: спершу наслідок, потім статус —
+    # інакше база рапортує про публікацію, якої не сталося.
+    mark_published(row_id, None)
+    print(f"🏛 стаття id={row_id} → допис спільноти «Історія громади» (page_post id={новий})")
+    return True
+
+
+def sync_history():
+    """Історичні статті кабінету → стрічка спільноти. Новин не торкається."""
+    рядки = fetch_ready_history()
+    if not рядки:
+        return 0
+    print(f"🏛 історичних статей до спільноти: {len(рядки)}")
+    return sum(1 for row in рядки if публікувати_в_спільноту(row))
 
 
 def mark_published(row_id, git_id):
@@ -288,7 +404,10 @@ def main():
         return
     # P11: кожен під-крок ізольовано — збій одного (напр. транзиентна REST-помилка)
     # не має обривати весь синк і блокувати публікацію новин нижче.
-    for step in (promote_scheduled, heal_phantom_drafts, publish_shotam):
+    # 🔑 `sync_history` СЕРЕД цих кроків, а не після новин: історичні статті не
+    # мають чекати, поки доїде стрічка, і не мають страждати від її ранніх
+    # `return`ів («немає готових статей» нижче стосується ЛИШЕ новин).
+    for step in (promote_scheduled, heal_phantom_drafts, publish_shotam, sync_history):
         try:
             step()
         except Exception as e:
@@ -299,7 +418,7 @@ def main():
         print(f"✗ не вдалося прочитати cms_articles: {e}")
         return
     if not ready:
-        print("Немає готових статей (status=ready) — синк не потрібен")
+        print("Немає готових НОВИННИХ статей (status=ready) — стрічку чіпати не треба")
         return
 
     existing = json.loads(pr.DATA_PATH.read_text(encoding="utf-8"))
