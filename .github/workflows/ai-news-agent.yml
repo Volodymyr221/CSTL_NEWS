@@ -46,11 +46,20 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/ai_news_agent.py --mission "${{ github.event.inputs.mission || 'Громада' }}"
 
+      # 🔴 28.08 — У СПИСКУ ЗʼЯВИВСЯ ПЛАН ІСТОРИЧНОЇ СПІЛЬНОТИ, І ЦЕ НЕ ДРІБНИЦЯ.
+      # Місія «Історія» кладе зібрані теми з фактами не в кабінет, а у файл-план
+      # `editor/plans/istoriya_hromady.json` (див. `seed_history_plan`). Поки цього
+      # шляху тут не було, прогін відпрацював би, заплатив за модель — і теми зникли б
+      # разом із контейнером раннера. Спіймано ПЕРЕД першим живим запуском, на читанні
+      # workflow, а не по факту порожньої спільноти.
+      # ⚠️ Список ведеться вручну: додаєш агенту новий вихідний файл — дописуй сюди,
+      # інакше робота тихо не переживе прогін.
       - name: Commit memory/drafts if changed
         run: |
           git config user.name  "CSTL AI Agent"
           git config user.email "ai-agent@cstl-news"
-          for f in data/hromada_memory.json data/editor_drafts.json data/ai_spend.json; do
+          for f in data/hromada_memory.json data/editor_drafts.json data/ai_spend.json \
+                   editor/plans/istoriya_hromady.json; do
             [ -f "$f" ] && git add "$f"
           done
           if git diff --staged --quiet; then
