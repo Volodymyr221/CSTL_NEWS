@@ -755,7 +755,20 @@ async function publishArticle(id) {
   // draft/готове → ready (CI-синк викладе в стрічку). Гейт can_publish — і в UI, і в RLS.
   const { error } = await supa.from('cms_articles')
     .update({ status: 'ready', ts: Date.now(), updated_at: new Date().toISOString() }).eq('id', id);
-  return !error;
+  if (error) return false;
+  await штовхнутиСинк();
+  return true;
+}
+// 🔴 28.08 — «ОПУБЛІКУВАВ → ВИЙШЛО ОДРАЗУ», А НЕ «КОЛИ ДІЙДЕ ЧЕРГА».
+// Синк живе окремим воркфловом, і доти його будив лише розклад. 📐 Заміряно:
+// при `*/5` GitHub давав ТРИ прогони на добу, тобто стаття чекала 8-11 годин.
+// Тепер публікація сама будить синк (`publish-now` → `workflow_dispatch`).
+// 🔑 Токен GitHub лишається в секретах Edge Function: у браузері він був би
+// видимий будь-кому з devtools, тобто ми віддали б чуже право запускати воркфлови.
+// ⚠️ Помилку НЕ показуємо і НЕ ламаємо публікацію: у базі стаття вже `ready`, і
+// розклад (`*/15`) однаково її забере. Це прискорення, а не умова публікації.
+async function штовхнутиСинк() {
+  try { await supa.functions.invoke('publish-now'); } catch (_) { /* лишиться розкладу */ }
 }
 async function unpublishArticle(id) {
   // updated_at теж оновлюємо — інакше зняття з публікації невидиме на картці
@@ -2380,7 +2393,7 @@ function renderArticles(el) {
         <article class="card">
           <div class="card-meta">
             <span class="badge" style="background:${st.color};color:#fff">${st.label}</span>
-            ${a.status === 'ready' ? '<span class="badge" style="background:#e0922a;color:#fff">⏳ у черзі на сайт (~15 хв)</span>' : ''}
+            ${a.status === 'ready' ? '<span class="badge" style="background:#e0922a;color:#fff">⏳ виходить на сайт (1-2 хв)</span>' : ''}
             ${isAI ? '<span class="badge" style="background:#4b3bd6;color:#fff">🤖 AI</span>' : ''}
             ${a.type && a.type !== 'news' && ART_TYPE_UK[a.type] ? `<span class="badge badge--type">${ART_TYPE_UK[a.type]}</span>` : ''}
             ${a.status === 'scheduled' && a.publish_at ? `<span class="badge" style="background:#7a5cc0;color:#fff">📅 ${escapeHtml(formatDate(a.publish_at))}</span>` : ''}
