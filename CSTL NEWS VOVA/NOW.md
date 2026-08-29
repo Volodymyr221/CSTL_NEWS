@@ -10,16 +10,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-29 21:42 UTC
+**Зріз на:** 2026-08-29 22:15 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-flaldh` |
-| останній коміт людини | `e136ef95` 29.08 21:40 — Стенди й документація під новий екран: 118 стендів, погода міряє 1280 як планшет |
+| останній коміт людини | `d5b2c543` 29.08 21:47 — docs(session): злиття з main, розведення конфліктів, журнал «d» |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260829-2141` |
 | останній PR у `main` | #1102 |
 | стендів на диску | 121 |
-| незакомічених файлів | 22 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-29 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -29,31 +29,25 @@
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-08-29c.md`
+- `_session-log/vova-2026-08-29d.md`
 - `bundle.js`
-- `docs/AUTH_EMAIL_SETUP.md`
 - `src/app.js`
-- `src/core/account-ui.js`
-- `src/core/auth.js`
 - `src/core/desktop-gate.js`
-- `src/core/join-invite.js`
 - `src/core/qr.js`
-- `src/core/supabase.js`
 - `style.css`
-- `style/account.css`
 - `style/desktop-gate.css`
 - `sw.js`
-- `tests/auth-email-code.mjs`
 - `tests/desktop-gate.mjs`
-- …ще 4
+- `tests/qr.mjs`
+- `tests/weather.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `d5b2c543` 29.08 21:47 — docs(session): злиття з main, розведення конфліктів, журнал «d»
+- `7dfcc5ed` 29.08 21:46 — Merge remote-tracking branch 'origin/main' into claude/startuem-flaldh
 - `e136ef95` 29.08 21:40 — Стенди й документація під новий екран: 118 стендів, погода міряє 1280 як планшет
 - `467608ad` 29.08 20:59 — docs: літопис — екран «тільки телефон» на компʼютері (29.08 «c»)
 - `2cbbf5cb` 29.08 20:58 — Екран «поки що тільки телефон» на компʼютері + власний генератор QR
-- `ee596fb0` 29.08 20:23 — docs(session): журнал сесії 29.08 «c» — старт
-- `3216c590` 29.08 20:17 — docs: передача в новий чат — 29.08.2026 (сесія «b») (#1101)
 
 <!-- AUTO:END -->
 
