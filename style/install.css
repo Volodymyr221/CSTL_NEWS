@@ -1,6 +1,15 @@
-/* style/install.css — банер «Відкрий/встанови у додатку» (.pwa-cta).
-   Показується лише в браузері (не в PWA); логіка — src/core/install-banner.js. */
+/* style/install.css — банер «Відкрий/встанови у додатку» (.pwa-cta) і покрокова
+   інструкція (.pwa-guide). Логіка — src/core/install-banner.js. */
 
+/* 🔴 29.08 — КАРТКА СТАЛА ДВОРЯДКОВОЮ, І ЦЕ НЕ ПРО КРАСУ.
+   Вова: «хрестик маленький, користувачі, особливо старші люди, можуть не попасти».
+   📐 Заміряно на попередній розкладці: картка ~68px заввишки, кнопка вертикально
+   по центру (y≈16..52), а область натиску 44×44 у правому верхньому куті займає
+   y0..44 — тобто ПЕРЕКРИВАЄ верхню половину кнопки. Один із двох тапів довелося б
+   у когось украсти: або хрестик лишається дрібним, або кнопка перестає ловити.
+   ➡️ Розвели по рядах: угорі текст і ✕, унизу кнопка на всю ширину. Обидві цілі
+   ≥44px, накладання немає. Заразом повноширинна кнопка сама по собі легша для
+   старшої руки, ніж вузька праворуч. */
 .pwa-cta {
   position: fixed;
   left: 12px;
@@ -8,11 +17,12 @@
   bottom: calc(76px + env(safe-area-inset-bottom, 0px));  /* над таб-баром */
   z-index: 3000;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr 44px;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.93);
+  column-gap: 12px;
+  row-gap: 12px;
+  padding: 14px 14px 14px 16px;
+  background: rgba(255, 255, 255, 0.95);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid rgba(114, 47, 55, 0.18);
@@ -23,7 +33,16 @@
 }
 .pwa-cta--in { transform: translateY(0); }
 
-.pwa-cta-ic { font-size: 26px; line-height: 1; }
+/* Справжня іконка застосунку — та сама, що стане на головний екран. Було 📲:
+   емодзі, який на кожній системі свій і до бренду стосунку не має. */
+.pwa-cta-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
 
 .pwa-cta-txt {
   display: flex;
@@ -34,37 +53,135 @@
 .pwa-cta-txt b { font-size: 14px; color: #2a1a1c; }
 .pwa-cta-txt span { font-size: 12px; color: #7a6a66; }
 
+/* Кнопка на всю ширину — другий ряд. */
 .pwa-cta-go {
-  padding: 9px 14px;
+  grid-column: 1 / -1;
+  min-height: 44px;
+  padding: 11px 14px;
   border: none;
   border-radius: 12px;
   background: var(--brand-grad-sm);
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
   cursor: pointer;
 }
+.pwa-cta-go:active { background: var(--brand-grad-press); }
 
+/* ✕ лишається візуально дрібним, а ловить 44×44 — рівно те, про що просив Вова. */
 .pwa-cta-x {
-  position: absolute;
-  top: 5px;
-  right: 8px;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
   border: none;
   background: transparent;
   color: #9a8a86;
   font-size: 15px;
   line-height: 1;
-  padding: 4px;
+  cursor: pointer;
+}
+.pwa-cta-x:active { color: #5a4a46; }
+
+/* ── ПОКРОКОВА ІНСТРУКЦІЯ ─────────────────────────────────────────────────── */
+.pwa-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(20, 10, 12, 0);
+  transition: background 0.22s ease;
+}
+.pwa-guide--in { background: rgba(20, 10, 12, 0.46); }
+
+.pwa-guide-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 8px 8px;
+  padding: 20px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.22);
+  transform: translateY(24px);
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.26s ease;
+}
+.pwa-guide--in .pwa-guide-sheet { transform: translateY(0); opacity: 1; }
+
+.pwa-guide-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #9a8a86;
+  font-size: 16px;
   cursor: pointer;
 }
 
-.pwa-cta-hint {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  color: #5a4a46;
-  line-height: 1.45;
-  padding-top: 8px;
-  margin-top: 2px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+.pwa-guide-head h2 {
+  margin: 0 40px 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2a1a1c;
 }
+.pwa-guide-head p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #7a6a66;
+  line-height: 1.4;
+}
+
+.pwa-guide-num {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #9a8a86;
+  margin-bottom: 8px;
+}
+.pwa-guide-now { color: #5E1723; }
+
+/* Схема тримає пропорцію 260:150 — текст під нею не стрибає при зміні кроку. */
+.pwa-guide-pic {
+  background: #F7F6F8;
+  border: 1px solid rgba(60, 50, 30, 0.08);
+  border-radius: 14px;
+  padding: 8px;
+  margin-bottom: 14px;
+}
+.pwa-guide-pic svg { display: block; width: 100%; height: auto; aspect-ratio: 260 / 150; }
+
+.pwa-guide-step { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.pwa-guide-name { font-size: 15.5px; font-weight: 700; color: #2a1a1c; }
+.pwa-guide-text { font-size: 13.5px; line-height: 1.5; color: #5a4a46; }
+.pwa-guide-text b { color: #2a1a1c; }
+
+.pwa-guide-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
+.pwa-guide-dots i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #DCD6D8; transition: background 0.2s ease, width 0.2s ease;
+}
+.pwa-guide-dots i.on { width: 18px; border-radius: 3px; background: #5E1723; }
+
+.pwa-guide-next {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: var(--brand-grad-sm);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pwa-guide-next:active { background: var(--brand-grad-press); }
