@@ -6772,7 +6772,7 @@
     "added_ts": 1787740123172,
     "_fullAlgo": 2,
     "_polish": 3,
-    "_richTries": 2
+    "_richTries": 3
   },
   {
     "title": "Після смертельних ДТП у Луцькраді хочуть посилити покарання для горе-водіїв",
@@ -6887,7 +6887,7 @@
     "added_ts": 1787736858895,
     "_fullAlgo": 2,
     "_polish": 3,
-    "_richTries": 2,
+    "_richTries": 3,
     "finalUrl": "https://www.volynpost.com/news/269005-igor-gnetnov-bilshe-ne-ocholyuie-luckyj-centr-reabilitacii-uchasnykiv-bojovyh-dij"
   },
   {
@@ -7658,7 +7658,7 @@
     "ts": 1782805320000,
     "id": 13315,
     "added_ts": 1788002870037,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   }
