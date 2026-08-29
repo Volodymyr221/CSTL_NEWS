@@ -90,6 +90,10 @@
   text-align: left;
 }
 
+/* Підпис «навіщо» біля назви поля — тихіший за саму назву, бо це пояснення,
+   а не друга вимога. Раніше дата питалась без жодного пояснення. */
+.acc-opt { font-weight: 600; text-transform: none; opacity: 0.85; }
+
 /* Кнопка, поки триває запит або відлік повторного надсилання */
 .acc-primary:disabled, .acc-skip:disabled, .acc-mail:disabled { opacity: 0.55; cursor: default; }
 
@@ -129,6 +133,27 @@
   font-variant-numeric: tabular-nums;
 }
 .acc-code::placeholder { letter-spacing: 6px; opacity: 0.35; font-weight: 600; }
+
+/* Дата народження — три списки замість календаря (29.08).
+   🗣️ Вова: «щоб цю карусель вибору дати було легко вибрати, а не гортати по
+   місяцях до 1994 року». `input type="date"` на iPhone відкривається на
+   ПОТОЧНОМУ місяці — до року народження це десятки гортань. Тут три тапи.
+   📐 Місяць ширший за день і рік: назви місяців довгі («листопада»), і при
+   рівних колонках вони обрізались би трикрапкою. */
+.acc-dob {
+  display: grid;
+  grid-template-columns: 0.85fr 1.5fr 1fr;
+  gap: 7px;
+}
+.acc-select {
+  /* Стрілка своя: `appearance: none` знімає системну, і без заміни список
+     виглядав би як звичайне поле — тобто не показував би, що його можна відкрити. */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23888' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 30px;
+  text-overflow: ellipsis;
+}
 
 /* Головна дія (Зберегти) */
 .acc-primary {

@@ -347,7 +347,17 @@ const PROFILE_FIELDS = ['name', 'birth_date', 'surname', 'phone', 'settlement', 
 export async function saveProfile(fields = {}) {
   const supa = getSupabase();
   if (!supa || !_user) return { ok: false, error: 'не залогінено' };
-  const row = { uid: _user.id, email: _user.email || null };
+  // 🔴 29.08 — ПОШТА АКАУНТА ЛИШАЄТЬСЯ ДЖЕРЕЛОМ ПРАВДИ, ПОКИ ВОНА Є.
+  // Вписана в анкеті адреса береться ЛИШЕ тоді, коли провайдер не дав жодної —
+  // цей випадок приносить Facebook (акаунт, заведений на номер телефону).
+  // 🛑 І вона лишається КОНТАКТОМ, а не способом увійти: адреса, вписана руками,
+  // не доводить нічого. Вважати її «тим самим акаунтом» означало б віддати чужий
+  // акаунт кожному, хто вгадає адресу. Звʼязує лише ПІДТВЕРДЖЕНА пошта —
+  // тобто окремий вхід кодом, а не це поле.
+  // 🔑 `email` навмисно НЕ в `PROFILE_FIELDS`: інакше цикл нижче перезаписав би
+  // справжню пошту акаунта тим, що лежить у формі.
+  const accountEmail = _user.email || (fields.email ? normalizeEmail(fields.email) : null);
+  const row = { uid: _user.id, email: accountEmail };
   for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
   let partial = false;
   // Через ядро: анкета — це upsert по uid, тобто повтор при обриві дає той самий рядок.
@@ -359,7 +369,7 @@ export async function saveProfile(fields = {}) {
     // зберігаємо базове, щоб ім'я не губилось, і ЧЕСНО повертаємо partial:
     // раніше тут мовчки губилися село/прізвище/телефон із тостом «збережено».
     partial = true;
-    const core = { uid: _user.id, email: _user.email || null,
+    const core = { uid: _user.id, email: accountEmail,
                    name: row.name ?? null, birth_date: row.birth_date ?? null };
     r = await netCall(() => supa.from('profiles').upsert(core, { onConflict: 'uid' }));
     error = r.ok ? null : r.rawError;

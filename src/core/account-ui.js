@@ -243,23 +243,139 @@ function openJoin(reason) {
 }
 
 // ── Екран 2: «Доповніть профіль» (раз, після першого входу) ───────
+//
+// 🔴 29.08 — ТРИ ЗМІНИ, КОЖНА ЗА ПРЯМИМ ЗАМОВЛЕННЯМ ВОВИ.
+//
+// 1️⃣ **ІМʼЯ І ПРІЗВИЩЕ ОКРЕМО.** Було одне поле «Імʼя», куди лягав увесь рядок
+//    від Google. У кабінеті поля вже РОЗДІЛЕНІ (`#cf-name` / `#cf-surname`), і в
+//    базі колонка `surname` є з липня — тобто перший екран був єдиним місцем, де
+//    прізвище губилось, і людині доводилось розбирати це руками пізніше.
+//
+// 2️⃣ **ПІДСТАВЛЯЄМО, АЛЕ НЕ ПЕРЕПИСУЄМО.** 📐 Заміряно по 13 акаунтах у базі:
+//    Google віддає `full_name` ОДНИМ рядком — ключів `given_name`/`family_name`
+//    у метаданих НЕМАЄ ЖОДНОГО. Тому ділимо по першому пробілу: у 12 із 13 рядок
+//    саме з двох слів. Тринадцятий і будь-який інший виняток людина виправляє
+//    одним тапом — поля лишаються звичайними полями.
+//    🛑 **ЛАТИНИЦЮ В КИРИЛИЦЮ АВТОМАТИЧНО НЕ ПЕРЕКЛАДАЄМО** (5 із 13 імен
+//    приходять латиницею). «Ihor/Igor», «Honchar/Gonchar», «Illia/Ilya» машина
+//    плутає регулярно, а мовчки переписане ПРІЗВИЩЕ — це образа, яку людина
+//    побачить уже під своїм коментарем. Показати і дати виправити чесніше, ніж
+//    вгадати. Якщо провайдер колись дасть окремі поля (Facebook їх має) —
+//    беремо їх, вони точніші за будь-який поділ.
+//
+// 3️⃣ **ДАТА — ТРИ СПИСКИ, А НЕ КАЛЕНДАР.** 🗣️ Вова: «щоб цю карусель вибору дати
+//    народження було легко вибрати, а не гортати по місяцях там до 1994 року».
+//    Він має рацію буквально: `input type="date"` на iPhone відкривається на
+//    ПОТОЧНОМУ місяці, і до 1994-го це десятки гортань. Три списки — три тапи,
+//    рік одразу списком. Так само зроблено в самому Facebook при реєстрації.
+//
+// ⚠️ І підпис, НАВІЩО дата. Раніше вона питалась без жодного пояснення — це
+// найчастіша причина, чому люди не заповнюють такі поля: незрозуміло, хто і
+// нащо це питає.
+const MONTHS_UA = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+                   'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+
+// Розбір імені з метаданих провайдера. Окремі поля — якщо їх дали; інакше поділ
+// по ПЕРШОМУ пробілу (усе після нього — прізвище, бо подвійні прізвища бувають,
+// а подвійні імена в наших краях майже ні).
+function splitProviderName(meta = {}) {
+  const given  = String(meta.given_name || meta.first_name || '').trim();
+  const family = String(meta.family_name || meta.last_name || '').trim();
+  if (given || family) return { name: given, surname: family };
+  const full = String(meta.full_name || meta.name || '').trim().replace(/\s+/g, ' ');
+  if (!full) return { name: '', surname: '' };
+  const i = full.indexOf(' ');
+  return i < 0 ? { name: full, surname: '' }
+               : { name: full.slice(0, i), surname: full.slice(i + 1) };
+}
+
+// Дата збирається лише з ТРЬОХ заповнених списків. Два з трьох — це не «майже
+// дата», а недороблений вибір, і мовчки викидати його не можна: людина думає,
+// що дату ввела.
+// ⚠️ Перевіряємо ще й ІСНУВАННЯ дня: «31 лютого» три списки дозволяють набрати
+// вільно, а база відхилила б такий рядок помилкою, якої людина не зрозуміє.
+// 🔑 Стоїть на рівні модуля, а не всередині екрана, рівно щоб сторож міг це
+// ВИКОНАТИ, а не грепнути: перевірка, яку не можна запустити, доводить лише те,
+// що потрібний текст десь написаний.
+function birthDateFrom(d, m, y) {
+  if (!d && !m && !y) return { ok: true, value: null };            // не заповнювали — це нормально
+  if (!d || !m || !y)  return { ok: false, error: 'Оберіть день, місяць і рік' };
+  const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const dt = new Date(iso + 'T00:00:00Z');
+  if (Number.isNaN(dt.getTime()) || dt.getUTCDate() !== Number(d))
+    return { ok: false, error: 'Такої дати немає' };
+  if (dt.getTime() > Date.now()) return { ok: false, error: 'Дата ще не настала' };
+  return { ok: true, value: iso };
+}
+
 function openProfile() {
   const u = currentUser();
   if (!u) return;
-  const defaultName = (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || '';
+  const guess = splitProviderName(u.user_metadata || {});
+  const year  = new Date().getFullYear();
+  // 🔑 Пошту питаємо ЛИШЕ якщо провайдер її не дав. Сьогодні такого не буває
+  // (Google і вхід кодом дають адресу завжди), але Facebook віддає акаунт без
+  // пошти регулярно — хто реєструвався там по номеру телефону. Гілка стоїть
+  // наперед, щоб перший такий житель не впорався в порожнє місце.
+  // 🛑 Ця адреса — КОНТАКТ, а не спосіб входу: вписане руками не доводить нічого.
+  const needEmail = !u.email;
+
+  const opts = (arr, val = '') => arr.map(o =>
+    `<option value="${o.v}"${o.v === val ? ' selected' : ''}>${escapeHtml(o.t)}</option>`).join('');
+  const days   = [{ v: '', t: 'День' }].concat(Array.from({ length: 31 }, (_, i) => ({ v: String(i + 1), t: String(i + 1) })));
+  const months = [{ v: '', t: 'Місяць' }].concat(MONTHS_UA.map((m, i) => ({ v: String(i + 1), t: m })));
+  const years  = [{ v: '', t: 'Рік' }].concat(Array.from({ length: 100 }, (_, i) => ({ v: String(year - i), t: String(year - i) })));
+
   const wrap = openModal(`
     <h2 class="acc-title">Раді вас бачити!</h2>
-    <label class="acc-label">Ім'я</label>
-    <input class="acc-input" id="acc-name" type="text" placeholder="Ваше ім'я" value="${escapeHtml(defaultName)}">
-    <label class="acc-label">Дата народження</label>
-    <input class="acc-input" id="acc-bdate" type="date" max="${new Date().toISOString().slice(0,10)}">
+    <p class="acc-sub">Як вас підписувати в громаді?</p>
+    <label class="acc-label" for="acc-name">Ім'я</label>
+    <input class="acc-input" id="acc-name" type="text" autocomplete="given-name"
+           placeholder="Ім'я" value="${escapeHtml(guess.name)}">
+    <label class="acc-label" for="acc-surname">Прізвище</label>
+    <input class="acc-input" id="acc-surname" type="text" autocomplete="family-name"
+           placeholder="Прізвище" value="${escapeHtml(guess.surname)}">
+    ${needEmail ? `
+    <label class="acc-label" for="acc-email">Пошта для зв'язку</label>
+    <input class="acc-input" id="acc-email" type="email" inputmode="email" autocomplete="email"
+           autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="адреса@пошта.com">` : ''}
+    <label class="acc-label">Дата народження <span class="acc-opt">— щоб привітати вас у ваш день</span></label>
+    <div class="acc-dob">
+      <select class="acc-input acc-select" id="acc-dd" aria-label="День">${opts(days)}</select>
+      <select class="acc-input acc-select" id="acc-mm" aria-label="Місяць">${opts(months)}</select>
+      <select class="acc-input acc-select" id="acc-yy" aria-label="Рік">${opts(years)}</select>
+    </div>
+    <p class="acc-err" hidden></p>
     <button class="acc-primary" type="button" id="acc-save">Зберегти</button>
     <button class="acc-skip" type="button" id="acc-later">Пізніше</button>`);
 
+  const showErr = (t) => {
+    const box = wrap.querySelector('.acc-err');
+    box.textContent = t || ''; box.hidden = !t;
+  };
+
+  const readDate = () => birthDateFrom(
+    wrap.querySelector('#acc-dd').value,
+    wrap.querySelector('#acc-mm').value,
+    wrap.querySelector('#acc-yy').value);
+
   const finish = async (withDate) => {
-    const name = wrap.querySelector('#acc-name').value.trim();
-    const bd   = wrap.querySelector('#acc-bdate').value;   // YYYY-MM-DD або ''
-    const res  = await saveProfile({ name, birth_date: withDate ? bd : null });
+    const name    = wrap.querySelector('#acc-name').value.trim();
+    const surname = wrap.querySelector('#acc-surname').value.trim();
+    const fields  = { name, surname };
+    if (withDate) {
+      const d = readDate();
+      if (!d.ok) { showErr(d.error); return; }
+      fields.birth_date = d.value;
+      if (needEmail) {
+        const box = wrap.querySelector('#acc-email');
+        const addr = normalizeEmail(box ? box.value : '');
+        if (addr && !isValidEmail(addr)) { showErr('Перевір адресу пошти'); return; }
+        if (addr) fields.email = addr;
+      }
+    }
+    showErr('');
+    const res = await saveProfile(fields);
     if (!res.ok) { showToast(netErrorText(res.error), 4000, 'error'); return; }
     closeModal();
     if (withDate) showToast('Профіль збережено', 2500);
