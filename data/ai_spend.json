@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788018220986,
+      "mission": "istoriya:hist:олицька-ординація-як-маєток",
+      "model": "claude-opus-5",
+      "input_tokens": 4271,
+      "output_tokens": 529,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0346,
+      "note": "Олицька ординація: як маєток Радзивіллів отримав особливий правовий статус"
+    },
+    {
       "ts": 1788009637968,
       "mission": "istoriya:hist:жорнище-село-над-осинищем",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0131,
       "note": ""
-    },
-    {
-      "ts": 1784540578178,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 448,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.008,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.3114,
-    "runs": 119,
+    "cost_usd": 8.346,
+    "runs": 120,
     "web_searches": 109
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 3.2018,
-      "runs": 41,
+      "cost_usd": 3.2364,
+      "runs": 42,
       "web_searches": 46
     }
   },
-  "updated_ts": 1788009637968
+  "updated_ts": 1788018220986
 }
