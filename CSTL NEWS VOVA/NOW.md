@@ -10,40 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-29 09:49 UTC
+**Зріз на:** 2026-08-29 09:54 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-2mp937` |
-| останній коміт людини | `6d9230a9` 29.08 09:49 — Пульс у межах бюджету |
+| останній коміт людини | `5c37ae7c` 29.08 09:50 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260829-0931` |
-| останній PR у `main` | #1087 |
+| останній PR у `main` | #1088 |
 | стендів на диску | 115 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 3 ⚠️ |
 | журнал за 2026-08-29 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/BOARD_two-owners_archive.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-07.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_full.md`
-- `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
-- `_session-log/roma-2026-07-08.md`
-- `_session-log/roma-2026-07-12b.md`
-- `_session-log/roma-2026-07-12c.md`
-- `_session-log/vova-2026-07-24c.md`
-- `_session-log/vova-2026-08-18b.md`
-- `_session-log/vova-2026-08-27c.md`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `5c37ae7c` 29.08 09:50 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
+- `a01dd7b4` 29.08 09:50 — Чужі пошти прибрано з документів; карта акаунтів у профіль (#1088)
+- `5cac310a` 29.08 09:49 — Пульс: авто-блок
 - `6d9230a9` 29.08 09:49 — Пульс у межах бюджету
 - `d4d9b2f4` 29.08 09:49 — Пульс: відео в статті, адмінка, чужі пошти
-- `002e6313` 29.08 09:45 — Чужі пошти прибрано з документів; карта акаунтів у профіль
-- `b43c2b68` 29.08 09:41 — Merge remote-tracking branch 'origin/main' into claude/startuem-2mp937
-- `990d0604` 29.08 09:32 — Відео з YouTube доходить у статтю: обкладинка в тілі, плеєр по тапу (#1087)
 
 <!-- AUTO:END -->
 
