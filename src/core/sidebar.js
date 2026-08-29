@@ -30,7 +30,7 @@
 
 import { isTeamMember } from './supabase.js';
 import { onAuthChange, isLoggedIn, currentUserName, currentAvatarUrl } from './auth.js';
-import { LEGAL_DOC_HTML, BOARD_RULES_HTML } from './legal.js';
+import { LEGAL_DOC_HTML, BOARD_RULES_HTML, CONTACT } from './legal.js';
 import { openModal } from './modal.js';
 import { ICONS } from './icons.js';
 import { avatarCircle, escapeHtml } from './utils.js';
@@ -160,9 +160,9 @@ const INFO = {
   support: {
     title: 'Підтримка',
     body: 'Питання, ідеї чи проблема? Напишіть нам на пошту — відповідаємо особисто.<br><br>' +
-          '<a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=Підтримка%20CSTL%20LIFE">' +
+          '<a class="info-mail-btn" href="mailto:' + CONTACT + '?subject=Підтримка%20CSTL%20LIFE">' +
           ICONS.mail + ' Написати в підтримку</a><br><br>' +
-          '<span class="info-mail-plain">olykacastle@gmail.com</span>',
+          '<span class="info-mail-plain">' + CONTACT + '</span>',
   },
   boardrules: {
     title: 'Правила Дошки',

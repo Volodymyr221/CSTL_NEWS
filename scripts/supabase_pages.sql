@@ -199,11 +199,13 @@ from (values
 where not exists (select 1 from public.pages p where p.name = v.name);
 
 -- Призначити Вову власником обох сторінок (за email акаунту).
--- ⚠️ Якщо у тебе інший email акаунту в додатку — заміни рядок нижче.
+-- 🔴 ПЛЕЙСХОЛДЕР, А НЕ ЗАБУТА АДРЕСА. Тут стояла реальна пошта Вови, а
+-- репозиторій публічний. Скрипт УЖЕ НАКАТАНО — рядок лишається як шаблон
+-- для повторного накату: підстав свою адресу в момент запуску і не комітʼ її.
 insert into public.page_admins (page_id, uid, role)
 select p.id, pr.uid, 'owner'
 from public.pages p
-join auth.users   u  on u.email = 'volodymyrshevchuk19@gmail.com'
+join auth.users   u  on u.email = 'ВСТАВ_СВІЙ_EMAIL@example.com'
 join public.profiles pr on pr.uid = u.id
 where p.name in ('Туристична Олика', 'Відділ культури ОТГ')
   and not exists (
