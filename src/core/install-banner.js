@@ -157,50 +157,78 @@ function showBanner(iosMode) {
 const БРЕНД = '#5E1723';
 
 // Низ Safari: адреса і панель, з обведеним входом у меню.
+// 🔴 29.08, ПІСЛЯ ЖИВОЇ ПЕРЕВІРКИ НА iPHONE — КРОКІВ ЧОТИРИ, А НЕ ТРИ.
+// Перша редакція вела «⋯ → На початковий екран», і це БУЛО НЕПРАВДОЮ: Вова
+// надіслав знімок відкритого меню ⋯, і в ньому «Поширити · Додати до папки
+// «Закладки» · Додати закладку до… · Нова вкладка · Нова приватна вкладка».
+// Пункту «На Початковий екран» там НЕМАЄ — він живе в аркуші «Поширити», на крок
+// глибше. 🛑 Тобто інструкція впевнено називала кнопку, якої на тому екрані немає:
+// рівно та вада, заради якої ми й розводили Safari з рештою браузерів.
+// 🔑 Урок ширший за цей екран: схему, намальовану з памʼяті про чужий інтерфейс,
+// доводить лише знімок із живого пристрою. Мій «здогад про очевидне» був хибний.
+
+// Низ Safari — за знімком Вови: КРУЖОК ліворуч, поле адреси посередині, КРУЖОК ⋯ праворуч.
 const СХЕМА_1 = `
-<svg viewBox="0 0 260 150" role="img" aria-label="Нижня панель браузера з обведеною кнопкою меню">
-  <rect x="16" y="14" width="228" height="118" rx="16" fill="#fff" stroke="#E3E3E7"/>
-  <rect x="34" y="34" width="192" height="30" rx="15" fill="#F1F1F4"/>
-  <text x="130" y="54" text-anchor="middle" font-size="13" fill="#8E8E93">castlelife.org</text>
-  <text x="46"  y="102" font-size="19" fill="#B9B9BE">‹</text>
-  <text x="76"  y="102" font-size="19" fill="#B9B9BE">›</text>
-  <text x="150" y="102" font-size="19" fill="${БРЕНД}" font-weight="700">⋯</text>
-  <text x="196" y="101" font-size="16" fill="#B9B9BE">⧉</text>
-  <circle cx="155" cy="96" r="21" fill="none" stroke="${БРЕНД}" stroke-width="2.5"/>
+<svg viewBox="0 0 260 150" role="img" aria-label="Нижня панель браузера з обведеною кнопкою «три крапки»">
+  <rect x="16" y="30" width="228" height="90" rx="16" fill="#fff" stroke="#E3E3E7"/>
+  <circle cx="48" cy="75" r="17" fill="#F1F1F4"/>
+  <text x="48" y="82" text-anchor="middle" font-size="17" fill="#B9B9BE">‹</text>
+  <rect x="76" y="58" width="104" height="34" rx="17" fill="#F1F1F4"/>
+  <text x="128" y="80" text-anchor="middle" font-size="11.5" fill="#8E8E93">castlelife.org</text>
+  <circle cx="212" cy="75" r="17" fill="#F1F1F4"/>
+  <text x="212" y="81" text-anchor="middle" font-size="17" fill="${БРЕНД}" font-weight="700">···</text>
+  <circle cx="212" cy="75" r="23" fill="none" stroke="${БРЕНД}" stroke-width="2.5"/>
 </svg>`;
 
-// Список меню з підсвіченим потрібним пунктом.
+// Меню ⋯ — перший пункт «Поширити», саме він веде далі.
 const СХЕМА_2 = `
-<svg viewBox="0 0 260 150" role="img" aria-label="Список меню з пунктом «На початковий екран»">
-  <rect x="16" y="10" width="228" height="130" rx="16" fill="#fff" stroke="#E3E3E7"/>
-  <rect x="32" y="26" width="120" height="9" rx="4.5" fill="#E8E8EC"/>
-  <rect x="32" y="50" width="150" height="9" rx="4.5" fill="#E8E8EC"/>
-  <rect x="26" y="72" width="208" height="34" rx="10" fill="#FAE2E6" stroke="${БРЕНД}" stroke-width="2"/>
-  <path d="M44 89 h14 M51 82 v14" stroke="${БРЕНД}" stroke-width="2.5" stroke-linecap="round"/>
-  <text x="68" y="94" font-size="12.5" fill="${БРЕНД}" font-weight="600">На початковий екран</text>
-  <rect x="32" y="120" width="96" height="9" rx="4.5" fill="#E8E8EC"/>
+<svg viewBox="0 0 260 150" role="img" aria-label="Меню браузера з пунктом «Поширити»">
+  <rect x="40" y="10" width="204" height="130" rx="16" fill="#fff" stroke="#E3E3E7"/>
+  <rect x="50" y="20" width="184" height="34" rx="10" fill="#FAE2E6" stroke="${БРЕНД}" stroke-width="2"/>
+  <path d="M68 44 v-14 M62 36 l6-6 6 6" fill="none" stroke="${БРЕНД}" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="88" y="42" font-size="13" fill="${БРЕНД}" font-weight="700">Поширити</text>
+  <rect x="88" y="68" width="126" height="9" rx="4.5" fill="#E8E8EC"/>
+  <rect x="88" y="90" width="104" height="9" rx="4.5" fill="#E8E8EC"/>
+  <rect x="88" y="112" width="88" height="9" rx="4.5" fill="#E8E8EC"/>
 </svg>`;
 
-// Верх екрана додавання з обведеною кнопкою «Додати».
+// Аркуш «Поширити» — тут і живе «На Початковий екран».
 const СХЕМА_3 = `
-<svg viewBox="0 0 260 150" role="img" aria-label="Екран додавання з кнопкою «Додати» вгорі справа">
+<svg viewBox="0 0 260 150" role="img" aria-label="Аркуш «Поширити» з пунктом «На Початковий екран»">
+  <rect x="16" y="10" width="228" height="130" rx="16" fill="#fff" stroke="#E3E3E7"/>
+  <rect x="32" y="24" width="120" height="9" rx="4.5" fill="#E8E8EC"/>
+  <rect x="32" y="46" width="150" height="9" rx="4.5" fill="#E8E8EC"/>
+  <rect x="26" y="68" width="208" height="36" rx="10" fill="#FAE2E6" stroke="${БРЕНД}" stroke-width="2"/>
+  <path d="M44 86 h14 M51 79 v14" stroke="${БРЕНД}" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="68" y="91" font-size="12.5" fill="${БРЕНД}" font-weight="700">На Початковий екран</text>
+  <rect x="32" y="118" width="96" height="9" rx="4.5" fill="#E8E8EC"/>
+</svg>`;
+
+// Останній екран — зі СПРАВЖНЬОЮ іконкою застосунку і його назвою.
+// 🗣️ Вова: «можна туди вставити нашу іконку додатку… це буде більш правдоподібно.
+// І написати CSTL LIFE в назві. А все остальне, рядки, залишити таким блюром».
+const СХЕМА_4 = `
+<svg viewBox="0 0 260 150" role="img" aria-label="Екран додавання: іконка CSTL LIFE і кнопка «Додати»">
   <rect x="16" y="14" width="228" height="118" rx="16" fill="#fff" stroke="#E3E3E7"/>
-  <rect x="34" y="36" width="58" height="9" rx="4.5" fill="#E8E8EC"/>
+  <rect x="34" y="36" width="52" height="9" rx="4.5" fill="#E8E8EC"/>
   <rect x="168" y="26" width="60" height="28" rx="14" fill="${БРЕНД}"/>
   <text x="198" y="45" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">Додати</text>
   <rect x="160" y="18" width="76" height="44" rx="22" fill="none" stroke="${БРЕНД}" stroke-width="2.5"/>
-  <rect x="34" y="80" width="36" height="36" rx="9" fill="${БРЕНД}"/>
-  <text x="52" y="102" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">CSTL</text>
-  <rect x="82" y="88" width="88" height="8" rx="4" fill="#E8E8EC"/>
-  <rect x="82" y="102" width="124" height="8" rx="4" fill="#F1F1F4"/>
+  <image href="icons/icon-192.png" x="34" y="78" width="38" height="38" preserveAspectRatio="xMidYMid slice"
+         clip-path="inset(0 round 9)"/>
+  <text x="84" y="94" font-size="12" fill="#2A2520" font-weight="700">CSTL LIFE</text>
+  <rect x="84" y="104" width="118" height="8" rx="4" fill="#F1F1F4"/>
 </svg>`;
 
 const КРОКИ = [
-  { схема: СХЕМА_1, назва: 'Відкрий меню браузера',
-    текст: 'Унизу екрана натисни <b>⋯</b>, а якщо його немає — значок <b>«Поділитись»&nbsp;⎋</b>.' },
-  { схема: СХЕМА_2, назва: 'Знайди «На початковий екран»',
+  { схема: СХЕМА_1, назва: 'Натисни «три крапки»',
+    текст: 'Кнопка <b>···</b> у правому нижньому куті браузера.' },
+  { схема: СХЕМА_2, назва: 'Обери «Поширити»',
+    текст: 'Перший пункт меню, зі значком стрілки вгору.' },
+  { схема: СХЕМА_3, назва: 'Знайди «На Початковий екран»',
     текст: 'Гортай список униз, поки не побачиш цей пункт, і натисни його.' },
-  { схема: СХЕМА_3, назва: 'Натисни «Додати»',
+  { схема: СХЕМА_4, назва: 'Натисни «Додати»',
     текст: 'Кнопка вгорі справа. Іконка CSTL LIFE стане на твій екран — далі заходиш одним тапом.' },
 ];
 
@@ -216,7 +244,13 @@ function відкритиІнструкцію() {
       <button class="pwa-guide-x" type="button" aria-label="Закрити">✕</button>
       <div class="pwa-guide-head">
         <h2>Як встановити CSTL LIFE</h2>
-        <p>Це просто — покажемо крок за кроком.</p>
+        <!-- 🗣️ Вова 29.08: сказати чесно, що зараз це ВЕБ-версія, а не застосунок
+             з App Store. Людина, яка чекала магазин застосунків, інакше вирішить,
+             що її обманули на кроці «Поширити». Пояснення термінів у дужках — як
+             усюди в проєкті: слово PWA більшості нічого не каже. -->
+        <p>Поки що CSTL LIFE — це <b>веб-версія</b> (PWA, застосунок із браузера):
+           у магазинах застосунків його ще немає. Ставиться за 4 кроки, і далі
+           працює як звичайний застосунок з іконкою на екрані.</p>
       </div>
       <div class="pwa-guide-num"><span class="pwa-guide-now">1</span> / ${КРОКИ.length}</div>
       <div class="pwa-guide-pic"></div>
@@ -258,6 +292,32 @@ function відкритиІнструкцію() {
   });
   // Тап повз аркуш закриває — та сама звичка, що в решті модалок застосунку.
   el.addEventListener('click', (e) => { if (e.target === el) закрити(); });
+
+  // ── СВАЙП МІЖ КРОКАМИ (прохання Вови 29.08 після живої перевірки) ──────────
+  // 🔑 Кнопка «Далі» лишається головним шляхом, свайп — другим: гортання це те,
+  // чого рука на телефоні пробує САМА, і коли воно не працює, екран здається
+  // зламаним. 📐 Поріг 40px і перевага горизонталі (|dx| > |dy|) — щоб звичайна
+  // прокрутка аркуша вгору-вниз не гортала кроки випадково.
+  let x0 = null, y0 = null;
+  const аркуш = $('.pwa-guide-sheet');
+  аркуш.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0];
+    x0 = t.clientX; y0 = t.clientY;
+  }, { passive: true });
+  аркуш.addEventListener('touchend', (e) => {
+    if (x0 === null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    // ⚠️ На КРАЯХ свайп навмисно НІЧОГО не робить. «Догорнути» вліво з останнього
+    // кроку і закрити аркуш означало б завершити встановлення жестом, схожим на
+    // гортання, — людина не зрозуміла б, що сталося.
+    const куди = dx < 0 ? крок.i + 1 : крок.i - 1;
+    if (куди < 0 || куди >= КРОКИ.length) return;
+    крок.i = куди;
+    намалювати();
+  }, { passive: true });
 
   намалювати();
   document.body.appendChild(el);

@@ -94,16 +94,60 @@ const видно = (page, с) => page.evaluate(s => !!document.querySelector(s),
     кнопка: (document.querySelector('.pwa-guide-next') || {}).textContent,
   }));
 
-  const к1 = await крок();
-  ok('крок 1 із 3, зі схемою', к1.номер === '1' && к1.схем === 1, JSON.stringify(к1));
-  await page.click('.pwa-guide-next'); await page.waitForTimeout(250);
-  const к2 = await крок();
-  ok('крок 2 — інший, і теж зі схемою',
-     к2.номер === '2' && к2.назва !== к1.назва && к2.схем === 1, JSON.stringify(к2));
-  await page.click('.pwa-guide-next'); await page.waitForTimeout(250);
-  const к3 = await крок();
-  ok('крок 3 — останній, кнопка каже «Готово»',
-     к3.номер === '3' && /Готово/.test(к3.кнопка), JSON.stringify(к3));
+  // 🔴 ЧОТИРИ КРОКИ, А НЕ ТРИ — і це не оформлення, а ПРАВДА про чужий екран.
+  // Знімок Вови з живого iPhone: у меню ⋯ пункти «Поширити · Додати до папки
+  // «Закладки» · Додати закладку до… · Нова вкладка · Нова приватна вкладка».
+  // «На Початковий екран» там НЕМАЄ — він на крок глибше, в аркуші «Поширити».
+  // 🛑 Стенд тримає саме цю послідовність: інструкція, що зникає на один крок,
+  // виглядає справною, а людину заводить у глухий кут.
+  const назви = [];
+  for (let i = 1; i <= 4; i++) {
+    const к = await крок();
+    назви.push(к.назва);
+    ok(`крок ${i} із 4, зі схемою`, к.номер === String(i) && к.схем === 1, JSON.stringify(к));
+    if (i === 4) ok('на останньому кроці кнопка каже «Готово»', /Готово/.test(к.кнопка), к.кнопка);
+    else { await page.click('.pwa-guide-next'); await page.waitForTimeout(250); }
+  }
+  ok('🔴 крок «Поширити» на місці — без нього шлях обривається',
+     назви.some(н => /Поширити/.test(н)), JSON.stringify(назви));
+  ok('🛑 усі чотири кроки різні', new Set(назви).size === 4, JSON.stringify(назви));
+
+  // ── ЧЕСНІСТЬ ПРО ТЕ, ЩО САМЕ СТАВИМО ──────────────────────────────────────
+  // 🗣️ Вова: сказати, що поки це веб-версія. Людина, яка чекала магазин
+  // застосунків, інакше вирішить на кроці «Поширити», що її обманули.
+  const шапка = await page.evaluate(() =>
+    (document.querySelector('.pwa-guide-head') || {}).textContent || '');
+  ok('🔴 сказано, що це веб-версія (PWA), а не застосунок з магазину',
+     /веб-верс/i.test(шапка) && /PWA/.test(шапка), шапка.slice(0, 90));
+
+  // ── СВАЙП ──────────────────────────────────────────────────────────────────
+  // Гортання — те, що рука пробує САМА; коли воно не працює, екран здається зламаним.
+  const свайп = async (звідки, куди) => page.evaluate(([x1, x2]) => {
+    const el = document.querySelector('.pwa-guide-sheet');
+    const т = (x, id) => new Touch({ identifier: id, target: el, clientX: x, clientY: 400 });
+    el.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [т(x1, 1)], bubbles: true }));
+    el.dispatchEvent(new TouchEvent('touchend',   { changedTouches: [т(x2, 1)], bubbles: true }));
+  }, [звідки, куди]);
+
+  await свайп(300, 80);   // вліво = вперед; ми на 4-му, тобто на краю
+  await page.waitForTimeout(200);
+  const край = await крок();
+  ok('🛑 свайп на КРАЮ нічого не робить (не закриває аркуш жестом)',
+     край.номер === '4' && await видно(page, '.pwa-guide-sheet'), край.номер);
+
+  await свайп(80, 300);   // вправо = назад
+  await page.waitForTimeout(250);
+  ok('🔴 свайп вправо гортає на крок назад', (await крок()).номер === '3');
+  await свайп(300, 80);
+  await page.waitForTimeout(250);
+  ok('🔴 свайп вліво гортає вперед', (await крок()).номер === '4');
+
+  // Дрібний рух і вертикальний свайп кроки НЕ гортають — інакше звичайна
+  // прокрутка аркуша перемикала б сторінки випадково.
+  await свайп(300, 275);
+  await page.waitForTimeout(200);
+  ok('🛑 рух коротший за поріг кроки не гортає', (await крок()).номер === '4');
+
   await page.click('.pwa-guide-next'); await page.waitForTimeout(400);
   ok('«Готово» закриває інструкцію', !(await видно(page, '.pwa-guide-sheet')));
 
