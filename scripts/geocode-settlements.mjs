@@ -78,7 +78,7 @@ async function запит(name) {
   const q = encodeURIComponent(`${name}, Волинська область, Україна`);
   const res = await fetch(
     `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=10&addressdetails=1`,
-    { headers: { 'Accept-Language': 'uk', 'User-Agent': 'CSTL-NEWS/1.0 (olykacastle@gmail.com)' } },
+    { headers: { 'Accept-Language': 'uk', 'User-Agent': 'CSTL-NEWS/1.0 (privacy@castlelife.org)' } },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

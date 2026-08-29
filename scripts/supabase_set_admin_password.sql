@@ -39,5 +39,5 @@ WHERE email = 'твоя_пошта@gmail.com';
 --   encrypted_password = crypt('пароль_другого_адміна', gen_salt('bf')),
 --   email_confirmed_at = COALESCE(email_confirmed_at, now()),
 --   updated_at = now()
--- WHERE email = 'volodymyrshevchuk19@gmail.com';
+-- WHERE email = 'ВСТАВ_СВІЙ_EMAIL@example.com';   -- підстав свою адресу тут, у файл не вписуй
 -- ============================================================================

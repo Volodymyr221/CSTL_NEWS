@@ -45,7 +45,7 @@ const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const VAPID_PRIVATE_KEY         = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
-const VAPID_EMAIL      = 'mailto:illiabogdanets041@gmail.com';
+const VAPID_EMAIL      = 'mailto:push@castlelife.org';
 
 // Вікно тиші для автора запису. Пряма відповідь конкретній людині його НЕ слухає.
 const QUIET_MINUTES = 10;

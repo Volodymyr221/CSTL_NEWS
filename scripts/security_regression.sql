@@ -37,8 +37,8 @@ begin;
 create temp table пер (ключ text primary key, знач text) on commit drop;
 insert into пер values
   ('uidA',    '4dcde4ce-eaff-4b44-9016-96c7e930084f'),   -- Володимир
-  ('uidB',    '31f36209-a12a-42db-a5bf-879efa6d0c33'),   -- Макс Безушкевич
-  ('adminEm', 'volodymyrshevchuk19@gmail.com');
+  ('uidB',    '31f36209-a12a-42db-a5bf-879efa6d0c33'),   -- другий житель (не адмін)
+  ('adminEm', 'ВСТАВ_СВІЙ_EMAIL@example.com');   -- 🔴 підстав свою в момент запуску, у git не комітʼ
 
 create temp table rez (
   n int generated always as identity,
@@ -201,7 +201,7 @@ reset role;
 -- ── РОЛЬ 4: АДМІН (усе, що потрібно адмінці, мусить лишитись робочим) ───────
 set local role authenticated;
 set local request.jwt.claims =
-  '{"role":"authenticated","sub":"4dcde4ce-eaff-4b44-9016-96c7e930084f","email":"volodymyrshevchuk19@gmail.com"}';
+  '{"role":"authenticated","sub":"4dcde4ce-eaff-4b44-9016-96c7e930084f","email":"ВСТАВ_СВІЙ_EMAIL@example.com"}';
 
 select pg_temp.зафіксувати('адмін','is_admin()','true', is_admin()::text);
 select pg_temp.зафіксувати('адмін','читає ads (адмінка не має осліпнути)','так',
