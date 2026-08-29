@@ -71,7 +71,7 @@ ${LEGAL_DOC_HTML}
 <footer>
   Редакція від ${LEGAL_UPDATED}. Цей документ ідентичний тому, що показує застосунок
   у розділі «Політика і приватність» — обидві сторінки складаються з одного джерела.
-  <br>Питання: <a href="mailto:privacy@castlelife.org">privacy@castlelife.org</a>
+  <br>Питання: <a href="mailto:olykacastle@gmail.com">olykacastle@gmail.com</a>
 </footer>
 </body>
 </html>
