@@ -627,6 +627,27 @@ export function openArticle(id) {
     </div>
   `;
 
+  // ── ВІДЕО: ОБКЛАДИНКА → ПЛЕЄР ─────────────────────────────────────────
+  // 🔑 Рішення Вови 29.08 (варіант «А»): у тілі статті стоїть кадр, і лише тап
+  // підвантажує плеєр YouTube. Доти з YouTube не йде жодного запиту.
+  // 🛑 Ідентифікатор перевіряємо ЩЕ РАЗ, хоч його вже перевірив парсер. Тіло
+  // статті малюється через `innerHTML`, і єдина річ, яка стоїть між чужим
+  // сайтом і адресою в нашому `iframe`, — оця перевірка. Одна копія правила в
+  // такому місці — це не дубль, це другий рубіж.
+  function увімкнутиВідео(fig) {
+    if (fig.dataset.playing === '1') return;
+    const id = fig.dataset.yt || '';
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return;
+    const плеєр = document.createElement('iframe');
+    // `youtube-nocookie` — та сама картинка, але без реклами й трекера до кліку.
+    плеєр.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0';
+    плеєр.title = 'Відео';
+    плеєр.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+    плеєр.allowFullscreen = true;
+    fig.replaceChildren(плеєр);
+    fig.dataset.playing = '1';
+  }
+
   // 🔴 27.08 — ТАП ПО ФОТО В ТІЛІ ВІДКРИВАЄ ЙОГО НА ВЕСЬ ЕКРАН.
   // 🔑 Переглядач НЕ свій: `core/photo-viewer.js`, той самий, що у «Стрічці».
   // Правило №14 — беремо з чужого сайту зміст, показуємо своїм.
@@ -637,9 +658,16 @@ export function openArticle(id) {
   if (!modalContent.dataset.photoWired) {
     modalContent.dataset.photoWired = '1';
     modalContent.addEventListener('click', e => {
+      // 🔴 ВІДЕО ПЕРЕВІРЯЄМО ПЕРШИМ, і це не порядок «на смак». Обкладинка відео —
+      // це теж `<figure><img>`, тобто вона підпадає під селектор фото нижче. Без
+      // цієї гілки тап по відео відкривав би ПЕРЕГЛЯДАЧ ФОТО замість плеєра.
+      const відео = e.target.closest('.article-body .art-video');
+      if (відео) return увімкнутиВідео(відео);
       const im = e.target.closest('.article-body figure img');
       if (!im) return;
-      const усі = [...modalContent.querySelectorAll('.article-body figure img')];
+      // ⚠️ І з галереї відео теж виключене: гортати кадр-обкладинку серед
+      // знімків статті означало б показувати те, що не є фотографією.
+      const усі = [...modalContent.querySelectorAll('.article-body figure:not(.art-video) img')];
       openPhotoViewer(усі.map(x => x.src), усі.indexOf(im));
     });
   }

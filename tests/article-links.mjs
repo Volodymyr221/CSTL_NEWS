@@ -177,6 +177,89 @@ const тап = await page.evaluate(() => new Promise(res => {
 }));
 ok('🔴 тап по посиланню доходить (жест модалки його не зʼїдає)', тап.дійшов, JSON.stringify(тап));
 
+// ── ВІДЕО З YOUTUBE: ОБКЛАДИНКА, ПЛЕЄР ПО ТАПУ (29.08) ─────────────────────
+// 🔴 Привід — приклад Вови: у статті-джерелі відео в кінці, у нас його немає.
+// Рішення Вови (варіант «А»): у тілі стоїть КАДР, плеєр вантажиться лише по тапу.
+//
+// 🛑 І ТУТ Є ПАСТКА, ЯКУ Я ЗНАЙШОВ ЩЕ ДО ЖИВОГО ПРОГОНУ: обкладинка відео — це
+// теж `<figure><img>`, а на них уже висить слухач, що відкриває ПЕРЕГЛЯДАЧ ФОТО.
+// Без окремої гілки тап по відео відкривав би картинку замість плеєра. Саме це
+// й міряємо нижче, бо на око така вада виглядає як «відео не працює».
+//
+// ⚠️ Розмітку підставляємо руками: живих статей із відео ще немає (парсер із цим
+// кодом ще не бігав), а чекати на них означало б не перевірити нічого.
+const відео = await page.evaluate(async () => {
+  const body = document.querySelector('.article-body');
+  if (!body) return { є: false };
+  body.insertAdjacentHTML('beforeend',
+    '<figure class="art-video" data-yt="dQw4w9WgXcQ">'
+    + '<img src="https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Відео">'
+    + '<span class="art-video-play" aria-hidden="true"></span></figure>');
+  const fig = body.querySelector('.art-video');
+  const пауза = () => new Promise(r => setTimeout(r, 120));
+
+  const значок = fig.querySelector('.art-video-play');
+  const до = {
+    ширина: Math.round(fig.getBoundingClientRect().width),
+    висота: Math.round(fig.getBoundingClientRect().height),
+    значокВидно: !!значок && значок.getBoundingClientRect().width > 0,
+    плеєрів: document.querySelectorAll('iframe').length,
+  };
+
+  fig.querySelector('img').click();
+  await пауза();
+
+  const рамка = fig.querySelector('iframe');
+  return {
+    є: true, до,
+    src: рамка ? rамкаSrc(рамка) : '',
+    плеєрівПісля: document.querySelectorAll('iframe').length,
+    переглядачФото: !!document.querySelector('.fd-viewer'),
+    обкладинкаЗникла: !fig.querySelector('img'),
+  };
+  function rамкаSrc(f) { return f.getAttribute('src') || ''; }
+});
+
+ok('обкладинка відео намалювалась на всю ширину тіла',
+   відео.є && відео.до.ширина > 200, відео.є ? `${відео.до.ширина}×${відео.до.висота}` : 'немає');
+ok('📐 кадр тримає пропорцію 16:9 — текст під ним не стрибне',
+   відео.є && Math.abs(відео.до.ширина / відео.до.висота - 16 / 9) < 0.05,
+   відео.є ? (відео.до.ширина / відео.до.висота).toFixed(2) : '—');
+ok('значок «грати» видно', відео.є && відео.до.значокВидно);
+ok('🔑 ДО ТАПУ з YouTube не вантажиться НІЧОГО — плеєра на сторінці немає',
+   відео.є && відео.до.плеєрів === 0, String(відео.до?.плеєрів));
+ok('🔴 тап вмикає плеєр саме цього відео',
+   /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ/.test(відео.src || ''), відео.src || 'плеєра немає');
+ok('🛑 і НЕ відкриває переглядач фото (обкладинка — теж figure img)',
+   відео.є && відео.переглядачФото === false,
+   відео.переглядачФото ? 'відкрився переглядач фото' : 'ні');
+ok('обкладинка поступилась місцем плеєру', відео.є && відео.обкладинкаЗникла);
+
+// 🛑 КОНТРОЛЬ на другий рубіж: клієнт перевіряє ідентифікатор ЩЕ РАЗ. Тіло
+// статті йде в `innerHTML`, і ця перевірка — остання річ між чужим рядком і
+// адресою в нашому `iframe`.
+const підробне = await page.evaluate(async () => {
+  const body = document.querySelector('.article-body');
+  body.insertAdjacentHTML('beforeend',
+    '<figure class="art-video" data-yt="x&quot; onerror=&quot;1"><img src="" alt=""></figure>');
+  const fig = [...body.querySelectorAll('.art-video')].pop();
+  fig.click();
+  await new Promise(r => setTimeout(r, 120));
+  const був = !!fig.querySelector('iframe');
+  fig.remove();
+  return був;
+});
+ok('🔴 КОНТРОЛЬ: підроблений ідентифікатор плеєра НЕ вмикає', підробне === false);
+
+// 🛑 ПРИБИРАЄМО ЗА СОБОЮ. Я вставив свою розмітку в живе тіло статті, і сусідня
+// перевірка нижче («бите фото не лишає підпис сиротою») питає «чи лишився хоч
+// один figure» — вона побачила МІЙ блок і почервоніла на справному коді.
+// ⚠️ Це та сама вада, що зі стендом, який писав у бойовий журнал витрат 28.08:
+// перевірка, яка лишає по собі слід, псує не свій результат, а чужий.
+await page.evaluate(() => {
+  document.querySelectorAll('.article-body .art-video').forEach(x => x.remove());
+});
+
 // ── ФОТО В ТІЛІ СТАТТІ (27.08) ──────────────────────────────────────────────
 // 🔑 Міряємо те, що бачить ЛЮДИНА: фото намалювалось, підпис на місці, і тап по
 // ньому відкриває наш повноекранний переглядач — той самий, що у «Стрічці».
