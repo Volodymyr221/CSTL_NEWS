@@ -2049,7 +2049,7 @@
     "_polish": 3,
     "_fullAlgo": 2,
     "finalUrl": "https://www.volynpost.com/news/269086-u-lucku-stalo-na-odnu-happy-bakery-bilshe-adresa-novoi-lokacii-ta-grafik-roboty",
-    "_richTries": 1
+    "_richTries": 2
   },
   {
     "title": "На Волині 24-річного чоловіка взяли під варту за збут наркотиків та зберігання гранати",
@@ -2548,7 +2548,7 @@
     "ts": 1787914620000,
     "id": 13226,
     "added_ts": 1787927329579,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2567,9 +2567,10 @@
     "ts": 1787913900000,
     "id": 13206,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269087-na-volyni-troh-chynovnykiv-pidozryuyut-u-nezakonnomu-oformlenni-vidstrochok-vid-mobilizacii"
   },
   {
     "title": "У селі на Волині мешканців перевірять на радіацію",
@@ -2586,7 +2587,7 @@
     "ts": 1787912460000,
     "id": 13227,
     "added_ts": 1787927329579,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2605,9 +2606,10 @@
     "ts": 1787910060000,
     "id": 13207,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269077-na-den-mista-v-novovolynsku-vystupyt-oleksandr-polozhynskyj"
   },
   {
     "title": "СБУ на Волині підозрює групу чиновників у перешкоджанні законній діяльності ЗСУ",
@@ -2624,7 +2626,7 @@
     "ts": 1787909760000,
     "id": 13228,
     "added_ts": 1787927329579,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2643,7 +2645,7 @@
     "ts": 1787909700000,
     "id": 13229,
     "added_ts": 1787927329579,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2662,7 +2664,7 @@
     "ts": 1787908800000,
     "id": 13230,
     "added_ts": 1787927329579,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2681,9 +2683,10 @@
     "ts": 1787908440000,
     "id": 13208,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269073-prozhytkovyj-minimum-u-veresni-2026-roku-chy-chekaty-ukrainciam-na-pidvyschennia-vyplat"
   },
   {
     "title": "Новий навчальний рік на Волині: що зміниться для школярів, батьків та вчителів",
@@ -2700,9 +2703,10 @@
     "ts": 1787906940000,
     "id": 13209,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269071-novyj-navchalnyj-rik-na-volyni-scho-zminytsia-dlia-shkoliariv-batkiv-ta-vchyteliv"
   },
   {
     "title": "«Укрзалізниця» попередила про «обрізання» поїздів, але скасовувати рейси не буде",
@@ -2719,9 +2723,10 @@
     "ts": 1787904480000,
     "id": 13210,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269075-ukrzaliznycia-poperedyla-pro-obrizannia-poizdiv-ale-skasovuvaty-rejsy-ne-bude"
   },
   {
     "title": "На Волині в ДТП загинув 18-річний мотоцикліст: що відомо",
@@ -2738,9 +2743,10 @@
     "ts": 1787902920000,
     "id": 13211,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269079-na-volyni-v-dtp-zagynuv-18-richnyj-motocyklist-scho-vidomo"
   },
   {
     "title": "Реактивний Шахед долетів до Луцького району: пролунав звук вибуху",
@@ -2757,9 +2763,10 @@
     "ts": 1787900760000,
     "id": 13212,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269076-reaktyvnyj-shahed-doletiv-do-luckogo-rajonu-prolunav-zvuk-vybuhu"
   },
   {
     "title": "Загинув понад 2 роки тому: підтвердили загибель Героя з Волині Ігоря Тимчука",
@@ -2776,9 +2783,10 @@
     "ts": 1787899440000,
     "id": 13213,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269074-zagynuv-ponad-2-roky-tomu-pidtverdyly-zagybel-geroia-z-volyni-igoria-tymchuka"
   },
   {
     "title": "Штурмовики 101 бригади ТРО отримали електробайк і генератори від волонтерів «Української команди»",
@@ -2795,9 +2803,10 @@
     "ts": 1787898000000,
     "id": 13214,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269089-shturmovyky-101-brygady-tro-otrymaly-elektrobajk-i-generatory-vid-volonteriv-ukrainskoi-komandy"
   },
   {
     "title": "Росія за добу втратила сотні солдатів: у Генштабі ЗСУ оприлюднили оновлені цифри",
@@ -2814,9 +2823,10 @@
     "ts": 1787896980000,
     "id": 13215,
     "added_ts": 1787927321308,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269070-rosiia-za-dobu-vtratyla-sotni-soldativ-u-genshtabi-zsu-oprylyudnyly-onovleni-cyfry"
   },
   {
     "title": "Окупанти вдарили вісьмома КАБами по Сумах: троє поранених, пошкоджено близько 15 будинків",
@@ -2833,7 +2843,7 @@
     "ts": 1787874120000,
     "id": 13197,
     "added_ts": 1787883318601,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2852,7 +2862,7 @@
     "ts": 1787872620000,
     "id": 13198,
     "added_ts": 1787883318601,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2871,7 +2881,7 @@
     "ts": 1787870820000,
     "id": 13199,
     "added_ts": 1787883318601,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2890,9 +2900,10 @@
     "ts": 1787868960000,
     "id": 13194,
     "added_ts": 1787883310858,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269066-u-volynskyj-muzej-peredaly-rechi-mynulogo-stolittia"
   },
   {
     "title": "Очільник ЦРУ під час візиту до Москви не погрожував РФ наслідками за продовження війни – NYT",
@@ -2909,7 +2920,7 @@
     "ts": 1787866440000,
     "id": 13200,
     "added_ts": 1787883318601,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2928,7 +2939,7 @@
     "ts": 1787863500000,
     "id": 13195,
     "added_ts": 1787883315515,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2947,7 +2958,7 @@
     "ts": 1787862600000,
     "id": 13196,
     "added_ts": 1787883315515,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2966,7 +2977,7 @@
     "ts": 1787861880000,
     "id": 13189,
     "added_ts": 1787862951264,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -2985,7 +2996,7 @@
     "ts": 1787860440000,
     "id": 13190,
     "added_ts": 1787862951264,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3004,7 +3015,7 @@
     "ts": 1787860080000,
     "id": 13184,
     "added_ts": 1787862947473,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3023,9 +3034,10 @@
     "ts": 1787859300000,
     "id": 13182,
     "added_ts": 1787862939786,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269059-u-lucku-zatrymaly-18-richnu-zakladchycyu-narkotykiv"
   },
   {
     "title": "На Волині в останню земну дорогу провели Героя Олексія Калюха (фото)",
@@ -3042,7 +3054,7 @@
     "ts": 1787859000000,
     "id": 13185,
     "added_ts": 1787862947473,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3061,9 +3073,10 @@
     "ts": 1787858640000,
     "id": 13191,
     "added_ts": 1787862951264,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.eurointegration.com.ua/news/2026/08/27/7244337/"
   },
   {
     "title": "Понад дві сотні боїв відбулось на фронті з початку доби – Генштаб",
@@ -3080,7 +3093,7 @@
     "ts": 1787858520000,
     "id": 13192,
     "added_ts": 1787862951264,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3099,7 +3112,7 @@
     "ts": 1787857860000,
     "id": 13186,
     "added_ts": 1787862947473,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3118,9 +3131,10 @@
     "ts": 1787856960000,
     "id": 13193,
     "added_ts": 1787862951264,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.eurointegration.com.ua/news/2026/08/27/7244341/"
   },
   {
     "title": "Фальсифікований алкоголь з Волині постачали по всій Україні. ФОТО",
@@ -3137,9 +3151,10 @@
     "ts": 1787856840000,
     "id": 13183,
     "added_ts": 1787862939786,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269061-falsyfikovanyj-alkogol-z-volyni-postachaly-po-vsij-ukraini-foto"
   },
   {
     "title": "Знищує ворожі дрони звичайним автоматом: як боєць волинської «сотки» вартує небо на фронті (фото)",
@@ -3156,7 +3171,7 @@
     "ts": 1787856300000,
     "id": 13187,
     "added_ts": 1787862947473,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3175,9 +3190,10 @@
     "ts": 1787854440000,
     "id": 13167,
     "added_ts": 1787854956207,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.eurointegration.com.ua/news/2026/08/27/7244336/"
   },
   {
     "title": "У Луцьку зупинили водія, який керував автівкою без прав",
@@ -3194,9 +3210,10 @@
     "ts": 1787854020000,
     "id": 13143,
     "added_ts": 1787854942122,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
-    "_fullAlgo": 2
+    "_fullAlgo": 2,
+    "finalUrl": "https://www.volynpost.com/news/269058-u-lucku-zupynyly-vodiia-iakyj-keruvav-avtivkoyu-bez-prav"
   },
   {
     "title": "У Луцьку в останню путь проведуть Героя Володимира Черниша",
@@ -3213,7 +3230,7 @@
     "ts": 1787853900000,
     "id": 13188,
     "added_ts": 1787862947473,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3232,7 +3249,7 @@
     "ts": 1787853360000,
     "id": 13168,
     "added_ts": 1787854956207,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3251,7 +3268,7 @@
     "ts": 1787852520000,
     "id": 13169,
     "added_ts": 1787854956207,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },
@@ -3270,7 +3287,7 @@
     "ts": 1787851500000,
     "id": 13153,
     "added_ts": 1787854950833,
-    "_richAlgo": 6,
+    "_richAlgo": 7,
     "_polish": 3,
     "_fullAlgo": 2
   },

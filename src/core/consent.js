@@ -35,6 +35,19 @@ export function initConsent() {
   if (seen === LEGAL_UPDATED) return;
 
   const updated = !!seen;   // ключ є, але від старої редакції → це ОНОВЛЕННЯ
+
+  // 🔴 ЗАТЕМНЕННЯ ПІД БАНЕРОМ (Вова 29.08). Діагноз його і він точний: банер
+  // «зливається зі всією інформацією, не зрозуміло, що саме оце надо».
+  // 🛑 АЛЕ ШАР ТУТ НАВМИСНО НЕ ЛОВИТЬ НАТИСКІВ — `notice-scrim--soft`. Наш власний
+  // текст каже «**Користуючись** CSTL LIFE, ви погоджуєтесь»: згода дається фактом
+  // користування, а не натиском кнопки. Заблокувати застосунок до натиску означало
+  // б суперечити цьому тексту — тобто перетворити повідомлення на браму, не
+  // змінивши жодного слова в ньому. Пряме рішення Вови: «залишаємо як зараз».
+  // ⚠️ У банера ВСТАНОВЛЕННЯ шар протилежний (ловить і закриває) — там пропозиція
+  // необовʼязкова, і тап повз неї є чесною відмовою.
+  const шар = document.createElement('div');
+  шар.className = 'notice-scrim notice-scrim--soft';
+
   const bar = document.createElement('div');
   bar.className = 'consent-bar';
   bar.innerHTML = `
@@ -51,10 +64,15 @@ export function initConsent() {
   bar.querySelector('.consent-accept').addEventListener('click', () => {
     try { localStorage.setItem(KEY, LEGAL_UPDATED); } catch (_) {}
     bar.classList.remove('consent-bar--show');
-    setTimeout(() => bar.remove(), 240);
+    шар.classList.remove('notice-scrim--in');
+    setTimeout(() => { bar.remove(); шар.remove(); }, 240);
     // Черга рушила далі: банер встановлення чекає саме цієї події.
     document.dispatchEvent(new CustomEvent('cstl-consent-accepted'));
   });
+  document.body.appendChild(шар);
   document.body.appendChild(bar);
-  requestAnimationFrame(() => bar.classList.add('consent-bar--show'));
+  requestAnimationFrame(() => {
+    шар.classList.add('notice-scrim--in');
+    bar.classList.add('consent-bar--show');
+  });
 }
