@@ -568,8 +568,19 @@ export function openArticle(id) {
   const modalMetaTags = document.getElementById('modalMetaTags');
   if (!modal || !modalContent) return;
 
-  const sourceHtml = article.sourceUrl
-    ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>`
+  // 🔴 29.08 — КУДИ ВЕДЕ «ЧИТАТИ ОРИГІНАЛ». `sourceUrl` — це адреса ЗАПИТУ з RSS,
+  // і в мережі «Правди» вона редиректить: стаття «Європейської правди» роздається
+  // через `pravda.com.ua/news/…`. Людину редирект доводить куди треба, але адреса,
+  // яку вона бачить у браузері, не збігається з підписом джерела під кнопкою.
+  // 🔑 `finalUrl` парсер кладе ЛИШЕ коли редирект справді був, тож запасний варіант
+  // тут не косметика: у переважної більшості статей поля просто немає.
+  // 🛑 Чому не переписали `sourceUrl` на кінцеву адресу: він же є ключем
+  // дедуплікації в парсері (`seen_urls`). Підмінити його означало б, що наступний
+  // прогін не впізнає вже збережену статтю і покладе її у стрічку вдруге.
+  const адресаОригіналу = article.finalUrl || article.sourceUrl;
+
+  const sourceHtml = адресаОригіналу
+    ? `<a class="article-byline-link" href="${escapeHtml(адресаОригіналу)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>`
     : `<span>${escapeHtml(article.source)}</span>`;
 
   // Беремо найдовший доступний текст, декодуємо HTML entities
@@ -616,13 +627,13 @@ export function openArticle(id) {
     ${showsShortNote(article, rawText) ? `
       <div class="article-short-note">
         Джерело надає лише анонс через RSS — повний текст на сайті видання.
-        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю →</a>
+        <a class="article-short-link" href="${escapeHtml(адресаОригіналу)}" target="_blank" rel="noopener">Читати повністю →</a>
       </div>
     ` : ''}
     <div class="article-source-row">
       <span class="article-source-author"><strong>Джерело:</strong><br>${escapeHtml(article.source)}</span>
-      ${article.sourceUrl
-        ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
+      ${адресаОригіналу
+        ? `<a class="article-source-link" href="${escapeHtml(адресаОригіналу)}" target="_blank" rel="noopener">Читати оригінал →</a>`
         : ''}
     </div>
   `;
