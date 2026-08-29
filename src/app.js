@@ -8,6 +8,7 @@ import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';
 import { initAuth, authReady, currentUserId, refreshOwnProfile } from './core/auth.js';
 import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
+import { passDesktopGate } from './core/desktop-gate.js';   // екран «поки що тільки телефон» на компʼютері (29.08)
 import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
@@ -517,6 +518,13 @@ async function init() {
   // ми просто не доходимо до решти init(), а на екрані лишається заслінка.
   // Знімається одним рядком — `DEV_LOCK = false` у core/dev-lock.js.
   if (!await passDevLock()) return;
+
+  // 🔴 ЕКРАН «ПОКИ ЩО ТІЛЬКИ ТЕЛЕФОН» (Вова 29.08) — стоїть ПІСЛЯ заслінки, це
+  // його пряме рішення. Заслінка питає «чи можна тобі сюди взагалі», цей екран —
+  // «чи вийде тобі тут користуватись». Порядок видно і в наслідку: код розробника
+  // з компʼютера прийме, а застосунок усе одно не відкриє, бо він не адаптований.
+  // Як і заслінка, він не «банер поверх», а зупинка: жодна вкладка не будується.
+  if (!passDesktopGate()) return;
 
   initAccountUI();   // Фаза Б: іконка 👤 в шапці + екрани входу/Кабінету
   initSidebar();     // Бічне меню (бургер зліва) + «Кабінет» лише для команди
