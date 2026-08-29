@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1788009637968,
+      "mission": "istoriya:hist:жорнище-село-над-осинищем",
+      "model": "claude-opus-5",
+      "input_tokens": 4157,
+      "output_tokens": 447,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.032,
+      "note": "Жорнище: село над Осинищем, яке колись звалося Силібер"
+    },
+    {
+      "ts": 1788007700560,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 555,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0126,
+      "note": ""
+    },
+    {
       "ts": 1787953891085,
       "mission": "istoriya:hist:носовичі-личани-котів-путилівка",
       "model": "claude-opus-5",
@@ -753,37 +779,11 @@
       "found": 1,
       "cost_usd": 0.008,
       "note": ""
-    },
-    {
-      "ts": 1784540568268,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 454,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0081,
-      "note": ""
-    },
-    {
-      "ts": 1784451422428,
-      "mission": "holiday:🌰 Горіховий Спас",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 470,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0082,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.2668,
-    "runs": 117,
+    "cost_usd": 8.3114,
+    "runs": 119,
     "web_searches": 109
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 3.1572,
-      "runs": 39,
+      "cost_usd": 3.2018,
+      "runs": 41,
       "web_searches": 46
     }
   },
-  "updated_ts": 1787953891085
+  "updated_ts": 1788009637968
 }
