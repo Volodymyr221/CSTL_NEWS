@@ -1421,6 +1421,16 @@ export function netErrorText(err) {
     return 'Вхід поштою тимчасово недоступний';
   if (acode === 'validation_failed' || /unable to validate email/i.test(msg))
     return 'Перевір адресу пошти';
+  // Провайдер (Facebook) ще не увімкнений у панелі Supabase. Кнопки для такого
+  // способу входу в застосунку немає — вона зʼявляється лише за вимикачем у
+  // `auth.js`. Але текст лишається на випадок, коли вимикач увімкнули раніше за
+  // налаштування: інакше людина побачила б «Не вдалося зберегти».
+  if (/provider is not enabled|unsupported provider/i.test(msg))
+    return 'Цей спосіб входу ще не увімкнено';
+  // Адреса вже належить іншому акаунту — при спробі додати пошту до входу.
+  // 🛑 Загальне «Це вже збережено» тут збрехало б: нічого не збереглося.
+  if (acode === 'email_exists' || /email address is already|already registered/i.test(msg))
+    return 'Ця пошта вже привʼязана до іншого акаунта';
   if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
   // Відповідь під коментар, який тим часом видалили. База відхиляє це тригером
   // `page_comments_antispam` (міграція `forbid_reply_under_deleted_parent`, 26.07) —

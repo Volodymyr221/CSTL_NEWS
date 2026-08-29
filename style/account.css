@@ -81,6 +81,29 @@
 .acc-mail:active { background: #ECEEF1; }
 .acc-mail svg { width: 19px; height: 19px; opacity: 0.72; }
 
+/* Facebook — той самий контур, що й Google: обидва «увійти чужим акаунтом».
+   Кнопка зʼявляється лише за вимикачем `FACEBOOK_ENABLED` в `auth.js`. */
+.acc-fb {
+  width: 100%;
+  margin-top: 9px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 13px;
+  font-size: 15px; font-weight: 700;
+  color: var(--ink, #2B2B2B);
+  background: #fff;
+  border: 1.5px solid rgba(0, 0, 0, 0.14);
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-fb:active { background: #F4F5F7; }
+.acc-f { font-weight: 800; color: #1877F2; font-size: 18px; }   /* фірмовий синій Meta */
+
+/* Значок способу входу в Кабінеті — той самий кружечок, що в решти рядків */
+.acc-lg-badge { font-weight: 800; font-size: 16px; }
+/* Привʼязка пошти: поля живуть ПІД рядком, у самому кабінеті (не модалкою) */
+.acc-lg-add { padding: 4px 2px 2px; display: flex; flex-direction: column; gap: 8px; }
+
 /* Помилка форми — під полем, а не тостом: людина дивиться в поле, яке щойно
    заповнила, і саме там має прочитати, що з ним не так. */
 .acc-err {

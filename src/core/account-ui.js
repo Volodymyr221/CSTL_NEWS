@@ -24,6 +24,7 @@ import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
   sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail,
+  signInWithFacebook, FACEBOOK_ENABLED, loginMethods, addEmailLogin, confirmEmailLogin,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { ICONS } from './icons.js';
@@ -125,11 +126,16 @@ function openJoin(reason) {
       <button class="acc-google" type="button" data-go="google">
         <span class="acc-g">G</span> Увійти з Google
       </button>
+      ${FACEBOOK_ENABLED ? `
+      <button class="acc-fb" type="button" data-go="facebook">
+        <span class="acc-f">f</span> Увійти з Facebook
+      </button>` : ''}
       <button class="acc-mail" type="button" data-go="mail">
         ${ICONS.mail} Увійти поштою
       </button>
       <button class="acc-skip" type="button" data-go="skip">Поки пропустити</button>`;
     body.querySelector('[data-go="google"]').addEventListener('click', () => signInWithGoogle());
+    body.querySelector('[data-go="facebook"]')?.addEventListener('click', () => signInWithFacebook());
     body.querySelector('[data-go="mail"]').addEventListener('click', stepEmail);
     body.querySelector('[data-go="skip"]').addEventListener('click', close);
   }
@@ -306,6 +312,107 @@ function birthDateFrom(d, m, y) {
     return { ok: false, error: 'Такої дати немає' };
   if (dt.getTime() > Date.now()) return { ok: false, error: 'Дата ще не настала' };
   return { ok: true, value: iso };
+}
+
+// ── Розділ Кабінету «Вхід в акаунт» (29.08) ──────────────────────
+//
+// 🔑 НАВІЩО ВІН ВЗАГАЛІ. Способів входу стало більше одного, і людина мусить
+// бачити, ЧИМ саме вона заходить у цей акаунт — інакше при зміні телефона вона
+// не знає, що натискати, і заводить другий акаунт замість того, щоб зайти в свій.
+// Це найпоширеніший спосіб «загубити» акаунт у застосунках із кількома входами.
+//
+// 🛑 Показуємо ФАКТ, а не обіцянку: `identities` веде сам Supabase.
+function loginSectionHtml() {
+  const lm = loginMethods();
+  const badge = (t) => `<span class="acc-cab-row-ic acc-lg-badge">${t}</span>`;
+  const row = (ic, name, desc) => `
+    <div class="acc-cab-row acc-cab-row--static">
+      ${ic}
+      <span class="acc-cab-row-body">
+        <span class="acc-cab-row-name">${name}</span>
+        <span class="acc-cab-row-desc">${desc}</span>
+      </span>
+    </div>`;
+  return `
+    <div class="acc-cab-sec acc-cab-sec--rows">
+      <h3>Вхід в акаунт</h3>
+      ${lm.google ? row(badge('G'), 'Google', 'Підключено') : ''}
+      ${lm.facebook ? row(badge('f'), 'Facebook', 'Підключено') : ''}
+      ${lm.email
+        ? row(`<span class="acc-cab-row-ic">${ICONS.mail}</span>`, 'Пошта',
+              `Код приходить на ${escapeHtml(lm.address)}`)
+        : `
+      <button class="acc-cab-row" type="button" id="cf-addmail">
+        <span class="acc-cab-row-ic">${ICONS.mail}</span>
+        <span class="acc-cab-row-body">
+          <span class="acc-cab-row-name">Додати пошту для входу</span>
+          <span class="acc-cab-row-desc">Щоб заходити ще й кодом на пошту — у цей самий акаунт</span>
+        </span>
+        <i>${ICONS.chevronRight}</i>
+      </button>
+      <div class="acc-lg-add" id="cf-addmail-box" hidden>
+        <input class="acc-input" id="cf-addmail-email" type="email" inputmode="email" autocomplete="email"
+               autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="адреса@пошта.com">
+        <input class="acc-input acc-code" id="cf-addmail-code" type="text" inputmode="numeric"
+               autocomplete="one-time-code" maxlength="6" placeholder="——————" hidden>
+        <p class="acc-err" id="cf-addmail-err" hidden></p>
+        <button class="acc-primary" type="button" id="cf-addmail-go">Надіслати код</button>
+      </div>`}
+    </div>`;
+}
+
+// Обробники розділу входу. Виділені окремо, бо розділ малюється не завжди:
+// у людини з поштою кнопки «додати» немає взагалі.
+//
+// 🛑 ПОТІК ЖИВЕ ПРЯМО В КАБІНЕТІ, А НЕ В МОДАЛЦІ ЗВЕРХУ. Кабінет — це власна
+// повноекранна панель, і вона сама ставить `modal-open` на `body`. Модалка
+// поверх нього зняла б цей клас при своєму закритті — тобто прокрутка сторінки
+// під кабінетом ожила б, а кабінет лишився б відкритим. Рівно той клас вади, на
+// якому проєкт уже обпікався з замком прокрутки (HOT_RULES №9).
+function attachLoginSection(cab) {
+  const open = cab.querySelector('#cf-addmail');
+  if (!open) return;                                  // пошта вже є — розділ статичний
+  const box   = cab.querySelector('#cf-addmail-box');
+  const email = cab.querySelector('#cf-addmail-email');
+  const code  = cab.querySelector('#cf-addmail-code');
+  const err   = cab.querySelector('#cf-addmail-err');
+  const go    = cab.querySelector('#cf-addmail-go');
+  let sent = '';                                      // адреса, на яку вже пішов код
+
+  const showErr = (t) => { err.textContent = t || ''; err.hidden = !t; };
+  open.addEventListener('click', () => {
+    box.hidden = !box.hidden;
+    if (!box.hidden) email.focus();
+  });
+  code.addEventListener('input', () => {
+    const only = code.value.replace(/\D/g, '').slice(0, 6);
+    if (only !== code.value) code.value = only;
+    showErr('');
+  });
+
+  go.addEventListener('click', async () => {
+    showErr('');
+    go.disabled = true;
+    try {
+      if (!sent) {
+        const r = await addEmailLogin(email.value);
+        if (!r.ok) { showErr(r.error); return; }
+        sent = normalizeEmail(email.value);
+        email.disabled = true;
+        code.hidden = false;
+        go.textContent = 'Підтвердити';
+        showToast('Код надіслано на пошту', 2600);
+        code.focus();
+        return;
+      }
+      const r = await confirmEmailLogin(sent, code.value);
+      if (!r.ok) { showErr(r.error); return; }
+      box.hidden = true;
+      showToast('Пошту привʼязано — тепер можна заходити й кодом', 3200);
+      // Розділ перемальовується наступним відкриттям кабінету: сесія вже несе
+      // нову адресу, тож рядок стане статичним сам, без окремої домальовки.
+    } finally { go.disabled = false; }
+  });
 }
 
 function openProfile() {
@@ -547,6 +654,8 @@ async function openAccount() {
           </div>`).join('')}
       </div>
 
+      ${loginSectionHtml()}
+
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Приватність і дані</h3>
         <div class="acc-cab-row acc-cab-row--tog">
@@ -773,6 +882,8 @@ async function openAccount() {
       showToast('Акаунт видалено', 4000);
     });
   });
+
+  attachLoginSection(cab);   // розділ «Вхід в акаунт» (привʼязка пошти)
 
   cab.querySelector('#cf-logout').addEventListener('click', async () => {
     await signOut();

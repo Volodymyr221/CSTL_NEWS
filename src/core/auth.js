@@ -196,6 +196,99 @@ export async function signInWithGoogle() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 📘 ВХІД ЧЕРЕЗ FACEBOOK (29.08.2026) — КОД ГОТОВИЙ, ВИМИКАЧ ВИМКНЕНИЙ
+//
+// 🗣️ Вова: «в нас люди, більшість населення, сидить в Facebook… якщо упростити
+// процес входу за допомогою Facebook, це б спростило для них процес реєстрації».
+//
+// 🔴 ЧОМУ ВИМИКАЧ, А НЕ ПРОСТО КНОПКА. Поки додаток у Meta не переведений у
+// режим Live, Facebook пускає ЛИШЕ адміністраторів і тестувальників того додатка.
+// Для жителя кнопка означала б помилку Facebook на весь екран — тобто кнопка,
+// яка не працює. 🛑 «Декоративного в нас нічого не має бути, у нас все має бути
+// робоче» (Вова, 24.08) — тому кнопки просто немає, поки немає дозволу.
+//
+// ➡️ ЩО ЗРОБИТИ, ЩОБ УВІМКНУТИ (по кроках — `docs/AUTH_EMAIL_SETUP.md`):
+//   1. створити додаток у Meta for Developers, додати продукт Facebook Login;
+//   2. вставити App ID і App Secret у Supabase → Authentication → Providers → Facebook;
+//   3. перевести додаток Meta в Live (там Meta й попросить верифікацію);
+//   4. поставити тут `true` — і кнопка зʼявиться.
+//
+// ⚠️ І ГОЛОВНЕ ПРО ДАНІ: Facebook ЧАСТО не віддає пошту (акаунт, заведений на
+// номер телефону, або людина зняла галочку). Саме тому анкета вміє питати адресу
+// окремо — див. `needEmail` в `account-ui.js`.
+export const FACEBOOK_ENABLED = false;
+
+export async function signInWithFacebook() {
+  const supa = supaForAuth();
+  if (!supa) return;
+  const redirectTo = window.location.origin + window.location.pathname;
+  // `public_profile,email` — це стандартний доступ, окремого дозволу Meta на нього
+  // не треба. Пошта тут — прохання, а не гарантія: див. попередження вище.
+  const { error } = await supa.auth.signInWithOAuth({
+    provider: 'facebook',
+    options: { redirectTo, scopes: 'public_profile,email' },
+  });
+  if (error) showToast(netErrorText(error), 4000, 'error');
+}
+
+// Якими способами людина може зайти в ЦЕЙ акаунт. Читається з живої сесії:
+// `identities` веде сам Supabase, тож це факт, а не наше припущення.
+// 🔑 Пошта рахується від `user.email`, а не від наявності identity: саме вона
+// приймає код при вході, і саме її людина впізнає.
+export function loginMethods() {
+  const ids = (_user && Array.isArray(_user.identities)) ? _user.identities.map(i => i.provider) : [];
+  return {
+    google:   ids.includes('google'),
+    facebook: ids.includes('facebook'),
+    email:    !!(_user && _user.email),
+    address:  (_user && _user.email) || '',
+  };
+}
+
+// ── Додати пошту як спосіб входу (для акаунта, який зайшов без неї) ──────────
+//
+// 🗣️ Вова: «якщо користувач в особистому кабінеті вказав свою пошту і хоче зайти
+// через пошту, воно також буде заходити на той самий акаунт. Суть однакова: це
+// одна і та сама людина, один і той самий акаунт».
+//
+// ✅ Мета правильна — і саме так це й робиться. 🛑 Але звʼязує тільки
+// ПІДТВЕРДЖЕНА адреса, і тому крок із кодом тут обовʼязковий. Інакше я вписую в
+// СВОЄМУ профілі чужу адресу — і забираю чужий акаунт разом з оголошеннями,
+// чатами й правами. Один код один раз закриває це повністю.
+//
+// 📐 Заміряно на живій базі 29.08: два акаунти вже мають ДВІ особистості
+// (`email` + `google`) при ОДНІЙ адресі — тобто Supabase зводить їх в один
+// акаунт сам, щойно адреса підтверджена. Ми лише даємо цій адресі зʼявитись.
+export async function addEmailLogin(email) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const addr = normalizeEmail(email);
+  if (!isValidEmail(addr)) return { ok: false, error: 'Перевір адресу пошти' };
+  const { error } = await supa.auth.updateUser({ email: addr });
+  if (error) {
+    console.warn('[auth] addEmailLogin:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
+}
+
+// ⚠️ Тип тут `email_change`, а НЕ `email`: Supabase шле цей код іншим шаблоном і
+// звіряє його іншим типом. З типом `email` код не підійшов би НІКОЛИ — і
+// виглядало б це як «код невірний», хоча код правильний.
+export async function confirmEmailLogin(email, code) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const token = String(code || '').replace(/\D/g, '');
+  if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
+  const { error } = await supa.auth.verifyOtp({ email: normalizeEmail(email), token, type: 'email_change' });
+  if (error) {
+    console.warn('[auth] confirmEmailLogin:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ✉️ ВХІД ПОШТОЮ ОДНОРАЗОВИМ КОДОМ (29.08.2026)
 //
 // 🗣️ ЗАМОВЛЕННЯ ВОВИ: «якщо в людини немає Gmail, вона є якась інша пошта…
