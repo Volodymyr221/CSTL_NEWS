@@ -28,6 +28,34 @@ from editor.sources.plan import mark_done
 SUPA_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase.co").rstrip("/")
 
 
+# ── СКІЛЬКИ ЧЕРНЕТОК УЖЕ ЧЕКАЄ ────────────────────────────────────────────
+# 🔴 ЗАВЕДЕНО 29.08 на замовлення Вови: «щоб для кожної спільноти, в якій працює
+# агент, було 2 пости — один публікується, другий на підхваті якщо що».
+#
+# 🔑 Це не лише про запас, це ще й про гроші. Доти агент писав щоразу, коли в
+# черзі була тема, — і чернетки накопичувались, поки Вова не дійде до них руками.
+# Тепер шухляда має стелю: повна — прогін НЕ звертається до моделі взагалі.
+# ⚠️ Рахуємо ЛИШЕ невидалені чернетки (`status=draft`, `deleted_at is null`):
+# опублікований пост шухляду не займає, видалений — тим паче.
+# 🛑 Без ключа повертаємо None, а не нуль. Нуль означав би «шухляда порожня, пиши»,
+# тобто мовчазний обхід стелі саме тоді, коли ми найменше про це знаємо.
+def скільки_чернеток(page_id) -> int:
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not key or not page_id:
+        return None
+    url = (f"{SUPA_URL}/rest/v1/page_posts?select=id&page_id=eq.{page_id}"
+           "&status=eq.draft&deleted_at=is.null")
+    req = urllib.request.Request(url, headers={
+        "apikey": key, "authorization": f"Bearer {key}", "accept": "application/json",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return len(json.loads(r.read().decode("utf-8") or "[]"))
+    except Exception as e:
+        print(f"  ⚠ не вдалося порахувати чернетки сторінки {page_id}: {e}")
+        return None
+
+
 @register("sink", "page_draft")
 class PageDraftSink(Sink):
     def save(self, draft):
