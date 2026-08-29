@@ -14,6 +14,21 @@ const KEY = 'cstl-legal-consent-v1';
 // Порталом, їй треба сказати не «ось правила», а «правила змінились»).
 // ⚠️ Наслідок, який треба памʼятати: підняв `LEGAL_UPDATED` — банер побачать УСІ.
 // Тому дату міняємо разом зі змістовною правкою, а не через одруківку.
+// 🔴 29.08 — ДВА БАНЕРИ НЕ ПОКАЗУЮТЬСЯ ОДНОЧАСНО.
+// Скарга Вови зі скріна в браузері: внизу екрана стояли обидва — згода і
+// «Встанови на екран». 📐 Заміряно по CSS: `.consent-bar` сидить на 10px від низу,
+// `.pwa-cta` на 76px, тобто вони не перекриваються рівно доти, доки банер
+// встановлення однорядковий. Розгорнув інструкцію — і він наїжджає на згоду.
+// 🔑 Але справжня вада не в пікселях, а у ВИБОРІ: людина бачить дві дії одразу і
+// не знає, котра перша. Тому лікуємо чергою, а не відступами.
+// ➡️ `consentPending()` каже банеру встановлення, чи буде показана згода; подія
+// `cstl-consent-accepted` каже, що черга дійшла до нього.
+export function consentPending() {
+  try { return localStorage.getItem(KEY) !== LEGAL_UPDATED; } catch (_) { return false; }
+  // ⚠️ Кидок = сховище недоступне, і тоді `initConsent` теж виходить ні з чим:
+  // банера згоди не буде, отже й чекати на нього не треба.
+}
+
 export function initConsent() {
   let seen = null;
   try { seen = localStorage.getItem(KEY); } catch (_) { return; }
@@ -37,6 +52,8 @@ export function initConsent() {
     try { localStorage.setItem(KEY, LEGAL_UPDATED); } catch (_) {}
     bar.classList.remove('consent-bar--show');
     setTimeout(() => bar.remove(), 240);
+    // Черга рушила далі: банер встановлення чекає саме цієї події.
+    document.dispatchEvent(new CustomEvent('cstl-consent-accepted'));
   });
   document.body.appendChild(bar);
   requestAnimationFrame(() => bar.classList.add('consent-bar--show'));
