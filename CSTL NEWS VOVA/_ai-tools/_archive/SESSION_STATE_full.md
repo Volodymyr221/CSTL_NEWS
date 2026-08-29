@@ -1465,7 +1465,7 @@ RLS на `posts` дозволяє UPDATE/DELETE лише адмінам. Пря�
 
 > Контекст: над проектом працюють Вова **і Рома**, кожен зі свого Claude. Треба автоматично розрізняти хто на зв'язку, працювати на іменованій гілці, бачити в історії хто що робив, і попереджати про конфлікти рішень.
 
-- **Автовизначення людини** за поштою сесії (`userEmail`): `roma.haranin.ru1@gmail.com` → Рома; інша → Вова (метод виключення, без запитань).
+- **Автовизначення людини** за поштою сесії (`userEmail`): `«пошта Роми»` → Рома; інша → Вова (метод виключення, без запитань).
 - **Підпис комітів:** `git config user.name/email` під людину на старті сесії → `git log` показує автора (раніше всі коміти були безликий `Claude <noreply@anthropic.com>`).
 - **Іменовані гілки:** `roma/<тема>` / `vova/<тема>` → `/finish` (PR → squash) → `main`.
 - **Перевірка конфліктів** на старті: `git fetch origin` + `git log --all` + кінець `SESSION_STATE`/`BACKLOG` → попередити якщо рішення власників суперечать.
@@ -1937,7 +1937,7 @@ RLS на `posts` дозволяє UPDATE/DELETE лише адмінам. Пря�
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
 | **Робоча гілка (остання сесія Вови)** | `claude/startup-uem-9tfuxg` (синхронізована з `main`) |
 | **Production-гілка** | `main` — auto-merge `claude/**`/`roma/**`/`vova/**` → main → auto-deploy |
-| **Власники** | Вова Шевчук (GitHub: Volodymyr221) + Рома (`roma.haranin.ru1@gmail.com`) |
+| **Власники** | Вова Шевчук (GitHub: Volodymyr221) + Рома (`«пошта Роми»`) |
 | **CACHE_NAME у `sw.js`** | `cstl-20260613-2010` |
 | **Статус вкладки «Автобуси»** | 🟢 V1.0 + порожнє hero-табло (Рома 13.06). Зворотні рейси відкладено |
 | **Push-сповіщення (Level B)** | 🟢 ПРАЦЮЄ 12.06 |
@@ -2562,7 +2562,7 @@ Supabase production-live з реальною модерацією, реалта�
   - `supabase_realtime.sql` — `ALTER PUBLICATION supabase_realtime ADD TABLE`
   - `supabase_set_admin_password.sql` — bcrypt пароль через SQL без email
 - `scripts/migrate_to_supabase.py` — одноразова міграція JSON → posts/announcements
-- Whitelist 2 адмінів у `admins`: haranin.ukraine + volodymyrshevchuk19
+- Whitelist 2 адмінів у `admins`: пошта Роми + пошта Вови
 
 **Адмінка `/admin.html`** (окрема сторінка, Supabase SDK з CDN):
 - Email+password auth (signInWithPassword) — спочатку був magic-link
