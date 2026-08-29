@@ -1401,6 +1401,36 @@ export function netErrorText(err) {
   if (isTransientError(err))              return 'Слабкий зв\'язок — спробуй ще раз';
   if (/permission|denied|policy|row-level|RLS/i.test(msg)) return 'Недостатньо прав для цієї дії';
   if (/duplicate|unique/i.test(msg))      return 'Це вже збережено';
+  // ── ✉️ ВХІД ПОШТОЮ КОДОМ (29.08) ────────────────────────────────────────────
+  // 🔴 ЦІ ГІЛКИ СТОЯТЬ ПЕРЕД `JWT|token|session` СВІДОМО, І ЦЕ НЕ ПРИДИРКА ДО
+  // ПОРЯДКУ. Supabase на невірний код відповідає дослівно «Token has expired or is
+  // invalid» — тобто зі словом `token`. Нижня гілка зловила б це першою і сказала
+  // людині «Сеанс застарів — увійди знову», тобто порадила б робити рівно те, що
+  // вона й робить у цю секунду. Той самий клас, що з `42501` на вставці: текст
+  // помилки веде розслідування (і людину) не туди.
+  // 🔑 Спираємось насамперед на КОД помилки, а не на її текст: текст Supabase
+  // перекладає й переписує між версіями, код лишається.
+  const acode = String(err?.code || '');
+  if (acode === 'otp_expired' || /token has expired or is invalid/i.test(msg))
+    return 'Код невірний або застарів — надішли новий';
+  if (/rate_limit/.test(acode) || /only request this after|email rate limit/i.test(msg))
+    return 'Код уже надіслано — зачекай хвилину';
+  if (/error sending|smtp/i.test(msg))
+    return 'Не вдалося надіслати лист — спробуй ще раз';
+  if (acode === 'signup_disabled' || /signups not allowed/i.test(msg))
+    return 'Вхід поштою тимчасово недоступний';
+  if (acode === 'validation_failed' || /unable to validate email/i.test(msg))
+    return 'Перевір адресу пошти';
+  // Провайдер (Facebook) ще не увімкнений у панелі Supabase. Кнопки для такого
+  // способу входу в застосунку немає — вона зʼявляється лише за вимикачем у
+  // `auth.js`. Але текст лишається на випадок, коли вимикач увімкнули раніше за
+  // налаштування: інакше людина побачила б «Не вдалося зберегти».
+  if (/provider is not enabled|unsupported provider/i.test(msg))
+    return 'Цей спосіб входу ще не увімкнено';
+  // Адреса вже належить іншому акаунту — при спробі додати пошту до входу.
+  // 🛑 Загальне «Це вже збережено» тут збрехало б: нічого не збереглося.
+  if (acode === 'email_exists' || /email address is already|already registered/i.test(msg))
+    return 'Ця пошта вже привʼязана до іншого акаунта';
   if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
   // Відповідь під коментар, який тим часом видалили. База відхиляє це тригером
   // `page_comments_antispam` (міграція `forbid_reply_under_deleted_parent`, 26.07) —

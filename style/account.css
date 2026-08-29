@@ -62,6 +62,64 @@
   font-size: 17px;
 }
 
+/* Друга кнопка входу — поштою (29.08). Навмисно ТИХІША за Google: та веде
+   швидше (один тап, без листа), тож і виглядати мусить головною. Однакова вага
+   двох кнопок змусила б людину вибирати там, де вибір їй нічого не дає. */
+.acc-mail {
+  width: 100%;
+  margin-top: 9px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px;
+  font-size: 15px; font-weight: 700;
+  color: var(--ink, #2B2B2B);
+  background: #F4F5F7;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-mail:active { background: #ECEEF1; }
+.acc-mail svg { width: 19px; height: 19px; opacity: 0.72; }
+
+/* Facebook — той самий контур, що й Google: обидва «увійти чужим акаунтом».
+   Кнопка зʼявляється лише за вимикачем `FACEBOOK_ENABLED` в `auth.js`. */
+.acc-fb {
+  width: 100%;
+  margin-top: 9px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 13px;
+  font-size: 15px; font-weight: 700;
+  color: var(--ink, #2B2B2B);
+  background: #fff;
+  border: 1.5px solid rgba(0, 0, 0, 0.14);
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-fb:active { background: #F4F5F7; }
+.acc-f { font-weight: 800; color: #1877F2; font-size: 18px; }   /* фірмовий синій Meta */
+
+/* Значок способу входу в Кабінеті — той самий кружечок, що в решти рядків */
+.acc-lg-badge { font-weight: 800; font-size: 16px; }
+/* Привʼязка пошти: поля живуть ПІД рядком, у самому кабінеті (не модалкою) */
+.acc-lg-add { padding: 4px 2px 2px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Помилка форми — під полем, а не тостом: людина дивиться в поле, яке щойно
+   заповнила, і саме там має прочитати, що з ним не так. */
+.acc-err {
+  margin: 8px 2px 0;
+  font-size: 13px; line-height: 1.35;
+  color: var(--red, #722F37);
+  text-align: left;
+}
+
+/* Підпис «навіщо» біля назви поля — тихіший за саму назву, бо це пояснення,
+   а не друга вимога. Раніше дата питалась без жодного пояснення. */
+.acc-opt { font-weight: 600; text-transform: none; opacity: 0.85; }
+
+/* Кнопка, поки триває запит або відлік повторного надсилання */
+.acc-primary:disabled, .acc-skip:disabled, .acc-mail:disabled { opacity: 0.55; cursor: default; }
+
 /* Поля профілю */
 .acc-label {
   display: block;
@@ -82,6 +140,43 @@
   appearance: none;
 }
 .acc-input:focus { outline: none; border-color: var(--red, #722F37); }
+
+/* Поле коду — цифри великі й розріджені, щоб шість символів читались як КОД,
+   а не як звичайний текст, і щоб описку було видно до натискання кнопки.
+   🔴 СТОЇТЬ САМЕ ТУТ, ПІСЛЯ `.acc-input`, І ЦЕ НЕ ВИПАДКОВІСТЬ ПОРЯДКУ. Поле
+   несе обидва класи (`acc-input acc-code`), вага в них однакова — тож виграє
+   той, що НИЖЧЕ у файлі. Вище за `.acc-input` цей блок мовчки втратив би і
+   розмір шрифту, і відступи: у браузері виглядало б як «стилі не застосувались». */
+.acc-code {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  padding: 14px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.acc-code::placeholder { letter-spacing: 6px; opacity: 0.35; font-weight: 600; }
+
+/* Дата народження — три списки замість календаря (29.08).
+   🗣️ Вова: «щоб цю карусель вибору дати було легко вибрати, а не гортати по
+   місяцях до 1994 року». `input type="date"` на iPhone відкривається на
+   ПОТОЧНОМУ місяці — до року народження це десятки гортань. Тут три тапи.
+   📐 Місяць ширший за день і рік: назви місяців довгі («листопада»), і при
+   рівних колонках вони обрізались би трикрапкою. */
+.acc-dob {
+  display: grid;
+  grid-template-columns: 0.85fr 1.5fr 1fr;
+  gap: 7px;
+}
+.acc-select {
+  /* Стрілка своя: `appearance: none` знімає системну, і без заміни список
+     виглядав би як звичайне поле — тобто не показував би, що його можна відкрити. */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23888' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 30px;
+  text-overflow: ellipsis;
+}
 
 /* Головна дія (Зберегти) */
 .acc-primary {

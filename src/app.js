@@ -13,6 +13,7 @@ import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
 import { initConsent } from './core/consent.js';
 import { initInstallBanner } from './core/install-banner.js';
+import { initJoinInvite } from './core/join-invite.js';   // запрошення увійти — гостю, який уже роздивився застосунок (29.08)
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
@@ -522,6 +523,7 @@ async function init() {
   initSidebar();     // Бічне меню (бургер зліва) + «Кабінет» лише для команди
   initConsent();     // Банер згоди з Політикою/Правилами (перший вхід)
   initInstallBanner();   // Банер «Відкрий/встанови у додатку» — лише в браузері (не в PWA)
+  initJoinInvite();      // Гостю після 3 переходів між розділами — пропозиція увійти (один раз)
   initMessages();    // Групи (V2 Чати): доведення відкладеного вступу за посиланням
   initBoardChat();   // Приватний чат Дошки: бейдж непрочитаних + push-пристрій + realtime
   initModalSwipe();
