@@ -14,7 +14,7 @@
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));  /* над таб-баром */
+  bottom: var(--notice-bottom);   /* полиця над таб-баром — див. tokens.css */
   z-index: 3000;
   display: grid;
   grid-template-columns: auto 1fr 44px;
@@ -68,7 +68,14 @@
 }
 .pwa-cta-go:active { background: var(--brand-grad-press); }
 
-/* ✕ лишається візуально дрібним, а ловить 44×44 — рівно те, про що просив Вова. */
+/* 🔴 29.08, ДРУГА РЕДАКЦІЯ ХРЕСТИКА. Перша дала область 44×44, але сам знак лишила
+   дрібним і світло-сірим — і Вова з живого екрана: «кнопку закриття Х погано видно,
+   бо вона маленька». 🔑 Це були ДВІ різні вади, а я полагодив одну: 44×44 лікує
+   ПОПАДАННЯ пальцем, а видимість — це розмір і контраст самого знака. Людина, яка
+   не бачить кнопки, до неї й не тягнеться, скільки б та не ловила.
+   ➡️ Знак більший і темніший, під ним видимий кружок. Кружок малює `radial-gradient`,
+   а не окремий елемент: так область натиску лишається всі 44×44, а видима мішень
+   34px — тобто нічого не звузилось заради вигляду. */
 .pwa-cta-x {
   grid-column: 3;
   grid-row: 1;
@@ -78,13 +85,18 @@
   display: grid;
   place-items: center;
   border: none;
-  background: transparent;
-  color: #9a8a86;
-  font-size: 15px;
+  background: radial-gradient(circle at center,
+              rgba(114, 47, 55, 0.10) 0 17px, transparent 17px);
+  color: #6B4A50;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
-.pwa-cta-x:active { color: #5a4a46; }
+.pwa-cta-x:active {
+  background: radial-gradient(circle at center,
+              rgba(114, 47, 55, 0.20) 0 17px, transparent 17px);
+  color: #3A1F24;
+}
 
 /* ── ПОКРОКОВА ІНСТРУКЦІЯ ─────────────────────────────────────────────────── */
 .pwa-guide {
@@ -114,6 +126,7 @@
 }
 .pwa-guide--in .pwa-guide-sheet { transform: translateY(0); opacity: 1; }
 
+/* Та сама мова, що й у банері: видимий кружок 34px усередині цілі 44×44. */
 .pwa-guide-x {
   position: absolute;
   top: 6px;
@@ -123,10 +136,16 @@
   display: grid;
   place-items: center;
   border: none;
-  background: transparent;
-  color: #9a8a86;
-  font-size: 16px;
+  background: radial-gradient(circle at center,
+              rgba(114, 47, 55, 0.10) 0 17px, transparent 17px);
+  color: #6B4A50;
+  font-size: 18px;
   cursor: pointer;
+}
+.pwa-guide-x:active {
+  background: radial-gradient(circle at center,
+              rgba(114, 47, 55, 0.20) 0 17px, transparent 17px);
+  color: #3A1F24;
 }
 
 .pwa-guide-head h2 {
