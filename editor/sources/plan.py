@@ -18,6 +18,10 @@ from datetime import date as _date
 from pathlib import Path
 
 from editor.core import geo as гео
+# 🛑 Той самий рубіж правдивості, що і в збирача історії — ОДИН модуль на обох.
+# Копія правила тут розійшлася б із оригіналом; у цьому проєкті так уже було зі
+# списками антиспаму, і симптом був найгіршого виду — «половина працює».
+from editor.core.facts import факти_без_недатованих
 from editor.core.registry import register
 from editor.sources.base import Source
 
@@ -219,7 +223,7 @@ def історії_олики(зроблено: set) -> list:
         if pid in зроблено:
             continue
         факти = [(іст.get("excerpt") or "").strip()] + _речення(іст.get("content", ""), 5)
-        факти = [ф for ф in факти if ф]
+        факти = факти_без_недатованих(факти, лог=print)
         if not факти:
             continue
         теми.append({
@@ -320,7 +324,7 @@ def новини_громади(зроблено: set, тепер_мс: int = 0)
         if pid in зроблено:
             continue
         факти = [якщо_коротко] + _речення(_без_розмітки(a.get("content", "")), 5)
-        факти = [ф for ф in факти if ф]
+        факти = факти_без_недатованих(факти, лог=print)
         if not факти:
             continue
         теми.append({
@@ -363,7 +367,7 @@ def фото_олики(зроблено: set) -> list:
     for знімок in записи:
         місце = (знімок.get("place") or "").strip()
         url = (знімок.get("url") or "").strip()
-        факти = [str(ф).strip() for ф in (знімок.get("facts") or []) if str(ф).strip()]
+        факти = факти_без_недатованих(знімок.get("facts") or [], лог=print)
         if not url or not місце:
             continue
         pid = знімок.get("id") or _мітка(f"{місце} {знімок.get('date', '')}", "photo")
