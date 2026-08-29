@@ -188,6 +188,21 @@
        ліворуч робить вкладеність видимою без рамок і без другої поверхні:
        відповідь належить питанню, а не лежить поруч із ним. */
     .card--q .q-text { font-size: 16px; font-weight: 600; color: #1d1f23; line-height: 1.4; margin-bottom: 6px; }
+    /* 🔴 29.08 — КАРТКА ПИТАННЯ ЗГОРНУТА, ВІДПОВІДІ ВІДКРИВАЮТЬСЯ ПО ТАПУ.
+       Скарга Вови: «воно не структуроване… ця сторінка розтягується до
+       безкінечності». 📐 Заміряно на його ж знімку: три питання зайняли ЕКРАН
+       І ЩЕ ТРОХИ, бо кожне одразу малювало всі свої відповіді з кнопками.
+       🔑 Модерувати — це передусім ПРОГЛЯДАТИ список, а не читати все підряд:
+       згорнутий вигляд дає побачити десять питань замість двох. */
+    .q-sum { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .q-sum .q-text { flex: 1; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; }
+    .q-chev { flex: 0 0 auto; color: #8A8579; font-size: 13px; transition: transform .18s ease; }
+    .card--q[data-open="1"] .q-chev { transform: rotate(90deg); }
+    /* Згорнуте ховаємо через `hidden`, а не `display:none` в стилі: так стан
+       читається з розмітки і його видно в DevTools без гадання. */
+    .card--q .q-body[hidden] { display: none; }
     .answers { margin: 10px 0 4px; padding-left: 12px; border-left: 2px solid #E7E4DE; }
     .answer { padding: 8px 0; border-top: 1px solid #F0EEEA; }
     .answer:first-child { border-top: 0; }
@@ -2771,8 +2786,21 @@ async function rejectPost(id, { запит = 'Чому відхиляємо? Ц�
   await loadAll(); renderApp();
 }
 
+// 🔴 29.08 — ПОПЕРЕДЖЕННЯ КАЖЕ ПРАВДУ ПРО НАСЛІДКИ.
+// Було просто «Видалити пост назавжди?». Але в базі на `posts` висить КАСКАД:
+// разом із питанням зникають усі відповіді, реакції, збережене й нитки чату
+// (`comments`, `reactions`, `saved_posts`, `threads` — усі `ON DELETE CASCADE`).
+// 🔑 Заміряно на живому прогоні: видалення питання з однією відповіддю знищує
+// і її. Людина має знати ЦЕ до натискання, а не дізнатись після.
+// ⚠️ Слово «пост» теж прибрано: у вкладці «Питання» воно збивало з пантелику.
 async function deletePost(id) {
-  if (!confirm('Видалити пост назавжди? Цю дію не скасувати.')) return;
+  const це_питання = ЦЕ_ПИТАННЯ(allPosts.find(p => p.id === id) || {});
+  const відп = це_питання ? відповідіДо(id).length : 0;
+  const що = це_питання ? 'питання' : 'оголошення';
+  const разом = відп
+    ? `\n\nРазом із ним зникне ${відп} ${відмінок(відп, 'відповідь', 'відповіді', 'відповідей')}.`
+    : '';
+  if (!confirm(`Видалити ${що} назавжди?${разом}\n\nЦю дію не скасувати.`)) return;
   const { error } = await supa.from('posts').delete().eq('id', id);
   if (error) return showToast('Помилка: ' + error.message, 4000);
   showToast('Видалено');
@@ -2878,14 +2906,19 @@ function вішатиДіїОголошення(el) {
 //
 // ⚠️ Мітка «розмова» пішла разом із розділами: вкладку перейменували на «Питання»
 // 11.08, а адмінка про це не знала ще девʼять днів.
-function renderQuestions(el) {
-  const список = питання();
+// ⚠️ `список` і `відповіді` приймаються ЗЗОВНІ (за замовчуванням — живі дані).
+// Це не абстракція заради абстракції: без неї стенд не може подати свої дані,
+// бо `allPosts` — це `let` у класичному скрипті, тобто ззовні недосяжний. А
+// перевіряти згортання картки на живій базі означало б перевіряти те, що
+// сьогодні є питання, а завтра їх нема.
+function renderQuestions(el, список = питання(), відповіді = відповідіДо) {
+  const відповідіДо = відповіді;
   if (!список.length) return el.innerHTML = '<div class="empty">Питань ще немає.</div>';
 
   el.innerHTML = список.map(q => {
     const відп = відповідіДо(q.id);
     return `
-      <article class="card card--q">
+      <article class="card card--q" data-q="${q.id}" data-open="0">
         <div class="card-meta">
           <span class="badge badge--type">Питання</span>
           ${відп.length
@@ -2893,26 +2926,51 @@ function renderQuestions(el) {
             : '<span class="badge badge--warn">без відповіді</span>'}
           <span class="card-when">${escapeHtml(formatDate(q.created_at))}</span>
         </div>
-        <div class="q-text">${escapeHtml(q.text || q.title || '')}</div>
+        <div class="q-sum" data-q-open="${q.id}" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="q-body-${q.id}">
+          <div class="q-text">${escapeHtml(q.text || q.title || '')}</div>
+          <span class="q-chev" aria-hidden="true">▶</span>
+        </div>
         <p class="card-author">— ${escapeHtml(q.author || 'анонімно')}</p>
 
-        ${відп.length ? `<div class="answers">
-          ${відп.map(c => `
-            <div class="answer">
-              <div class="answer-head">
-                <b>${escapeHtml(c.author || 'анонімно')}</b>
-                <span class="card-when">${escapeHtml(formatDate(c.created_at))}</span>
-              </div>
-              <div class="answer-text">${escapeHtml(c.text || '')}</div>
-              <button class="btn btn--delete btn--sm" data-del-answer="${c.id}">Видалити відповідь</button>
-            </div>`).join('')}
-        </div>` : ''}
+        <div class="q-body" id="q-body-${q.id}" hidden>
+          ${відп.length ? `<div class="answers">
+            ${відп.map(c => `
+              <div class="answer">
+                <div class="answer-head">
+                  <b>${escapeHtml(c.author || 'анонімно')}</b>
+                  <span class="card-when">${escapeHtml(formatDate(c.created_at))}</span>
+                </div>
+                <div class="answer-text">${escapeHtml(c.text || '')}</div>
+                <button class="btn btn--delete btn--sm" data-del-answer="${c.id}">Видалити відповідь</button>
+              </div>`).join('')}
+          </div>` : '<div class="empty" style="padding:6px 0">Відповідей ще немає.</div>'}
 
-        <div class="card-actions">
-          <button class="btn btn--delete" data-delete-post="${q.id}">Видалити питання</button>
+          <div class="card-actions">
+            <button class="btn btn--delete" data-delete-post="${q.id}">Видалити питання</button>
+          </div>
         </div>
       </article>`;
   }).join('');
+
+  // 🔑 Кнопка видалення живе ВСЕРЕДИНІ відкритої картки — навмисно. Питання
+  // видаляється разом з усіма відповідями (каскад у базі), тож рішення має
+  // ухвалюватись тоді, коли ці відповіді видно, а не наосліп зі згорнутого списку.
+  const перемкнути = (id) => {
+    const карта = el.querySelector(`.card--q[data-q="${id}"]`);
+    if (!карта) return;
+    const відкрито = карта.dataset.open === '1';
+    карта.dataset.open = відкрито ? '0' : '1';
+    карта.querySelector('.q-body').hidden = відкрито;
+    карта.querySelector('.q-sum').setAttribute('aria-expanded', String(!відкрито));
+  };
+  el.querySelectorAll('[data-q-open]').forEach(b => {
+    b.addEventListener('click', () => перемкнути(Number(b.dataset.qOpen)));
+    // Клавіатура: картка — це кнопка, тож має відкриватись Enter/пробілом.
+    b.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); перемкнути(Number(b.dataset.qOpen)); }
+    });
+  });
 
   el.querySelectorAll('[data-delete-post]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePost))));
   el.querySelectorAll('[data-del-answer]').forEach(b => b.addEventListener('click', async () => {
