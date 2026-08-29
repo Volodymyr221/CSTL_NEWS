@@ -50,6 +50,30 @@ const видно = (page, с) => page.evaluate(s => !!document.querySelector(s),
   // 🔴 ГОЛОВНА ПЕРЕВІРКА ЦЬОГО СТЕНДА.
   ok('🔴 банер встановлення НЕ показується, поки висить згода', !банерЄ, String(банерЄ));
 
+  // ── ЗАТЕМНЕННЯ ПІД ЗГОДОЮ: Є, АЛЕ НЕ БЛОКУЄ ───────────────────────────────
+  // 🔴 Найтонше місце всієї роботи. Шар МУСИТЬ бути (інакше банер зливається зі
+  // стрічкою — діагноз Вови), і МУСИТЬ пропускати натиски: текст банера каже
+  // «КОРИСТУЮЧИСЬ CSTL LIFE, ви погоджуєтесь», тобто згода дається фактом
+  // користування. Шар, що ловить натиски, зробив би з повідомлення браму, не
+  // змінивши в ньому жодного слова. Рішення Вови: «залишаємо як зараз».
+  const шарЗгоди = await page.evaluate(() => {
+    const ш = document.querySelector('.notice-scrim--soft');
+    if (!ш) return { нема: true };
+    const s = getComputedStyle(ш);
+    // Що САМЕ під пальцем у центрі екрана — головна перевірка: якби шар ловив
+    // натиски, тут повернувся б він сам.
+    const під = document.elementFromPoint(195, 300);
+    return { тло: s.backgroundColor, вказівник: s.pointerEvents,
+             підПальцем: під ? под_клас(під) : null };
+    function под_клас(e) { return e.className && e.className.baseVal !== undefined
+      ? e.className.baseVal : String(e.className || e.tagName); }
+  });
+  ok('🔴 під згодою є затемнення', !шарЗгоди.нема && /rgba?\(/.test(шарЗгоди.тло || ''),
+     JSON.stringify(шарЗгоди));
+  ok('🛑 але воно НЕ блокує застосунок — текст каже «користуючись, ви погоджуєтесь»',
+     шарЗгоди.вказівник === 'none' && !/notice-scrim/.test(шарЗгоди.підПальцем || ''),
+     JSON.stringify(шарЗгоди));
+
   // Банер згоди — теж технічне сповіщення, і правило для нього те саме.
   const згодаНадБаром = await page.evaluate(() => {
     const б = document.querySelector('.consent-bar');
@@ -64,7 +88,25 @@ const видно = (page, с) => page.evaluate(s => !!document.querySelector(s),
   await page.click('.consent-accept');
   await page.waitForTimeout(1200);
   ok('після «Погоджуюсь» згода зникла', !(await видно(page, '.consent-bar')));
-  ok('🔴 і тільки тепер зʼявився банер встановлення', await видно(page, '.pwa-cta'));
+  ok('🛑 затемнення згоди зникло разом із нею', !(await видно(page, '.notice-scrim--soft')));
+
+  // 🔴 ПАУЗА В 5 СЕКУНД — ЦЕ ЗМІСТ, А НЕ ЧИСЛО. 🗣️ Вова: «користувач погоджується
+  // з умовами, скролить ленту… там 5 секунд він сидить в застосунку, і через
+  // 5 секунд знов трішки затемняється екран». Між двома проханнями має бути
+  // шматок ЖИТТЯ застосунку, інакше друге читається як продовження першого.
+  ok('🔴 одразу після згоди банера встановлення ще НЕМАЄ',
+     !(await видно(page, '.pwa-cta')));
+  await page.waitForTimeout(4500);
+  ok('🔴 через паузу він зʼявився', await видно(page, '.pwa-cta'));
+
+  // ── ЗАТЕМНЕННЯ ПІД ВСТАНОВЛЕННЯМ: ЛОВИТЬ І ЗАКРИВАЄ ───────────────────────
+  const шарБанера = await page.evaluate(() => {
+    const ш = document.querySelector('.notice-scrim:not(.notice-scrim--soft)');
+    return ш ? { є: true, вказівник: getComputedStyle(ш).pointerEvents } : { є: false };
+  });
+  ok('🔴 під банером встановлення є затемнення', шарБанера.є, JSON.stringify(шарБанера));
+  ok('🔑 і воно ловить натиски — тап повз банер має бути відмовою',
+     шарБанера.вказівник !== 'none', JSON.stringify(шарБанера));
 
   // ── РОЗМІР ЦІЛІ ────────────────────────────────────────────────────────────
   const ціль = await page.evaluate(() => {
@@ -213,7 +255,8 @@ const видно = (page, с) => page.evaluate(s => !!document.querySelector(s),
   const { ctx, page } = await відкрити(UA_CHROME);
   await page.waitForTimeout(1500);
   await page.click('.consent-accept');
-  await page.waitForTimeout(3500);
+  // Пауза та сама, що й у сцені 1 (5 с після згоди) — з запасом на появу.
+  await page.waitForTimeout(6000);
   ok('банер показано і в Chrome на iPhone', await видно(page, '.pwa-cta'));
   await page.click('.pwa-cta-go');
   await page.waitForTimeout(500);
@@ -225,6 +268,40 @@ const видно = (page, с) => page.evaluate(s => !!document.querySelector(s),
      !/початковий екран/.test(текст) || /Safari/.test(текст), текст.slice(0, 80));
   ok('🛑 схем-кроків у цьому аркуші немає',
      await page.evaluate(() => document.querySelectorAll('.pwa-guide-pic svg').length === 0));
+  await ctx.close();
+}
+
+// ── СЦЕНА 3: ЕКРАН ЗАЙНЯТИЙ — БАНЕР ЧЕКАЄ ────────────────────────────────────
+// 🔴 Пастка, яку я назвав ДО того, як писати: «через 5 секунд» без запобіжника
+// означає, що людина відкрила статтю — і їй ПОВЕРХ неї наїжджає затемнення.
+// 🛑 Це вже не привернення уваги, а перехоплення: шар накриває рівно те, що людина
+// сама щойно попросила показати. Тому банер чекає, поки екран звільниться.
+{
+  const { ctx, page } = await відкрити(UA_SAFARI);
+  await page.waitForTimeout(1500);
+  await page.click('.consent-accept');
+  // Одразу після згоди «відкриваємо» повноекранний шар тією самою ознакою, якою
+  // це робить сам застосунок (`modal-open` ставить `core/modal.js` і вкладки).
+  await page.evaluate(() => document.body.classList.add('modal-open'));
+  await page.waitForTimeout(6500);
+  ok('🔴 поки відкрита модалка, банер НЕ наїжджає на неї',
+     !(await видно(page, '.pwa-cta')), 'банер зʼявився поверх відкритого шару');
+  ok('🛑 і затемнення теж не зʼявилось',
+     !(await видно(page, '.notice-scrim:not(.notice-scrim--soft)')));
+
+  // Людина закрила модалку — ось тепер можна.
+  await page.evaluate(() => document.body.classList.remove('modal-open'));
+  await page.waitForTimeout(700);
+  ok('🔴 щойно екран звільнився — банер зʼявився', await видно(page, '.pwa-cta'));
+
+  // Тап повз банер = відмова. Це і є «хрестик завбільшки з екран».
+  await page.mouse.click(195, 200);
+  await page.waitForTimeout(400);
+  ok('🔑 тап повз банер закриває його', !(await видно(page, '.pwa-cta')));
+  ok('🛑 і затемнення йде разом із ним',
+     !(await видно(page, '.notice-scrim:not(.notice-scrim--soft)')));
+  const пауза = await page.evaluate(() => !!localStorage.getItem('cstl-install-snooze-v1'));
+  ok('🔑 тап повз банер — це чесна відмова, тобто пауза на 7 днів', пауза);
   await ctx.close();
 }
 
