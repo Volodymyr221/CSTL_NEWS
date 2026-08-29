@@ -662,7 +662,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
 /* ── Банер згоди (перший вхід) ── */
 .consent-bar {
   position: fixed; left: 10px; right: 10px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--notice-bottom);   /* полиця над таб-баром — див. tokens.css */
   z-index: 1200;
   display: flex; align-items: center; gap: 12px;
   background: #2b2b2b; color: #fff;
