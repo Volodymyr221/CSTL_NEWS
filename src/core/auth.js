@@ -145,24 +145,33 @@ export async function initAuth() {
   });
 }
 
+// 🔴 26.08 — ДВІ РІЗНІ ПРИЧИНИ ПЕРЕСТАЛИ ГОВОРИТИ ОДНИМИ СЛОВАМИ.
+// 🗣️ Вова зі скріна: «Немає звʼязку з сервером» у Safari — при живому інтернеті,
+// бо новини на тому ж екрані завантажились.
+// 🛑 Тост брехав не навмисно: він казав про мережу, а бракувало ФАЙЛУ бібліотеки.
+// Людина після такого шукає проблему в звʼязку і не знаходить — бо її там немає.
+// 🔑 Той самий клас, що з журналом збоїв: «не сталося» і «сталося, але ми не
+// побачили» мусять бути РІЗНІ повідомлення.
+//
+// 🔑 29.08 — ВИНЕСЕНО В ОДНЕ МІСЦЕ, бо способів входу стало три (Google, надсилання
+// коду, звірка коду). Три копії цього блоку розійшлися б при першій же правці —
+// рівно те, чим уже обпікались на словниках помилок (див. `netErrorText`).
+// ⚠️ Повертає `null` і САМА показує пояснення: викликач лише виходить.
+function supaForAuth() {
+  const supa = getSupabase();
+  if (supa) return supa;
+  showToast(sdkLoaded()
+    ? 'Сервер недоступний. Спробуй ще раз за хвилину'
+    : 'Не завантажилась частина застосунку. Онови сторінку',
+    4000, 'error');
+  return null;
+}
+
 // Вхід через Google. Після редіректу назад Supabase сам підхопить сесію
 // (detectSessionInUrl) і onAuthStateChange оновить _user.
 export async function signInWithGoogle() {
-  const supa = getSupabase();
-  // 🔴 26.08 — ДВІ РІЗНІ ПРИЧИНИ ПЕРЕСТАЛИ ГОВОРИТИ ОДНИМИ СЛОВАМИ.
-  // 🗣️ Вова зі скріна: «Немає звʼязку з сервером» у Safari — при живому інтернеті,
-  // бо новини на тому ж екрані завантажились.
-  // 🛑 Тост брехав не навмисно: він казав про мережу, а бракувало ФАЙЛУ бібліотеки.
-  // Людина після такого шукає проблему в звʼязку і не знаходить — бо її там немає.
-  // 🔑 Той самий клас, що з журналом збоїв: «не сталося» і «сталося, але ми не
-  // побачили» мусять бути РІЗНІ повідомлення.
-  if (!supa) {
-    showToast(sdkLoaded()
-      ? 'Сервер недоступний. Спробуй ще раз за хвилину'
-      : 'Не завантажилась частина застосунку. Онови сторінку',
-      4000, 'error');
-    return;
-  }
+  const supa = supaForAuth();
+  if (!supa) return;
   const redirectTo = window.location.origin + window.location.pathname;
   // 🔴 24.08 — `prompt: 'select_account'`: ГОOGLE ЗАВЖДИ ПИТАЄ, ЯКИМ АКАУНТОМ ЗАЙТИ.
   //
@@ -184,6 +193,176 @@ export async function signInWithGoogle() {
   });
   // Сира помилка входу («Load failed» тощо) людині нічого не пояснює — через словник.
   if (error) showToast(netErrorText(error), 4000, 'error');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📘 ВХІД ЧЕРЕЗ FACEBOOK (29.08.2026) — КОД ГОТОВИЙ, ВИМИКАЧ ВИМКНЕНИЙ
+//
+// 🗣️ Вова: «в нас люди, більшість населення, сидить в Facebook… якщо упростити
+// процес входу за допомогою Facebook, це б спростило для них процес реєстрації».
+//
+// 🔴 ЧОМУ ВИМИКАЧ, А НЕ ПРОСТО КНОПКА. Поки додаток у Meta не переведений у
+// режим Live, Facebook пускає ЛИШЕ адміністраторів і тестувальників того додатка.
+// Для жителя кнопка означала б помилку Facebook на весь екран — тобто кнопка,
+// яка не працює. 🛑 «Декоративного в нас нічого не має бути, у нас все має бути
+// робоче» (Вова, 24.08) — тому кнопки просто немає, поки немає дозволу.
+//
+// ➡️ ЩО ЗРОБИТИ, ЩОБ УВІМКНУТИ (по кроках — `docs/AUTH_EMAIL_SETUP.md`):
+//   1. створити додаток у Meta for Developers, додати продукт Facebook Login;
+//   2. вставити App ID і App Secret у Supabase → Authentication → Providers → Facebook;
+//   3. перевести додаток Meta в Live (там Meta й попросить верифікацію);
+//   4. поставити тут `true` — і кнопка зʼявиться.
+//
+// ⚠️ І ГОЛОВНЕ ПРО ДАНІ: Facebook ЧАСТО не віддає пошту (акаунт, заведений на
+// номер телефону, або людина зняла галочку). Саме тому анкета вміє питати адресу
+// окремо — див. `needEmail` в `account-ui.js`.
+export const FACEBOOK_ENABLED = false;
+
+export async function signInWithFacebook() {
+  const supa = supaForAuth();
+  if (!supa) return;
+  const redirectTo = window.location.origin + window.location.pathname;
+  // `public_profile,email` — це стандартний доступ, окремого дозволу Meta на нього
+  // не треба. Пошта тут — прохання, а не гарантія: див. попередження вище.
+  const { error } = await supa.auth.signInWithOAuth({
+    provider: 'facebook',
+    options: { redirectTo, scopes: 'public_profile,email' },
+  });
+  if (error) showToast(netErrorText(error), 4000, 'error');
+}
+
+// Якими способами людина може зайти в ЦЕЙ акаунт. Читається з живої сесії:
+// `identities` веде сам Supabase, тож це факт, а не наше припущення.
+// 🔑 Пошта рахується від `user.email`, а не від наявності identity: саме вона
+// приймає код при вході, і саме її людина впізнає.
+export function loginMethods() {
+  const ids = (_user && Array.isArray(_user.identities)) ? _user.identities.map(i => i.provider) : [];
+  return {
+    google:   ids.includes('google'),
+    facebook: ids.includes('facebook'),
+    email:    !!(_user && _user.email),
+    address:  (_user && _user.email) || '',
+  };
+}
+
+// ── Додати пошту як спосіб входу (для акаунта, який зайшов без неї) ──────────
+//
+// 🗣️ Вова: «якщо користувач в особистому кабінеті вказав свою пошту і хоче зайти
+// через пошту, воно також буде заходити на той самий акаунт. Суть однакова: це
+// одна і та сама людина, один і той самий акаунт».
+//
+// ✅ Мета правильна — і саме так це й робиться. 🛑 Але звʼязує тільки
+// ПІДТВЕРДЖЕНА адреса, і тому крок із кодом тут обовʼязковий. Інакше я вписую в
+// СВОЄМУ профілі чужу адресу — і забираю чужий акаунт разом з оголошеннями,
+// чатами й правами. Один код один раз закриває це повністю.
+//
+// 📐 Заміряно на живій базі 29.08: два акаунти вже мають ДВІ особистості
+// (`email` + `google`) при ОДНІЙ адресі — тобто Supabase зводить їх в один
+// акаунт сам, щойно адреса підтверджена. Ми лише даємо цій адресі зʼявитись.
+export async function addEmailLogin(email) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const addr = normalizeEmail(email);
+  if (!isValidEmail(addr)) return { ok: false, error: 'Перевір адресу пошти' };
+  const { error } = await supa.auth.updateUser({ email: addr });
+  if (error) {
+    console.warn('[auth] addEmailLogin:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
+}
+
+// ⚠️ Тип тут `email_change`, а НЕ `email`: Supabase шле цей код іншим шаблоном і
+// звіряє його іншим типом. З типом `email` код не підійшов би НІКОЛИ — і
+// виглядало б це як «код невірний», хоча код правильний.
+export async function confirmEmailLogin(email, code) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const token = String(code || '').replace(/\D/g, '');
+  if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
+  const { error } = await supa.auth.verifyOtp({ email: normalizeEmail(email), token, type: 'email_change' });
+  if (error) {
+    console.warn('[auth] confirmEmailLogin:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ✉️ ВХІД ПОШТОЮ ОДНОРАЗОВИМ КОДОМ (29.08.2026)
+//
+// 🗣️ ЗАМОВЛЕННЯ ВОВИ: «якщо в людини немає Gmail, вона є якась інша пошта…
+// треба добавити ще через іншу пошту, щоб просто людина могла зайти».
+//
+// 🔑 ЧОМУ КОД, А НЕ ПРОСТО ПОЛЕ «ВВЕДІТЬ ПОШТУ». Вхід через Google — це Google
+// каже нам «це точно вона, я перевірив». За адресою, вписаною руками, не ручається
+// НІХТО: без доказу будь-хто вводить ЧУЖУ пошту і опиняється в чужому акаунті.
+// Код у скриньку і є той доказ — єдиний, який ми можемо отримати самі.
+//
+// 🛑 ЧОМУ КОД, А НЕ ПОСИЛАННЯ З ЛИСТА (magic link). Застосунок у людини стоїть як
+// PWA на головному екрані. Лист відкриється в браузері — і сесія опиниться В
+// БРАУЗЕРІ, а у ВСТАНОВЛЕНОМУ додатку людина так і лишиться гостем, не розуміючи
+// чому. Код вона переписує в тому самому екрані, де стоїть, і сесія лягає туди,
+// де людина її чекає. `emailRedirectTo` лишаємо лише як запасний шлях для того,
+// хто все-таки тапне посилання.
+//
+// ⚠️ ПАРОЛЯ НЕМАЄ НАВМИСНО. Пароль для нашої аудиторії — це «забув пароль»,
+// «відновіть пароль» і врешті чужий папірець біля телефона. Код вводиться РАЗ НА
+// ПРИСТРІЙ: далі сесію тримає Supabase (той самий refresh token, що й для Google),
+// тож людина побачить його один раз, а не щоразу.
+//
+// 🔴 ЩО ПОТРІБНО В ПАНЕЛІ SUPABASE, ІНАКШЕ ПРИЙДЕ ПОСИЛАННЯ ЗАМІСТЬ КОДУ:
+// у шаблонах листів (Authentication → Emails) «Magic Link» І «Confirm signup»
+// мусять містити `{{ .Token }}`. Код генерується завжди — питання лише в тому, чи
+// показує його лист. Повна інструкція — `docs/AUTH_EMAIL_SETUP.md`.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// Нормалізація адреси в одному місці: обрізаємо пробіли (їх додає автопідстановка
+// на iOS) і зводимо до нижнього регістру — інакше «Ivan@Mail.com» і «ivan@mail.com»
+// виглядали б для людини однаково, а для бази це два різні акаунти.
+export function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+export function isValidEmail(email) {
+  return EMAIL_RE.test(normalizeEmail(email));
+}
+
+// Крок 1: надіслати код на пошту. shouldCreateUser: true — саме заради цього все
+// й робиться: людина без Google має завести акаунт тут-таки, а не «зареєструйтесь
+// деінде спочатку».
+export async function sendEmailCode(email) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const addr = normalizeEmail(email);
+  if (!isValidEmail(addr)) return { ok: false, error: 'Перевір адресу пошти' };
+  const emailRedirectTo = window.location.origin + window.location.pathname;
+  const { error } = await supa.auth.signInWithOtp({
+    email: addr,
+    options: { shouldCreateUser: true, emailRedirectTo },
+  });
+  if (error) {
+    console.warn('[auth] sendEmailCode:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
+}
+
+// Крок 2: звірити код. Успіх → Supabase кладе сесію, `onAuthStateChange` (він уже
+// підписаний в `initAuth`) сам оновить `_user` і розішле подію — тобто далі все
+// працює тим самим шляхом, що й після Google. Окремого «увійти» тут не треба.
+//
+// 🔑 `type: 'email'` — саме той тип, яким звіряється код, надісланий `signInWithOtp`.
+export async function verifyEmailCode(email, code) {
+  const supa = supaForAuth();
+  if (!supa) return { ok: false, error: 'Сервер недоступний' };
+  const token = String(code || '').replace(/\D/g, '');   // людина вставляє код із пробілами
+  if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
+  const { error } = await supa.auth.verifyOtp({ email: normalizeEmail(email), token, type: 'email' });
+  if (error) {
+    console.warn('[auth] verifyEmailCode:', error.message);
+    return { ok: false, error: netErrorText(error) };
+  }
+  return { ok: true };
 }
 
 // 🔴 24.08 — ВИХІД ТЕПЕР ВІДВʼЯЗУЄ ПРИСТРІЙ ВІД АКАУНТА.
@@ -261,7 +440,17 @@ const PROFILE_FIELDS = ['name', 'birth_date', 'surname', 'phone', 'settlement', 
 export async function saveProfile(fields = {}) {
   const supa = getSupabase();
   if (!supa || !_user) return { ok: false, error: 'не залогінено' };
-  const row = { uid: _user.id, email: _user.email || null };
+  // 🔴 29.08 — ПОШТА АКАУНТА ЛИШАЄТЬСЯ ДЖЕРЕЛОМ ПРАВДИ, ПОКИ ВОНА Є.
+  // Вписана в анкеті адреса береться ЛИШЕ тоді, коли провайдер не дав жодної —
+  // цей випадок приносить Facebook (акаунт, заведений на номер телефону).
+  // 🛑 І вона лишається КОНТАКТОМ, а не способом увійти: адреса, вписана руками,
+  // не доводить нічого. Вважати її «тим самим акаунтом» означало б віддати чужий
+  // акаунт кожному, хто вгадає адресу. Звʼязує лише ПІДТВЕРДЖЕНА пошта —
+  // тобто окремий вхід кодом, а не це поле.
+  // 🔑 `email` навмисно НЕ в `PROFILE_FIELDS`: інакше цикл нижче перезаписав би
+  // справжню пошту акаунта тим, що лежить у формі.
+  const accountEmail = _user.email || (fields.email ? normalizeEmail(fields.email) : null);
+  const row = { uid: _user.id, email: accountEmail };
   for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
   let partial = false;
   // Через ядро: анкета — це upsert по uid, тобто повтор при обриві дає той самий рядок.
@@ -273,7 +462,7 @@ export async function saveProfile(fields = {}) {
     // зберігаємо базове, щоб ім'я не губилось, і ЧЕСНО повертаємо partial:
     // раніше тут мовчки губилися село/прізвище/телефон із тостом «збережено».
     partial = true;
-    const core = { uid: _user.id, email: _user.email || null,
+    const core = { uid: _user.id, email: accountEmail,
                    name: row.name ?? null, birth_date: row.birth_date ?? null };
     r = await netCall(() => supa.from('profiles').upsert(core, { onConflict: 'uid' }));
     error = r.ok ? null : r.rawError;
