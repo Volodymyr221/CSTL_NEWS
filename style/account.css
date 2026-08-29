@@ -62,6 +62,37 @@
   font-size: 17px;
 }
 
+/* Друга кнопка входу — поштою (29.08). Навмисно ТИХІША за Google: та веде
+   швидше (один тап, без листа), тож і виглядати мусить головною. Однакова вага
+   двох кнопок змусила б людину вибирати там, де вибір їй нічого не дає. */
+.acc-mail {
+  width: 100%;
+  margin-top: 9px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px;
+  font-size: 15px; font-weight: 700;
+  color: var(--ink, #2B2B2B);
+  background: #F4F5F7;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-mail:active { background: #ECEEF1; }
+.acc-mail svg { width: 19px; height: 19px; opacity: 0.72; }
+
+/* Помилка форми — під полем, а не тостом: людина дивиться в поле, яке щойно
+   заповнила, і саме там має прочитати, що з ним не так. */
+.acc-err {
+  margin: 8px 2px 0;
+  font-size: 13px; line-height: 1.35;
+  color: var(--red, #722F37);
+  text-align: left;
+}
+
+/* Кнопка, поки триває запит або відлік повторного надсилання */
+.acc-primary:disabled, .acc-skip:disabled, .acc-mail:disabled { opacity: 0.55; cursor: default; }
+
 /* Поля профілю */
 .acc-label {
   display: block;
@@ -82,6 +113,22 @@
   appearance: none;
 }
 .acc-input:focus { outline: none; border-color: var(--red, #722F37); }
+
+/* Поле коду — цифри великі й розріджені, щоб шість символів читались як КОД,
+   а не як звичайний текст, і щоб описку було видно до натискання кнопки.
+   🔴 СТОЇТЬ САМЕ ТУТ, ПІСЛЯ `.acc-input`, І ЦЕ НЕ ВИПАДКОВІСТЬ ПОРЯДКУ. Поле
+   несе обидва класи (`acc-input acc-code`), вага в них однакова — тож виграє
+   той, що НИЖЧЕ у файлі. Вище за `.acc-input` цей блок мовчки втратив би і
+   розмір шрифту, і відступи: у браузері виглядало б як «стилі не застосувались». */
+.acc-code {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  padding: 14px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.acc-code::placeholder { letter-spacing: 6px; opacity: 0.35; font-weight: 600; }
 
 /* Головна дія (Зберегти) */
 .acc-primary {

@@ -18,9 +18,12 @@ import {
   deleteMyAccount,
   fetchNotifPrefs, saveNotifPref, seedNotifPrefs, NOTIF_TOPICS,
 } from './supabase.js';
+// sendEmailCode/verifyEmailCode + normalizeEmail/isValidEmail — вхід поштою
+// одноразовим кодом (29.08): другий спосіб входу для тих, хто не має Google.
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
+  sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { ICONS } from './icons.js';
@@ -65,20 +68,178 @@ function openModal(innerHtml) {
 
 // ── Екран 1: «Приєднайтесь» (гість) ──────────────────────────────
 // reason — необов'язковий підпис чому варто увійти (з контекстного гейту).
+//
+// 🔴 29.08 — ДВА СПОСОБИ ВХОДУ ЗАМІСТЬ ОДНОГО (замовлення Вови).
+// Було: одна кнопка «Увійти з Gmail». Хто не має акаунта Google — не мав ЖОДНОГО
+// способу зайти, тобто для частини Олики застосунок був закритий назавжди.
+//
+// 🔑 НАЗВУ КНОПКИ ВИПРАВЛЕНО НА «Google», І ЦЕ НЕ КОСМЕТИКА. Акаунт Google буває
+// на будь-якому домені (робоча пошта, власний домен) — і навпаки, «Gmail» звучить
+// як «тільки для тих, у кого адреса на gmail.com». Кнопка САМА відсіювала людей,
+// яким вона підходить.
+//
+// 🛑 ЧОМУ ЦЕ ОДНА КАРТКА НА ТРИ КРОКИ, А НЕ ТРИ МОДАЛКИ. Кожне відкриття модалки
+// в примітиві закриває попередню (`core/modal.js`), тобто три модалки = три
+// перемальовки з нуля і три анімації підряд. Людина при цьому лишається в одній
+// думці — «я заходжу», — тож і картка мусить лишатись однією.
 function openJoin(reason) {
   const sub = reason
     ? `Увійдіть, щоб ${escapeHtml(reason)}.`
     : 'Увійдіть, щоб подавати оголошення, писати й реагувати.';
-  const wrap = openModal(`
-    <div class="acc-emoji">👤</div>
-    <h2 class="acc-title">Приєднайтесь до громади</h2>
-    <p class="acc-sub">${sub}</p>
-    <button class="acc-google" type="button">
-      <span class="acc-g">G</span> Увійти з Gmail
-    </button>
-    <button class="acc-skip" type="button">Поки пропустити</button>`);
-  wrap.querySelector('.acc-google').addEventListener('click', () => signInWithGoogle());
-  wrap.querySelector('.acc-skip').addEventListener('click', closeModal);
+
+  // 🔑 Беремо `close` самої картки, а не спільний `closeModal()`. Різниця стає
+  // видимою рівно в одному місці — після вдалого входу: `onAuthChange` встигає
+  // відкрити «Доповніть профіль», і спільний `closeModal()` закрив би ЙОГО, бо
+  // закриває ту модалку, що активна ЗАРАЗ. Власний `close` знає лише свою і при
+  // повторному виклику мовчки виходить.
+  let timer = 0;
+  const { el: wrap, close } = openModalPrimitive({
+    bodyHtml: '', variant: 'center',
+    onClose: () => { if (timer) clearInterval(timer); timer = 0; },
+  });
+  const body = wrap.querySelector('.app-modal-body');
+
+  let addr = '';            // пошта, введена людиною (жива між кроками)
+  let resendLeft = 0;       // скільки секунд лишилось до повторного надсилання
+
+  const showErr = (text) => {
+    const box = body.querySelector('.acc-err');
+    if (!box) return;
+    box.textContent = text || '';
+    box.hidden = !text;
+  };
+  // Кнопка на час запиту: вимкнена + чесно каже, що саме відбувається.
+  const busy = (btn, on, label) => {
+    if (!btn) return;
+    if (on) { btn.dataset.idle = btn.textContent; btn.textContent = label; }
+    else if (btn.dataset.idle) { btn.textContent = btn.dataset.idle; }
+    btn.disabled = on;
+  };
+
+  // ── Крок 1: вибір способу ──
+  function stepStart() {
+    body.innerHTML = `
+      <div class="acc-emoji">👤</div>
+      <h2 class="acc-title">Приєднайтесь до громади</h2>
+      <p class="acc-sub">${sub}</p>
+      <button class="acc-google" type="button" data-go="google">
+        <span class="acc-g">G</span> Увійти з Google
+      </button>
+      <button class="acc-mail" type="button" data-go="mail">
+        ${ICONS.mail} Увійти поштою
+      </button>
+      <button class="acc-skip" type="button" data-go="skip">Поки пропустити</button>`;
+    body.querySelector('[data-go="google"]').addEventListener('click', () => signInWithGoogle());
+    body.querySelector('[data-go="mail"]').addEventListener('click', stepEmail);
+    body.querySelector('[data-go="skip"]').addEventListener('click', close);
+  }
+
+  // ── Крок 2: адреса ──
+  // ⚠️ `autocapitalize/autocorrect/spellcheck` вимкнені навмисно: iOS інакше пише
+  // адресу з великої літери й підкреслює її як помилку — обидва «виправлення»
+  // людина мусила б скасовувати руками при кожному вході.
+  function stepEmail() {
+    body.innerHTML = `
+      <div class="acc-emoji">✉️</div>
+      <h2 class="acc-title">Вхід поштою</h2>
+      <p class="acc-sub">Надішлемо код на вашу адресу. Пароль вигадувати не треба.</p>
+      <input class="acc-input" type="email" inputmode="email" autocomplete="email"
+             autocapitalize="off" autocorrect="off" spellcheck="false"
+             placeholder="адреса@пошта.com" value="${escapeHtml(addr)}" data-f="email">
+      <p class="acc-err" hidden></p>
+      <button class="acc-primary" type="button" data-go="send">Надіслати код</button>
+      <button class="acc-skip" type="button" data-go="back">← Інший спосіб</button>`;
+    const input = body.querySelector('[data-f="email"]');
+    const send  = body.querySelector('[data-go="send"]');
+    input.focus();
+    input.addEventListener('input', () => showErr(''));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
+    send.addEventListener('click', doSend);
+    body.querySelector('[data-go="back"]').addEventListener('click', stepStart);
+
+    async function doSend() {
+      const value = normalizeEmail(input.value);
+      if (!isValidEmail(value)) { showErr('Перевір адресу пошти'); input.focus(); return; }
+      addr = value;
+      showErr('');
+      busy(send, true, 'Надсилаю…');
+      const r = await sendEmailCode(addr);
+      busy(send, false);
+      if (!r.ok) { showErr(r.error); return; }
+      stepCode();
+    }
+  }
+
+  // ── Крок 3: код ──
+  // 🔑 `autocomplete="one-time-code"` — саме завдяки цьому iOS сам пропонує код
+  // із листа над клавіатурою, і людина вводить його одним тапом.
+  function stepCode() {
+    body.innerHTML = `
+      <div class="acc-emoji">🔑</div>
+      <h2 class="acc-title">Введіть код</h2>
+      <p class="acc-sub">Надіслали 6 цифр на <b>${escapeHtml(addr)}</b>.<br>
+        Лист іде до хвилини — гляньте й теку «Спам».</p>
+      <input class="acc-input acc-code" type="text" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="6" placeholder="——————" data-f="code">
+      <p class="acc-err" hidden></p>
+      <button class="acc-primary" type="button" data-go="check">Підтвердити</button>
+      <button class="acc-skip" type="button" data-go="resend"></button>
+      <button class="acc-skip" type="button" data-go="edit">← Змінити пошту</button>`;
+    const input  = body.querySelector('[data-f="code"]');
+    const check  = body.querySelector('[data-go="check"]');
+    const resend = body.querySelector('[data-go="resend"]');
+    input.focus();
+    body.querySelector('[data-go="edit"]').addEventListener('click', stepEmail);
+
+    // Тільки цифри. Набрали шість — звіряємо самі, без зайвого тапу: код і так
+    // однозначний, а зайвий тап тут це рівно та дрібниця, на якій люди спотикаються.
+    input.addEventListener('input', () => {
+      const only = input.value.replace(/\D/g, '').slice(0, 6);
+      if (only !== input.value) input.value = only;
+      showErr('');
+      if (only.length === 6) doCheck();
+    });
+    check.addEventListener('click', doCheck);
+    resend.addEventListener('click', async () => {
+      if (resendLeft > 0) return;
+      busy(resend, true, 'Надсилаю…');
+      const r = await sendEmailCode(addr);
+      busy(resend, false);
+      if (!r.ok) { showErr(r.error); return; }
+      showToast('Код надіслано ще раз', 2200);
+      startCountdown();
+    });
+    startCountdown();
+
+    // Повторне надсилання не раніше ніж через хвилину — стільки ж тримає й сам
+    // Supabase. 🛑 Показуємо це числом, а не мовчазною відмовою: інакше людина
+    // тисне кнопку, «нічого не стається», і вона йде з застосунку.
+    function startCountdown() {
+      resendLeft = 60;
+      if (timer) clearInterval(timer);
+      const tick = () => {
+        if (!resend.isConnected) { clearInterval(timer); timer = 0; return; }
+        resend.textContent = resendLeft > 0 ? `Надіслати ще раз (${resendLeft})` : 'Надіслати ще раз';
+        resend.disabled = resendLeft > 0;
+        if (resendLeft-- <= 0) { clearInterval(timer); timer = 0; }
+      };
+      tick();
+      timer = setInterval(tick, 1000);
+    }
+
+    async function doCheck() {
+      const code = input.value.replace(/\D/g, '');
+      if (code.length < 6) { showErr('Код складається з 6 цифр'); return; }
+      busy(check, true, 'Перевіряю…');
+      const r = await verifyEmailCode(addr, code);
+      busy(check, false);
+      if (!r.ok) { showErr(r.error); input.select(); return; }
+      close();                       // саме СВОЮ картку — див. коментар угорі
+      showToast('Ви увійшли', 2200);
+    }
+  }
+
+  stepStart();
 }
 
 // ── Екран 2: «Доповніть профіль» (раз, після першого входу) ───────
