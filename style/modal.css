@@ -306,6 +306,50 @@
   cursor: zoom-in;
 }
 .article-body figure img:active { opacity: .85; }
+
+/* ── ВІДЕО З YOUTUBE: ОБКЛАДИНКА, ПЛЕЄР ПО ТАПУ ───────────────────────────
+   🔑 Рішення Вови 29.08 (варіант «А»): у тілі стоїть КАДР, а не плеєр. Поки
+   читач не натиснув, з YouTube не вантажиться нічого — ні плеєр (~1 МБ), ні
+   куки. Стаття лишається легкою, а YouTube не бачить читача, доки той не
+   захотів дивитись.
+   ⚠️ `aspect-ratio` тут обовʼязковий: обкладинка приїжджає з мережі, і без
+   заздалегідь відомої висоти текст під нею стрибав би. 16/9 — формат самої
+   обкладинки YouTube, тож кадр не обрізається. */
+.article-body .art-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.article-body .art-video img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  cursor: pointer;          /* не `zoom-in`: тап ВМИКАЄ відео, а не збільшує кадр */
+}
+/* Значок «грати» — власний, не картинка з YouTube: одна фігура замість ще
+   одного мережного запиту. Червоний — упізнаваний, білий трикутник по центру. */
+.article-body .art-video-play {
+  position: absolute; inset: 0; margin: auto;
+  width: 68px; height: 48px; border-radius: 12px;
+  background: rgba(0, 0, 0, .55);
+  transition: background .15s ease;
+}
+.article-body .art-video-play::after {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 11px 0 11px 18px;
+  border-color: transparent transparent transparent #fff;
+}
+.article-body .art-video:active .art-video-play { background: rgba(0, 0, 0, .75); }
+/* Коли плеєр уже вставлено — значок зникає разом із обкладинкою (`replaceChildren`),
+   а сам кадр віддає всю площу вбудованому вікну. */
+.article-body .art-video iframe {
+  width: 100%; height: 100%; border: 0; display: block;
+}
 /* Підпис — тихіший за текст статті і трохи менший: він пояснює знімок, а не
    продовжує розповідь. Курсиву НЕ додаємо — курсив у нас носить цитата, і два
    різні сенси однією формою злились би. */
