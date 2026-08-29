@@ -2745,7 +2745,7 @@ Supabase production-live з реальною модерацією, реалта�
 
 ### Cloudflare Worker (проксі)
 - **URL:** `https://cstl-proxy.volodymyrshevchuk19.workers.dev`
-- **Акаунт:** `volodymyrshevchuk19@gmail.com`
+- **Акаунт:** `«пошта адмін-акаунта Вови»`
 - **Код:** `cloudflare/worker.js`
 - **Навіщо:** GitHub Actions IP блокується сайтом громади → Worker має інші IP
 

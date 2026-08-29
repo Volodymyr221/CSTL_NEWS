@@ -1,3 +1,9 @@
+// 🔴 ПЕРСОНАЛЬНИХ ДАНИХ У ФІКСТУРІ БУТИ НЕ МОЖЕ. Тут стояв РЕАЛЬНИЙ номер
+// Вови — і з цього файлу він поїхав у знімки `_out/`, а звідти в публічний
+// репозиторій (знайдено аудитом 18.08, знімки прибрали, джерело — ні).
+// Номер-заглушка `+380 00 000 00 00` навмисно неможливий: правдоподібний
+// номер у демо вже коштував проєкту окремого розбору (`data/community-board.json`,
+// видалено 05.08 — людина могла подзвонити сторонній людині).
 // ІНСТРУМЕНТ (руками): node tests/tools/chat-contexts-shot.mjs [тека]
 // Знімає ЖИВИЙ екран розмови з двома контекстами і перемикає чіп.
 //
@@ -32,7 +38,7 @@ const screen = (tabsCount) => {
         <span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>
         <span class="pm-ctx-body">
           <span class="pm-ctx-title">Куплю будинок Олика${tabsCount === 3 ? '<span class="pm-ctx-state">Завершено</span>' : ''}</span>
-          <span class="pm-ctx-contact"><span class="pm-ctx-phone">+380 50 888 84 88</span> — Володимир</span>
+          <span class="pm-ctx-contact"><span class="pm-ctx-phone">+380 00 000 00 00</span> — Олександр</span>
           <span class="pm-ctx-link">Переглянути оголошення →</span>
         </span>
       </div>
