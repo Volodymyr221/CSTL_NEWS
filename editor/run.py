@@ -5,10 +5,25 @@
   python -m editor.run --mission holidays --sink queue # перекрити sink (тест без ключа)
 """
 import argparse
+import json
+from pathlib import Path
 
 from editor.core import spend
 from editor.core.config import load_mission
 from editor.core.pipeline import Pipeline
+
+
+def _сторінка_місії(mission: dict):
+    """`page_id` живе в ПЛАНІ місії, а не в самій місії: план знає, у яку сторінку
+    пише агент. Читаємо звідти, щоб не заводити другу копію цього числа."""
+    ім = mission.get("plan")
+    if not ім:
+        return None
+    файл = Path(__file__).resolve().parent / "plans" / f"{ім}.json"
+    try:
+        return json.loads(файл.read_text(encoding="utf-8")).get("page_id")
+    except Exception:
+        return None
 
 
 def main():
@@ -37,6 +52,32 @@ def main():
             print(f"⛔ {блок}")
             print("— прогін пропущено (запобіжник витрат, не помилка)")
             return
+    # 🔴 СТЕЛЯ ШУХЛЯДИ — ТЕЖ ПЕРЕД РОБОТОЮ. Замовлення Вови 29.08: «щоб для кожної
+    # спільноти, в якій працює агент, було 2 пости — один публікується, другий на
+    # підхваті якщо що».
+    # 🔑 Стеля рахується по ЖИВИХ чернетках у самій спільноті, а не по прогонах:
+    # прогін — це наша внутрішня подія, а «є що публікувати» — стан, який бачить Вова.
+    # 💸 Заразом це запобіжник витрат: повна шухляда означає нуль звернень до моделі.
+    # ⚠️ Не знаємо, скільки їх (немає ключа) — пишемо як раніше і кажемо про це вголос.
+    # Тихо пропустити прогін було б гірше: спільнота мовчала б без пояснення.
+    стеля = int(mission.get("keep_drafts", 0) or 0)
+    if стеля and not args.dry_run:
+        from editor.sinks.page_draft import скільки_чернеток
+        сторінка = _сторінка_місії(mission)
+        є = скільки_чернеток(сторінка)
+        if є is None:
+            print(f"  ⚠ скільки чернеток у сторінці {сторінка} — невідомо, пишу як звичайно")
+        elif є >= стеля:
+            print(f"  🗂 у спільноті вже {є} чернетк(и) при стелі {стеля} — "
+                  f"нових не пишемо, модель не кличемо")
+            print("— готово: 0 чернеток (шухляда повна, це не помилка)")
+            return
+        else:
+            можна = стеля - є
+            if можна < int(mission.get("per_run", 1) or 1):
+                mission["per_run"] = можна
+            print(f"  🗂 чернеток у спільноті {є} із {стеля} — пишемо ще {mission.get('per_run')}")
+
     drafts = Pipeline(mission).run(dry_run=args.dry_run, sink_override=args.sink)
 
     for d in drafts:
