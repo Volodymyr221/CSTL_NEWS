@@ -10,31 +10,49 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-29 20:17 UTC
+**Зріз на:** 2026-08-29 21:39 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/startuem-h0iocf` |
-| останній коміт людини | `d9fdd0b9` 29.08 20:17 — Merge remote-tracking branch 'origin/main' into claude/startuem-h0iocf |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260829-2004` |
-| останній PR у `main` | #1100 |
-| стендів на диску | 116 |
-| незакомічених файлів | 0 ✅ |
+| гілка | `claude/startuem-flaldh` |
+| останній коміт людини | `467608ad` 29.08 20:59 — docs: літопис — екран «тільки телефон» на компʼютері (29.08 «c») |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260829-2055` |
+| останній PR у `main` | #1102 |
+| стендів на диску | 118 |
+| незакомічених файлів | 3 ⚠️ |
 | журнал за 2026-08-29 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/BACKLOG_VOVA_2026-08.md`
-- `_session-log/vova-2026-08-29b.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `_session-log/vova-2026-08-29c.md`
+- `bundle.js`
+- `docs/AUTH_EMAIL_SETUP.md`
+- `src/app.js`
+- `src/core/account-ui.js`
+- `src/core/auth.js`
+- `src/core/desktop-gate.js`
+- `src/core/join-invite.js`
+- `src/core/qr.js`
+- `src/core/supabase.js`
+- `style.css`
+- `style/account.css`
+- `style/desktop-gate.css`
+- `sw.js`
+- `tests/auth-email-code.mjs`
+- `tests/desktop-gate.mjs`
+- …ще 3
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `d9fdd0b9` 29.08 20:17 — Merge remote-tracking branch 'origin/main' into claude/startuem-h0iocf
-- `51a1bd23` 29.08 20:15 — Пульс: авто-блок після передачі
-- `7f62ed63` 29.08 20:15 — docs: передача в новий чат — 29.08.2026 (сесія «b»)
-- `04d9ae41` 29.08 20:14 — docs(session): закриття сесії 29.08 «b»
+- `467608ad` 29.08 20:59 — docs: літопис — екран «тільки телефон» на компʼютері (29.08 «c»)
+- `2cbbf5cb` 29.08 20:58 — Екран «поки що тільки телефон» на компʼютері + власний генератор QR
+- `ee596fb0` 29.08 20:23 — docs(session): журнал сесії 29.08 «c» — старт
+- `3216c590` 29.08 20:17 — docs: передача в новий чат — 29.08.2026 (сесія «b») (#1101)
 - `e87489a3` 29.08 20:09 — Технічні сповіщення: над таб-баром, під затемненням, із видимим хрестиком (#1100)
 
 <!-- AUTO:END -->
