@@ -32,6 +32,11 @@ const res = [];
 const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${n}${i ? '  — ' + i : ''}`); };
 
 const auth = projectFile('src/core/auth.js', REV);
+// 🔴 30.08 — ДОВЖИНУ КОДУ БЕРЕМО З КОДУ, А НЕ ЗНАЄМО НАПАМʼЯТЬ. У листі приходило
+// ВІСІМ цифр, а поле стояло на шість і мовчки відрізало решту; стенд із власною
+// шісткою лишався б зеленим над цією вадою назавжди.
+const OTP_LEN = Number((auth.match(/export const OTP_LENGTH = (\d+)/) || [])[1] || 6);
+const КОД = Array.from({ length: OTP_LEN }, (_, i) => String((i + 1) % 10)).join('');
 const ui   = projectFile('src/core/account-ui.js', REV);
 const supa = projectFile('src/core/supabase.js', REV);
 
@@ -187,14 +192,14 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
   out.створюєНового = !!(calls[0] && calls[0][1].options && calls[0][1].options.shouldCreateUser === true);
 
   // 4. Короткий код не летить у мережу (і людина одразу бачить, чому).
-  const short = await verifyEmailCode('ivan@mail.com', '123');
+  const short = await verifyEmailCode('ivan@mail.com', '123');   // коротший за OTP_LENGTH
   out.короткийНеШле = calls.filter(c => c[0] === 'verify').length === 0 && short.ok === false;
 
   // 5. Код чиститься від пробілів (їх лишає вставка з листа) і йде з типом 'email'.
-  await verifyEmailCode('ivan@mail.com', ' 12 34 56 ');
+  await verifyEmailCode('ivan@mail.com', ' ${КОД.replace(/(..)/g, '$1 ')} ');
   const v = calls.find(c => c[0] === 'verify');
   const verifies = calls.filter(c => c[0] === 'verify').map(c => c[1]);
-  out.чиститьКод = !!(v && v[1].token === '123456');
+  out.чиститьКод = !!(v && v[1].token === '${КОД}');
   out.типEmail   = !!(v && v[1].type === 'email');       // перша спроба — саме email
   // ГОЛОВНЕ: код, який лежить під magiclink, МУСИТЬ підійти. Так поводиться
   // акаунт, що вже існує (у Вови — через Google), тобто більшість входів.
