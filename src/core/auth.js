@@ -279,7 +279,7 @@ export async function confirmEmailLogin(email, code) {
   const supa = supaForAuth();
   if (!supa) return { ok: false, error: 'Сервер недоступний' };
   const token = String(code || '').replace(/\D/g, '');
-  if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
+  if (token.length < OTP_LENGTH) return { ok: false, error: `Код складається з ${OTP_LENGTH} цифр` };
   const { error } = await supa.auth.verifyOtp({ email: normalizeEmail(email), token, type: 'email_change' });
   if (error) {
     console.warn('[auth] confirmEmailLogin:', error.message);
@@ -315,6 +315,26 @@ export async function confirmEmailLogin(email, code) {
 // у шаблонах листів (Authentication → Emails) «Magic Link» І «Confirm signup»
 // мусять містити `{{ .Token }}`. Код генерується завжди — питання лише в тому, чи
 // показує його лист. Повна інструкція — `docs/AUTH_EMAIL_SETUP.md`.
+// 🔴 30.08 — ДОВЖИНА КОДУ ЖИВЕ В ОДНОМУ МІСЦІ, І ЦЕ КУПЛЕНО ДОРОГО.
+//
+// 🗣️ Вова надіслав знімок листа: у ньому **вісім** цифр — `10821732`. А поле в
+// застосунку стояло `maxlength="6"` і мовчки відрізало зайве. Тобто на перевірку
+// летіло `108217`, а `32` викидалось. **Код був правильний ЗАВЖДИ** — застосунок
+// сам його калічив і показував це як помилку людини.
+//
+// 🛑 ЧОМУ Я НЕ БАЧИВ ЦЬОГО ЧОТИРИ КОЛА ПОСПІЛЬ: я дивився в логи сервера, у
+// таблицю токенів, у власний код — усе з боку СИСТЕМИ. І жодного разу не
+// подивився в те, що бачить ЛЮДИНА, тобто в сам лист. Знайшов Вова за хвилину,
+// відкривши пошту.
+// ➡️ Правило: коли система каже «дані невірні», а людина каже «я ввів правильно»,
+// перший погляд — на те, ЩО САМЕ вона тримає в руках.
+//
+// ⚠️ ЧИСЛО МУСИТЬ ЗБІГАТИСЬ ІЗ НАЛАШТУВАННЯМ SUPABASE (Authentication → Sign In /
+// Providers → Email → OTP length). Змінив там — зміни тут, і навпаки. Тому воно
+// одне на весь застосунок: дев'ять місць прибивали шістку окремо, і саме через це
+// одну з них неможливо було полагодити, не пропустивши решту.
+export const OTP_LENGTH = 8;
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // Нормалізація адреси в одному місці: обрізаємо пробіли (їх додає автопідстановка
@@ -389,7 +409,7 @@ export async function verifyEmailCode(email, code) {
   const supa = supaForAuth();
   if (!supa) return { ok: false, error: 'Сервер недоступний' };
   const token = String(code || '').replace(/\D/g, '');   // людина вставляє код із пробілами
-  if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
+  if (token.length < OTP_LENGTH) return { ok: false, error: `Код складається з ${OTP_LENGTH} цифр` };
   const addr = normalizeEmail(email);
   let last = null;
   for (const type of OTP_TYPES) {

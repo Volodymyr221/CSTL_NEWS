@@ -31,6 +31,21 @@ const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${
 const ui   = projectFile('src/core/account-ui.js', REV);
 const auth = projectFile('src/core/auth.js', REV);
 // Справжні перевірки адреси — щоб стенд не мав власної, добрішої копії.
+// 🔴 30.08 — ДОВЖИНУ КОДУ СТЕНД БЕРЕ З КОДУ, А НЕ ЗНАЄ НАПАМʼЯТЬ.
+// Вада, яку знайшов Вова: у листі приходило ВІСІМ цифр, а поле стояло
+// `maxlength="6"` і мовчки відрізало решту — на сервер летіли перші шість.
+// Код був правильний завжди, застосунок сам його калічив.
+// 🛑 Якби стенд тримав власну шістку, він лишався б зеленим над цією вадою
+// назавжди — і саме так вада прожила чотири кола розслідування.
+const OTP_LEN = Number((auth.match(/export const OTP_LENGTH = (\d+)/) || [])[1] || 0);
+ok('довжина коду названа однією константою', OTP_LEN >= 4 && OTP_LEN <= 10, `OTP_LENGTH = ${OTP_LEN}`);
+// 🔑 І жодного місця, де довжина прибита цвяхами повз константу.
+{
+  const uiOnly = ui.replace(/^\s*\/\/.*$/gm, '');
+  ok('поле коду не тримає власної довжини',
+     !/maxlength="\d/.test(uiOnly) && !/slice\(0, \d\)/.test(uiOnly));
+}
+
 const emailHelpers = ['normalizeEmail', 'isValidEmail']
   .map(n => (auth.match(new RegExp('export function ' + n + '\\([\\s\\S]*?\\n\\}')) || [''])[0].replace(/^export /, ''))
   .join('\n')
@@ -69,6 +84,7 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
   const currentAvatarUrl = () => '', getProfile = async () => null, saveProfile = async () => ({ ok: true });
   const signOut = async () => {}, signInWithGoogle = () => {}, signInWithFacebook = () => {};
   const FACEBOOK_ENABLED = false;
+  const OTP_LENGTH = ${OTP_LEN};        // справжнє значення з auth.js, не вигадане
   const loginMethods = () => ({ google: true, facebook: false, email: true, address: 'x@y.z' });
   const addEmailLogin = async () => ({ ok: true }), confirmEmailLogin = async () => ({ ok: true });
   ${emailHelpers}
@@ -123,7 +139,7 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
     // 4. Авто-звірка на шостій цифрі — і РІВНО один виклик.
     const поле2 = document.querySelector('[data-f="code"]');
     if (поле2) {
-      поле2.value = '123456';
+      поле2.value = '${'1'.repeat(OTP_LEN)}';
       поле2.dispatchEvent(new Event('input', { bubbles: true }));
       тап('[data-go="check"]');            // палець тисне ще й кнопку
     }
