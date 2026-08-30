@@ -218,6 +218,14 @@ function openJoin(reason) {
       busy(send, true, 'Надсилаю…');
       const r = await sendEmailCode(addr);
       busy(send, false);
+      // 🔑 «Зачекай N секунд» означає, що лист із робочим кодом УЖЕ надіслано.
+      // Тримати людину на екрані адреси було б приховуванням того, що в неї є.
+      if (!r.ok && r.rateLimited) {
+        showErr('');
+        stepCode(r.retryAfter);
+        showToast('Код уже надіслано — перевір пошту', 3000);
+        return;
+      }
       if (!r.ok) { showErr(r.error); return; }
       stepCode();
     });
@@ -232,7 +240,7 @@ function openJoin(reason) {
   // ── Крок 3: код ──
   // 🔑 `autocomplete="one-time-code"` — саме завдяки цьому iOS сам пропонує код
   // із листа над клавіатурою, і людина вводить його одним тапом.
-  function stepCode() {
+  function stepCode(waitLeft = 60) {
     body.innerHTML = `
       <div class="acc-emoji">🔑</div>
       <h2 class="acc-title">Введіть код</h2>
@@ -264,8 +272,8 @@ function openJoin(reason) {
     // Повторне надсилання не раніше ніж через хвилину — стільки ж тримає й сам
     // Supabase. 🛑 Показуємо це числом, а не мовчазною відмовою: інакше людина
     // тисне кнопку, «нічого не стається», і вона йде з застосунку.
-    function startCountdown() {
-      resendLeft = 60;
+    function startCountdown(secs = 60) {
+      resendLeft = Math.max(0, Math.round(secs));
       if (timer) clearInterval(timer);
       const tick = () => {
         if (!resend.isConnected) { clearInterval(timer); timer = 0; return; }
@@ -300,7 +308,7 @@ function openJoin(reason) {
       if (only.length === 6) doCheck();
     });
     check.addEventListener('click', doCheck);
-    startCountdown();
+    startCountdown(waitLeft);
   }
 
   stepStart();
