@@ -161,7 +161,15 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
       getSession: async () => ({ data: { session: null } }),
       onAuthStateChange: () => {},
       signInWithOtp: async (a) => { calls.push(['otp', a]); return { error: null }; },
-      verifyOtp:     async (a) => { calls.push(['verify', a]); return { error: null }; },
+      // Підробка поводиться як справжній Supabase у випадку Вови: код лежить
+      // під типом magiclink (акаунт уже існує), а на email сервер чесно каже
+      // «не знайшов». Саме на цьому вхід і не працював.
+      // (Зворотні лапки тут заборонені — увесь блок живе в шаблонному рядку.)
+      verifyOtp: async (a) => {
+        calls.push(['verify', a]);
+        if (a.type === 'magiclink') return { error: null };
+        return { error: { message: 'Token has expired or is invalid' } };
+      },
     },
   });
   ${authInline}
@@ -185,8 +193,14 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
   // 5. Код чиститься від пробілів (їх лишає вставка з листа) і йде з типом 'email'.
   await verifyEmailCode('ivan@mail.com', ' 12 34 56 ');
   const v = calls.find(c => c[0] === 'verify');
+  const verifies = calls.filter(c => c[0] === 'verify').map(c => c[1]);
   out.чиститьКод = !!(v && v[1].token === '123456');
-  out.типEmail   = !!(v && v[1].type === 'email');
+  out.типEmail   = !!(v && v[1].type === 'email');       // перша спроба — саме email
+  // ГОЛОВНЕ: код, який лежить під magiclink, МУСИТЬ підійти. Так поводиться
+  // акаунт, що вже існує (у Вови — через Google), тобто більшість входів.
+  out.типиПеребрані = verifies.map(x => x.type).join('>');
+  out.існуючийЗайшов = out.чиститьКод && verifies.some(x => x.type === 'magiclink');
+
 
   // 6. 🔴 ГОЛОВНА ПЕРЕВІРКА КЛАСУ: помилка про КОД не сміє говорити про СЕАНС.
   out.кодНеПроСеанс = netErrorText({ message: 'Token has expired or is invalid' }) !== 'Сеанс застарів — увійди знову';
@@ -217,7 +231,9 @@ ok('адресу нормалізує (пробіли + регістр)',    out
 ok('🔴 заводить НОВОГО жителя (shouldCreateUser)', out.створюєНового === true);
 ok('короткий код НЕ шле в мережу',             out.короткийНеШле === true);
 ok('код чистить від пробілів',                 out.чиститьКод === true);
-ok('звіряє код типом email',                   out.типEmail === true);
+ok('перша спроба — тип email',                 out.типEmail === true);
+ok('🔴 код існуючого акаунта (magiclink) ПІДХОДИТЬ', out.існуючийЗайшов === true,
+   `спроби: ${out.типиПеребрані}`);
 ok('🔴 помилка про КОД не каже «сеанс застарів»', out.кодНеПроСеанс === true);
 ok('помилка про код говорить про код',         out.кодПроКод === true);
 ok('ліміт надсилання говорить про час',        out.лімітПроЧас === true);

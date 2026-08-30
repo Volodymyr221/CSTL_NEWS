@@ -352,17 +352,49 @@ export async function sendEmailCode(email) {
 // працює тим самим шляхом, що й після Google. Окремого «увійти» тут не треба.
 //
 // 🔑 `type: 'email'` — саме той тип, яким звіряється код, надісланий `signInWithOtp`.
+// 🔴 30.08 — ОДИН КОД, АЛЕ ДВА РІЗНІ ТИПИ. НАЙДОРОЖЧА ВАДА ЦЬОГО ПОТОКУ.
+//
+// 🗣️ Вова: «досі пише невірний код» — на свіжому коді, зі свіжого листа.
+//
+// 📐 ЩО ПОКАЗАЛА БАЗА (клієнт цього не бачить у принципі):
+//     select token_type from auth.one_time_tokens → **recovery_token**
+// А ми звіряли `type: 'email'`. Тип не збігся — і збіг НЕ МІГ статися ніколи.
+//
+// 🔑 ПРИЧИНА, І ВОНА НЕ ОЧЕВИДНА: Supabase кладе код у РІЗНІ комірки залежно від
+// того, чи людина вже є в базі.
+//   • акаунта ще немає → це підтвердження реєстрації → тип `email`;
+//   • акаунт УЖЕ Є (у Вови він є через Google) → це magic-link → `magiclink`.
+// Тобто мій `type: 'email'` працював би лише для НОВИХ людей, а для всіх, хто вже
+// заходив, — не працював би ЖОДНОГО разу.
+//
+// 🛑 І найгірше в цій ваді: назовні вона виглядає як «людина ввела не той код».
+// Помилка сервера дослівно та сама, що на протермінований код. Тобто застосунок
+// знову звинувачував людину в тому, що зробив сам — третій раз за добу той самий
+// клас (B-33). Побачити різницю можна було ЛИШЕ зазирнувши в `auth.one_time_tokens`.
+//
+// ➡️ КЛІЄНТ НЕ ЗНАЄ, чи людина нова: `signInWithOtp` цього не повідомляє. Тому
+// пробуємо типи по черзі. ⚠️ Невдала спроба код НЕ споживає — сервер просто не
+// знаходить збігу під тим типом, тож перебір безпечний для одноразового коду.
+const OTP_TYPES = ['email', 'magiclink', 'signup'];
+
 export async function verifyEmailCode(email, code) {
   const supa = supaForAuth();
   if (!supa) return { ok: false, error: 'Сервер недоступний' };
   const token = String(code || '').replace(/\D/g, '');   // людина вставляє код із пробілами
   if (token.length < 6) return { ok: false, error: 'Код складається з 6 цифр' };
-  const { error } = await supa.auth.verifyOtp({ email: normalizeEmail(email), token, type: 'email' });
-  if (error) {
-    console.warn('[auth] verifyEmailCode:', error.message);
-    return { ok: false, error: netErrorText(error) };
+  const addr = normalizeEmail(email);
+  let last = null;
+  for (const type of OTP_TYPES) {
+    const { error } = await supa.auth.verifyOtp({ email: addr, token, type });
+    if (!error) return { ok: true };
+    last = error;
+    // 🔑 Далі пробуємо ТІЛЬКИ якщо сервер сказав «не знайшов такого коду». Мережа
+    // впала, ліміт, збій — це не «спробуй інший тип», і перебирати їх означало б
+    // тричі повторити той самий провал і втроє довше тримати людину на екрані.
+    if (!/token has expired or is invalid/i.test(String(error.message || ''))) break;
   }
-  return { ok: true };
+  console.warn('[auth] verifyEmailCode:', last && last.message);
+  return { ok: false, error: netErrorText(last) };
 }
 
 // 🔴 24.08 — ВИХІД ТЕПЕР ВІДВʼЯЗУЄ ПРИСТРІЙ ВІД АКАУНТА.
