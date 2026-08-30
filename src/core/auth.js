@@ -342,7 +342,15 @@ export async function sendEmailCode(email) {
   });
   if (error) {
     console.warn('[auth] sendEmailCode:', error.message);
-    return { ok: false, error: netErrorText(error) };
+    // 🔴 30.08 — «ЗАЧЕКАЙ ХВИЛИНУ» ЦЕ НЕ ВІДМОВА, А «КОД УЖЕ В ТЕБЕ».
+    // Supabase не дає просити новий код частіше ніж раз на хвилину. Раніше ми
+    // показували це як помилку і лишали людину на екрані адреси — хоча лист із
+    // робочим кодом уже лежав у неї в пошті. 🛑 Тобто застосунок ховав від людини
+    // те, що в неї ВЖЕ Є. Повертаємо ознаку окремо, щоб екран повів її далі, до
+    // поля коду, а не змушував тиснути кнопку, яка не спрацює ще 50 секунд.
+    const wait = (String(error.message || '').match(/(\d+)\s*seconds/)   /* не `after (` — сторож імпортів читає це як виклик функції */ || [])[1];
+    const rateLimited = /rate_limit/.test(String(error.code || '')) || !!wait;
+    return { ok: false, rateLimited, retryAfter: wait ? Number(wait) : 60, error: netErrorText(error) };
   }
   return { ok: true };
 }
