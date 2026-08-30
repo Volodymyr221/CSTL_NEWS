@@ -67,6 +67,7 @@ jobs:
           python3 scripts/test_retention.py
           python3 scripts/test_dedup.py
           python3 scripts/test_rich_html.py
+          python3 scripts/test_categories.py
 
       - name: Сторож документації
         run: node tests/docs-refs.mjs
