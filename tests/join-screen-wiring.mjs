@@ -88,8 +88,21 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
   const openThreadsList = () => {}, openMyAds = () => {}, openSavedHub = () => {};
   const SETTLEMENTS = [], OTHER_SETTLEMENT = 'Інше';
   const avatarCircle = () => '', uploadAvatarPair = async () => ({});
-  const isLoggedIn = () => false, currentUser = () => null, onAuthChange = () => {};
-  const currentAvatarUrl = () => '', getProfile = async () => null, saveProfile = async () => ({ ok: true });
+  // 🔴 Підміняємо «хто я» так, щоб можна було ПЕРЕМИКАТИ людей — саме на перемиканні
+  // анкета новачка й зникала: прапорець «уже питали» був один на весь запуск.
+  let _хто = null, _профілі = {};
+  const isLoggedIn = () => !!_хто, currentUser = () => _хто;
+  let _слухач = () => {};
+  const onAuthChange = (cb) => { _слухач = cb; };
+  const currentAvatarUrl = () => '';
+  const getProfile = async () => (_хто ? (_профілі[_хто.id] || null) : null);
+  const saveProfile = async () => ({ ok: true });
+  window.__увійти = async (id, маєПрофіль) => {
+    _хто = { id, email: id + '@x.z', user_metadata: {} };
+    if (маєПрофіль) _профілі[id] = { name: 'Хтось' };
+    await _слухач(_хто);
+  };
+  window.__вийти = async () => { _хто = null; await _слухач(null); };
   const signOut = async () => {}, signInWithGoogle = () => {}, signInWithFacebook = () => {};
   const FACEBOOK_ENABLED = false;
   const OTP_LENGTH = ${OTP_LEN};        // справжнє значення з auth.js, не вигадане
@@ -168,6 +181,22 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
     тап('[data-go="back"]');
     await пауза();
     out.іншийСпосіб = !!document.querySelector('.acc-google');
+
+    // 6-БІС. 🔴 АНКЕТА НОВАЧКА ПРИ ПЕРЕМИКАННІ АКАУНТА (вада 30.08).
+    // Вова зайшов Google (анкети не треба — профіль є), вийшов, зайшов НОВОЮ
+    // поштою — і анкета не відкрилась, бо прапорець «уже питали» стояв на весь
+    // запуск. Імʼя лишилось «Житель»: вхід поштою метаданих імені не дає.
+    document.querySelectorAll('.app-modal').forEach(m => m.remove());
+    await window.__увійти('стара-людина', true);    // профіль Є — анкети бути не має
+    await new Promise(r => setTimeout(r, 60));
+    out.анкетаДляСтарого = !!document.querySelector('#acc-name');
+
+    await window.__вийти();
+    document.querySelectorAll('.app-modal').forEach(m => m.remove());
+    await window.__увійти('новий-житель', false);   // профілю НЕМА — анкета мусить бути
+    await new Promise(r => setTimeout(r, 60));
+    out.анкетаДляНового = !!document.querySelector('#acc-name');
+
   } catch (e) {
     журнал.помилки.push(String(e && e.message || e));
   }
@@ -197,6 +226,9 @@ ok('🔴 довший код доходить ЦІЛИМ, не обрізани�
 ok('невдалий код показує помилку під полем',      out.помилкаПідПолем === true);
 ok('«Змінити пошту» жива',                       out.назадДоПошти === true);
 ok('повертає на крок з адресою',                 out.повернулисьНаПошту === true);
+ok('у того, хто вже має профіль, анкети НЕМА', out.анкетаДляСтарого === false);
+ok('🔴 новому жителю анкета ВІДКРИВАЄТЬСЯ навіть після зміни акаунта',
+   out.анкетаДляНового === true);
 ok('🔴 «Інший спосіб» жива',                      out.іншийСпосіб === true);
 ok('екран будується без помилок',                !out.помилки, out.помилки || 'помилок немає');
 
