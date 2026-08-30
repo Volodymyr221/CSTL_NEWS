@@ -200,14 +200,16 @@ function openJoin(reason) {
       <button class="acc-skip" type="button" data-go="back">← Інший спосіб</button>`;
     const input = body.querySelector('[data-f="email"]');
     const send  = body.querySelector('[data-go="send"]');
-    input.focus();
-    input.addEventListener('input', () => showErr(''));
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
-    send.addEventListener('click', doSend);
-    body.querySelector('[data-go="back"]').addEventListener('click', stepStart);
-
-    // 🔴 `singleFlight`: подвійний тап шле ДВА листи, а новий код скасовує
-    // попередній — людина відкриває першу літеру і вводить уже мертвий код.
+    // 🔴 30.08 — ВИЗНАЧЕННЯ СТОЇТЬ ВИЩЕ ЗА СЛУХАЧІВ, І ЦЕ НЕ СТИЛЬ, А ВИМОГА.
+    // Спершу тут була `async function doSend()` унизу — оголошення функції
+    // піднімається, тож порядок не важив. Коли я загорнув її в `singleFlight`,
+    // вона стала `const` — а `const` до свого рядка НЕ ІСНУЄ. Рядок
+    // `send.addEventListener('click', doSend)` кидав помилку, `stepEmail()`
+    // обривався на ньому, і НІЧОГО нижче не підключалось: мертвими ставали
+    // обидві кнопки — і «Надіслати код», і «Інший спосіб».
+    // 🛑 Знайшов Вова пальцем; жоден сторож цього не бачив, бо всі вони міряли
+    // помічники ОКРЕМО, а зламалась ЗБІРКА екрана. Тому нижче доданий стенд,
+    // який справді відкриває картку і тисне кнопки.
     const doSend = singleFlight(async () => {
       const value = normalizeEmail(input.value);
       if (!isValidEmail(value)) { showErr('Перевір адресу пошти'); input.focus(); return; }
@@ -219,6 +221,12 @@ function openJoin(reason) {
       if (!r.ok) { showErr(r.error); return; }
       stepCode();
     });
+
+    input.focus();
+    input.addEventListener('input', () => showErr(''));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
+    send.addEventListener('click', doSend);
+    body.querySelector('[data-go="back"]').addEventListener('click', stepStart);
   }
 
   // ── Крок 3: код ──
@@ -240,17 +248,9 @@ function openJoin(reason) {
     const check  = body.querySelector('[data-go="check"]');
     const resend = body.querySelector('[data-go="resend"]');
     input.focus();
-    body.querySelector('[data-go="edit"]').addEventListener('click', stepEmail);
 
     // Тільки цифри. Набрали шість — звіряємо самі, без зайвого тапу: код і так
     // однозначний, а зайвий тап тут це рівно та дрібниця, на якій люди спотикаються.
-    input.addEventListener('input', () => {
-      const only = input.value.replace(/\D/g, '').slice(0, 6);
-      if (only !== input.value) input.value = only;
-      showErr('');
-      if (only.length === 6) doCheck();
-    });
-    check.addEventListener('click', doCheck);
     resend.addEventListener('click', singleFlight(async () => {
       if (resendLeft > 0) return;
       busy(resend, true, 'Надсилаю…');
@@ -260,7 +260,6 @@ function openJoin(reason) {
       showToast('Код надіслано ще раз', 2200);
       startCountdown();
     }));
-    startCountdown();
 
     // Повторне надсилання не раніше ніж через хвилину — стільки ж тримає й сам
     // Supabase. 🛑 Показуємо це числом, а не мовчазною відмовою: інакше людина
@@ -291,6 +290,17 @@ function openJoin(reason) {
       close();                       // саме СВОЮ картку — див. коментар угорі
       showToast('Ви увійшли', 2200);
     });
+
+    // Слухачі — ПІСЛЯ визначення `doCheck` (та сама причина, що в `stepEmail`).
+    body.querySelector('[data-go="edit"]').addEventListener('click', stepEmail);
+    input.addEventListener('input', () => {
+      const only = input.value.replace(/\D/g, '').slice(0, 6);
+      if (only !== input.value) input.value = only;
+      showErr('');
+      if (only.length === 6) doCheck();
+    });
+    check.addEventListener('click', doCheck);
+    startCountdown();
   }
 
   stepStart();
