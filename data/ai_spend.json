@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788091768785,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 488,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0116,
+      "note": ""
+    },
+    {
       "ts": 1788018220986,
       "mission": "istoriya:hist:олицька-ординація-як-маєток",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0096,
       "note": ""
-    },
-    {
-      "ts": 1784540595081,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 773,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0131,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.346,
-    "runs": 120,
+    "cost_usd": 8.3576,
+    "runs": 121,
     "web_searches": 109
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 3.2364,
-      "runs": 42,
+      "cost_usd": 3.248,
+      "runs": 43,
       "web_searches": 46
     }
   },
-  "updated_ts": 1788018220986
+  "updated_ts": 1788091768785
 }
