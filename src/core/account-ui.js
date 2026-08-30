@@ -36,6 +36,55 @@ import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } fr
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 30.08 — ДВІ ВАДИ ВХОДУ ПОШТОЮ, ЗНАЙДЕНІ ВОВОЮ НА ЖИВОМУ ТЕЛЕФОНІ
+//
+// 🗣️ «Натиснув, ввів код, і вантажить вже 3 хв». На знімку одночасно: під полем
+// «Код невірний або застарів», а кнопка каже «Перевіряю…». Два стани, які не
+// можуть бути правдою разом — і саме ця пара показала обидві вади.
+//
+// 1️⃣ **КНОПКА БРЕХАЛА.** `busy()` при вмиканні запамʼятовував поточний напис як
+//    «спокійний». Якщо він спрацьовував ДРУГИЙ раз, поки кнопка вже в роботі, то
+//    запамʼятовував «Перевіряю…» — і потім «відновлював» його назавжди. Запит
+//    давно повернувся, а кнопка ще хвилини казала, що працює.
+//    ➡️ Лікується одним рядком: спокійний напис зберігається РІВНО ОДИН раз.
+//
+// 2️⃣ 🔴 **ГІРША: ЗВІРКА ЗАПУСКАЛАСЬ ДВІЧІ.** Код звірявся сам на шостій цифрі
+//    (зручність) І по тапу «Підтвердити». Одноразовий код тим і одноразовий: перший
+//    виклик його СПОЖИВАЄ, другий отримує «Token has expired or is invalid».
+//    🛑 Тобто застосунок спалював код людини і показував це як ЇЇ помилку — той
+//    самий клас, що «фальшиве підтвердження» у вимикачах (B-33): екран звинувачує
+//    людину в тому, що зробив сам.
+//    ⚠️ Вимкнути авто-звірку було б хибним лікуванням: вона знімає зайвий тап і
+//    працює. Лікуємо ПРИЧИНУ — два входи в ту саму дію.
+//
+// 🔑 `singleFlight` тримає це правило в ОДНОМУ місці й на рівні модуля — щоб
+// сторож міг його ВИКОНАТИ, а не грепнути, і щоб наступна кнопка з мережевим
+// викликом отримала захист даром, а не переписувала його заново.
+export function singleFlight(fn) {
+  let inFlight = false;
+  return async (...args) => {
+    if (inFlight) return undefined;         // дубль тихо відкидаємо — він не подія
+    inFlight = true;
+    try { return await fn(...args); }
+    finally { inFlight = false; }
+  };
+}
+
+// Кнопка на час запиту: вимкнена + чесно каже, що саме відбувається.
+// 🔴 `!= null` — саме «вже зберігали?», а не «непорожнє». Порожній напис теж
+// законний стан, і перевірка на правдивість зробила б із нього «не зберігали».
+export function setBusy(btn, on, label) {
+  if (!btn) return;
+  if (on) {
+    if (btn.dataset.idle == null) btn.dataset.idle = btn.textContent;
+    btn.textContent = label;
+  } else if (btn.dataset.idle != null) {
+    btn.textContent = btn.dataset.idle;
+  }
+  btn.disabled = on;
+}
+
 // ── Кнопки входу в кабінет ([data-account-btn]) ─────────────────
 // Раніше була одна #account-btn у шапці; тепер кнопка живе біля привітання на
 // Громаді (рішення Вови 15.07), а механізм узагальнено: оновлюємо ВСІ кнопки
@@ -109,13 +158,7 @@ function openJoin(reason) {
     box.textContent = text || '';
     box.hidden = !text;
   };
-  // Кнопка на час запиту: вимкнена + чесно каже, що саме відбувається.
-  const busy = (btn, on, label) => {
-    if (!btn) return;
-    if (on) { btn.dataset.idle = btn.textContent; btn.textContent = label; }
-    else if (btn.dataset.idle) { btn.textContent = btn.dataset.idle; }
-    btn.disabled = on;
-  };
+  const busy = (btn, on, label) => setBusy(btn, on, label);
 
   // ── Крок 1: вибір способу ──
   function stepStart() {
@@ -163,7 +206,9 @@ function openJoin(reason) {
     send.addEventListener('click', doSend);
     body.querySelector('[data-go="back"]').addEventListener('click', stepStart);
 
-    async function doSend() {
+    // 🔴 `singleFlight`: подвійний тап шле ДВА листи, а новий код скасовує
+    // попередній — людина відкриває першу літеру і вводить уже мертвий код.
+    const doSend = singleFlight(async () => {
       const value = normalizeEmail(input.value);
       if (!isValidEmail(value)) { showErr('Перевір адресу пошти'); input.focus(); return; }
       addr = value;
@@ -173,7 +218,7 @@ function openJoin(reason) {
       busy(send, false);
       if (!r.ok) { showErr(r.error); return; }
       stepCode();
-    }
+    });
   }
 
   // ── Крок 3: код ──
@@ -206,7 +251,7 @@ function openJoin(reason) {
       if (only.length === 6) doCheck();
     });
     check.addEventListener('click', doCheck);
-    resend.addEventListener('click', async () => {
+    resend.addEventListener('click', singleFlight(async () => {
       if (resendLeft > 0) return;
       busy(resend, true, 'Надсилаю…');
       const r = await sendEmailCode(addr);
@@ -214,7 +259,7 @@ function openJoin(reason) {
       if (!r.ok) { showErr(r.error); return; }
       showToast('Код надіслано ще раз', 2200);
       startCountdown();
-    });
+    }));
     startCountdown();
 
     // Повторне надсилання не раніше ніж через хвилину — стільки ж тримає й сам
@@ -233,7 +278,10 @@ function openJoin(reason) {
       timer = setInterval(tick, 1000);
     }
 
-    async function doCheck() {
+    // 🔴 ГОЛОВНЕ МІСЦЕ ВАДИ 30.08: сюди ведуть ДВА входи — авто-звірка на шостій
+    // цифрі й тап «Підтвердити». Код одноразовий, тож другий виклик отримував
+    // «код невірний» про КОД, який щойно спожив перший.
+    const doCheck = singleFlight(async () => {
       const code = input.value.replace(/\D/g, '');
       if (code.length < 6) { showErr('Код складається з 6 цифр'); return; }
       busy(check, true, 'Перевіряю…');
@@ -242,7 +290,7 @@ function openJoin(reason) {
       if (!r.ok) { showErr(r.error); input.select(); return; }
       close();                       // саме СВОЮ картку — див. коментар угорі
       showToast('Ви увійшли', 2200);
-    }
+    });
   }
 
   stepStart();
