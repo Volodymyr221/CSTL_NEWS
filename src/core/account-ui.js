@@ -23,7 +23,7 @@ import {
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
-  sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail, OTP_LENGTH,
+  sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail, OTP_LENGTH, OTP_MAX,
   signInWithFacebook, FACEBOOK_ENABLED, loginMethods, addEmailLogin, confirmEmailLogin,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
@@ -247,13 +247,14 @@ function openJoin(reason) {
       <p class="acc-sub">Надіслали код на <b>${escapeHtml(addr)}</b> — ${OTP_LENGTH} цифр.<br>
         Лист іде до хвилини — гляньте й теку «Спам».</p>
       <input class="acc-input acc-code" type="text" inputmode="numeric" autocomplete="one-time-code"
-             maxlength="${OTP_LENGTH}" placeholder="${'—'.repeat(OTP_LENGTH)}" data-f="code">
+             maxlength="${OTP_MAX}" placeholder="${'—'.repeat(OTP_LENGTH)}" data-f="code">
       <p class="acc-err" hidden></p>
       <button class="acc-primary" type="button" data-go="check">Підтвердити</button>
       <button class="acc-skip" type="button" data-go="resend"></button>
       <button class="acc-skip" type="button" data-go="edit">← Змінити пошту</button>`;
     const input  = body.querySelector('[data-f="code"]');
     const check  = body.querySelector('[data-go="check"]');
+    let autoTimer = 0;
     const resend = body.querySelector('[data-go="resend"]');
     input.focus();
 
@@ -289,6 +290,11 @@ function openJoin(reason) {
     // цифрі й тап «Підтвердити». Код одноразовий, тож другий виклик отримував
     // «код невірний» про КОД, який щойно спожив перший.
     const doCheck = singleFlight(async () => {
+      // 🔑 Тап СКАСОВУЄ відкладену автозвірку. Без цього рядка тап і пауза дають
+      // два послідовні виклики — а `singleFlight` їх не ловить, бо другий стартує
+      // ПІСЛЯ завершення першого. Другий отримав би «код невірний» про код, який
+      // щойно спожив перший: рівно та вада 30.08, лише іншим шляхом.
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = 0; }
       const code = input.value.replace(/\D/g, '');
       if (code.length < OTP_LENGTH) { showErr(`Код складається з ${OTP_LENGTH} цифр`); return; }
       busy(check, true, 'Перевіряю…');
@@ -302,10 +308,15 @@ function openJoin(reason) {
     // Слухачі — ПІСЛЯ визначення `doCheck` (та сама причина, що в `stepEmail`).
     body.querySelector('[data-go="edit"]').addEventListener('click', stepEmail);
     input.addEventListener('input', () => {
-      const only = input.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
+      const only = input.value.replace(/\D/g, '').slice(0, OTP_MAX);
       if (only !== input.value) input.value = only;
       showErr('');
-      if (only.length === OTP_LENGTH) doCheck();
+      // 🔑 Автозвірка з ПАУЗОЮ, а не на точній довжині. Дві причини, обидві з
+      // 30.08: якщо в Supabase раптом стоїть інше число, звірка на точній довжині
+      // або не спрацює зовсім, або вистрелить ОГРИЗКОМ коду посеред набору. Пауза
+      // означає «людина дописала» — і тоді байдуже, шість там цифр чи вісім.
+      if (autoTimer) clearTimeout(autoTimer);
+      if (only.length >= OTP_LENGTH) autoTimer = setTimeout(doCheck, 350);
     });
     check.addEventListener('click', doCheck);
     startCountdown(waitLeft);
@@ -420,7 +431,7 @@ function loginSectionHtml() {
         <input class="acc-input" id="cf-addmail-email" type="email" inputmode="email" autocomplete="email"
                autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="адреса@пошта.com">
         <input class="acc-input acc-code" id="cf-addmail-code" type="text" inputmode="numeric"
-               autocomplete="one-time-code" maxlength="${OTP_LENGTH}" placeholder="${'—'.repeat(OTP_LENGTH)}" hidden>
+               autocomplete="one-time-code" maxlength="${OTP_MAX}" placeholder="${'—'.repeat(OTP_LENGTH)}" hidden>
         <p class="acc-err" id="cf-addmail-err" hidden></p>
         <button class="acc-primary" type="button" id="cf-addmail-go">Надіслати код</button>
       </div>`}
@@ -451,7 +462,7 @@ function attachLoginSection(cab) {
     if (!box.hidden) email.focus();
   });
   code.addEventListener('input', () => {
-    const only = code.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
+    const only = code.value.replace(/\D/g, '').slice(0, OTP_MAX);
     if (only !== code.value) code.value = only;
     showErr('');
   });

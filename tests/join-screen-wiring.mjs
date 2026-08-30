@@ -37,13 +37,21 @@ const auth = projectFile('src/core/auth.js', REV);
 // Код був правильний завжди, застосунок сам його калічив.
 // 🛑 Якби стенд тримав власну шістку, він лишався б зеленим над цією вадою
 // назавжди — і саме так вада прожила чотири кола розслідування.
-const OTP_LEN = Number((auth.match(/export const OTP_LENGTH = (\d+)/) || [])[1] || 0);
+const OTP_LEN  = Number((auth.match(/export const OTP_LENGTH = (\d+)/) || [])[1] || 0);
+const OTP_MAXV = Number((auth.match(/export const OTP_MAX = (\d+)/) || [])[1] || 0);
+// 🔴 30.08 — ПОЛЕ НЕ СМІЄ ОБРІЗАТИ ВВЕДЕНЕ. Саме обрізання й було коренем: у листі
+// приходило вісім цифр, поле брало шість, і на сервер летів огризок. Стеля мусить
+// бути ВИЩОЮ за очікувану довжину — тоді розбіг налаштувань нікого не замикає.
+ok('стеля поля вища за довжину коду', OTP_MAXV > OTP_LEN, `${OTP_LEN} цифр, стеля ${OTP_MAXV}`);
 ok('довжина коду названа однією константою', OTP_LEN >= 4 && OTP_LEN <= 10, `OTP_LENGTH = ${OTP_LEN}`);
 // 🔑 І жодного місця, де довжина прибита цвяхами повз константу.
 {
   const uiOnly = ui.replace(/^\s*\/\/.*$/gm, '');
   ok('поле коду не тримає власної довжини',
      !/maxlength="\d/.test(uiOnly) && !/slice\(0, \d\)/.test(uiOnly));
+  // 🔑 І зріз іде по СТЕЛІ, а не по очікуваній довжині — інакше поле знову різало б.
+  ok('зріз по стелі, а не по довжині коду',
+     !/slice\(0, OTP_LENGTH\)/.test(uiOnly) && /slice\(0, OTP_MAX\)/.test(uiOnly));
 }
 
 const emailHelpers = ['normalizeEmail', 'isValidEmail']
@@ -85,6 +93,7 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
   const signOut = async () => {}, signInWithGoogle = () => {}, signInWithFacebook = () => {};
   const FACEBOOK_ENABLED = false;
   const OTP_LENGTH = ${OTP_LEN};        // справжнє значення з auth.js, не вигадане
+  const OTP_MAX = ${OTP_MAXV};
   const loginMethods = () => ({ google: true, facebook: false, email: true, address: 'x@y.z' });
   const addEmailLogin = async () => ({ ok: true }), confirmEmailLogin = async () => ({ ok: true });
   ${emailHelpers}
@@ -139,12 +148,15 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body><scr
     // 4. Авто-звірка на шостій цифрі — і РІВНО один виклик.
     const поле2 = document.querySelector('[data-f="code"]');
     if (поле2) {
-      поле2.value = '${'1'.repeat(OTP_LEN)}';
+      // 🔴 Вводимо код ДОВШИЙ за очікуваний — рівно випадок Вови (у листі 8, чекали 6).
+      поле2.value = '${'1'.repeat(OTP_LEN + 2)}';
       поле2.dispatchEvent(new Event('input', { bubbles: true }));
       тап('[data-go="check"]');            // палець тисне ще й кнопку
     }
     await пауза();
+    await new Promise(r => setTimeout(r, 450));   // чекаємо паузу автозвірки
     out.звірок = журнал.звірено.length;
+    out.кодЦілий = журнал.звірено[0] === '${'1'.repeat(OTP_LEN + 2)}';
     out.помилкаПідПолем = (document.querySelector('.acc-err')?.textContent || '').length > 0;
 
     // 5. «Змінити пошту» жива.
@@ -181,6 +193,7 @@ ok('тап веде на крок з адресою',                 out.кро
 ok('🔴 «Надіслати код» ДОХОДИТЬ до мережі',       out.надіслалиКод === 'test@example.com', `надіслано: «${out.надіслалиКод}»`);
 ok('після надсилання видно крок коду',           out.крокКоду === true);
 ok('🔴 звірка йде РІВНО раз (авто + тап)',        out.звірок === 1, `звірок: ${out.звірок}`);
+ok('🔴 довший код доходить ЦІЛИМ, не обрізаним',  out.кодЦілий === true, `надіслано: «${(out.кодЦілий ? 'цілий' : 'обрізаний')}»`);
 ok('невдалий код показує помилку під полем',      out.помилкаПідПолем === true);
 ok('«Змінити пошту» жива',                       out.назадДоПошти === true);
 ok('повертає на крок з адресою',                 out.повернулисьНаПошту === true);
