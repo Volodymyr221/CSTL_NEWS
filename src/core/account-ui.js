@@ -23,7 +23,7 @@ import {
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
-  sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail,
+  sendEmailCode, verifyEmailCode, normalizeEmail, isValidEmail, OTP_LENGTH,
   signInWithFacebook, FACEBOOK_ENABLED, loginMethods, addEmailLogin, confirmEmailLogin,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
@@ -244,10 +244,10 @@ function openJoin(reason) {
     body.innerHTML = `
       <div class="acc-emoji">🔑</div>
       <h2 class="acc-title">Введіть код</h2>
-      <p class="acc-sub">Надіслали 6 цифр на <b>${escapeHtml(addr)}</b>.<br>
+      <p class="acc-sub">Надіслали код на <b>${escapeHtml(addr)}</b> — ${OTP_LENGTH} цифр.<br>
         Лист іде до хвилини — гляньте й теку «Спам».</p>
       <input class="acc-input acc-code" type="text" inputmode="numeric" autocomplete="one-time-code"
-             maxlength="6" placeholder="——————" data-f="code">
+             maxlength="${OTP_LENGTH}" placeholder="${'—'.repeat(OTP_LENGTH)}" data-f="code">
       <p class="acc-err" hidden></p>
       <button class="acc-primary" type="button" data-go="check">Підтвердити</button>
       <button class="acc-skip" type="button" data-go="resend"></button>
@@ -290,7 +290,7 @@ function openJoin(reason) {
     // «код невірний» про КОД, який щойно спожив перший.
     const doCheck = singleFlight(async () => {
       const code = input.value.replace(/\D/g, '');
-      if (code.length < 6) { showErr('Код складається з 6 цифр'); return; }
+      if (code.length < OTP_LENGTH) { showErr(`Код складається з ${OTP_LENGTH} цифр`); return; }
       busy(check, true, 'Перевіряю…');
       const r = await verifyEmailCode(addr, code);
       busy(check, false);
@@ -302,10 +302,10 @@ function openJoin(reason) {
     // Слухачі — ПІСЛЯ визначення `doCheck` (та сама причина, що в `stepEmail`).
     body.querySelector('[data-go="edit"]').addEventListener('click', stepEmail);
     input.addEventListener('input', () => {
-      const only = input.value.replace(/\D/g, '').slice(0, 6);
+      const only = input.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
       if (only !== input.value) input.value = only;
       showErr('');
-      if (only.length === 6) doCheck();
+      if (only.length === OTP_LENGTH) doCheck();
     });
     check.addEventListener('click', doCheck);
     startCountdown(waitLeft);
@@ -420,7 +420,7 @@ function loginSectionHtml() {
         <input class="acc-input" id="cf-addmail-email" type="email" inputmode="email" autocomplete="email"
                autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="адреса@пошта.com">
         <input class="acc-input acc-code" id="cf-addmail-code" type="text" inputmode="numeric"
-               autocomplete="one-time-code" maxlength="6" placeholder="——————" hidden>
+               autocomplete="one-time-code" maxlength="${OTP_LENGTH}" placeholder="${'—'.repeat(OTP_LENGTH)}" hidden>
         <p class="acc-err" id="cf-addmail-err" hidden></p>
         <button class="acc-primary" type="button" id="cf-addmail-go">Надіслати код</button>
       </div>`}
@@ -451,7 +451,7 @@ function attachLoginSection(cab) {
     if (!box.hidden) email.focus();
   });
   code.addEventListener('input', () => {
-    const only = code.value.replace(/\D/g, '').slice(0, 6);
+    const only = code.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
     if (only !== code.value) code.value = only;
     showErr('');
   });
