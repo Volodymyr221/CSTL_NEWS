@@ -727,7 +727,8 @@ CSTL_NEWS/
 │   ├── send-bus-push/            # Edge Function: push про автобуси (cron щохв)
 │   └── send-chat-push/           # Фаза Б: Edge Function: push про повідомлення чату
 ├── scripts/
-│   ├── parse_rss.py              # 7 джерел, fetch_full_article, класифікатор news/event
+│   ├── parse_rss.py              # 7 джерел, fetch_full_article, класифікатор тем (10 категорій)
+│   ├── test_categories.py        # 🆕 30.08 сторож класифікатора категорій (19 перевірок)
 │   ├── test_worker.py            # Тест Cloudflare Worker
 │   └── supabase_*.sql            # Фаза Б: міграції (profiles, chat, RLS, saved_posts) — застосовані
 │
