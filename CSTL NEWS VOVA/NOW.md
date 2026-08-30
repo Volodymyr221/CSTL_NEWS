@@ -10,30 +10,37 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-30 06:07 UTC
+**Зріз на:** 2026-08-30 07:15 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-nju3bu` |
-| останній коміт людини | `a4c0a21a` 30.08 06:05 — Merge remote-tracking branch 'origin/main' into claude/startuem-nju3bu |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260830-0604` |
-| останній PR у `main` | #1107 |
+| останній коміт людини | `c50930d4` 30.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-nju3bu |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260830-0714` |
+| останній PR у `main` | #1108 |
 | стендів на диску | 122 |
-| незакомічених файлів | 1 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-30 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- ✅ нічого. Уся робота гілки вже в `main`.
+- `_session-log/vova-2026-08-29c.md`
+- `bundle.js`
+- `docs/AUTH_EMAIL_SETUP.md`
+- `src/core/account-ui.js`
+- `src/core/auth.js`
+- `sw.js`
+- `tests/auth-email-code.mjs`
+- `tests/join-screen-wiring.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `a4c0a21a` 30.08 06:05 — Merge remote-tracking branch 'origin/main' into claude/startuem-nju3bu
-- `f1556691` 30.08 06:04 — 429 при надсиланні коду — це не мережа, а «код уже в тебе» (#1107)
-- `29de7db4` 30.08 06:04 — Merge origin/main + свіжий CACHE
-- `56d91d04` 30.08 06:03 — «Слабкий звʼязок», якого не було: 429 — це не мережа, а «код уже в тебе»
-- `82c20fd9` 30.08 05:42 — Вхід поштою: код існуючого акаунта підходить — типи перебираються (#1106)
+- `c50930d4` 30.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-nju3bu
+- `bc398f95` 30.08 07:15 — Вхід поштою: застосунок відрізав дві цифри коду — знайшов Вова
+- `7033368b` 30.08 06:09 — Merge remote-tracking branch 'origin/main' into claude/startuem-nju3bu
+- `366328fc` 30.08 06:08 — docs: чотири вади входу поштою 30.08 і метод, яким їх знайшли (#1108)
+- `1faaaebf` 30.08 06:08 — Пульс і літопис: чотири вади входу поштою 30.08 і метод, яким їх знайшли
 
 <!-- AUTO:END -->
 
