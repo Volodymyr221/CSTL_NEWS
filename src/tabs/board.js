@@ -29,6 +29,7 @@ import {
   submitAdReport, fetchPostContact,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
+import { search as smartSearch } from '../core/search.js';   // єдиний пошук CSTL (30.08)
 // ⚠️ `core/sheet-motion.js` більше не імпортується ВЗАГАЛІ: у модалки оголошення немає
 // власного жесту закриття. Її закриває системний жест iPhone через історію браузера —
 // той самий механізм, що й екран спільноти у «Стрічці» (див. `core/layers.js`).
@@ -232,6 +233,10 @@ let activeType     = 'board';
 let activeCategory = 'all';
 let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
+// Слова, за якими кожне оголошення потрапило у видачу: id → ['будинк','жорнищ'].
+// Заповнює `getFilteredPosts`, читає картка. Тримаємо ПОРУЧ із запитом, а не в
+// самій картці: розмітка перебудовується часто, і стан у ній злітав би.
+let searchHits     = new Map();
 // Чіп «Без відповіді» на вкладці «Питання» (11.08). Стан ЛИШЕ в памʼяті модуля і
 // свідомо не зберігається між сесіями: людина, яка вчора допомагала відповідати,
 // сьогодні заходить читати — і мовчазний фільтр, який пережив перезапуск, показав
@@ -338,6 +343,21 @@ function renderCardDesc(p) {
   return d ? `<p class="bd-ad-desc">${escapeHtml(d)}</p>` : '';
 }
 
+// ПІДПИС «ЗНАЙДЕНО ЗА…» — чому саме це оголошення потрапило у видачу.
+//
+// 🗣️ Рішення Вови 30.08 («1 — так»). Підстава не косметична: щойно пошук перестає
+// збігатися дослівно, людина не може сама пояснити результат. «Продам приватний
+// будинок» у відповідь на «хочу купити хату» без підпису читається як випадковість,
+// а з підписом — як робота. Довіра до пошуку тримається саме на цьому.
+//
+// ⚠️ Показуємо ЛИШЕ коли є що сказати: без запиту або при прямому збігу однією
+// формою підпис нічого не додає, лише шумить.
+function renderWhyFound(p) {
+  const hits = searchHits.get(p.id);
+  if (!hits || !hits.length) return '';
+  return `<div class="bd-ad-why">✦ знайдено за: ${escapeHtml(hits.join(', '))}</div>`;
+}
+
 function renderBoardCard(p) {
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   // 🔄 07.08 — ЗАМІСТЬ ФОТО ІКОНКА КАТЕГОРІЇ, А НЕ ПЕРША БУКВА ЗАГОЛОВКА
@@ -379,6 +399,7 @@ function renderBoardCard(p) {
           <span class="bd-ad-loc">${PIN_ICON_SVG}${escapeHtml(locLabel(p.location))}</span>
           ${renderPrice(p)}
         </div>
+        ${renderWhyFound(p)}
       </div>
     </article>
   `;
@@ -1373,10 +1394,9 @@ function canSeeMessages() {
 // opts.ignoreLocation — пропустити фільтр локації (для fallback «вся громада»
 // коли в обраному НП немає власних оголошень, Вова 11.07).
 function getFilteredPosts(opts = {}) {
-  const q = searchQuery.trim().toLowerCase();
   const savedIds = activeType === 'saved' ? getSavedIds() : null;
 
-  return allPosts.filter(p => {
+  const base = allPosts.filter(p => {
     // Фільтр по типу
     if (activeType === 'saved') {
       // Таб «Збережені» ДОШКИ = лише оголошення: збережені ОБГОВОРЕННЯ мають
@@ -1406,16 +1426,24 @@ function getFilteredPosts(opts = {}) {
     if (activeType === 'board' && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
       if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
     }
-    // Пошук — text + tags + author + title
-    if (q) {
-      const hay = [
-        p.text, p.title, p.author,
-        ...(p.tags || []),
-      ].filter(Boolean).join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
     return true;
   });
+
+  // 🔴 ПОШУК ЙДЕ ПІСЛЯ ФІЛЬТРІВ, А НЕ ВСЕРЕДИНІ НИХ (30.08).
+  // Було одним рядком у `.filter()`: `hay.includes(q)` — точний ПІДРЯДОК по злитому
+  // тексту. Через це «будинок Жорнище» не знаходило «Продам будинок в Жорнищах»
+  // одразу з двох причин: слова мусили стояти ПОРЯД і в тому ж порядку, і «жорнищЕ»
+  // не є підрядком «жорнищАХ». Тобто навіть одне слово в іншому відмінку губилось.
+  // ➡️ Тепер цим займається `core/search.js`: морфологія, синоніми, друкарські
+  // помилки і ранжування. Розбір і виміри — у шапці того файлу.
+  // 🔑 Порядок саме такий, бо ранжувати треба ВЖЕ звужений набір: категорія й
+  // локація — це вибір людини, і пошук не має права їх перебивати.
+  const q = searchQuery.trim();
+  if (!q) { searchHits = new Map(); return base; }
+
+  const hits = smartSearch(base, q);
+  searchHits = new Map(hits.map(h => [h.item.id, h.matched]));
+  return hits.map(h => h.item);
 }
 
 // Скільки питань ще без жодної відповіді — число для чіпа «Без відповіді».
@@ -1808,8 +1836,17 @@ function emptyStateHtml() {
   if (!причини.length) return 'Тут поки порожньо';
 
   const текст = `Нічого не знайшлось ${причини.join(' ')}`;
+  // 🗣️ Вова 30.08: «нічого не знайшли, можливо ще добавити типу "перегляньте інші
+  // оголошення громади". Ми вже це десь добавляли» — і має рацію, механізм тут уже
+  // стояв. Змінився лише НАПИС, і лише коли скидати нема чого, крім запиту:
+  // «Скинути фільтри» — технічна мова, а людина в цю мить хоче не скидати
+  // налаштування, а просто подивитись, що взагалі є в громаді.
+  // ⚠️ Коли стоять ще й категорія чи локація — напис лишається старим: там
+  // скидається кілька речей, і «усі оголошення» обіцяло б менше, ніж станеться.
+  const лишеЗапит = причини.length === 1 && searchQuery.trim();
+  const напис = лишеЗапит ? 'Усі оголошення громади' : 'Скинути фільтри';
   return `${текст}
-    <button class="bd-empty-reset" type="button" data-bd-reset>Скинути фільтри</button>`;
+    <button class="bd-empty-reset" type="button" data-bd-reset>${напис}</button>`;
 }
 
 // ЗНАЙОМСТВО З РОЗДІЛОМ «ПИТАННЯ» — Large Title + пояснення одним реченням.
