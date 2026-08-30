@@ -32,6 +32,7 @@
 @import url('style/crop.css');       /* .crop-* — рамка кадрування фото (банер сторінки, аватар) */
 @import url('style/install.css');    /* .pwa-cta — банер «Відкрий/встанови у додатку» (лише в браузері) */
 @import url('style/dev-lock.css');   /* .dev-lock — заслінка «Додаток у розробці» (замок на час доробки) */
+@import url('style/desktop-gate.css'); /* .dg-* — екран «поки що тільки телефон» на компʼютері (29.08) */
 @import url('style/news-hub.css');   /* .nh-* — повноекранний хаб новин (шар поверх Громади) */
 @import url('style/fund-screen.css'); /* .fs-* / .fsf-* — розділ «Збори» і форма заявки (17.08) */
 /* ⚠️ home.css стоїть ПІСЛЯ community.css навмисно: головна перебудована 04.08
