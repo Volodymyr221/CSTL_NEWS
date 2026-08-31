@@ -10,30 +10,39 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-31 07:22 UTC
+**Зріз на:** 2026-08-31 13:17 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-8csg49` |
-| останній коміт людини | `e8f188f8` 31.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260830-2108` |
+| останній коміт людини | `58194267` 31.08 13:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260831-1316` |
 | останній PR у `main` | #1119 |
-| стендів на диску | 126 |
-| незакомічених файлів | 1 ⚠️ |
+| стендів на диску | 127 |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-31 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `_session-log/vova-2026-08-31.md`
+- `bundle.js`
+- `src/tabs/home-feed.js`
+- `style/home.css`
+- `sw.js`
+- `tests/fd-name-fit.mjs`
+- `tests/tools/fd-name-wrap-probe.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `58194267` 31.08 13:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `0b0bbe77` 31.08 13:16 — Назва спільноти не рветься посеред слова — ні активна, ні при шести кружечках
+- `37e9c474` 31.08 07:38 — Назва спільноти більше не переноситься інакше, коли кружечок активний
+- `4e24d132` 31.08 07:22 — docs(session-log): журнал 31.08 — продовження сесії після рестарту контейнера
 - `e8f188f8` 31.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
-- `e6a7c527` 31.08 07:15 — Документація сесії пошуку: телеметрія з умовою, архів потоку, 126 стендів (#1119)
-- `1f8cb5dc` 31.08 06:26 — docs: телеметрію пошуку збережено з умовою «після запуску»
-- `8647f497` 31.08 06:24 — Merge branch 'main' of https://github.com/Volodymyr221/CSTL_NEWS into claude/startuem-8csg49
-- `d3db7579` 30.08 21:14 — docs: закриття потоку пошуку — архів плану, пульс, 126 стендів
 
 <!-- AUTO:END -->
 
