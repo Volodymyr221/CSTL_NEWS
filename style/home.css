@@ -1838,6 +1838,16 @@
 /* ── Групи контактів громади ─────────────────────────────────────────────────
    `<details>` — щоб працювало без JS, з клавіатурою і читачем екрана, і щоб
    стан не жив у модулі (він злітав би: `initCommunity()` перебудовує сторінку). */
+/* Плаский список контактів — коли їх мало (див. `GROUP_FROM`).
+   Той самий проміжок 6px, що й усередині групи: перехід «пласко → групами»
+   не має рухати рядки по вертикалі. */
+.hm-ctlist { display: flex; flex-direction: column; gap: 6px; }
+
+/* Екстрені стоять ЗНИЗУ (порядок перевернуто 31.08 за словом Вови). Відступ
+   більший за звичайний між секціями: це інший клас інформації, і зорова пауза
+   тут робить те саме, що заголовок, — розділяє «моя громада» і «загальні». */
+.hm-csec--sos { margin-top: var(--hm-s6); }
+
 .hm-cgrp { margin-bottom: var(--hm-s2); }
 .hm-cgrp-sum {
   list-style: none; cursor: pointer;
@@ -1850,7 +1860,7 @@
 }
 .hm-cgrp-sum::-webkit-details-marker { display: none; }
 .hm-cgrp-sum:active { background: var(--board-press); }
-.hm-cgrp-ic { font-size: 16px; line-height: 1; }
+.hm-cgrp-ic { display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--hm-quiet); }
 .hm-cgrp-t { flex: 1 1 auto; min-width: 0; }
 /* Лічильник у групі + стрілка. Стрілка повертається при розкритті — це єдиний
    натяк на те, що рядок взагалі можна відкрити. */
@@ -1874,9 +1884,20 @@
   border-radius: var(--hm-r-card); box-shadow: var(--hm-shadow); overflow: hidden;
 }
 .hm-ct-main {
-  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px;
   padding: 10px var(--hm-s3); text-decoration: none;
 }
+/* Значок контакту. 🆕 31.08 — замість емодзі.
+   📐 Коробка 34px із тихою підкладкою, значок усередині 18px. Коробка потрібна
+   не для краси: без неї значки різної ширини (трубка вузька, будівля широка)
+   зсували б назви на різну відстань від краю, і колонка тексту «дихала» б.
+   ⚠️ `flex: 0 0 34px` — щоб довга назва не стискала значок у смужку. */
+.hm-ct-ic {
+  flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 10px; background: var(--board-press); color: var(--hm-quiet);
+}
+.hm-ct-ic svg { width: 18px; height: 18px; }
+.hm-ct-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-ct-main:active { background: var(--board-press); }
 .hm-ct-name  { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
 .hm-ct-phone { font: 500 13px/1 system-ui, -apple-system, sans-serif; color: var(--red); }
@@ -1884,9 +1905,13 @@
 .hm-ct-acts { display: flex; flex: 0 0 auto; }
 .hm-ct-act {
   appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
-  width: 44px; display: grid; place-items: center; font-size: 15px;
+  width: 44px; display: grid; place-items: center;
   color: var(--hm-quiet); text-decoration: none;
 }
+/* 44px — ціль пальця за посібником Apple; значок усередині 17px.
+   Розмір задано ТУТ, а не через `font-size`: у векторної іконки немає кегля,
+   і старе `font-size: 15px` після заміни емодзі не керувало б нічим. */
+.hm-ct-act svg { width: 17px; height: 17px; }
 .hm-ct-act:active { background: var(--board-press); }
 
 /* ══ ОДНА МОВА КАРТОК НА ВСЮ ГОЛОВНУ ══════════════════════════════════════════

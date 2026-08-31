@@ -235,7 +235,7 @@ function renderSkeleton() {
          кілька разів на рік. Стало: екстрені на видноті + решта під розкриттям. -->
     <section class="hm-sec" id="cm-contacts">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">Телефони</h2>
+        <h2 class="hm-kicker">Телефони громади</h2>
       </div>
       <div id="cm-contacts-content" class="hm-list">${skeletonRows(1)}</div>
     </section>
