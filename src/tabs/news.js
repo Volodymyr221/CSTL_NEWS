@@ -1,6 +1,6 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
-import { registerScope, readSeen, writeSeen } from '../core/board-shared.js';
+import { registerScope, readSeen, writeSeen, readSeenIds, writeSeenIds } from '../core/board-shared.js';
 import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний зі «Стрічкою»)
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
@@ -198,6 +198,30 @@ export function newsSeenTs() {
 // Позначити новини переглянутими. Кличе хаб у момент відкриття.
 export function markNewsSeen() {
   writeSeen(NEWS_SEEN_KEY);
+  // Підлога піднялась до «зараз» — усе, що лежало в списку, тепер під нею.
+  // 🔑 Чистимо саме тут, а не «колись потім»: список існує ЛИШЕ для статей над
+  // підлогою, і без цього він ріс би, описуючи стан, який уже нічого не змінює.
+  writeSeenIds(NEWS_IDS_KEY, []);
+}
+
+// ── СПИСОК ПРОЧИТАНИХ СТАТЕЙ ────────────────────────────────────────────────
+// 🗣️ Вимога Вови (31.08): «якщо одна стаття, він відкриває саме цю нову статтю…
+// Тоді ця плашка пропадає. Коли, наприклад, там сім нових, користувач натискає
+// усі новини… тоді пропадає це число».
+//
+// 🔴 Заміряно приладом `tests/tools/news-badge-probe.mjs` ДО правки: тап по самій
+// статті у віджеті не міняв бейдж ЗОВСІМ — «20 нових» → «20 нових». Гасило його
+// лише відкриття хаба, бо весь стан був одним числом.
+const NEWS_IDS_KEY = 'cstl_news_seen_ids';
+
+// Позначити прочитаною ОДНУ статтю.
+// ⚠️ Пишемо лише те, що справді впливає на лічильник: чужий розділ і стаття,
+// нижча за підлогу, у списку були б мертвим вантажем, який лише наближає стелю.
+export function markArticleSeen(art) {
+  if (!art || !Number.isFinite(art.id)) return;
+  if (!matchGeoGroup(art, NEWS_GEO_GROUPS[0])) return;
+  if ((art.ts || 0) <= newsSeenTs()) return;
+  writeSeenIds(NEWS_IDS_KEY, [...readSeenIds(NEWS_IDS_KEY), art.id]);
 }
 
 // Скільки статей Громади новіші за останній перегляд.
@@ -208,7 +232,12 @@ export function markNewsSeen() {
 export function countNewCommunity(arts) {
   const seen = newsSeenTs();
   if (!seen) { markNewsSeen(); return 0; }
-  return articlesOfGroup(arts, NEWS_GEO_GROUPS[0]).filter(a => (a.ts || 0) > seen).length;
+  // 🔑 ДВА УМОВИ, І ДРУГА — НОВА (31.08): свіжіша за останній захід У ХАБ **і**
+  // не прочитана поокремо. Одна лише перша умова робила «прочитав одну з семи»
+  // невиразимим станом.
+  const read = new Set(readSeenIds(NEWS_IDS_KEY));
+  return articlesOfGroup(arts, NEWS_GEO_GROUPS[0])
+    .filter(a => (a.ts || 0) > seen && !read.has(a.id)).length;
 }
 
 // Точка входу. Стрічка новин тепер живе блоком у вкладці Громада
