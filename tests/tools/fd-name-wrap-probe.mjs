@@ -49,6 +49,10 @@ await p.waitForTimeout(3000);
 const дані = await p.evaluate(() => {
   const кола = [...document.querySelectorAll('.hm-fd-c')];
   if (!кола.length) return null;
+  // 🔴 ВИМИКАЄМО АНІМАЦІЮ НА ЧАС ВИМІРУ. Масштаб активної назви їде 400ms, і
+  // перша редакція міряла ОДРАЗУ після додавання класу — виходив приріст ×1,
+  // тобто стенд «доводив», що виділення немає, над цілком робочим кодом.
+  кола.forEach(c => { c.querySelector('.hm-fd-c-name').style.transition = 'none'; });
   // 🔑 МІРЯЄМО НЕ scrollHeight, А ШИРИНУ СЛОВА. Перша спроба дивилась на висоту —
   // марно: `-webkit-line-clamp: 2` уже обрізав текст, тож висота ЗАВЖДИ дорівнює
   // двом рядкам, і вада не видна. Вирішує перенос саме ширина: у назви стоїть
@@ -85,7 +89,33 @@ const дані = await p.evaluate(() => {
     return { назва, колонка, спокій, активна };
   };
   const рядки = кола.map(міра);
-  return { рядки, колонка: рядки[0]?.колонка };
+
+  // 🔴 НАКЛАДАННЯ — пряма вимога Вови «без накладання один на одного».
+  // Міряємо намальовані прямокутники: активна назва масштабується, і якщо
+  // виступ перевищить gap (4px), вона накриє сусідню.
+  const накладання = [];
+  for (let i = 0; i < кола.length; i++) {
+    кола.forEach(c => c.classList.remove('hm-fd-c--on'));
+    кола[i].classList.add('hm-fd-c--on');
+    const r = кола.map(c => c.querySelector('.hm-fd-c-name').getBoundingClientRect());
+    for (let j = 0; j < r.length - 1; j++) {
+      const зазор = +(r[j + 1].left - r[j].right).toFixed(2);
+      if (зазор < 0) накладання.push({ активний: i, пара: `${j}-${j + 1}`, зазор });
+    }
+  }
+  кола.forEach(c => c.classList.remove('hm-fd-c--on'));
+
+  // Найменший зазор за всі стани — саме він каже, чи є запас.
+  let мін = Infinity;
+  for (let i = 0; i < кола.length; i++) {
+    кола.forEach(c => c.classList.remove('hm-fd-c--on'));
+    кола[i].classList.add('hm-fd-c--on');
+    const r = кола.map(c => c.querySelector('.hm-fd-c-name').getBoundingClientRect());
+    for (let j = 0; j < r.length - 1; j++) мін = Math.min(мін, r[j + 1].left - r[j].right);
+  }
+  кола.forEach(c => c.classList.remove('hm-fd-c--on'));
+
+  return { рядки, колонка: рядки[0]?.колонка, накладання, мінЗазор: +мін.toFixed(2) };
   return { спокій, активні, колонка: спокій[0]?.ширина };
 });
 
@@ -112,5 +142,9 @@ else {
       `${r.активна.кегль} → ${r.активна.ширина}px`.padEnd(18) + '│ ' +
       (зламано ? '❌ РВЕТЬСЯ ПРИ АКТИВАЦІЇ' : r.активна.рветься ? '⚠️ рветься в обох' : '✅'));
   });
+  console.log(`\nнайменший зазор між назвами (за всіх активацій): ${дані.мінЗазор}px`);
+  console.log(дані.накладання.length
+    ? `❌ НАКЛАДАННЯ: ${дані.накладання.length} випадків`
+    : '✅ накладання немає в жодному стані');
 }
 await stop(); await b.close();
