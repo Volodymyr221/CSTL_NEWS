@@ -9,7 +9,7 @@
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, showToast } from '../core/utils.js';
 import { coordsOf, locationGroups, isKnownPlace, pickedPlace, lastPickedPlace, pickPlace, rememberDetectedPlace } from '../core/settlements-geo.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
-import { openAdModalStandalone } from './board.js';
+import { openAdModalStandalone, renderBoardCard } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
 import { COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { weatherCodeInfo } from '../core/weather-icons.js';
@@ -1414,7 +1414,6 @@ function switchCmBusCard(el) {
 // `.cmbw-foot` і весь код автопрокрутки (~120 рядків). CSS цих класів лишився в
 // community.css — його чіпає ще прев'ю подачі оголошення.
 
-const BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 
 // Скільки оголошень показує головна. Три — щоб секція читалась як «є життя»,
 // але не перетворювалась на другу Дошку.
@@ -1427,31 +1426,48 @@ let _boardAds = [];
 // заголовок у два рядки, локація і час.
 // 🔑 `cardTitleText` не копіюємо: 9 із 19 оголошень назви не мають, і саме тому
 // на самій Дошці заголовок беруть як перше речення тексту. Тут та сама логіка.
-function bwRowHtml(p) {
-  const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
-  const raw = (p.title && p.title.trim()) || (p.text || '').trim();
-  const title = raw.length > 70 ? raw.slice(0, 70).replace(/\s+\S*$/, '') + '…' : (raw || 'Оголошення');
-  const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
-  const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
-  const color = catColor(p.category);
-  const cover = photo
-    ? `<span class="hm-ad-ph" style="background-image:url('${escapeHtml(photo)}')"></span>`
-    : `<span class="hm-ad-ph hm-ad-ph--none">${catIcon(p.category)}</span>`;
-  return `
-    <article class="hm-card hm-card--tap hm-ad" data-bw-id="${p.id}">
-      ${cover}
-      <span class="hm-ad-body">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)} hm-ad-cat">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
-        <span class="hm-ad-name">${escapeHtml(title)}</span>
-        <span class="hm-ad-meta">
-          ${locLabel ? `<span class="hm-ad-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
-          ${ts ? `<span>${formatTime(ts)}</span>` : ''}
-        </span>
-      </span>
-    </article>`;
-}
+// 🔴 31.08 — ВІДЖЕТ ПОКАЗУЄ ТУ САМУ КАРТКУ, ЩО Й ДОШКА (замовлення Вови).
+//
+// 🗣️ Дослівно: «самі карточки, можливо, зробити такими, як в вкладці Дошка,
+// типу з описом, з датою, без збереження, але з локацією, датою, фото».
+//
+// ⚠️ ЩО БУЛО І ЧОГО БРАКУВАЛО. Тут жила власна вузька розмітка `bwRowHtml()`:
+// фото 64px, категорія, заголовок, локація, час — і **ЖОДНОГО опису**. Тобто
+// віджет показував менше, ніж картка на Дошці, хоча дані для опису вже лежали
+// в тому самому об'єкті. Людина бачила заголовок і мусила відкривати кожне
+// оголошення, щоб зрозуміти, про що воно.
+//
+// 🔑 Тепер картку малює `renderBoardCard()` з `board.js` — ОДНА функція на дві
+// поверхні. `actions: false` прибирає «зберегти/поділитись»: на Громаді це
+// вітрина, дія живе на Дошці й у модалці. Розбір, чому експорт, а не копія, —
+// у самій `board.js` над функцією.
+//
+// ⚠️ Разом із `bwRowHtml` пішов `BW_PIN_SVG`: мітку локації тепер малює та сама
+// картка Дошки своїм `PIN_ICON_SVG`. Дві копії однієї шпильки в проєкті вже
+// були — саме з таких і починається розходження товщини лінії.
 
-// Fisher-Yates перемішування (чесний випадковий порядок, кожен елемент рівні шанси)
+// ── АЛГОРИТМ ПОРЯДКУ: ЧЕСНЕ ПЕРЕМІШУВАННЯ (Fisher-Yates) ─────────────────────
+//
+// 🗣️ Підтверджено Вовою 31.08: «в такому самому порядку, тобто хаотично
+// розкинуті: десь там 3 серпня, десь 9, десь 12 — по такому алгоритму, як ми
+// працюємо». Тобто дати навмисно НЕ впорядковані — і це задум, а не недогляд.
+//
+// 🔑 ЧОМУ НЕ «СВІЖІ ВГОРІ» (рішення Вови 13.07). Вкладка Дошка вже сортує за
+// свіжістю. Якби віджет робив те саме, він показував би ТІ САМІ три оголошення,
+// що й верх Дошки, — тобто був би її зменшеною копією. Випадковий порядок дає
+// рівний шанс усьому, що лежить на Дошці: оголошення, подане тиждень тому, має
+// такий самий шанс потрапити на Громаду, як подане сьогодні.
+//
+// 📐 ЧОМУ САМЕ FISHER-YATES, А НЕ `sort(() => Math.random() - 0.5)`.
+// Другий спосіб виглядає коротшим і є НЕЧЕСНИМ: результат порівняння там
+// непослідовний, і різні рушії дають помітно нерівномірний розподіл — частина
+// оголошень з'являлась би стабільно частіше за інші. Fisher-Yates дає кожній
+// перестановці однакову ймовірність, і це доведена властивість, а не враження.
+//
+// ⚠️ ЦЕ НЕ ПЕРСОНАЛІЗАЦІЯ. Порядок не залежить ні від людини, ні від її
+// поведінки — жодного сигналу «тобі це цікавіше» тут немає і не планується без
+// окремого рішення. Повний опис — `docs/ALGORITHMS.md`, розділ «Дошка».
+
 function bwShuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -1492,7 +1508,7 @@ export async function renderBoardBlock() {
     // по-різному. До 05.08 обидва випадки давали «На дошці поки порожньо»:
     // при збої мережі людина читала, що оголошень немає, хоча вони є.
     el.innerHTML = ads.length
-      ? shown.map(bwRowHtml).join('')
+      ? shown.map(p => renderBoardCard(p, { actions: false })).join('')
       : ok
         ? '<div class="hm-empty">На дошці поки порожньо — подайте перше оголошення</div>'
         : '<div class="hm-empty">Не вдалось завантажити оголошення</div>';
@@ -1501,9 +1517,11 @@ export async function renderBoardBlock() {
     if (!el.dataset.wired) {
       el.dataset.wired = '1';
       el.addEventListener('click', e => {
-        const card = e.target.closest('[data-bw-id]');
+        // Картка Дошки підписана `data-post-id` (до 31.08 віджет мав власний
+        // `data-bw-id`). Атрибут один — і сам собою доводить, що картка спільна.
+        const card = e.target.closest('[data-post-id]');
         if (!card) return;
-        const id = Number(card.dataset.bwId);
+        const id = Number(card.dataset.postId);
         const post = (_boardAds || []).find(p => p.id === id);
         if (post) openAdModalStandalone(post);
       });

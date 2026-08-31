@@ -215,7 +215,7 @@ function renderSkeleton() {
     <!-- ══ ОГОЛОШЕННЯ ══════════════════════════════════════════════════════════ -->
     <section class="hm-sec" id="hm-board">
       <div class="hm-sec-head">
-        <h2 class="hm-kicker">Оголошення</h2>
+        <h2 class="hm-kicker">Оголошення громади</h2>
         <button class="hm-more" type="button" data-switch-tab="board">Дошка →</button>
       </div>
       <div id="cm-board-content" class="hm-list">${skeletonRows(3)}</div>
