@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788188556053,
+      "mission": "olyka:news:особистісний-розвиток-для-підлітків",
+      "model": "claude-opus-5",
+      "input_tokens": 6012,
+      "output_tokens": 560,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0441,
+      "note": "Особистісний розвиток для підлітків: в Олицькій громаді запрошують до програми G"
+    },
+    {
       "ts": 1788185996031,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0101,
       "note": ""
-    },
-    {
-      "ts": 1784625119500,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 515,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.009,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.4242,
-    "runs": 124,
+    "cost_usd": 8.4683,
+    "runs": 125,
     "web_searches": 109
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 3.3146,
-      "runs": 46,
+      "cost_usd": 3.3587,
+      "runs": 47,
       "web_searches": 46
     }
   },
-  "updated_ts": 1788185996031
+  "updated_ts": 1788188556053
 }
