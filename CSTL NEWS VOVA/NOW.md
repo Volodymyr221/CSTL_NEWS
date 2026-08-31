@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-31 13:17 UTC
+**Зріз на:** 2026-08-31 14:49 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-8csg49` |
-| останній коміт людини | `58194267` 31.08 13:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260831-1316` |
-| останній PR у `main` | #1119 |
+| останній коміт людини | `7a6dd5e3` 31.08 14:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260831-1449` |
+| останній PR у `main` | #1120 |
 | стендів на диску | 127 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-31 | є ✅ |
@@ -25,12 +25,7 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-08-31.md`
-- `bundle.js`
-- `src/tabs/home-feed.js`
 - `style/home.css`
 - `sw.js`
 - `tests/fd-name-fit.mjs`
@@ -38,11 +33,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `58194267` 31.08 13:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
-- `0b0bbe77` 31.08 13:16 — Назва спільноти не рветься посеред слова — ні активна, ні при шести кружечках
-- `37e9c474` 31.08 07:38 — Назва спільноти більше не переноситься інакше, коли кружечок активний
-- `4e24d132` 31.08 07:22 — docs(session-log): журнал 31.08 — продовження сесії після рестарту контейнера
-- `e8f188f8` 31.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `7a6dd5e3` 31.08 14:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `8c373823` 31.08 14:49 — Назва спільноти знову виділяється — масштабом, який не чіпає перенос
+- `aac849b9` 31.08 14:19 — ai(editor): свята-чернетки 31.08 14:19 UTC
+- `6cf86ba5` 31.08 13:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `43370cb7` 31.08 13:17 — Назва спільноти не рветься посеред слова — ні активна, ні при шести кружечках (#1120)
 
 <!-- AUTO:END -->
 
