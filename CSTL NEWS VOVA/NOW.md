@@ -10,12 +10,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-31 14:49 UTC
+**Зріз на:** 2026-08-31 15:06 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-8csg49` |
-| останній коміт людини | `7a6dd5e3` 31.08 14:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
+| останній коміт людини | `ebcdc1d3` 31.08 15:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260831-1449` |
 | останній PR у `main` | #1120 |
 | стендів на диску | 127 |
@@ -25,6 +25,7 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/NOW.md`
 - `_session-log/vova-2026-08-31.md`
 - `style/home.css`
 - `sw.js`
@@ -33,11 +34,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `ebcdc1d3` 31.08 15:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
 - `7a6dd5e3` 31.08 14:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
 - `8c373823` 31.08 14:49 — Назва спільноти знову виділяється — масштабом, який не чіпає перенос
 - `aac849b9` 31.08 14:19 — ai(editor): свята-чернетки 31.08 14:19 UTC
 - `6cf86ba5` 31.08 13:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
-- `43370cb7` 31.08 13:17 — Назва спільноти не рветься посеред слова — ні активна, ні при шести кружечках (#1120)
 
 <!-- AUTO:END -->
 
