@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-31 06:32 UTC
+**Зріз на:** 2026-08-31 07:21 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-8csg49` |
-| останній коміт людини | `1f8cb5dc` 31.08 06:26 — docs: телеметрію пошуку збережено з умовою «після запуску» |
+| останній коміт людини | `e8f188f8` 31.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260830-2108` |
-| останній PR у `main` | #1118 |
+| останній PR у `main` | #1119 |
 | стендів на диску | 126 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-31 | **НЕМАЄ** ⚠️ |
@@ -25,21 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_ARCHIVE_2026-08-30_poshuk-slovnyk.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-08-30b.md`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `e8f188f8` 31.08 07:15 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `e6a7c527` 31.08 07:15 — Документація сесії пошуку: телеметрія з умовою, архів потоку, 126 стендів (#1119)
 - `1f8cb5dc` 31.08 06:26 — docs: телеметрію пошуку збережено з умовою «після запуску»
 - `8647f497` 31.08 06:24 — Merge branch 'main' of https://github.com/Volodymyr221/CSTL_NEWS into claude/startuem-8csg49
 - `d3db7579` 30.08 21:14 — docs: закриття потоку пошуку — архів плану, пульс, 126 стендів
-- `e88b4e76` 30.08 21:12 — Пошук за змістом: морфологія, синоніми, намір — і підключення до Дошки (#1118)
-- `889b8705` 30.08 21:12 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
 
 <!-- AUTO:END -->
 
