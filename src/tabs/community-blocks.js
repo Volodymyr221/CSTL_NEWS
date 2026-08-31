@@ -29,7 +29,7 @@ import { startAutoCarousel } from '../core/auto-carousel.js';
 // стара стрічка плиток дописувала мітку розділу на КОЖНУ картку, бо в одному
 // вікні лежали новини з різних розділів. Тепер сторінка = один розділ, і його
 // назву каже шапка секції — мітка на картці повторювала б її втретє.
-import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, newsLoadFailed, handleImgError } from './news.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, markArticleSeen, newsLoadFailed, handleImgError } from './news.js';
 import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
@@ -1937,7 +1937,14 @@ function paintCmNews(el, arts) {
 // висоти й казали одне й те саме двічі.
 function paintNewsCat(group) {
   const el = document.getElementById('hm-ncat');
-  if (el && el.textContent !== group) el.textContent = group;
+  if (!el) return;
+  if (el.textContent !== group) el.textContent = group;
+  // 🔴 31.08 — ГРОМАДА ПОЗНАЧЕНА ЯК «НАШЕ» (замовлення Вови: «громаду потрібно
+  // чуть-чуть якби виділити, щоб вона зразу кидалася в очі… якби позначалось,
+  // що це наше»). Решта розділів лишаються тихими — інакше виділення не виділяє.
+  // 🔑 Клас, а не інлайновий стиль: тон і вага живуть у `style/home.css` поруч із
+  // рештою правил підпису, і при зміні палітри їх не доведеться шукати в JS.
+  el.classList.toggle('hm-kicker-cat--own', group === NEWS_GEO_GROUPS[0]);
 }
 
 // Розділ, який людина зараз бачить у віджеті. Читаємо з РОЗМІТКИ сторінки, що
@@ -2065,7 +2072,16 @@ export async function renderCommunityNews() {
     const card = e.target.closest('[data-article-id]');
     if (card) {
       const id = Number(card.dataset.articleId);
-      if (Number.isFinite(id)) openArticle(id);
+      if (Number.isFinite(id)) {
+        // 🔴 31.08 — ПРОЧИТАНА СТАТТЯ РАХУЄТЬСЯ ПРОЧИТАНОЮ (вимога Вови).
+        // До цього бейдж гасило ЛИШЕ відкриття хаба: заміряно приладом
+        // `tests/tools/news-badge-probe.mjs` — тап по статті давав «20 нових»
+        // → «20 нових». Перемальовуємо бейдж одразу, бо число мусить
+        // змінитись під пальцем, а не при наступному заході на вкладку.
+        markArticleSeen(arts.find(a => a.id === id));
+        paintNewsBadge(arts);
+        openArticle(id);
+      }
       return;
     }
     // Будь-яке інше місце віджета (шапка, «Усі новини», порожнє поле) → хаб.
