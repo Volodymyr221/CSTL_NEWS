@@ -10,14 +10,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-08-31 15:06 UTC
+**Зріз на:** 2026-08-31 15:13 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-8csg49` |
-| останній коміт людини | `ebcdc1d3` 31.08 15:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
+| останній коміт людини | `7eb4e116` 31.08 15:13 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260831-1449` |
-| останній PR у `main` | #1120 |
+| останній PR у `main` | #1122 |
 | стендів на диску | 127 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-08-31 | є ✅ |
@@ -25,20 +25,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
-- `_session-log/vova-2026-08-31.md`
-- `style/home.css`
-- `sw.js`
-- `tests/fd-name-fit.mjs`
-- `tests/tools/fd-name-wrap-probe.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `7eb4e116` 31.08 15:13 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
+- `7ec5b539` 31.08 15:09 — docs(state): літопис наздогнав дві сесії — пошук за змістом і назви спільнот (#1122)
+- `84bb1628` 31.08 15:08 — docs(state): літопис наздогнав дві сесії — пошук за змістом і назви спільнот
+- `68d03377` 31.08 15:07 — Назва активної спільноти виділяється масштабом, який не чіпає перенос (#1121)
 - `ebcdc1d3` 31.08 15:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
-- `7a6dd5e3` 31.08 14:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
-- `8c373823` 31.08 14:49 — Назва спільноти знову виділяється — масштабом, який не чіпає перенос
-- `aac849b9` 31.08 14:19 — ai(editor): свята-чернетки 31.08 14:19 UTC
-- `6cf86ba5` 31.08 13:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-8csg49
 
 <!-- AUTO:END -->
 
