@@ -69,6 +69,19 @@ jobs:
           python3 scripts/test_rich_html.py
           python3 scripts/test_categories.py
           python3 scripts/test_mixed_layout.py
+          # 🔴 31.08 — ДОПИСАНО ПІСЛЯ ЗНАХІДКИ: стенд існував із 27.08 (42 перевірки
+          # про розмітку статті) і в CI НЕ ЗАПУСКАВСЯ ЖОДНОГО РАЗУ. У цьому проєкті
+          # вже був випадок, коли документація посилалась на сторожів, яких не було
+          # в git, і «захист» був уявним — тут те саме, тільки файл на місці.
+          python3 scripts/test_markup_polish.py
+          # Ці двоє стережуть РОЗДІЛЕННЯ КОНТЕНТУ між спільнотами (53+53 перевірки)
+          # і теж не запускались у CI. Саме вони ловлять витік історичних тем у
+          # бренд і навпаки — тобто те, що читають жителі.
+          python3 scripts/test_history_routing.py
+          python3 scripts/test_editor_pools.py
+          # ℹ️ `test_vopas_access.py` живе у власному воркфлові `test-vopas.yml`,
+          # а `test_worker.py` вимагає адресу проксі аргументом — це ручний
+          # інструмент, не сторож. Обидва тут навмисно відсутні.
 
       - name: Сторож документації
         run: node tests/docs-refs.mjs
