@@ -266,6 +266,54 @@ export async function renderHomeFeed() {
     const edge = Date.now() - FRESH_H * 3600 * 1000;
     const isFresh = post => new Date(post.created_at).getTime() >= edge;
 
+// ── НАЗВА СПІЛЬНОТИ НІКОЛИ НЕ РВЕТЬСЯ ПОСЕРЕД СЛОВА (31.08) ─────────────────
+//
+// 🗣️ Скарга Вови по знімках: «переноситься одна буква — ТУРИСТИЧН / А ОЛИКА»;
+// «Олицька міська рада» наведена ставала трьома рядками з трьома крапками.
+// Перша причина — жирність активного стану — знята в `style/home.css`.
+//
+// 🔴 АЛЕ ЛИШИЛАСЬ ДРУГА, І ВОНА НЕ ПРО АКТИВНИЙ СТАН. Ряд кружечків це grid із
+// `grid-auto-columns: 1fr`, тобто КОЛОНКА ЗВУЖУЄТЬСЯ З КОЖНОЮ НОВОЮ СПІЛЬНОТОЮ.
+// 📐 Заміряно (`tests/tools/fd-name-wrap-probe.mjs`):
+//     5 кружечків → колонка **61px** — рветься нічого;
+//     6 кружечків → колонка **50px** — рвуться ТРИ назви, вже без будь-якої жирності.
+// `MAX_CIRCLES = 6`, тобто шоста спільнота можлива вже сьогодні. Тому одного лише
+// зняття жирності НЕ досить: Вова просив, щоб це працювало «в загальному всіх».
+//
+// 🔑 ЧОМУ КЕГЛЬ ОДИН НА ВЕСЬ РЯД, А НЕ ОКРЕМО ДЛЯ ДОВГОЇ НАЗВИ. Різні розміри в
+// сусідніх колонках читаються як недогляд верстки; однаковий дрібніший — як
+// свідомий масштаб. Тому шукаємо найтіснішу назву і зводимо ВСІ до неї.
+// ⚠️ Підлога 8px: нижче напис перестає читатись, і тоді краще чесний обрив, ніж
+// нечитабельний рядок. Вимірюємо canvas-ом, а не приміркою в DOM — приміряння
+// означало б десятки reflow на кожен рендер віджета.
+const NAME_MIN_PX = 8;
+let _measureCtx = null;
+
+function fitCircleNames(root) {
+  const names = [...root.querySelectorAll('.hm-fd-c-name')];
+  if (!names.length) return;
+  names.forEach(n => { n.style.fontSize = ''; });          // міряємо від базового кегля
+
+  const cs = getComputedStyle(names[0]);
+  const base = parseFloat(cs.fontSize) || 9.5;
+  _measureCtx = _measureCtx || document.createElement('canvas').getContext('2d');
+  _measureCtx.font = `${cs.fontWeight} ${base}px ${cs.fontFamily}`;
+
+  let scale = 1;
+  for (const n of names) {
+    const box = n.clientWidth;
+    if (!box) continue;                                     // вузол ще не в розкладці
+    const words = n.textContent.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+    const longest = Math.max(...words.map(w => _measureCtx.measureText(w).width));
+    if (longest > box) scale = Math.min(scale, box / longest);
+  }
+  if (scale >= 1) return;                                   // усе влазить — не чіпаємо
+
+  const px = Math.max(NAME_MIN_PX, base * scale);
+  names.forEach(n => { n.style.fontSize = px.toFixed(2) + 'px'; });
+}
+
     sec.hidden = false;
     // 🔑 ОДИН СПИСОК → ДВА ЯРУСИ. Кружечки і слайди будуються з того самого `slides`,
     // тож «третій кружечок» і «третій слайд» це за визначенням та сама спільнота.
@@ -275,6 +323,8 @@ export async function renderHomeFeed() {
         slides.map(s => `<div class="hm-fd-slide">${postHtml(s.post, s.page)}</div>`).join('')
       }</div>`;
     body.classList.add('hm-appear');
+    // Після вставки в документ: до цього `clientWidth` дорівнює нулю і міряти нічого.
+    fitCircleNames(body);
 
     startFeedCarousel(body);
   } catch {
