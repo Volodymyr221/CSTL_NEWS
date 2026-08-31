@@ -69,12 +69,12 @@ const дані = await p.evaluate(() => {
     const колонка = n.clientWidth;
     const слова = назва.split(/\s+/);
     const заВагою = () => {
-      const cs = getComputedStyle(n);
+      const cs = getComputedStyle(n);   // фактичний кегль ПІСЛЯ fitCircleNames
       const cv = document.createElement('canvas').getContext('2d');
       cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       const w = слова.map(sl => cv.measureText(sl).width);
       const найдовше = Math.max(...w);
-      return { вага: cs.fontWeight, слово: слова[w.indexOf(найдовше)],
+      return { вага: cs.fontWeight, кегль: cs.fontSize, слово: слова[w.indexOf(найдовше)],
                ширина: +найдовше.toFixed(1), рветься: найдовше > колонка };
     };
     c.classList.remove('hm-fd-c--on');
@@ -101,15 +101,15 @@ if (!дані) {
 }
 else {
   console.log(`ширина колонки: ${дані.колонка}px · кружечків: ${дані.рядки.length}\n`);
-  console.log('назва'.padEnd(24) + '│ найдовше    │ спокій       │ активна      │');
+  console.log('назва'.padEnd(24) + '│ найдовше    │ спокій кегль→слово │ активна кегль→слово│');
   console.log('─'.repeat(88));
   дані.рядки.forEach(r => {
     const зламано = !r.спокій.рветься && r.активна.рветься;
     console.log(
       r.назва.slice(0, 23).padEnd(24) + '│ ' +
       r.спокій.слово.slice(0, 12).padEnd(13) + '│ ' +
-      `${r.спокій.вага}: ${r.спокій.ширина}px`.padEnd(14) + '│ ' +
-      `${r.активна.вага}: ${r.активна.ширина}px`.padEnd(14) + '│ ' +
+      `${r.спокій.кегль} → ${r.спокій.ширина}px`.padEnd(18) + '│ ' +
+      `${r.активна.кегль} → ${r.активна.ширина}px`.padEnd(18) + '│ ' +
       (зламано ? '❌ РВЕТЬСЯ ПРИ АКТИВАЦІЇ' : r.активна.рветься ? '⚠️ рветься в обох' : '✅'));
   });
 }
