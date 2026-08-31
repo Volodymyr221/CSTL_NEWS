@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1788185996031,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 521,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0125,
+      "note": ""
+    },
+    {
+      "ts": 1788185984030,
+      "mission": "holiday:🇺🇦 День знань",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 542,
+      "cache_read": 0,
+      "cache_write": 1143,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0124,
+      "note": ""
+    },
+    {
       "ts": 1788094151995,
       "mission": "olyka:news:особистісний-розвиток-для-підлітків",
       "model": "claude-opus-5",
@@ -753,37 +779,11 @@
       "found": 1,
       "cost_usd": 0.009,
       "note": ""
-    },
-    {
-      "ts": 1784625098074,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 549,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0095,
-      "note": ""
-    },
-    {
-      "ts": 1784540626464,
-      "mission": "holiday:🌰 Горіховий Спас",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 471,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0083,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.3993,
-    "runs": 122,
+    "cost_usd": 8.4242,
+    "runs": 124,
     "web_searches": 109
   },
   "months": {
@@ -793,10 +793,10 @@
       "web_searches": 63
     },
     "2026-08": {
-      "cost_usd": 3.2897,
-      "runs": 44,
+      "cost_usd": 3.3146,
+      "runs": 46,
       "web_searches": 46
     }
   },
-  "updated_ts": 1788094151995
+  "updated_ts": 1788185996031
 }
