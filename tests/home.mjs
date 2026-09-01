@@ -184,7 +184,10 @@ ok('назад повертає на Громаду', await p.evaluate(()=>docum
 
 // 5. Переходи по вкладках із секцій
 // ⚠️ «Афіші» тут НЕМАЄ навмисно — див. окрему перевірку нижче.
-for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
+// ⚠️ 31.08: пару ['#hm-bus .hm-more','buses'] прибрано — секції автобусів на
+// Громаді більше немає (рішення Вови). Шлях на вкладку Автобуси лишається
+// через нижню панель вкладок, вона окремо перевіряється нижче.
+for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка']]) {
   await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(400);
   const has = await p.evaluate(s=>!!document.querySelector(s), sel);
   if (!has) { ok(`кнопка «${name}» існує`, false); continue; }
@@ -699,12 +702,15 @@ const filled = await p.evaluate(()=>{
   const t = id => (document.getElementById(id)?.textContent||'').trim();
   const sk = id => document.getElementById(id)?.querySelector('.hm-sk-row');
   return { news:t('cm-news-content').length,
-    board:t('cm-board-content').length, bus:t('cm-bus-content').length, cont:t('cm-contacts-content').length,
-    stuck:['cm-news-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
+    board:t('cm-board-content').length, cont:t('cm-contacts-content').length,
+    // 🔴 31.08 — віджет автобусів прибрано з Громади (рішення Вови). Перевіряємо
+    // не «наповнився», а що його НЕМАЄ: інакше стенд мовчав би про повернення.
+    busЗник: !document.getElementById('cm-bus-content') && !document.getElementById('hm-bus'),
+    stuck:['cm-news-content','cm-board-content','cm-contacts-content'].filter(sk) };
 });
 ok('новини наповнились', filled.news>40, String(filled.news));
 ok('оголошення наповнились', filled.board>10, String(filled.board));
-ok('автобуси наповнились', filled.bus>10, String(filled.bus));
+ok('🔴 віджета автобусів на Громаді НЕМАЄ', filled.busЗник);
 ok('контакти наповнились', filled.cont>10, String(filled.cont));
 ok('жоден блок не завис на скелеті', filled.stuck.length===0, filled.stuck.join(', '));
 
@@ -721,6 +727,15 @@ const ct = await p.evaluate(()=>{
     номери: sos.map(b=>b.querySelector('.hm-sos-n').textContent.trim()),
     групи: [...c.querySelectorAll('.hm-cgrp')].length,
     контакти: [...c.querySelectorAll('.hm-ct')].length,
+    // 🆕 31.08 — ПОРЯДОК. Телефони громади мусять стояти ПЕРЕД екстреними.
+    // Читаємо позицію в DOM, а не CSS: `order`/`flex-direction` могли б
+    // намалювати правильно те, що в розмітці стоїть навпаки.
+    громадаПерша: (() => {
+      const вузли = [...c.querySelectorAll('.hm-ct, .hm-sos-b')];
+      const пг = вузли.findIndex(n => n.classList.contains('hm-ct'));
+      const пе = вузли.findIndex(n => n.classList.contains('hm-sos-b'));
+      return пг !== -1 && пе !== -1 && пг < пе;
+    })(),
     // Чи веде екстрена плитка одразу в дзвінок (а не на проміжний екран).
     tel: sos.every(b => (b.getAttribute('href')||'').startsWith('tel:')),
     // 🔴 Сітка не має вилазити за екран: `1fr` без minmax(0,…) розпирався
@@ -733,8 +748,14 @@ ok('екстрені служби окремим блоком', ct.sos >= 3, `${
 ok('порядок екстрених — 101,102,103…', ct.номери[0] === '101' && ct.номери[1] === '102', ct.номери.join(','));
 ok('тап по екстреній веде в дзвінок', ct.tel);
 ok('🔴 сітка екстрених не вилазить за екран', ct.влазить);
-ok('контакти громади згруповані', ct.групи > 0, `${ct.групи} груп`);
-ok('у групах є контакти', ct.контакти > 0, `${ct.контакти}`);
+// 🔴 ПЕРЕПИСАНО 31.08. Тут стояло «контакти громади ЗГРУПОВАНІ» (`групи > 0`) —
+// і після замовлення Вови це стало перевіркою НА ВАДУ: при чотирьох контактах
+// три заголовки категорій були рівно тим, на що він скаржився. Тепер правило
+// залежить від кількості: мало — пласко, багато — групами.
+ok('контактів громади не менше чотирьох', ct.контакти >= 4, `${ct.контакти}`);
+ok('🔴 при малій кількості — БЕЗ груп (плаский список)', ct.контакти < 9 ? ct.групи === 0 : ct.групи > 0,
+   `${ct.контакти} контактів / ${ct.групи} груп`);
+ok('🔴 телефони громади стоять ПЕРЕД екстреними', ct.громадаПерша);
 ok('є швидка дія «копіювати»', ct.копія);
 
 ok('помилок у консолі нема', errs.length===0, errs.slice(0,3).join(' | '));

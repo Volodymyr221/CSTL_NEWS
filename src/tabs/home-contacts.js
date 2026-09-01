@@ -36,7 +36,28 @@
 // міграція даних не потрібна. Невідома категорія не ламає блок — запис
 // потрапляє в «Інші контакти».
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 ПЕРЕРОБЛЕНО 31.08 — ЗАМОВЛЕННЯ ВОВИ. Три претензії, усі влучні:
+//
+//   1. «телефони громади мають бути ЗВЕРХУ, а екстрені знизу — 101/102/103 і
+//      так всі знають; а от телефони громади не кожен знає». Порядок
+//      перевернуто: спершу те, чого людина НЕ знає напамʼять.
+//   2. «мені не подобається, що вони в списках, в таких категоріях».
+//      📐 Заміряно на живих даних (`data/community.json`): контактів **9**, у
+//      громаді після відділення екстрених лишається **4** — сільрада, ЦНАП,
+//      амбулаторія, Волиньобленерго. Вони були розкладені на **3 категорії**,
+//      тобто три заголовки на чотири номери: СТРУКТУРА БІЛЬША ЗА ВМІСТ.
+//      Тепер список ПЛАСКИЙ, поки контактів мало, а групи вмикаються самі
+//      (`GROUP_FROM`), коли їх справді стає багато.
+//   3. «іконки у вигляді смайлів, а ми домовились що емодзі не буде».
+//      Правда: цей файл лишався ОСТАННІМ острівцем емодзі (🏛 🏥 ⚡ 📦 👮 📇
+//      🚨 🏘 ⧉ 📍) при тому, що `core/icons.js` існує з 12.07 і решта
+//      застосунку давно векторна. Замінено на Tabler-іконки з того самого
+//      набору — однакова товщина лінії (1.75) і колір від `currentColor`.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { escapeHtml, showToast } from '../core/utils.js';
+import { ICONS } from '../core/icons.js';
 
 // Скільки контактів громади показувати розкритими. 6 — стільки вміщується на
 // екран без прокрутки разом із заголовками груп; більше вже вимагає згортання.
@@ -51,26 +72,41 @@ const EMERGENCY_ORDER = ['101', '102', '103', '104', '112'];
 // людині. Порядок тут визначає порядок груп на екрані.
 // ⚠️ `gov` і `admin` навмисно зведені в одну групу: сільрада і ЦНАП — це для
 // людини «куди йти по документи», а не дві різні гілки влади.
+// ⚠️ Значок бере кожен КОНТАКТ, а не лише заголовок групи: у пласкому списку
+// заголовків груп немає взагалі, і без цього рядки лишились би без знаків.
 const CATEGORIES = [
-  { keys: ['gov', 'admin'], icon: '🏛', title: 'Органи влади' },
-  { keys: ['medical'],      icon: '🏥', title: 'Медицина' },
-  { keys: ['utility'],      icon: '⚡', title: 'Комунальні служби' },
-  { keys: ['post'],         icon: '📦', title: 'Пошта' },
-  { keys: ['edu'],          icon: '🎓', title: 'Освіта' },
-  { keys: ['safety'],       icon: '👮', title: 'Безпека' },
+  { keys: ['gov', 'admin'], icon: ICONS.bank,        title: 'Органи влади' },
+  { keys: ['medical'],      icon: ICONS.stethoscope, title: 'Медицина' },
+  // Лампочка, а не блискавка: єдина комунальна служба в даних —
+  // Волиньобленерго, тобто СВІТЛО. Значок уже є в наборі, новий не заводимо.
+  { keys: ['utility'],      icon: ICONS.bulb,        title: 'Комунальні служби' },
+  { keys: ['post'],         icon: ICONS.mail,        title: 'Пошта' },
+  { keys: ['edu'],          icon: ICONS.bulb,        title: 'Освіта' },
+  { keys: ['safety'],       icon: ICONS.shield,      title: 'Безпека' },
 ];
-const OTHER = { icon: '📇', title: 'Інші контакти' };
+const OTHER = { icon: ICONS.phone, title: 'Інші контакти' };
+
+// Значок для одного контакту — за його категорією. Невідома категорія віддає
+// загальну трубку, а не порожнечу: дірка в сітці помітніша за приблизний знак.
+function iconOf(c) {
+  const cat = CATEGORIES.find(x => x.keys.includes(c.category));
+  return (cat || OTHER).icon;
+}
+
+// 🔴 З якої кількості вмикати групи. Поки контактів мало, заголовок групи —
+// це рядок, що коштує висоти і не несе інформації («Медицина (1)» над одним
+// рядком). Коли їх стане більше — групи вмикаються самі, код і дані вже готові.
+// ⚠️ Це та сама думка, що жила в `AUTO_OPEN_MAX`, але доведена до кінця: там
+// групи лишались НАЗАВЖДИ і лише розкривались; тут при малій кількості їх
+// немає зовсім.
+const GROUP_FROM = 9;
 
 // Для набору `tel:` лишаємо лише цифри і плюс.
 const telOf = p => String(p || '').replace(/[^\d+]/g, '');
 
-function plural(n, one, few, many) {
-  const t = n % 100, o = n % 10;
-  if (t >= 11 && t <= 14) return many;
-  if (o === 1) return one;
-  if (o >= 2 && o <= 4) return few;
-  return many;
-}
+// ⚠️ `plural()` прибрано 31.08 разом із лічильником «4 контакти»: лічильник жив
+// у заголовку «Служби громади», а сам заголовок зник як дубль назви секції.
+// Чотири рядки людина перелічує оком швидше, ніж читає про них число.
 
 // ── Екстрені ─────────────────────────────────────────────────────────────────
 // Однакові компактні плитки. Тап = дзвінок одразу, без проміжного екрана:
@@ -99,13 +135,16 @@ function contactHtml(c) {
   return `
     <div class="hm-ct">
       <a class="hm-ct-main" href="tel:${escapeHtml(tel)}">
-        <span class="hm-ct-name">${escapeHtml(c.name)}</span>
-        <span class="hm-ct-phone">${escapeHtml(c.phone)}</span>
-        ${meta ? `<span class="hm-ct-meta">${meta}</span>` : ''}
+        <span class="hm-ct-ic" aria-hidden="true">${iconOf(c)}</span>
+        <span class="hm-ct-txt">
+          <span class="hm-ct-name">${escapeHtml(c.name)}</span>
+          <span class="hm-ct-phone">${escapeHtml(c.phone)}</span>
+          ${meta ? `<span class="hm-ct-meta">${meta}</span>` : ''}
+        </span>
       </a>
       <span class="hm-ct-acts">
-        <button class="hm-ct-act" type="button" data-copy="${escapeHtml(c.phone)}" aria-label="Копіювати номер">⧉</button>
-        ${c.address ? `<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">📍</a>` : ''}
+        <button class="hm-ct-act" type="button" data-copy="${escapeHtml(c.phone)}" aria-label="Копіювати номер">${ICONS.copy}</button>
+        ${c.address ? `<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${ICONS.pin}</a>` : ''}
       </span>
     </div>`;
 }
@@ -161,21 +200,36 @@ export async function renderContactsBlock() {
     const sos = list.filter(c => isEmergency(c) && EMERGENCY_ORDER.includes(String(c.phone || '').trim()));
     const local = list.filter(c => !sos.includes(c));
 
-    const groups = groupContacts(local);
-    const openAll = local.length <= AUTO_OPEN_MAX;
+    // 🔴 ПОРЯДОК ПЕРЕВЕРНУТО 31.08 — і це не косметика, а зміна призначення блока.
+    // Слово Вови: «екстрені служби і так всі прекрасно знають… 101, 102, 103 —
+    // так зрозуміло. А от телефони громади — це такі телефони, які вже не кожен
+    // може знати повністю».
+    // 🔑 Тобто вгорі має стояти те, чого людина НЕ памʼятає, а не те, що
+    // виглядає найтривожніше. Екстрені лишаються на сторінці й нікуди не
+    // зникають — вони просто нижче, за один рух пальця.
+    //
+    // ⚠️ Групи проти плаского списку. `local.length` сьогодні = 4, і три
+    // заголовки категорій над чотирма рядками були рівно тим, на що скаржився
+    // Вова. Пласко до `GROUP_FROM`, далі — групами; жодна з двох гілок не є
+    // «тимчасовою», обидві робочі.
+    const flat   = local.length < GROUP_FROM;
+    const groups = flat ? [] : groupContacts(local);
 
     el.innerHTML =
-      (sos.length ? `
+      // ⚠️ Свого заголовка тут НЕМАЄ навмисно: секція на сторінці вже
+      // називається «Телефони громади» (`tabs/community.js`). Подвійний
+      // заголовок — окрема відома вада проєкту, її вже прибирали з віджета
+      // Дошки 04.08 («Оголошення» + «АКТУАЛЬНІ ОГОЛОШЕННЯ ГРОМАДИ»).
+      (local.length ? `
         <div class="hm-csec">
-          <div class="hm-csec-h"><span aria-hidden="true">🚨</span> Екстрені служби</div>
-          ${emergencyHtml(sos)}
+          ${flat
+            ? `<div class="hm-ctlist">${local.map(contactHtml).join('')}</div>`
+            : groups.map(g => groupHtml(g, local.length <= AUTO_OPEN_MAX)).join('')}
         </div>` : '') +
-      (groups.length ? `
-        <div class="hm-csec">
-          <div class="hm-csec-h"><span aria-hidden="true">🏘</span> Служби громади
-            <span class="hm-csec-n">${local.length} ${plural(local.length, 'контакт', 'контакти', 'контактів')}</span>
-          </div>
-          ${groups.map(g => groupHtml(g, openAll)).join('')}
+      (sos.length ? `
+        <div class="hm-csec hm-csec--sos">
+          <div class="hm-csec-h">Екстрені служби</div>
+          ${emergencyHtml(sos)}
         </div>` : '');
 
     // Копіювання номера. Один слухач на блок; вішається раз.

@@ -358,7 +358,23 @@ function renderWhyFound(p) {
   return `<div class="bd-ad-why">✦ знайдено за: ${escapeHtml(hits.join(', '))}</div>`;
 }
 
-function renderBoardCard(p) {
+// 🔴 31.08 — ФУНКЦІЯ СТАЛА СПІЛЬНОЮ (замовлення Вови по віджету Громади:
+// «самі карточки зробити такими, як в вкладці Дошка… з описом, з датою, без
+// збереження, але з локацією, датою, фото»).
+//
+// 🔑 ЧОМУ ЕКСПОРТ, А НЕ КОПІЯ У ВІДЖЕТІ. Скопіювати цю розмітку в
+// `community-blocks.js` було б швидше на десять хвилин і дорожче назавжди: дві
+// картки розійшлися б першою ж правкою. У проєкті це вже коштувало — дві
+// реалізації авто-каруселі жили паралельно, поки їх не звели в
+// `core/auto-carousel.js` (правило №8 «не плодити дублі»).
+// ⚠️ Кільця імпортів немає: `community-blocks.js` уже тягне звідси
+// `openAdModalStandalone`, тобто напрямок залежності той самий.
+//
+// `opts.actions` — чи малювати «зберегти / поділитись». На Громаді їх НЕМАЄ за
+// прямим словом Вови («без збереження»): віджет — це вітрина, дія живе на
+// самій Дошці й у модалці, яка відкривається тапом.
+export function renderBoardCard(p, opts = {}) {
+  const { actions = true } = opts;
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   // 🔄 07.08 — ЗАМІСТЬ ФОТО ІКОНКА КАТЕГОРІЇ, А НЕ ПЕРША БУКВА ЗАГОЛОВКА
   // (замовлення Вови по знімках: «так як це в віджеті оголошень»).
@@ -391,7 +407,7 @@ function renderBoardCard(p) {
         <div class="bd-ad-meta">
           <span class="bd-ad-type cat-c-${escapeHtml(catColor(p.category))}">${escapeHtml(catShort(p.category))}</span>
           <span class="bd-ad-time">${renderPostTime(p)}</span>
-          ${boardActionsHtml(p)}
+          ${actions ? boardActionsHtml(p) : ''}
         </div>
         <h3 class="bd-ad-title">${escapeHtml(cardTitleText(p))}</h3>
         ${renderCardDesc(p)}
