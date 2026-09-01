@@ -45,8 +45,7 @@
       "category": "admin",
       "icon": "gromada",
       "group": "local",
-      "address": "вул. Замкова, 17, м. Олика",
-      "hours": "08:00–17:15"
+      "address": "вул. Замкова, 17 — вхід ліворуч від головного"
     },
     {
       "id": "hospital",
@@ -59,8 +58,8 @@
     },
     {
       "id": "social",
-      "name": "Соціальний захист",
-      "phone": "066 605 04 32",
+      "name": "Соцзахист (за записом)",
+      "phone": "050 557 26 32",
       "category": "gov",
       "icon": "gromada",
       "group": "local"
