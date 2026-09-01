@@ -27,16 +27,22 @@
    ⚠️ `display:flex` тут ОБОВʼЯЗКОВО: текстовий гліф центрувався сам (рядком), а
    inline-SVG — ні, і без цього хрестик сидів би вище центру кола.
    ⚠️ `font-size` лишається органом керування розміром: `.cat-ico` = 1em. */
+/* 🔴 01.09 «c» — ✕ ЖИВЕ В ЛИПКІЙ ШАПЦІ, А НЕ В ПОТОЦІ АРКУША.
+   Було `position: absolute` відносно `.app-modal-sheet` — а той САМ є скролером,
+   тож кнопка прокручувалась разом із вмістом (заміряно: −935px, за екран).
+   Тепер вона — звичайний елемент флекс-рядка `.app-modal-head`, який липкий.
+   🔑 Колір бордовий, а не сірий: це не новий смак, а ЗВЕДЕННЯ до вибору, який
+   Вова вже зробив 14.07 для статті й «Подати оголошення» («✕ бордовий… не
+   iOS-синій»). Примітив був єдиним місцем, де ✕ лишався сірим. */
 .app-modal-close {
-  position: absolute; top: 12px; right: 14px;
+  flex: 0 0 32px;
   background: var(--gray-light);
   border: 0;
   width: 32px; height: 32px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; color: var(--ink-soft, #888);
+  font-size: 15px; color: var(--red, #722F37);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  z-index: 1;
 }
 /* 🔴 05.08 — СИСТЕМНИЙ SANS ЗАМІСТЬ GEORGIA (вибір Вови «Б» із чотирьох макетів,
    `_mockups/modal-font.html`). Скарга дослівно: «шрифт, який зараз у модалці,
@@ -85,7 +91,11 @@
      `--modal-bg`, тож розійтись більше не можуть. */
   background: var(--modal-bg, #fff);
   border-radius: 22px 22px 0 0;
-  padding: 4px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  /* 🔑 Бічний відступ — ТОКЕНОМ, бо липка шапка мусить бути «full-bleed» (на всю
+     ширину аркуша) і компенсує його відʼємним margin. Модалка з іншим відступом
+     (напр. «Подати оголошення», 18px) міняє лише цей токен — і шапка їде за ним. */
+  --modal-pad-x: 20px;
+  padding: 0 var(--modal-pad-x) calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%);
   transition: transform 0.25s var(--ease-drawer);
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
@@ -142,11 +152,38 @@
   -webkit-tap-highlight-color: transparent;
 }
 .brules-ok:active { opacity: 0.88; }
+/* ── ЛИПКА ШАПКА МОДАЛКИ — БАЗА ДЛЯ ВСІХ (01.09 «c») ────────────────────────
+   Рисочка + ✕ в одному ярусі, який НЕ їде за вмістом.
+   📐 Висота 40px: ✕ це 32px (ціль пальця тримає сам кружок + смуга навколо), плюс
+   по 4px повітря. Менше — кнопка торкалась би краю аркуша; більше — шапка з'їдала б
+   висоту в кожній модалці застосунку.
+   ⚠️ `margin` відʼємний рівно на бічний відступ аркуша: смуга мусить іти від краю
+   до краю, інакше вміст при прокрутці визирав би збоку від неї.
+   ⚠️ Заливка ОБОВʼЯЗКОВО непрозора і власна: під шапкою проїжджає вміст. Модалка
+   з іншою поверхнею (Дошка) перевизначає лише `background`.
+   ⚠️ Радіус повторює аркуш: шапка стоїть у самому верху, і без нього її прямі кути
+   виглядали б з-під заокруглених кутів листа. */
+.app-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 40px;
+  margin: 0 calc(-1 * var(--modal-pad-x)) 4px;
+  padding: 0 var(--modal-pad-x);
+  background: var(--modal-bg, #fff);
+  border-radius: 22px 22px 0 0;
+}
+/* Рисочка по центру шапки — абсолютом, щоб ✕ праворуч не зсував її від середини. */
 .app-modal-handle {
+  position: absolute;
+  left: 50%; top: 10px;
+  transform: translateX(-50%);
   width: 40px; height: 4px;
   background: rgba(0, 0, 0, 0.18);
   border-radius: 2px;
-  margin: 8px auto 12px;
 }
 
 /* --center: центрована картка (Акаунт: приєднатись/профіль/кабінет) */
