@@ -700,7 +700,7 @@ gh workflow run deploy.yml → сайт оновлюється
 CSTL_NEWS/
 ├── index.html                    # UI + плейсхолдер лічильника версії
 ├── style.css                     # legacy-стилі (більшість винесено у style/*.css)
-├── style/                        # 21 файл, з них 20 підключено через @import у style.css
+├── style/                        # 24 файли, з них 22 підключено через @import (звірено 01.09)
 │   ├── base.css (усі токени), filters.css, news.css, news-card.css, news-hub.css
 │   ├── events.css, buses.css, power.css, modal.css, tabbar.css, sidebar.css
 │   ├── community.css, home.css, account.css, messages.css, feed.css
@@ -771,7 +771,9 @@ CSTL_NEWS/
 │
 ├── src/
 │   ├── app.js                    # Точка входу
-│   ├── core/                     # 31 модуль (звірено 06.08 — до цього в карті було 10)
+│   ├── core/                     # 42 модулі (звірено 01.09; було «31, звірено 06.08»,
+│   │                             # а до того 10 — це число застаріває швидше за все
+│   │                             # інше в карті, рахуй `ls src/core/*.js | wc -l`)
 │   │   │
 │   │   │  ── 🔴 «ОДНЕ МІСЦЕ ПРАВДИ» — копію НЕ робити, правити тут ──
 │   │   ├── layers.js             # 🔴 Повноекранні шари + системний жест «назад» (iPhone).
