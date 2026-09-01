@@ -12,6 +12,7 @@ import datetime
 import html
 import json
 import os
+import math
 import re
 import time
 import traceback
@@ -705,16 +706,126 @@ def is_dup_title(tokens: set, section: str, seen_by_section: dict) -> bool:
     if not tokens:
         return False
     for prev in seen_by_section.get(section, ()):
-        union = tokens | prev
-        if union and len(tokens & prev) / len(union) >= TITLE_SIM_THRESHOLD:
+        p = prev["t"]
+        union = tokens | p
+        if union and len(tokens & p) / len(union) >= TITLE_SIM_THRESHOLD:
             return True
     return False
 
 
-def remember_title(tokens: set, section: str, seen_by_section: dict) -> None:
-    """Запам'ятати заголовок у його розділі (для подальших порівнянь)."""
-    if tokens:
-        seen_by_section.setdefault(section, []).append(tokens)
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔴 B-22 — ДРУГИЙ РІВЕНЬ ДЕДУПЛІКАЦІЇ: ЗА ТЕКСТОМ, А НЕ ЗА ЗАГОЛОВКОМ
+#
+# 🗣️ Скарга Вови (01.09, зі знімка стрічки): «одна й та сама новина, тільки з
+# різними заголовками і від різних джерел. Чому вона дублюється? Вона не має
+# дублюватися… в загальному, не тільки в цьому випадку».
+#
+# 🔬 ВИПАДОК, ЯКИЙ ЦЕ ЗАВІВ. Дві статті про ту саму ДТП, різниця публікацій
+# ДВІ ХВИЛИНИ:
+#   «На Волині в аварію потрапив шкільний автобус: у салоні перебувало 18 людей»
+#   «Біля Берестечка шкільний автобус зіткнувся з авто «Укрпошти»…»
+# Спільних слів у заголовках — «шкільний» і «автобус», Jaccard **0.14**.
+# Заголовковий поріг 0.65 такого не бачить у принципі.
+#
+# 🛑 ЧОМУ НЕ МОЖНА ПРОСТО ЗНИЗИТИ ПОРІГ. Заміряно на 400 живих статтях: за
+# простим перекриттям «заголовок+текст» ця пара дає **0.49** — тобто СТОЇТЬ
+# НИЖЧЕ за пари, які дублями НЕ Є (прогнози погоди на різні періоди — 0.70-0.78).
+# Знизити поріг означало б почати ховати справжні новини, а це найдорожча
+# помилка з можливих: людина просто не побачить, що сталося.
+#
+# ✅ ЩО СПРАЦЮВАЛО — ВАГА ЗА РІДКІСТЮ СЛОВА (IDF). «волинь», «поліція», «район»
+# є майже в кожній статті й не доводять нічого; «берестечк», «богдан»,
+# «укрпошт» — майже ніде. Збіг рідкісного слова важить набагато більше.
+# 📐 Та сама пара піднялась 0.49 → **0.74**.
+#
+# 📐 ПРАВИЛО ПЕРЕВІРЕНЕ НА ВСЬОМУ КОРПУСІ: 400 статей, **14 спрацювань, і всі
+# 14 — справжні дублі**. Хибних нуль. Сторож `tests/news-dedup.mjs` міряє це
+# щоразу і падає, щойно зʼявиться перше хибне склеювання.
+DUP_W_STRONG = 0.80      # схожість, якої досить самої по собі (в межах вікна)
+DUP_W_FRESH  = 0.70      # нижча схожість — але тільки для свіжого передруку
+DUP_FRESH_MIN = 30       # «свіжий» = різниця публікацій ≤ 30 хвилин
+DUP_WINDOW_H = 6         # далі за 6 годин не порівнюємо взагалі
+
+_DF: dict = {}           # скільки статей містять слово (для рідкості)
+_NDOC = 0
+
+
+def article_tokens(title: str, text: str) -> set:
+    """Основи значущих слів із заголовка + початку тексту.
+
+    ⚠️ Беремо саме ПОЧАТОК тексту (900 символів): у новині головне стоїть на
+    початку, а хвіст — це підписи, теги й «читайте також», які в різних видань
+    свої і лише розмивають порівняння.
+    🔑 Обрізання слова до 6 літер — груба заміна морфології: «автобуса»,
+    «автобусом», «автобус» стають одним ключем без словника.
+    """
+    сирий = f"{title or ''} {strip_html(text or '')}"[:900].lower()
+    слова = re.findall(r"[а-яіїєґa-z0-9]{4,}", сирий)
+    return {w[:6] for w in слова if w not in STOPWORDS_UK}
+
+
+def build_idf(articles: list) -> None:
+    """Порахувати, наскільки кожне слово рідкісне — по ВСІХ наявних статтях."""
+    global _DF, _NDOC
+    _DF, _NDOC = {}, 0
+    for a in articles:
+        toks = article_tokens(a.get("title", ""), a.get("content") or a.get("excerpt") or "")
+        if not toks:
+            continue
+        _NDOC += 1
+        for t in toks:
+            _DF[t] = _DF.get(t, 0) + 1
+
+
+def _idf(t: str) -> float:
+    return math.log(max(_NDOC, 2) / (1 + _DF.get(t, 0)))
+
+
+def _weight(toks: set) -> float:
+    return sum(_idf(t) for t in toks)
+
+
+def dup_score(a: set, b: set) -> float:
+    """Частка СПІЛЬНОЇ ваги від ваги коротшої зі статей.
+
+    ⚠️ Ділимо на МЕНШУ вагу, а не на обʼєднання: одне видання пише три абзаци,
+    інше десять, і Jaccard тоді карав би за багатослівність, а не за різний
+    зміст. Нас цікавить «чи вміщається коротша стаття у довшу».
+    """
+    if not a or not b:
+        return 0.0
+    m = min(_weight(a), _weight(b))
+    return (sum(_idf(t) for t in a & b) / m) if m else 0.0
+
+
+def is_dup_article(tokens: set, ts: int, section: str, seen_by_section: dict) -> bool:
+    """True якщо це та сама ПОДІЯ, що вже є в розділі (навіть з іншим заголовком)."""
+    if not tokens or not ts:
+        return False
+    for prev in seen_by_section.get(section, ()):
+        p_toks, p_ts = prev.get("a"), prev.get("ts")
+        if not p_toks or not p_ts:
+            continue
+        хв = abs(ts - p_ts) / 60000
+        if хв > DUP_WINDOW_H * 60:
+            continue
+        s = dup_score(tokens, p_toks)
+        if s >= DUP_W_STRONG or (s >= DUP_W_FRESH and хв <= DUP_FRESH_MIN):
+            return True
+    return False
+
+
+def remember_title(tokens: set, section: str, seen_by_section: dict,
+                   art_tokens: set = None, ts: int = 0) -> None:
+    """Запам'ятати статтю в її розділі (для подальших порівнянь).
+
+    ⚠️ `art_tokens`/`ts` необовʼязкові: HTML-збирачі перевіряють дубль ЩЕ ДО
+    того, як завантажили текст статті, і для них лишається тільки заголовок.
+    Це свідома деградація, а не недогляд — краще половина захисту, ніж жодного.
+    """
+    if tokens or art_tokens:
+        seen_by_section.setdefault(section, []).append(
+            {"t": tokens or set(), "a": art_tokens or set(), "ts": ts or 0})
 
 
 def prune_by_age(articles: list) -> list:
@@ -3064,7 +3175,13 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             section = section_of(geo)
             tokens = title_tokens(title)
             if is_dup_title(tokens, section, seen_by_section):
-                continue  # схожа новина вже є в цьому розділі
+                continue  # схожий ЗАГОЛОВОК уже є в цьому розділі
+            # 🔴 B-22 — та сама ПОДІЯ під іншим заголовком (див. розбір над
+            # `is_dup_article`). Тут, на відміну від HTML-збирачів, текст і час
+            # уже відомі, тож друга перевірка працює на повну.
+            art_toks = article_tokens(title, content or excerpt)
+            if is_dup_article(art_toks, ts, section, seen_by_section):
+                continue  # ту саму подію вже взяли з іншого джерела
 
             category = detect_category(title, excerpt)
             entry_type = classify_entry(title, excerpt + " " + content)
@@ -3099,7 +3216,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             if кінцева and кінцева != link:
                 articles[-1]["finalUrl"] = кінцева
             seen_urls.add(link)
-            remember_title(tokens, section, seen_by_section)
+            remember_title(tokens, section, seen_by_section, art_toks, ts)
         except Exception:
             continue
 
@@ -3320,10 +3437,16 @@ def main():
     # Дедуп заголовків — per-розділ (Крок 2): множини слів заголовків, згруповані
     # за розділом (Україна та Світ / Волинь / Громада). Seed з наявних статей.
     seen_by_section: dict = {}
+    # 🔴 B-22: рідкість слів рахуємо по ВСІХ наявних статтях — без корпусу
+    # неможливо відрізнити «волинь» (є всюди) від «берестечк» (майже ніде).
+    build_idf(existing_articles)
     for _a in existing_articles:
         if _a.get("title"):
             remember_title(title_tokens(_a["title"]),
-                           section_of(_a.get("geo", "")), seen_by_section)
+                           section_of(_a.get("geo", "")), seen_by_section,
+                           article_tokens(_a["title"],
+                                          _a.get("content") or _a.get("excerpt") or ""),
+                           _a.get("ts") or 0)
     # 🔴 21.08 — ПАРСЕР РАХУЄ НОМЕРИ ЛИШЕ СЕРЕД СВОЇХ, НИЖЧЕ CMS_ID_BASE.
     #
     # Заміряно стендом `cms-chain` наступного ж дня після розведення просторів:
