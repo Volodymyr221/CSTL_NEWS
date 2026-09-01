@@ -36,6 +36,7 @@ await p.waitForTimeout(300);
 
 const зріз = await p.evaluate(() => {
   const c = document.getElementById('cm-contacts-content');
+  const root = c;
   const вузли = [...c.querySelectorAll('.hm-ct, .hm-sos-b')];
   const контакти = [...c.querySelectorAll('.hm-ct')];
 
@@ -66,6 +67,30 @@ const зріз = await p.evaluate(() => {
     значкиЦілі: [...c.querySelectorAll('.hm-ct-ic')].every(n => n.getBoundingClientRect().width >= 33),
     // Тап по контакту веде в дзвінок.
     telУсі: contactsTel(c),
+    // 🔴 01.09 — ДРУГИЙ НОМЕР (замовлення Вови «давай два, але компактне і не
+    // таке широке»). Стережемо три речі, і кожна куплена заміром:
+    //   • ширина карток НЕ змінилась (другий номер іде вниз, а не поруч);
+    //   • цифри другого номера стоять РІВНО під першим — перша редакція мала
+    //     значок трубки, і він вирівнювався сам, а цифри зʼїжджали на 18px;
+    //   • ціль пальця ≥ 34px — перший замір дав 22px.
+    другий: (() => {
+      const a = root.querySelector('.hm-ct-alt');
+      if (!a) return null;
+      const картка = a.closest('.hm-ct');
+      const перший = картка.querySelector('.hm-ct-phone');
+      const rng = document.createRange(); rng.selectNodeContents(a.lastChild);
+      return {
+        tel: (a.getAttribute('href') || '').startsWith('tel:'),
+        висота: Math.round(a.getBoundingClientRect().height),
+        рівно: Math.round(rng.getBoundingClientRect().left)
+             === Math.round(перший.getBoundingClientRect().left),
+      };
+    })(),
+    ширинаОднакова: (() => {
+      const ш = [...root.querySelectorAll('.hm-ct')]
+        .map(x => Math.round(x.getBoundingClientRect().width));
+      return new Set(ш).size === 1;
+    })(),
     // Нічого не вилазить за правий край екрана.
     влазить: [...c.querySelectorAll('.hm-ct, .hm-sos-b')]
       .every(n => n.getBoundingClientRect().right <= window.innerWidth + 1),
@@ -92,6 +117,12 @@ ok('ціль пальця дій ≥ 44px', зріз.цілі44);
 ok('значок не стискається (34px)', зріз.значкиЦілі);
 ok('тап по контакту веде в дзвінок', зріз.telУсі);
 ok('нічого не вилазить за екран', зріз.влазить);
+ok('🔴 другий номер ЦНАПу намальовано', !!зріз.другий);
+ok('другий номер веде в дзвінок', зріз.другий?.tel);
+ok('🔴 цифри другого РІВНО під першим', зріз.другий?.рівно);
+ok('ціль пальця другого ≥ 34px', (зріз.другий?.висота || 0) >= 34, `${зріз.другий?.висота}px`);
+ok('🔴 ширина карток НЕ змінилась (номер пішов вниз, не вбік)', зріз.ширинаОднакова);
+
 ok('помилок у консолі нема', errs.length === 0, errs.slice(0, 2).join(' | '));
 
 await browser.close();
