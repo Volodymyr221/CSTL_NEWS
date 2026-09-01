@@ -1896,42 +1896,22 @@
    ⚠️ Дії ОКРЕМИМИ кнопками поза посиланням: вкладати <button> у <a> не можна,
    і тап по «копіювати» не має набирати номер. */
 .hm-ct {
-  display: flex; align-items: stretch; gap: 2px;
+  /* 🔴 01.09 «c» — КАРТКА ЗНОВУ ОДИН РЯДОК. Обгортка `.hm-ct-row` (PR #1134)
+     прибрана: вона не мала `flex-grow`, стискалась по вмісту, і кнопки їхали за
+     текстом — заміряно ТРИ різні позиції «копіювати» (267 / 294.7 / 249.2).
+     `position: relative` — опора для розтягнутої цілі `.hm-ct-main::after`.
+     `align-items: center` — значок і кнопки центруються по ВСІЙ текстовій
+     колонці, разом із другим номером (претензія Вови №3). */
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  /* 📐 Падінг 8px, а не 10. Причина арифметична: центрування замість `stretch`
+     вимагає від кнопки власної висоти (44px за орієнтиром Apple), і на 10px
+     коротка картка виросла б 56 → 66px. На 8px вона 62px, а ВИСОКА картка
+     лишається 105.8px проти 103.9px до правки — тобто там, де вміст і так
+     високий, різниці майже немає. */
+  padding: 8px var(--hm-s3);
   background: var(--board-card); border: 1px solid var(--board-line);
   border-radius: var(--hm-r-card); box-shadow: var(--hm-shadow); overflow: hidden;
-}
-/* 🔴 01.09 — КАРТКА З ДВОМА НОМЕРАМИ. Замовлення Вови: «давай два, але щоб
-   компактне і не таке широке».
-   📐 Другий номер іде ВНИЗ, а не поруч: у колонці тексту ~220px два номери
-   через «·» дають ~200px і лягли б упритул до краю. Ширина картки не
-   змінюється взагалі, ціна — +18px висоти і лише там, де другий номер є.
-   🔑 Колонкою стає ЛИШЕ така картка (`--two`); решта лишається тим самим
-   рядком, який уже перевірений. */
-.hm-ct--two { flex-direction: column; align-items: stretch; gap: 0; }
-.hm-ct-row { display: flex; align-items: stretch; gap: 2px; min-width: 0; }
-
-/* Другий номер. Тихіший за перший — він альтернатива, а не рівноправна дія.
-   ⚠️ Відступ ліворуч дорівнює ширині значка (34px) + проміжку (10px) + падінгу
-   картки: номер стає рівно під першим, а не «десь під іконкою». Зміниш
-   `.hm-ct-ic` — зміни й тут. */
-.hm-ct-alt {
-  display: flex; align-items: center;
-  padding: 0 var(--hm-s3) 8px calc(var(--hm-s3) + 34px + 10px);
-  /* ⚠️ Ціль пальця. Перший замір дав 22px — удвічі менше за орієнтир Apple (44).
-     Для ДРУГОРЯДНОЇ дії всередині картки, чия головна ціль і так 104px, беремо
-     36px: палець влучає впевнено, а картка не роздувається. Ріст висоти —
-     +34px і лише на тій картці, де другий номер є. */
-  min-height: 36px;
-  margin-top: -4px;
-  font: 500 13px/1 system-ui, -apple-system, sans-serif;
-  color: var(--red); text-decoration: none;
-}
-.hm-ct-alt:active { background: var(--board-press); }
-/* 🛑 `.hm-ct-alt-ic` прибрано разом зі значком: див. розбір у `home-contacts.js`
-   над `alt` — значок вирівнювався сам, а цифри зʼїжджали на 18px. */
-.hm-ct-main {
-  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px;
-  padding: 10px var(--hm-s3); text-decoration: none;
 }
 /* Значок контакту. 🆕 31.08 — замість емодзі.
    📐 Коробка 34px із тихою підкладкою, значок усередині 18px. Коробка потрібна
@@ -1943,15 +1923,55 @@
   border-radius: 10px; background: var(--board-press); color: var(--hm-quiet);
 }
 .hm-ct-ic svg { width: 18px; height: 18px; }
-.hm-ct-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.hm-ct-main:active { background: var(--board-press); }
+/* 🔴 `flex: 1` ОБОВʼЯЗКОВИЙ. Саме його бракувало `.hm-ct-row`, і через це
+   кнопки ставали «зразу за текстом» — тим далі, чим довша назва. Тепер колонка
+   забирає всю вільну ширину, і стовпець дій стоїть на місці ЗАВЖДИ. */
+.hm-ct-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-ct-name  { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
-.hm-ct-phone { font: 500 13px/1 system-ui, -apple-system, sans-serif; color: var(--red); }
+.hm-ct-phone { font: 500 13px/1.3 system-ui, -apple-system, sans-serif; color: var(--red); text-decoration: none; }
 .hm-ct-meta  { font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
-.hm-ct-acts { display: flex; flex: 0 0 auto; }
+
+/* 🛑 РОЗТЯГНУТА ЦІЛЬ. Перший номер — звичайний рядок тексту, але його `::after`
+   накриває картку цілком, тож тап будь-де лишається дзвінком на перший номер
+   (поведінка перевірена пальцем 01.09, HOT_RULES №9).
+   ⚠️ Накладка НЕ рухає розкладку — з-під пальця між `pointerdown` і `click`
+   нічого не зникає (HOT_RULES №10). */
+.hm-ct-main::after { content: ''; position: absolute; inset: 0; }
+.hm-ct-main:active::after { background: var(--board-press); }
+
+/* Другий номер. Стоїть ПІД першим, у тій самій колонці — це й була претензія
+   Вови №1 («номер має бути під номером»); адреса тепер під обома.
+   ⚠️ `z-index: 1` — інакше його накрила б розтягнута ціль першого номера, і
+   другий номер не набирався б узагалі.
+   📐 `align-self: flex-start` — ширина по цифрах, а не на всю колонку: решта
+   рядка лишається ціллю ПЕРШОГО номера, як і решта картки.
+   ⚠️ Ціль пальця: 36px — те саме число, що стояло тут до перебудови.
+   🛑 Я спершу поставив 30px, і сторож `home-contacts.mjs` це впіймав («ціль
+   пальця другого ≥ 34px — 30px»). Спокуса була знизити планку в стороже під свій
+   код — саме те, чого робити НЕ МОЖНА: 36 куплене міркуванням (перший замір дав
+   22px, палець промахувався), а не зручністю верстки. Верстка підганяється під
+   перевірку, не навпаки. Ціна — +6px висоти і лише на картці, де другий номер є. */
+.hm-ct-alt {
+  position: relative; z-index: 1; align-self: flex-start;
+  display: flex; align-items: center; min-height: 36px;
+}
+.hm-ct-alt:active { background: var(--board-press); }
+/* 🛑 `.hm-ct-alt-ic` прибрано разом зі значком: див. розбір у `home-contacts.js`
+   над `alt` — значок вирівнювався сам, а цифри зʼїжджали на 18px. */
+
+/* 🔴 СТОВПЦІ ДІЙ РІВНІ БЕЗ ЖОДНОГО РЕЗЕРВУ. Ключ — ПОРЯДОК: у розмітці спершу
+   пін, потім «копіювати», а вся коробка притиснута праворуч (`.hm-ct-txt` має
+   `flex: 1` і забирає решту). Тому «копіювати» завжди біля правого краю, а пін —
+   рівно на 44px лівіше; там, де адреси немає, ця ширина дістається ТЕКСТУ.
+   📐 Заміряно обидва варіанти: резерв `min-width: 88px` теж давав рівні стовпці,
+   але звужував колонку тексту 189.7 → 164px і ламав назву «Соцзахист (за
+   записом)» у два рядки (картка 56 → 71.9px). Цей варіант коштує нуль.
+   ⚠️ Дії ОКРЕМИМИ кнопками поза посиланням: вкладати <button> у <a> не можна,
+   і тап по «копіювати» не має набирати номер. */
+.hm-ct-acts { position: relative; z-index: 1; flex: 0 0 auto; display: flex; }
 .hm-ct-act {
   appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
-  width: 44px; display: grid; place-items: center;
+  width: 44px; min-height: 44px; display: grid; place-items: center;
   color: var(--hm-quiet); text-decoration: none;
 }
 /* 44px — ціль пальця за посібником Apple; значок усередині 17px.
