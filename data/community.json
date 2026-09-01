@@ -29,6 +29,51 @@
   ],
   "contacts": [
     {
+      "id": "gromada",
+      "name": "Олицька міська рада",
+      "phone": "+38 (03365) 9-51-41",
+      "category": "gov",
+      "icon": "gromada",
+      "group": "local",
+      "address": "вул. Замкова, 17, м. Олика",
+      "hours": "08:00–17:15"
+    },
+    {
+      "id": "cnap",
+      "name": "ЦНАП (адмінпослуги)",
+      "phone": "099 205 69 12",
+      "category": "admin",
+      "icon": "gromada",
+      "group": "local",
+      "address": "вул. Замкова, 17, м. Олика",
+      "hours": "08:00–17:15"
+    },
+    {
+      "id": "hospital",
+      "name": "Олицька амбулаторія",
+      "phone": "+38 (03365) 9-52-32",
+      "category": "medical",
+      "icon": "hospital",
+      "group": "local",
+      "address": "вул. Шевченка, 58а, м. Олика"
+    },
+    {
+      "id": "social",
+      "name": "Соціальний захист",
+      "phone": "066 605 04 32",
+      "category": "gov",
+      "icon": "gromada",
+      "group": "local"
+    },
+    {
+      "id": "power",
+      "name": "Волиньобленерго",
+      "phone": "0 800 210 131",
+      "category": "utility",
+      "icon": "power",
+      "group": "emergency"
+    },
+    {
       "id": "ambulance",
       "name": "Швидка допомога",
       "phone": "103",
@@ -60,38 +105,6 @@
       "category": "emergency",
       "icon": "gas",
       "group": "emergency"
-    },
-    {
-      "id": "power",
-      "name": "Волиньобленерго",
-      "phone": "0 800 501 482",
-      "category": "utility",
-      "icon": "power",
-      "group": "emergency"
-    },
-    {
-      "id": "hospital",
-      "name": "Олицька амбулаторія",
-      "phone": "+38 (03365) 9-21-12",
-      "category": "medical",
-      "icon": "hospital",
-      "group": "local"
-    },
-    {
-      "id": "gromada",
-      "name": "Олицька сільрада",
-      "phone": "+38 (03365) 9-15-50",
-      "category": "gov",
-      "icon": "gromada",
-      "group": "local"
-    },
-    {
-      "id": "cnap",
-      "name": "ЦНАП (адмінпослуги)",
-      "phone": "099 205 69 12",
-      "category": "admin",
-      "icon": "gromada",
-      "group": "local"
     },
     {
       "id": "emergency112",

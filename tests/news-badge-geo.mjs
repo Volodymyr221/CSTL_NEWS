@@ -73,13 +73,30 @@ const шапка = await p.evaluate(() => {
   return {
     висота: Math.round(head.getBoundingClientRect().height),
     сума: Math.round(w(el('.hm-kicker')) + w(el('.cm-news-new')) + w(el('.hm-more'))),
+    зПроміжками: (() => {
+      const g = parseFloat(getComputedStyle(head).gap) || 0;
+      const n = [el('.hm-kicker'), el('.cm-news-new'), el('.hm-more')].filter(Boolean).length;
+      return Math.round(w(el('.hm-kicker')) + w(el('.cm-news-new')) + w(el('.hm-more')) + g * (n - 1));
+    })(),
+    підписСтискається: (() => {
+      const k = el('.hm-kicker'); if (!k) return false;
+      const cs = getComputedStyle(k);
+      return cs.minWidth === '0px' && cs.textOverflow === 'ellipsis' && cs.whiteSpace === 'nowrap';
+    })(),
     доступно: Math.round(head.getBoundingClientRect().width),
     вилазить: [...head.children].some(e => e.getBoundingClientRect().right > window.innerWidth + 1),
   };
 });
 ok('🔴 шапка в ОДИН рядок (не вище 32px)', шапка.висота <= 32, `${шапка.висота}px`);
-ok('вміст шапки влазить у ширину', шапка.сума <= шапка.доступно,
-   `${шапка.сума} з ${шапка.доступно}px`);
+// 🔴 01.09 — ПРОМІЖКИ ТЕЖ РАХУЮТЬСЯ. Скарга Вови: бейдж «переноситься вниз,
+// під Волинь». Стара перевірка міряла лише елементи і давала «298 з 322» —
+// фальшивий запас: два проміжки по 12px доводять суму РІВНО до 322 з 322.
+// Тобто шапка стояла впритул до краю, і на iOS із трохи ширшим шрифтом вміст
+// вивалювався. Тепер вимагаємо реальний запас.
+ok('🔴 вміст шапки влазить РАЗОМ ІЗ ПРОМІЖКАМИ', шапка.зПроміжками <= шапка.доступно,
+   `${шапка.зПроміжками} з ${шапка.доступно}px`);
+ok('🔴 підпис уміє стискатись (не ламає рядок)', шапка.підписСтискається,
+   шапка.підписСтискається ? 'min-width:0 + трикрапка' : 'підпис жорсткий');
 ok('нічого не вилазить за екран', !шапка.вилазить);
 
 // ── 3. Читання статті ГРОМАДИ гасить число ──────────────────────────────────

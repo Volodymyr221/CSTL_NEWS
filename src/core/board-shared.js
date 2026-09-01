@@ -156,8 +156,46 @@ function adoptLegacySeen(base) {
 let seenCache = {};        // { base: мітка в мс } — злите значення бази й пристрою
 let seenLoadedFor = null;  // для якого uid кеш наповнений (null = гість/ще ні)
 
+// 🔴 01.09 — ПЕРЕНОС МІТКИ З ГОСТЯ НА АКАУНТ. Без нього прочитане ЗНИКАЛО.
+//
+// 🗣️ Скарга Вови: «якщо я його прочитав, воно мені не має вибивати другий раз,
+// коли я заходжу в додаток».
+//
+// 🔬 ЩО ВІДБУВАЛОСЬ. Ключ мітки — `base + ':' + (currentUserId() || 'anon')`, а
+// `initAuth()` кличеться БЕЗ await (це задокументоване рішення: інакше запуск
+// застосунку залежав би від мережі). Тобто в перші секунди після відкриття
+// `currentUserId()` ще `null`. `openNewsHub()` кличе `markNewsSeen()` одразу —
+// і мітка лягає під `:anon`. Коли авторизація доїжджає, читання йде вже під
+// `:<uid>`, де порожньо, і «прочитане» зникає назавжди.
+// 📐 Доведено приладом `tests/tools/news-seen-anon2.mjs`: у сховищі мирно
+// співіснували ДВА простори ключів — `cstl_news_seen_ts:anon` і
+// `cstl_news_seen_ts:<uid>`, і жоден не знав про інший.
+//
+// 🔑 Беремо НАЙПІЗНІШЕ з двох, а не просто копіюємо: мітка рухається лише
+// вперед — те саме правило, що вже діє для пари «пристрій / база».
+// 🛑 Гостьовий ключ стираємо ЛИШЕ коли його забрав СПРАВЖНІЙ акаунт — та сама
+// асиметрія, що в `adoptLegacySeen` нижче: поки людина не увійшла, вона має
+// право на свої мітки.
+function adoptAnonSeen(base) {
+  const uid = currentUserId();
+  if (!uid) return null;                       // ще гість — переносити нема куди
+  const anon = localStorage.getItem(base + ':anon');
+  if (anon == null) return null;
+  try {
+    const мій = Number(localStorage.getItem(base + ':' + uid) || 0);
+    const гість = Number(anon || 0);
+    if (Number.isFinite(гість) && гість > мій) {
+      localStorage.setItem(base + ':' + uid, String(гість));
+    }
+    localStorage.removeItem(base + ':anon');
+    return String(Math.max(мій, Number.isFinite(гість) ? гість : 0));
+  } catch (_) { return null; }
+}
+
 export function readSeen(base) {
   const local = (() => {
+    // Спершу забираємо мітку, залишену до того, як застосунок дізнався, хто я.
+    adoptAnonSeen(base);
     let raw = localStorage.getItem(seenKey(base));
     if (raw == null) raw = adoptLegacySeen(base);
     const v = Number(raw || 0);
