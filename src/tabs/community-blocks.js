@@ -1,7 +1,11 @@
 // src/tabs/community-blocks.js
 // Всі render-блоки головної вкладки «Громада» (винесено з community.js 13.05).
-// Експортовані: renderWeatherBlock, renderPowerBlock, renderBusBlock,
-//               renderBoardBlock, renderEventBlock, renderContactsBlock.
+// Експортовані: renderWeatherBlock, renderPowerBlock, renderBoardBlock,
+//               renderEventBlock, renderCommunityNews.
+// 🔁 Звірено 01.09 «c» — список тут розійшовся з файлом і брехав у ДВІ сторони:
+// обіцяв `renderBusBlock` (віджет прибрано #1130) і `renderContactsBlock` (живе
+// в `home-contacts.js`), а `renderCommunityNews` не згадував узагалі. Шапка
+// файлу — перше, що читають, тож така неточність дорожча за свій розмір.
 //
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.

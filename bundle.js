@@ -1706,23 +1706,19 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(g)
           <span class="hm-sos-n">${p(a.phone)}</span>
           <span class="hm-sos-t">${p(a.name)}</span>
         </a>`).join("")}
-    </div>`}function oM(t){let e=sd(t.phone),n=t.phone2?sd(t.phone2):"",a=[t.hours,t.address].filter(Boolean).map(p).join(" · "),s=n?`<a class="hm-ct-alt" href="tel:${p(n)}">${p(t.phone2)}</a>`:"";return`
-    <div class="hm-ct${n?" hm-ct--two":""}">
-      <div class="hm-ct-row">
-      <a class="hm-ct-main" href="tel:${p(e)}">
-        <span class="hm-ct-ic" aria-hidden="true">${D4(t)}</span>
-        <span class="hm-ct-txt">
-          <span class="hm-ct-name">${p(t.name)}</span>
-          <span class="hm-ct-phone">${p(t.phone)}</span>
-          ${a?`<span class="hm-ct-meta">${a}</span>`:""}
-        </span>
-      </a>
-      <span class="hm-ct-acts">
-        <button class="hm-ct-act" type="button" data-copy="${p(t.phone)}" aria-label="Копіювати номер">${T.copy}</button>
-        ${t.address?`<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(t.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${T.pin}</a>`:""}
+    </div>`}function oM(t){let e=sd(t.phone),n=t.phone2?sd(t.phone2):"",a=[t.hours,t.address].filter(Boolean).map(p).join(" · ");return`
+    <div class="hm-ct">
+      <span class="hm-ct-ic" aria-hidden="true">${D4(t)}</span>
+      <span class="hm-ct-txt">
+        <span class="hm-ct-name">${p(t.name)}</span>
+        <a class="hm-ct-main hm-ct-phone" href="tel:${p(e)}">${p(t.phone)}</a>
+        ${n?`<a class="hm-ct-alt hm-ct-phone" href="tel:${p(n)}">${p(t.phone2)}</a>`:""}
+        ${a?`<span class="hm-ct-meta">${a}</span>`:""}
       </span>
-      </div>
-      ${s}
+      <span class="hm-ct-acts">
+        ${t.address?`<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(t.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${T.pin}</a>`:""}
+        <button class="hm-ct-act" type="button" data-copy="${p(t.phone)}" aria-label="Копіювати номер">${T.copy}</button>
+      </span>
     </div>`}function j4(t,e){return`
     <details class="hm-cgrp"${e?" open":""}>
       <summary class="hm-cgrp-sum">
