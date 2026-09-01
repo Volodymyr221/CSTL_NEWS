@@ -26,9 +26,20 @@ const page = (mode) => `<!doctype html><html><head><meta charset="utf-8"><style>
    </div>
    <div class="fd-comp-body">
      <textarea class="fd-comp-text"></textarea>
-     <div class="fd-comp-as"><div class="fd-comp-as-label">Публікувати як</div></div>
    </div>
-   <div class="fd-comp-bar"><button class="fd-comp-send">Опублікувати</button></div>
+   <!-- 01.09 c: вибір автора переїхав із тіла в НИЖНЮ панель (варіант Б Вови).
+        Раніше він був останнім вузлом скролера і стояв упритул до кнопок:
+        заміряно зазор 0.0px, від чіпа до іконки фото 2px. -->
+   <div class="fd-comp-bar fd-comp-bar--stack fd-comp-bar--author">
+     <div class="fd-comp-as"><div class="fd-comp-as-label">Публікувати як</div>
+       <button class="fd-comp-as-btn is-on"><span class="fd-comp-as-txt">Олицька міська рада</span></button>
+       <button class="fd-comp-as-btn" data-as="me"><span class="fd-comp-as-txt">Володимир Шевчук</span></button>
+     </div>
+     <div class="fd-comp-actions">
+       <label class="fd-comp-photo">IMG</label>
+       <button class="fd-comp-send">Опублікувати</button>
+     </div>
+   </div>
   </div>
  </div></div>
 <script>
@@ -42,8 +53,13 @@ window.__scrollAll = () => {                    // «скролю донизу»
 window.__geom = () => {
   const g = (s) => { const e=document.querySelector(s); if(!e) return null;
     const r=e.getBoundingClientRect(); return {top:Math.round(r.top), bottom:Math.round(r.bottom)}; };
+  const чіп = document.querySelector('.fd-comp-as-btn:last-child').getBoundingClientRect();
+  const фото = document.querySelector('.fd-comp-photo').getBoundingClientRect();
   return { head: g('.fd-comp-head'), title: g('.fd-sheet-title'), type: g('.fd-comp-type'),
-           bar: g('.fd-comp-bar'), sheet: g('.fd-composer') };
+           bar: g('.fd-comp-bar'), sheet: g('.fd-composer'),
+           as: g('.fd-comp-as'), дії: g('.fd-comp-actions'),
+           чіпДоФото: Math.round(фото.top - чіп.bottom),
+           імʼя: document.querySelector('.fd-comp-as-btn[data-as=me] .fd-comp-as-txt').textContent.trim() };
 };
 </script></body></html>`;
 
@@ -71,6 +87,23 @@ for (const mode of ['old','new']) {
        `top=${after.bar.top} bottom=${after.bar.bottom}`);
     ok('шапка НЕ рухається від скролу взагалі', after.head.top === before.head.top,
        `було ${before.head.top} → стало ${after.head.top}`);
+
+    // ── 01.09 «c» — ДРУГА СКАРГА ВОВИ ПО ЦЬОМУ Ж ЛИСТУ ──────────────────────
+    // 🗣️ «воно дуже близько знаходиться біля іконки фотографії та опублікувати…
+    // майже налягає одне на одне. Це має бути теж зафіксована частина, вона має
+    // мати певні відступи».
+    // 🔬 Заміряно ДО правки: зазор між вибором автора і рядом дій — 0.0px, від
+    // нижнього чіпа до іконки фото — 2px. Тобто «майже налягає» було буквально.
+    const зазор = after.дії.top - after.as.bottom;
+    ok('🔴 вибір автора НЕ налягає на кнопки (зазор ≥ 8px)', зазор >= 8, `${зазор}px`);
+    ok('🔴 від чіпа до іконки фото є повітря (≥ 12px)', after.чіпДоФото >= 12, `${after.чіпДоФото}px`);
+    // 🔑 Головне: вибір автора ЗАКРІПЛЕНИЙ. Він більше не в скролері, тому довгий
+    // текст не може його зсунути — саме цього Вова й просив («воно має бути
+    // прикріплене»). Порівнюємо ДО і ПІСЛЯ прокрутки донизу.
+    ok('🔴 вибір автора ЗАКРІПЛЕНИЙ (не їде від скролу)', after.as.top === before.as.top,
+       `було ${before.as.top} → стало ${after.as.top}`);
+    // 🗣️ «замість "від себе" потрібно зазначити імʼя, тобто там Володимир Шевчук».
+    ok('🔴 правий чіп називає ІМʼЯ, а не роль', !/^Від себе$/i.test(after.імʼя), `«${after.імʼя}»`);
   }
   await p.close();
 }
