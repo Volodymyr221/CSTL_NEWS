@@ -48,7 +48,7 @@
 //     контрольних знімках 03.08.
 //
 // ✅ ЩО НЕ ЧІПАЛИ (вимога Вови «не ламай бізнес-логіку»): id контейнерів блоків
-// (`cm-news-content`, `cm-board-content`, `cm-event-content`, `cm-bus-content`,
+// (`cm-news-content`, `cm-board-content`, `cm-event-content`,
 // `cm-weather-content`, `cm-contacts-content`) — render-функції в
 // `community-blocks.js` шукають саме їх; кнопка кабінету `[data-account-btn]`;
 // делегування `[data-switch-tab]`.
@@ -62,7 +62,6 @@ import { renderHomeFeed } from './home-feed.js';
 import { renderContactsBlock } from './home-contacts.js';
 import {
   renderWeatherBlock,
-  renderBusBlock,
   renderBoardBlock,
   renderCommunityNews,
 } from './community-blocks.js';
@@ -221,14 +220,15 @@ function renderSkeleton() {
       <div id="cm-board-content" class="hm-list">${skeletonRows(3)}</div>
     </section>
 
-    <!-- ══ АВТОБУСИ ════════════════════════════════════════════════════════════ -->
-    <section class="hm-sec" id="hm-bus">
-      <div class="hm-sec-head">
-        <h2 class="hm-kicker">Автобуси</h2>
-        <button class="hm-more" type="button" data-switch-tab="buses">Розклад →</button>
-      </div>
-      <div id="cm-bus-content" class="hm-list">${skeletonRows(1)}</div>
-    </section>
+    <!-- ══ АВТОБУСИ — СЕКЦІЮ ПРИБРАНО 31.08.2026 ════════════════════════════════
+         🗣️ Рішення Вови: «з сторінки громада той віджет треба забрати, а на
+         сторінці автобуси залишити і капсулу залишити».
+         Віджет малював ту саму велику картку, що й вкладка Автобуси, — копію
+         цілого екрана над згином. Відповідь про автобус на Громаді лишається:
+         її дає КАПСУЛА, і вона рахує з того самого core/bus-schedule.js.
+         📖 Розбір і наслідок для шкали балів — docs/ALGORITHMS.md.
+         ⚠️ Зворотних лапок у цьому коментарі немає навмисно: розмітка живе в
+         шаблонному рядку, і перша ж лапка розриває його (спіймано одразу). -->
 
     <!-- ══ ТЕЛЕФОНИ (довідка) ══════════════════════════════════════════════════
          Було 420px = 57.5% видимої зони на статичний довідник, потрібний
@@ -305,7 +305,6 @@ export function initCommunity() {
   renderHomeFeed();         // → дайджест Стрічки (порожньо = секція hidden)
   renderCommunityNews();
   renderBoardBlock();
-  renderBusBlock();
   renderContactsBlock();
 }
 

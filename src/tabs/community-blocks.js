@@ -34,26 +34,6 @@ import { openNewsHub } from './news-hub.js';   // повноекранний х�
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
-let cmBusIndex = 0;
-let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
-
-const CM_TRACK_KEY = 'bus_track_v2';
-// Читає відстежувані рейси ПОТОЧНОГО акаунта (per-uid key). Гість → нічого
-// персонального (показуємо лише загальний найближчий рейс — публічний розклад).
-function loadCmTracked(todayISO) {
-  if (!isLoggedIn()) return [];
-  try {
-    const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY + ':' + currentUserId()));
-    if (d?.routes?.length) return d.routes.filter(t => t.trackDate >= todayISO);
-  } catch { /* пусто */ }
-  return [];
-}
-
-// Вкладка Автобуси змінила відстеження → одразу перемальовуємо віджет Громади
-// (якщо вкладка Громада зараз не в DOM — renderBusBlock тихо вийде на null).
-window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
-// Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
-onAuthChange(() => { renderBusBlock(); });
 
 // ⚠️ 04.08: стан автопрокрутки віджета Дошки (`_bwTimer`, `_bwResume`,
 // `BW_STEP_MS`, `BW_RESUME_MS`, `BW_MAX_CARDS`) видалено разом із самою
@@ -87,6 +67,14 @@ const WEEKDAYS_UA_FULL = ['Неділя', 'Понеділок', 'Вівторо�
 
 // Кеш останньої відповіді Open-Meteo — потрібен модалці «по годинах» (клік на день).
 let _wxData = null;
+
+// Українські місяці в родовому відмінку — «1 вересня», а не «1 вересень».
+// ⚠️ 31.08: константа ЗАЛИШЕНА при видаленні віджета автобусів, хоч і жила в
+// його блоці. Її споживач — підпис дати в ПОГОДІ (`dateLabel` нижче), і разом
+// із автобусами вона поїхала б помилково: перший прогін після видалення дав
+// `CM_MONTHS is not defined`, і жодна перевірка синтаксису цього не бачила.
+const CM_MONTHS = ['січня','лютого','березня','квітня','травня','червня',
+                   'липня','серпня','вересня','жовтня','листопада','грудня'];
 
 function setWeatherTitle(cityName) {
   const headerEl = document.querySelector('.cm-block--weather .cm-block-title');
@@ -1194,207 +1182,36 @@ export async function renderPowerBlock() {
   }
 }
 
-// ── Блок 3: Наступний автобус ────────────────────────────────────────────────
-
-function busIsDayActive(days) {
-  const d = new Date().getDay();
-  if (days === 'щодня') return true;
-  if (days === 'пн-сб') return d >= 1 && d <= 6;
-  if (days === 'пн-пт') return d >= 1 && d <= 5;
-  return true;
-}
-
-// Маршрутна шкала з зупинками-крапками і маркером 🚌 на позиції автобуса.
-// Точна копія функції з buses.js — обидві використовують одні CSS-класи (.bhm-*).
-function renderBusRouteMap(route, timings) {
-  const stops    = route.stops;
-  const totalKm  = stops[stops.length - 1].km || 1;
-  const progress = (timings.progress * 100).toFixed(1);
-  const stopsHtml = stops.map(s => {
-    const pct = totalKm ? (s.km / totalKm) * 100 : 0;
-    const isCurrent = s.name === timings.currentStop;
-    return `<span class="bhm-stop${isCurrent ? ' bhm-stop--current' : ''}" style="left:${pct.toFixed(1)}%"></span>`;
-  }).join('');
-  return `
-    <div class="bus-hero-map" aria-hidden="true">
-      <div class="bhm-track">
-        <div class="bhm-fill" style="width:${progress}%"></div>
-        ${stopsHtml}
-        <span class="bhm-marker" style="left:${progress}%">🚌</span>
-      </div>
-      <div class="bhm-ends">
-        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
-        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
-      </div>
-    </div>
-  `;
-}
-
-export async function renderBusBlock() {
-  const el = document.getElementById('cm-bus-content');
-  if (!el) return;
-  // 🔴 25.08 — ЧЕКАЄМО ФАКТ «ХТО Я» (беклог, пункт 0). Нижче `loadCmTracked()`
-  // читає ключ `bus_track_v2:<uid>` і починається з `if (!isLoggedIn()) return []`,
-  // тобто без відповіді віджет показує ЗАГАЛЬНИЙ найближчий рейс замість «твій
-  // рейс, який ти відстежуєш». Різниця для людини істотна: перше — довідка,
-  // друге — те, заради чого вона тиснула «відстежувати».
-  // ⏱ Безкоштовно: рядком нижче ми й так ідемо по `schedule.json`, тобто цей
-  // віджет асинхронний за побудовою і нічого не затримує.
-  await authReady();
-
-  try {
-    const res  = await fetch('./data/schedule.json');
-    const data = await res.json();
-
-    // Нова структура: data.days["2026-06-07"].routes
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
-
-    const dayRoutes = iso =>
-      (data.days?.[iso]?.routes) || (iso === todayISO ? data.routes : null) || [];
-    const depMins = r => scheduleGetStopMins(r, r.stops[0].name) || 0;
-
-    const entries = [];
-    const seen = new Set();
-    const add = (route, dateISO) => {
-      const key = dateISO + '|' + route.id;
-      if (seen.has(key)) return;
-      seen.add(key);
-      entries.push({ route, dateISO });
-    };
-
-    // 1) Відстежувані рейси (сьогодні + майбутні дні) — найвищий пріоритет.
-    //    Це дублює віджет відстеження з вкладки Автобуси у блок Громади.
-    for (const t of loadCmTracked(todayISO)) {
-      const r = dayRoutes(t.trackDate).find(x => x.id === t.routeId && x.status !== 'cancelled');
-      if (!r) continue;
-      if (t.trackDate === todayISO && getRouteState(r) === 'past') continue; // вже проїхав
-      add(r, t.trackDate);
-    }
-
-    // 2) Сьогоднішні активні: enroute + waiting у межах 90 хв
-    dayRoutes(todayISO)
-      .filter(r => {
-        if (r.status === 'cancelled') return false;
-        const state = getRouteState(r);
-        if (state === 'enroute') return true;
-        if (state === 'waiting') {
-          const t = getRouteTimings(r);
-          return t.minsToDeparture !== null && t.minsToDeparture <= 90;
-        }
-        return false;
-      })
-      .sort((a, b) => depMins(a) - depMins(b))
-      .forEach(r => add(r, todayISO));
-
-    // 3) Якщо для сьогодні нічого не зібрали — показуємо наступний сьогоднішній рейс
-    if (!entries.some(e => e.dateISO === todayISO)) {
-      const next = dayRoutes(todayISO)
-        .filter(r => r.status !== 'cancelled' && getRouteState(r) === 'waiting')
-        .sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
-      if (next) add(next, todayISO);
-    }
-
-    // 4) Сьогоднішні рейси закінчились і нічого не відстежується —
-    //    одразу показуємо найближчий завтрашній рейс (замість «рейсів більше немає»)
-    if (!entries.length) {
-      const tom = dayRoutes(tomorrowISO)
-        .filter(r => r.status !== 'cancelled')
-        .sort((a, b) => depMins(a) - depMins(b))[0];
-      if (tom) add(tom, tomorrowISO);
-    }
-
-    cmBusEntries = entries;
-
-    if (!cmBusEntries.length) {
-      el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
-      return;
-    }
-
-    if (cmBusIndex >= cmBusEntries.length) cmBusIndex = 0;
-    renderCmBusCard(el);
-  } catch {
-    el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
-  }
-}
-
-// Підпис над карткою для не-сьогоднішнього рейсу: «Завтра · 12 червня»
-const CM_MONTHS = ['січня','лютого','березня','квітня','травня','червня',
-                   'липня','серпня','вересня','жовтня','листопада','грудня'];
-function cmDayLabel(dateISO, todayISO, tomorrowISO) {
-  if (dateISO === todayISO) return '';
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const prefix = dateISO === tomorrowISO ? 'Завтра' : '';
-  const datePart = `${d} ${CM_MONTHS[m - 1]}`;
-  return prefix ? `${prefix} · ${datePart}` : datePart;
-}
-
-function renderCmBusCard(el) {
-  if (!el || !cmBusEntries.length) return;
-  const { route, dateISO } = cmBusEntries[cmBusIndex];
-
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowISO = tomorrow.toISOString().slice(0, 10);
-
-  // Для не-сьогоднішніх днів: state→waiting, без відліку (як на вкладці Автобуси)
-  const base = getRouteTimings(route);
-  const timings = dateISO === todayISO
-    ? base
-    : { ...base, state: 'waiting', progress: 0, minsToDeparture: null, minsToArrival: null };
-
-  const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
-  const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : '';
-  el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
-
-  // Свайп
-  let touchStartX = 0, touchMoved = false;
-  const card = el.querySelector('.bhv4') || el.lastElementChild;
-  if (!card) return;
-  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchMoved = false; }, { passive: true });
-  card.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(dx) < 40) return;
-    touchMoved = true;
-    cmBusIndex = dx < 0
-      ? (cmBusIndex + 1) % cmBusEntries.length
-      : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
-    switchCmBusCard(el);
-  }, { passive: true });
-  // Тап по картці (не свайп) → САМЕ цей рейс на вкладці Автобуси, знайдено аудитом
-  // перенаправлень — раніше картка взагалі нічого не робила при тапі.
-  card.addEventListener('click', () => {
-    if (touchMoved) return;
-    if (typeof window.switchTab === 'function') window.switchTab('buses');
-    openSavedRouteOnBuses(route.id, dateISO, null, null);
-  });
-
-  // Тап по крапках
-  el.querySelectorAll('.bhv4-dot-nav').forEach(dot => {
-    dot.addEventListener('click', e => {
-      cmBusIndex = parseInt(e.target.dataset.idx, 10);
-      switchCmBusCard(el);
-    });
-  });
-}
-
-function switchCmBusCard(el) {
-  const content = el.querySelector('.bhv4-content');
-  if (!content) { renderCmBusCard(el); return; }
-  content.style.transition = 'opacity 0.08s ease';
-  content.style.opacity    = '0';
-  setTimeout(() => {
-    renderCmBusCard(el);
-    const newContent = el.querySelector('.bhv4-content');
-    if (newContent) {
-      newContent.style.opacity    = '0';
-      newContent.style.transition = 'opacity 0.1s ease';
-      requestAnimationFrame(() => requestAnimationFrame(() => { newContent.style.opacity = '1'; }));
-    }
-  }, 80);
-}
-
+// ── Блок 3: ВІДЖЕТ АВТОБУСІВ — ПРИБРАНО 31.08.2026 ───────────────────────────
+//
+// 🗣️ Рішення Вови: «з сторінки громада той віджет треба забрати, а на сторінці
+// автобуси залишити і капсулу залишити, ми не маємо нічого поламати».
+//
+// 🔑 ПІДСТАВА — НЕ «ЗАЙВЕ», А ДУБЛЮВАННЯ ЕКРАНА. Віджет малював
+// `buildHeroCard()` — буквально ту саму велику картку зі свайпом і крапками,
+// що й вкладка Автобуси. Тобто на Громаді жила зменшена копія цілого екрана,
+// і коштувала вона найдорожчим — висотою над згином.
+//
+// ✅ ЩО ЛИШИЛОСЬ І ЧОМУ НІЧОГО НЕ ЗЛАМАЛОСЬ:
+//   • вкладка Автобуси — недоторкана;
+//   • капсула автобуса на Громаді — недоторкана, вона рахує з того самого
+//     `core/bus-schedule.js` і відповідає на те саме питання;
+//   • слухачі `cstl-bus-track-changed` і `onAuthChange` тут більше не потрібні:
+//     вони перемальовували ЛИШЕ цей віджет.
+//
+// 🔴 І ГОЛОВНЕ, ЩО ДОВЕЛОСЬ ПОЛАГОДИТИ ЗАРАЗОМ. Шкала балів капсул
+// (`tabs/home-caps.js`) обґрунтовувала `FEED_REPLIES: 65` вище за `BUS_SOON: 60`
+// дослівно так: «рейс за 16-45 хв людина побачить ІЩЕ Й У ВІДЖЕТІ АВТОБУСІВ на
+// цій самій сторінці». Тобто шкала спиралась на існування цього віджета.
+// Прибрати його і не чіпати шкалу означало б лишити мовчазну поломку — рівно
+// той клас вади, від якого правило №12. Тому `BUS_SOON` піднято до 68.
+//
+// ⚠️ Разом із блоком пішли: `renderBusBlock`, `renderCmBusCard`,
+// `switchCmBusCard`, `cmDayLabel`, стан `cmBusIndex`/`cmBusEntries`,
+// `loadCmTracked` і `CM_TRACK_KEY`. 🛑 А от `CM_MONTHS` ЛИШИЛАСЬ: вона жила в
+// цьому ж блоці, але споживає її ПОГОДА. Перший прогін після видалення впав із
+// `CM_MONTHS is not defined` — перевірка синтаксису такого не бачить.
+// 📖 Повний розбір рішення — `docs/ALGORITHMS.md`, розділ «К. Стан рейсу».
 // ── Блок 4: Віджет Дошки ─────────────────────────────────────────────────────
 // 🔴 ПЕРЕРОБЛЕНО 04.08 (аудит + замовлення Вови «дошку оголошень ти розміщаєш
 // по-старому»). Було: темний «корок» + ГОРИЗОНТАЛЬНА СТРІЧКА пар карток-стікерів

@@ -184,7 +184,10 @@ ok('назад повертає на Громаду', await p.evaluate(()=>docum
 
 // 5. Переходи по вкладках із секцій
 // ⚠️ «Афіші» тут НЕМАЄ навмисно — див. окрему перевірку нижче.
-for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка'],['#hm-bus .hm-more','buses','Розклад']]) {
+// ⚠️ 31.08: пару ['#hm-bus .hm-more','buses'] прибрано — секції автобусів на
+// Громаді більше немає (рішення Вови). Шлях на вкладку Автобуси лишається
+// через нижню панель вкладок, вона окремо перевіряється нижче.
+for (const [sel,tab,name] of [['#hm-board .hm-more','board','Дошка']]) {
   await p.evaluate(()=>window.switchTab('community')); await p.waitForTimeout(400);
   const has = await p.evaluate(s=>!!document.querySelector(s), sel);
   if (!has) { ok(`кнопка «${name}» існує`, false); continue; }
@@ -699,12 +702,15 @@ const filled = await p.evaluate(()=>{
   const t = id => (document.getElementById(id)?.textContent||'').trim();
   const sk = id => document.getElementById(id)?.querySelector('.hm-sk-row');
   return { news:t('cm-news-content').length,
-    board:t('cm-board-content').length, bus:t('cm-bus-content').length, cont:t('cm-contacts-content').length,
-    stuck:['cm-news-content','cm-board-content','cm-bus-content','cm-contacts-content'].filter(sk) };
+    board:t('cm-board-content').length, cont:t('cm-contacts-content').length,
+    // 🔴 31.08 — віджет автобусів прибрано з Громади (рішення Вови). Перевіряємо
+    // не «наповнився», а що його НЕМАЄ: інакше стенд мовчав би про повернення.
+    busЗник: !document.getElementById('cm-bus-content') && !document.getElementById('hm-bus'),
+    stuck:['cm-news-content','cm-board-content','cm-contacts-content'].filter(sk) };
 });
 ok('новини наповнились', filled.news>40, String(filled.news));
 ok('оголошення наповнились', filled.board>10, String(filled.board));
-ok('автобуси наповнились', filled.bus>10, String(filled.bus));
+ok('🔴 віджета автобусів на Громаді НЕМАЄ', filled.busЗник);
 ok('контакти наповнились', filled.cont>10, String(filled.cont));
 ok('жоден блок не завис на скелеті', filled.stuck.length===0, filled.stuck.join(', '));
 
