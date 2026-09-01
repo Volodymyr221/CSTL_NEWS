@@ -509,7 +509,7 @@
 .fd-screen-list { padding: 10px 0 calc(30px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; }
 
 /* ── Нижні листи (коментарі / композер / редактор сторінки) ── */
-.fd-sheet-back { position: fixed; inset: 0; z-index: 1300; background: rgba(0,0,0,0.45);
+.fd-sheet-back { position: fixed; inset: 0; z-index: 1300; background: var(--modal-backdrop);
   display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity 0.2s ease; }
 .fd-sheet-back.open { opacity: 1; }
 
@@ -567,7 +567,7 @@
    Тому підкладка тепер НЕ шар, а ТІНЬ САМОГО АРКУША (нижче, у `.fd-com-sheet--kb`):
    тінь малюється позаду свого елемента, тож накрити його вміст не може ФІЗИЧНО. */
 .fd-sheet { width: 100%; max-width: 640px; max-height: 82svh; overflow-y: auto; background: var(--fd-surface);
-  border-radius: 20px 20px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--modal-radius) var(--modal-radius) 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%); transition: transform 0.25s var(--ease-drawer); }
 .fd-sheet-back.open .fd-sheet { transform: translateY(0); }
 .fd-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: #d1d5db; margin: 4px auto 12px; }
@@ -1049,6 +1049,15 @@
 /* Нижня панель, що містить не рядок кнопок, а цілий блок (форма «додати модератора»):
    там потрібна звичайна вертикальна розкладка, а не flex-рядок із space-between. */
 .fd-comp-bar--stack { display: block; }
+/* Другий ярус панелі: фото ліворуч, «Опублікувати» праворуч — та сама розкладка,
+   що була в однорядковій панелі, просто тепер під вибором автора. */
+.fd-comp-actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+/* ⚠️ Відступ згори — щоб панель не притискалась до тексту, який під неї заїжджає.
+   Лінія над панеллю каже те саме, що й лінія під шапкою: «нижче — не текст, а дія».
+   🛑 Модифікатор ВЛАСНИЙ, а не `--stack`: двоярусну панель уже вживає «Команда
+   сторінки», і вішати відступи на спільний клас означало б мовчки змінити аркуш,
+   якого Вова не просив (правило №9 — не чіпати те, про що не просили). */
+.fd-comp-bar--author { padding-top: 12px; border-top: 1px solid var(--fd-divider); }
 /* Клавіатура відкрита: низ накритий нею — прибираємо safe-area, лишаємо 8px (як у коментарях). */
 .fd-comp--kb { padding-bottom: 8px; }
 /* Плавність — одноразовим класом, тривалість і крива ті самі, що в анімації відкриття
@@ -1151,7 +1160,25 @@
 /* ── Композер: від чийого імені публікуємо ───────────────────────────────── */
 /* Рядок над кнопкою публікації: підпис + два варіанти. Обраний — бордовий,
    з крапкою-маркером (як радіо-кнопка, але в стилі решти композера). */
-.fd-comp-as { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 2px 2px; }
+/* 🔴 01.09 «c» — ВИБІР АВТОРА ПЕРЕЇХАВ У НИЖНЮ ПАНЕЛЬ І ЗАКРІПЛЕНИЙ (варіант «Б»).
+   🗣️ Скарга Вови: «воно дуже близько знаходиться біля іконки фотографії та
+   опублікувати… майже налягає одне на одне. Це має бути теж зафіксована частина,
+   вона має мати певні відступи».
+   🔬 ЗАМІРЯНО ДО ПРАВКИ: зазор між `.fd-comp-as` і `.fd-comp-bar` — **0.0px**, від
+   нижнього чіпа до іконки фото — **2px**. Тобто «майже налягає» було буквально:
+   тут стояв `padding: 10px 2px 2px`, а панель не мала ні відступу згори, ні лінії.
+   🔑 ЧОМУ В ПАНЕЛЬ, А НЕ ОКРЕМИМ ЯРУСОМ (вибір Вови з двох, «Б»): вибір автора і
+   кнопка «Опублікувати» відповідають на одне питання — «як і від кого це піде в
+   світ». Порізно це дві тонкі смуги, разом — один блок рішення. Ціна по висоті
+   та сама, а прецедент у коді вже був: `--stack` так само працює в «Команді сторінки».
+   ⚠️ Скролитись воно більше не може за побудовою: `.fd-comp-bar` має `flex: 0 0 auto`
+   у колонці композера, тобто лежить ПОЗА єдиним скролером `.fd-comp-body`. */
+.fd-comp-as {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 0 0 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--fd-divider);
+}
 .fd-comp-as-label { font-size: 12.5px; color: var(--fd-muted); margin-right: 2px; }
 .fd-comp-as-btn {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;

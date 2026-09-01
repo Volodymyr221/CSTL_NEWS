@@ -35,8 +35,15 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 <div class="app-modal app-modal--sheet app-modal--board-compose open">
   <div class="app-modal-backdrop"></div>
   <div class="app-modal-sheet">
-    <div class="app-modal-handle"></div>
-    <button class="app-modal-close" type="button">✕</button>
+    <!-- 01.09 c: розмітку зведено з базою. Тут стояли рисочка і хрестик прямими
+         дітьми аркуша: так було, поки ця модалка мала ВЛАСНІ sticky-правила.
+         Тепер липку шапку дає примітив (.app-modal-head у core/modal.js), а
+         модалка лише перевизначає поверхню — тож і стенд міряє те, що
+         застосунок справді малює. -->
+    <div class="app-modal-head">
+      <div class="app-modal-handle"></div>
+      <button class="app-modal-close" type="button">✕</button>
+    </div>
     <div class="app-modal-body">
       <div class="cm-board-modal-head">
         <h3 class="cm-board-modal-title">Нове оголошення</h3>
@@ -57,7 +64,8 @@ window.__g = () => {
   const hd=document.querySelector('.app-modal-handle'), hh=document.querySelector('.cm-board-modal-head');
   const cl=document.querySelector('.app-modal-close');
   const r=e=>{const b=e.getBoundingClientRect();return {top:Math.round(b.top),right:Math.round(b.right),w:Math.round(b.width),h:Math.round(b.height)};};
-  return { handle:r(hd), head:r(hh), close:r(cl), sheet:r(sh),
+  const bar=document.querySelector('.app-modal-head');
+  return { handle:r(hd), head:r(hh), close:r(cl), sheet:r(sh), bar:r(bar),
            scroller: window.__scroller().className,
            isScrolled: sh.classList.contains('is-scrolled') };
 };
@@ -98,13 +106,17 @@ console.log('   після скролу: рисочка', z.handle.top, '· ша
 // ── ВЕРТИКАЛЬ: шапка стоїть, вміст їде ──
 ok('вміст реально прокрутився', moved > 100, `${moved}px`);
 ok('рисочка нерухома', z.handle.top === a.handle.top, `${a.handle.top} → ${z.handle.top}`);
-// Заголовок має ПРИЛИПНУТИ під баром рисочки і лишитись видимим. Рівність до пікселя тут
-// НЕ критерій: у базі (яку Вова прийняв) `top: 22px` навмисно на 2px заходить під бар
-// рисочки — «2px перекриття, без гапу», інакше між ними світилась би прозора смуга.
-const handleBottom = a.handle.top + Math.round(a.handle.h);
-ok('заголовок липне під баром рисочки і лишається видимим',
-   z.head.top > 0 && Math.abs(z.head.top - handleBottom) <= 3,
-   `${a.head.top} → ${z.head.top}, низ рисочки ${handleBottom}`);
+// Заголовок має ПРИЛИПНУТИ під смугою шапки і лишитись видимим.
+// 🔁 01.09 «c» — МІРЯЄМО СМУГУ, А НЕ РИСОЧКУ. Раніше повноширинною смугою був сам
+// `.app-modal-handle` (ця модалка робила з нього бар власним правилом). Тепер смугу
+// дає база — `.app-modal-head`, а рисочка всередині неї це 4px грабер. Перевірка
+// «під низом рисочки» після переїзду міряла б відстань до грабера, тобто зовсім не
+// те, що стереже: між смугою і заголовком не має бути щілини, крізь яку видно
+// вміст. Тому орієнтир — низ СМУГИ.
+const barBottom = a.bar.top + Math.round(a.bar.h);
+ok('заголовок липне під смугою шапки, без щілини',
+   z.head.top > 0 && Math.abs(z.head.top - barBottom) <= 3,
+   `${a.head.top} → ${z.head.top}, низ смуги ${barBottom}`);
 ok('✕ нерухома і у правому куті', z.close.top === a.close.top && z.close.right > 340,
    `top ${a.close.top}→${z.close.top}, right ${z.close.right}`);
 ok('✕ НЕ займає власний рядок', a.close.w < 60, `ширина ${a.close.w}px`);

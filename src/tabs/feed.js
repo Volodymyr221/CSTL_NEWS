@@ -8,7 +8,7 @@
 
 import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
          looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
-import { currentUserId, isLoggedIn, requireAuth, onAuthChange, authReady } from '../core/auth.js';
+import { currentUserId, currentUserName, isLoggedIn, requireAuth, onAuthChange, authReady } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName,
   fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
@@ -3210,6 +3210,19 @@ function openComposer(pageId, editPost = null) {
   // При редагуванні беремо те, що вже стоїть у поста.
   let showAuthor = edit ? (editPost.show_author !== false) : false;
 
+  // 🔴 01.09 «c» — «ВІД СЕБЕ» СТАЛО ІМЕНЕМ. Замовлення Вови: «замість "від себе"
+  // потрібно зазначити імʼя, тобто там Володимир Шевчук».
+  // 🔑 Чому це не косметика: чіп ліворуч називає спільноту поіменно («Олицька
+  // міська рада»), а правий казав безлику роль. Людина обирала між НАЗВОЮ і
+  // ЗАЙМЕННИКОМ, хоча вибір насправді між двома іменами — і саме так підпис
+  // виглядатиме під готовим дописом.
+  // ⚠️ ПАСТКА, ЧЕРЕЗ ЯКУ ЦЕ МОГЛО ТИХО ЗЛАМАТИСЬ: `currentUserName()` читає кеш
+  // профілю, і поки той не прогрітий, віддає запасне «Житель». Тобто залогінена
+  // людина побачила б на кнопці чуже слово — рівно клас вади «хто я як перегони»
+  // (розбір 25.08, `core/auth.js`). Тому імʼя ще й ПЕРЕПИТУЄТЬСЯ, коли факт
+  // приїхав (нижче, після `authReady()`), а не береться один раз при відкритті.
+  let myName = currentUserName();
+
   const back = document.createElement('div');
   // --kbsafe + шар-координати .fd-sheet-vp — те саме, що в листа коментарів: без них
   // клавіатурний модуль не має чого рухати (він прибиває до видимої області САМЕ vp).
@@ -3247,17 +3260,19 @@ function openComposer(pageId, editPost = null) {
               <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
           </div>
           <div class="fd-comp-thumbs" hidden></div>
+        </div>
+        <div class="fd-comp-bar fd-comp-bar--stack fd-comp-bar--author">
           <div class="fd-comp-as">
             <div class="fd-comp-as-label">Публікувати як</div>
             <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
               <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || 'Спільнота')}</span></button>
             <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
-              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">Від себе</span></button>
+              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(myName)}</span></button>
           </div>
-        </div>
-        <div class="fd-comp-bar">
-          <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
-          <button class="fd-comp-send" type="button">${CTA}</button>
+          <div class="fd-comp-actions">
+            <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
+            <button class="fd-comp-send" type="button">${CTA}</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -3284,6 +3299,21 @@ function openComposer(pageId, editPost = null) {
     }));
 
   const fileInput = back.querySelector('input[type=file]');
+
+  // 🔴 ІМʼЯ ПЕРЕПИТУЄМО, КОЛИ «ХТО Я» СТАВ ФАКТОМ. Композер може відкритись
+  // раніше, ніж прогрівся профіль, і тоді на кнопці стояло б запасне «Житель».
+  // ⚠️ Це НЕ «про всяк випадок»: гілка `initAuth()` іде без `await`, і саме на
+  // цих перегонах Вова вже ловив три різні скарги (розбір 25.08).
+  // 🔑 Оновлюємо ЛИШЕ текст вузла, а не перемальовуємо кнопку: перемальовка збила б
+  // вибір, який людина могла вже зробити, і слухач кліку довелося б вішати вдруге.
+  authReady().then(() => {
+    const свіже = currentUserName();
+    if (!свіже || свіже === myName) return;
+    myName = свіже;
+    const вузол = back.querySelector('.fd-comp-as-btn[data-as="me"] .fd-comp-as-txt');
+    if (вузол) вузол.textContent = myName;
+  });
+
   // Перемикач «від спільноти / від себе»
   back.querySelectorAll('.fd-comp-as-btn').forEach(btn =>
     btn.addEventListener('click', () => {

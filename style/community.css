@@ -1392,50 +1392,20 @@
   overscroll-behavior-y: contain;
 }
 /* Липка шапка = рисочка + заголовок + ✕ (Вова: усе над лінією-роздільником статичне).
-   Три елементи стекаються зверху: рисочка (top:0) → заголовок (top:22, під баром) → ✕ на рядку заголовка.
-   БЕЗ негативних верхніх margin (iOS Safari через них не пінить впритул). */
-.app-modal--board-compose .app-modal-handle {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  width: auto;
-  height: auto;
-  margin: 0 -18px 0;        /* full-bleed; без нижнього відступу — заголовок одразу під баром */
-  padding: 12px 0 8px;      /* смуга ~24px */
-  /* 🔴 29.07 — поверхня Дошки, як і сам лист. Липка шапка мусить мати ВЛАСНУ
-     непрозору заливку (під нею проїжджає форма), тому вона НЕ успадковує фон
-     аркуша — її треба міняти окремо. Саме через це вона лишилась кремовою,
-     коли лист уже став сірим. Фон і аркуш ходять парою: міняєш `--board-bg` —
-     тут нічого не чіпаєш, бо це той самий токен. */
-  background: var(--board-bg);
-  border-radius: 22px 22px 0 0;
-}
-.app-modal--board-compose .app-modal-handle::before {
-  content: '';
-  display: block;
-  width: 40px;
-  height: 4px;
-  margin: 0 auto;
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 2px;
-}
-.app-modal--board-compose .app-modal-close {
-  position: sticky;
-  float: right;
-  top: 24px;               /* на рядку заголовка */
-  right: auto;
-  z-index: 7;
-  margin: 0 0 -32px 0;     /* прибрати висоту кнопки з потоку */
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);  /* тінь — щоб кнопка не зливалася з фоном (фідбек Вови) */
-  /* Векторний бордовий ✕ замість текстового: ховаємо текст, малюємо SVG-X. Кружок кнопки лишається. */
-  font-size: 0;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23722F37" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 15px;
-}
-/* Полиш (Вова): локація і телефон не на всю ширину — стільки, скільки треба даним.
-   Телефон — ширина за атрибутом size="18" (трохи більше за макс. "+380 XX XXX XX XX"). */
+   🔴 01.09 «c» — ТРИ ВЛАСНІ ПРАВИЛА ЗВІДСИ ПРИБРАНО, БО ВОНИ ПЕРЕЇХАЛИ В БАЗУ.
+   Тут лежали `position: sticky` для `.app-modal-handle` і `.app-modal-close` та
+   домальовка рисочки через `::before` — тобто ця модалка ЄДИНА в застосунку вміла
+   те, чого просив Вова для всіх. Тепер це вміє примітив (`.app-modal-head` у
+   `style/modal.css`), а звідси лишається рівно те, що специфічне для Дошки:
+   інший бічний відступ і власна поверхня шапки.
+   🔑 Саме так і має виглядати стандартизація: не «зробити ще одній модалці так
+   само», а забрати робоче рішення в базу і зняти копію. */
+.app-modal--board-compose .app-modal-sheet { --modal-pad-x: 18px; }
+/* Шапка НЕ успадковує колір аркуша: під нею проїжджає форма, тож заливка власна.
+   Міняєш `--board-bg` — тут нічого не чіпаєш, це той самий токен. */
+.app-modal--board-compose .app-modal-head { background: var(--board-bg); }
+/* ✕ на поверхні Дошки зливався б із фоном — тінь лишається (фідбек Вови 29.07). */
+.app-modal--board-compose .app-modal-close { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16); }
 .app-modal--board-compose #bm-location { width: auto; max-width: 100%; }
 .app-modal--board-compose #bm-contact  { width: auto; }
 .app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
