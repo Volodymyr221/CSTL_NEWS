@@ -1,6 +1,71 @@
 {
   "runs": [
     {
+      "ts": 1788239771650,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 11145,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0336,
+      "note": ""
+    },
+    {
+      "ts": 1788239769368,
+      "mission": "Громада №4",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 4646,
+      "cache_read": 60150,
+      "cache_write": 41788,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.3045,
+      "note": ""
+    },
+    {
+      "ts": 1788239690410,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 4214,
+      "cache_read": 60724,
+      "cache_write": 41882,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.2985,
+      "note": ""
+    },
+    {
+      "ts": 1788239612059,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10,
+      "output_tokens": 5071,
+      "cache_read": 97577,
+      "cache_write": 43576,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.3288,
+      "note": ""
+    },
+    {
+      "ts": 1788239514380,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3613,
+      "cache_read": 41518,
+      "cache_write": 42342,
+      "web_searches": 6,
+      "found": 2,
+      "cost_usd": 0.2855,
+      "note": ""
+    },
+    {
       "ts": 1788188556053,
       "mission": "olyka:news:особистісний-розвиток-для-підлітків",
       "model": "claude-opus-5",
@@ -714,77 +779,12 @@
       "found": 1,
       "cost_usd": 0.0137,
       "note": ""
-    },
-    {
-      "ts": 1784711464541,
-      "mission": "holiday:🍯 Медовий Спас (Маковія)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 430,
-      "output_tokens": 528,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0092,
-      "note": ""
-    },
-    {
-      "ts": 1784711450784,
-      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
-      "model": "claude-sonnet-5",
-      "input_tokens": 424,
-      "output_tokens": 510,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0089,
-      "note": ""
-    },
-    {
-      "ts": 1784625162625,
-      "mission": "holiday:🌰 Горіховий Спас",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 515,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0089,
-      "note": ""
-    },
-    {
-      "ts": 1784625146442,
-      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
-      "model": "claude-sonnet-5",
-      "input_tokens": 435,
-      "output_tokens": 394,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0072,
-      "note": ""
-    },
-    {
-      "ts": 1784625134520,
-      "mission": "holiday:⛪ Преображення Господнє (Ябл",
-      "model": "claude-sonnet-5",
-      "input_tokens": 506,
-      "output_tokens": 573,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0101,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 8.4683,
-    "runs": 125,
-    "web_searches": 109
+    "cost_usd": 9.7192,
+    "runs": 130,
+    "web_searches": 133
   },
   "months": {
     "2026-07": {
@@ -796,7 +796,12 @@
       "cost_usd": 3.3587,
       "runs": 47,
       "web_searches": 46
+    },
+    "2026-09": {
+      "cost_usd": 1.2509,
+      "runs": 5,
+      "web_searches": 24
     }
   },
-  "updated_ts": 1788188556053
+  "updated_ts": 1788239771650
 }
