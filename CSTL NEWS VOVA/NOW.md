@@ -10,50 +10,31 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-01 15:56 UTC
+**Зріз на:** 2026-09-01 18:50 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-wzboev` |
-| останній коміт людини | `85a75d7e` 01.09 15:54 — Сторожі: дві перевірки переїхали за кодом, а не видалені |
+| останній коміт людини | `b3dc618d` 01.09 18:50 — fix: прибрано маркери конфлікту з журналу (add/add після squash), conflict-markers 2/2 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260901-1555` |
-| останній PR у `main` | #1136 |
+| останній PR у `main` | #1137 |
 | стендів на диску | 133 |
-| незакомічених файлів | 2 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-01 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/commands/startuem.md`
-- `CLAUDE.md`
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/CSTL_BUGS.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/BACKLOG_VOVA_2026-08.md`
-- `CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md`
-- `CSTL NEWS VOVA/docs/AI_AGENT_OLYKA_CASTLE.md`
 - `_session-log/vova-2026-09-01c.md`
-- `bundle.js`
-- `docs/ALGORITHMS.md`
-- `scripts/parse_rss.py`
-- `src/tabs/community-blocks.js`
-- `src/tabs/home-contacts.js`
-- `style/home.css`
-- `sw.js`
-- `tests/docs-fresh.mjs`
-- `tests/feed-auth-race.mjs`
-- `tests/home-contacts.mjs`
-- …ще 2
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `85a75d7e` 01.09 15:54 — Сторожі: дві перевірки переїхали за кодом, а не видалені
-- `b49f0823` 01.09 15:22 — docs: повний прогін — два сторожі стережуть учорашній код (feed-auth-race, news-seen), обидва червоні й на main
-- `154485d4` 01.09 14:59 — docs: пульс — телефони громади, знайдений червоний сторож feed-auth-race, дублі зведено
-- `f410e8e1` 01.09 14:43 — Телефони громади: номер під номером, кнопки в один стовпець, іконки по центру
-- `0a1d7184` 01.09 11:40 — docs(log): замір телефонів громади — корінь хаосу кнопок знайдено (регрес .hm-ct-row у #1134)
+- `b3dc618d` 01.09 18:50 — fix: прибрано маркери конфлікту з журналу (add/add після squash), conflict-markers 2/2
+- `87b56e16` 01.09 18:49 — docs: журнал сесії «c» і пульс — доводимо до main
+- `7e236004` 01.09 16:06 — docs(log): деплой #5367 success
+- `465dc619` 01.09 15:58 — docs(log): фініш — PR #1137, деплой #5367, CACHE cstl-20260901-1555
+- `739ff24e` 01.09 15:57 — Телефони громади: номер під номером, кнопки в стовпець, іконки по центру + лад у документації (#1137)
 
 <!-- AUTO:END -->
 
