@@ -2444,7 +2444,7 @@ textarea.cm-board-input.bm-invalid {
 }
 /* Скидання спадку від «стікера»: поворот, три шари тіні, вертикальна розкладка
    і padding 16px були потрібні корку, а рядку заважають. */
-#board-content .bd-ad {
+:is(#board-content, #cm-board-content) .bd-ad {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -2475,10 +2475,10 @@ textarea.cm-board-input.bm-invalid {
   box-shadow: none;
   transform: none;
 }
-#board-content .bd-ad:hover { transform: none; }
-#board-content .bd-ad:active { background: var(--board-press, #E4E4E1); }
+:is(#board-content, #cm-board-content) .bd-ad:hover { transform: none; }
+:is(#board-content, #cm-board-content) .bd-ad:active { background: var(--board-press, #E4E4E1); }
 
-#board-content /* 🔴 03.08 — ФОТО ТЯГНЕТЬСЯ НА ВСЮ ВИСОТУ КАРТКИ. Скарга Вови: «населений пункт
+:is(#board-content, #cm-board-content) /* 🔴 03.08 — ФОТО ТЯГНЕТЬСЯ НА ВСЮ ВИСОТУ КАРТКИ. Скарга Вови: «населений пункт
    розташувати знизу, напроти нижнього краю фотографії».
    Заміряно, чому не збігалось: фото мало ФІКСОВАНУ висоту 76px і було приліплене до
    ВЕРХУ, а права колонка просто сипала текст згори вниз — їх не звʼязувало ніщо. Через
@@ -2532,7 +2532,7 @@ textarea.cm-board-input.bm-invalid {
    28px при плитці 88px — та сама пропорція, що у віджеті (22px при 64px).
    ⚠️ `font-weight` знято як мертвий — він керував накресленням літери, якої тут
    більше немає. */
-#board-content .bd-ad-img--mono {
+:is(#board-content, #cm-board-content) .bd-ad-img--mono {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2541,7 +2541,7 @@ textarea.cm-board-input.bm-invalid {
   background: rgba(0, 0, 0, 0.05);
 }
 
-#board-content .bd-ad-body {
+:is(#board-content, #cm-board-content) .bd-ad-body {
   flex: 1;
   min-width: 0;
   /* Місце під фото, вийняте з потоку: 88 ширина + 10 просвіт. */
@@ -2549,7 +2549,7 @@ textarea.cm-board-input.bm-invalid {
   display: flex;
   flex-direction: column;
 }
-#board-content .bd-ad-meta {
+:is(#board-content, #cm-board-content) .bd-ad-meta {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2558,13 +2558,13 @@ textarea.cm-board-input.bm-invalid {
 /* Тип угоди — кольоровий ТЕКСТ, а не пігулка з підкладкою: мітка стоїть на кожній
    картці без винятку, і плашки зробили б список строкатим. Колір бере наявні
    класи `cat-c-*`, тобто семантика категорій лишається спільною з рештою Дошки. */
-#board-content .bd-ad-type {
+:is(#board-content, #cm-board-content) .bd-ad-type {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
-#board-content .bd-ad-time {
+:is(#board-content, #cm-board-content) .bd-ad-time {
   font-size: 11px;
   color: var(--gray, #8A8A8A);
 }
@@ -2582,7 +2582,7 @@ textarea.cm-board-input.bm-invalid {
    📐 Заміряно на 390px: блок назви 248px завширшки, у два рядки капсом при 16px/800
    влазить ~34-40 символів. Довше — обрізає клемп із багатокрапкою, і 80 символів
    (стеля поля вводу) картку не розвалять за побудовою. */
-#board-content .bd-ad-title {
+:is(#board-content, #cm-board-content) .bd-ad-title {
   margin: 0;
   font-size: 16px;
   font-weight: 800;
@@ -2615,7 +2615,7 @@ textarea.cm-board-input.bm-invalid {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-#board-content /* `margin-top: auto` — саме він притискає рядок «локація · ціна» до низу картки,
+:is(#board-content, #cm-board-content) /* `margin-top: auto` — саме він притискає рядок «локація · ціна» до низу картки,
    тобто до краю фото. Разом із `align-self: stretch` на фото це і є вся механіка
    вирівнювання: жодних фіксованих висот. */
 .bd-ad-foot {
@@ -2633,7 +2633,7 @@ textarea.cm-board-input.bm-invalid {
    інакше в одному рядку стояли б два «майже однакові» багряні.
    ⚠️ Пін фарбується разом із текстом сам: у `PIN_ICON_SVG` стоїть
    `stroke="currentColor"`, тож окремого правила для `svg` не треба. */
-#board-content .bd-ad-loc {
+:is(#board-content, #cm-board-content) .bd-ad-loc {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2645,17 +2645,17 @@ textarea.cm-board-input.bm-invalid {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-#board-content .bd-ad-loc svg { width: 11px; height: 11px; flex: none; }
+:is(#board-content, #cm-board-content) .bd-ad-loc svg { width: 11px; height: 11px; flex: none; }
 /* Ціна праворуч у тому ж рядку, що й локація. Коли ціни немає (16 оголошень із 17)
    — рядок не порожніє, місце просто забирає локація. */
-#board-content .bd-ad .cm-board-price {
+:is(#board-content, #cm-board-content) .bd-ad .cm-board-price {
   flex: none;
   margin: 0;
   font-size: 14px;
   font-weight: 800;
   color: var(--news-accent, #722F37);
 }
-#board-content .bd-ad .cm-board-price--word { font-size: 12px; font-weight: 700; }
+:is(#board-content, #cm-board-content) .bd-ad .cm-board-price--word { font-size: 12px; font-weight: 700; }
 
 /* Дії (зберегти) — ВСЕРЕДИНІ рядка категорії, притиснуті праворуч.
    🔴 03.08 — було `position: absolute` у кутку картки, і кнопка 40px накривала початок
@@ -2708,7 +2708,7 @@ textarea.cm-board-input.bm-invalid {
 #board-content .bd-ad .bd-bookmark--active { color: var(--news-accent, #722F37); }
 /* Рядок категорії тепер несе й закладку — тому вирівнюємо по центру і не даємо
    кнопці розтягнути його по висоті. */
-#board-content .bd-ad .bd-ad-meta { align-items: center; min-height: 24px; }
+:is(#board-content, #cm-board-content) .bd-ad .bd-ad-meta { align-items: center; min-height: 24px; }
 
 /* ── ШАПКА ДОШКИ: назва + слоган + «+» і ряд типів (01.08) ──────────────────
    Багряний «прилад» — той самий, що в таблі новин: бренд у застосунку один, і
@@ -4441,7 +4441,7 @@ textarea.cm-board-input.bm-invalid {
    без цього рядка результат читається як випадковість.
    🔑 Тихий і дрібний навмисно — це виноска, а не друга назва оголошення:
    він не має змагатися з заголовком і ціною за увагу. */
-#board-content .bd-ad-why {
+:is(#board-content, #cm-board-content) .bd-ad-why {
   margin-top: 6px;
   font-size: 11px;
   line-height: 1.3;
