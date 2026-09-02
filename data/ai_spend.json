@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788350703988,
+      "mission": "olyka:news:в-олицькій-громаді-можна",
+      "model": "claude-opus-5",
+      "input_tokens": 6050,
+      "output_tokens": 382,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0398,
+      "note": "В Олицькій громаді можна переглянути навчальні тренінги програми «Досвід має зна"
+    },
+    {
       "ts": 1788349050826,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0085,
       "note": ""
-    },
-    {
-      "ts": 1787207779627,
-      "mission": "olyka:weather-compact",
-      "model": "claude-opus-5",
-      "input_tokens": 2132,
-      "output_tokens": 486,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0228,
-      "note": "Віджет погоди став компактним, прогноз на 7 днів розгортається"
     }
   ],
   "totals": {
-    "cost_usd": 10.7834,
-    "runs": 138,
+    "cost_usd": 10.8232,
+    "runs": 139,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.3151,
-      "runs": 13,
+      "cost_usd": 2.3549,
+      "runs": 14,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788349050826
+  "updated_ts": 1788350703988
 }
