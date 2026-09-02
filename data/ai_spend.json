@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788349050826,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 597,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0136,
+      "note": ""
+    },
+    {
       "ts": 1788348066541,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0228,
       "note": "Віджет погоди став компактним, прогноз на 7 днів розгортається"
-    },
-    {
-      "ts": 1784797868914,
-      "mission": "holiday:🌰 Горіховий Спас",
-      "model": "claude-sonnet-5",
-      "input_tokens": 398,
-      "output_tokens": 529,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0091,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 10.7698,
-    "runs": 137,
+    "cost_usd": 10.7834,
+    "runs": 138,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.3015,
-      "runs": 12,
+      "cost_usd": 2.3151,
+      "runs": 13,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788348066541
+  "updated_ts": 1788349050826
 }
