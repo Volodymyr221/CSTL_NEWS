@@ -27,10 +27,12 @@ on:
         type: boolean
         default: false
 
-# Два прогони одночасно писали б у той самий файл памʼяті `data/olyka_agent_state.json`
-# і могли б видати одну тему двічі.
+# 02.09 — спільна черга ВСІХ, хто пише в `data/ai_spend.json` (гаманець один файл;
+# розгорнуте пояснення — в `ai-news-agent.yml`). Заразом закриває й стару причину:
+# памʼять `data/olyka_agent_state.json` СПІЛЬНА в олицького та історичного агентів,
+# тож два прогони поруч могли б видати одну тему двічі.
 concurrency:
-  group: olyka-agent
+  group: ai-spend-writers
   cancel-in-progress: false
 
 jobs:
@@ -40,6 +42,8 @@ jobs:
       contents: write        # памʼять агента комітиться назад у репозиторій
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # повна історія — без неї `git rebase origin/main` нижче не має на що спертись
 
       - uses: actions/setup-python@v5
         with:
@@ -73,5 +77,21 @@ jobs:
             echo "Змін немає — тем у плані не було."
           else
             git commit -m "auto(olyka-agent): памʼять і витрати після прогону"
-            git push
+            # 🔴 02.09 — ПУШ ІЗ РЕ-БАЗОЮ, А НЕ ГОЛИЙ `git push`.
+            # Раніше тут стояв один `git push` під `set -euo pipefail`. Поки агент
+            # писав пост (десятки секунд у моделі), `main` міг піти вперед — і пуш
+            # відлітав з «fetch first». Крок падав, АЛЕ пост уже лежав у Supabase:
+            # губилась лише памʼять «цю тему вже написано». Наступний прогін брав
+            # ТУ САМУ тему вдруге — і платив за неї вдруге.
+            # 🔑 Тому: 5 спроб з ре-базою, і чесний `exit 1`, якщо не вийшло —
+            # мовчазний зелений прогін тут гірший за червоний.
+            pushed=false
+            for i in 1 2 3 4 5; do
+              if git push origin HEAD:main; then pushed=true; break; fi
+              echo "Пуш $i відхилено (main пішов уперед) — rebase і повтор…"
+              git fetch origin main
+              git rebase origin/main || { echo "Конфлікт rebase — стоп"; exit 1; }
+              sleep 2
+            done
+            [ "$pushed" = true ] || { echo "Пуш не вдався після 5 спроб"; exit 1; }
           fi
