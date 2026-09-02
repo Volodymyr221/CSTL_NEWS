@@ -58,6 +58,14 @@ MEMORY_DIGEST = 150                          # скільки останніх �
 MODEL = "claude-sonnet-5"            # рішення Роми: Sonnet (якісна курація)
 WEB_SEARCH_TOOL = "web_search_20250305"
 MAX_SEARCHES_PER_MISSION = 6        # обмеження веб-пошуків на місію (контроль вартості; економно під малий бюджет)
+# 🔴 02.09 — РІВЕНЬ ЗУСИЛЬ. Sonnet 5 приймає `output_config.effort` (GA, без бета-заголовка);
+# без нього діє `high`. 📐 Вихідні токени — 26% рахунку пакета ($0.079 з $0.227), і саме їх
+# ріже цей параметр. Робота тут не дослідницька: зібрати дві локальні новини й написати їх —
+# `medium` для цього і задумувався.
+# ⚠️ Живого прогону перевірити звідси не можу (ключа немає), тому нижче стоїть саморемонт:
+# якщо API поверне 400 зі згадкою `output_config`/`effort`, запит повториться БЕЗ нього.
+# 🔑 Вимкнути одним рухом: `AI_EFFORT=""` — тоді параметр не надсилається взагалі.
+EFFORT = os.environ.get("AI_EFFORT", "medium")
 API_URL = "https://api.anthropic.com/v1/messages"
 
 # Скільки оригінальних матеріалів просимо в агента за прогін Громади.
@@ -120,12 +128,26 @@ SUSPECT_CHARGE_USD = float(os.environ.get("AI_SUSPECT_USD", "0.30"))
 # Прилад: скільки $ їсть автопостинг. Пише data/ai_spend.json (читає адмінка).
 SPEND_PATH = Path("data/ai_spend.json")
 SPEND_KEEP_RUNS = 60                 # скільки останніх запусків тримати в журналі
-# Ціни Anthropic за 1 млн токенів (claude-sonnet-5, стандартні — консервативно).
-PRICE_IN_PER_M = 3.0                 # вхідні токени
-PRICE_OUT_PER_M = 15.0               # вихідні токени
-PRICE_CACHE_WRITE_PER_M = 3.75       # запис у кеш = 1.25× вхідних
-PRICE_CACHE_READ_PER_M = 0.30        # читання з кешу = 0.1× вхідних (тут економія)
-PRICE_WEB_SEARCH_PER_1K = 10.0       # веб-пошук — $10 за 1000 запитів
+# 🔴 02.09 — ЦІНИ БІЛЬШЕ НЕ ЖИВУТЬ ТУТ ДРУГОЮ КОПІЄЮ.
+# Було: чотири константи в цьому файлі і така сама таблиця в `editor/core/spend.py`.
+# Дві копії розійшлись саме так, як і мали: тут стояло $3/$15 — ціни Sonnet 4.6, —
+# хоча `MODEL` уже давно `claude-sonnet-5` за $2/$10.
+# 📐 Заміряно: журнал ЗАВИЩУВАВ витрати на ~27% (пакет $0.309 замість $0.227), і всі
+# запобіжники — місячний, добовий, лінія темпу — гальмували агента за чужими числами.
+# 🔑 Тому імпорт ЖОРСТКИЙ, без `try`: помилитись у ціні гірше, ніж впасти. Це та сама
+# логіка, що вже стоїть вище на `editor.core.facts` — «краще впасти».
+from editor.core.spend import PRICES, PRICE_SEARCH_1K   # noqa: E402
+
+_ЦІНИ = PRICES.get(MODEL)
+if _ЦІНИ is None:                    # модель змінили, а ціну для неї не завели
+    raise SystemExit(
+        f"✗ ціни для моделі «{MODEL}» не заведені в editor/core/spend.py — "
+        f"додай рядок у PRICES, інакше журнал витрат брехатиме")
+PRICE_IN_PER_M = _ЦІНИ["in"]
+PRICE_OUT_PER_M = _ЦІНИ["out"]
+PRICE_CACHE_WRITE_PER_M = _ЦІНИ["cache_write"]
+PRICE_CACHE_READ_PER_M = _ЦІНИ["cache_read"]
+PRICE_WEB_SEARCH_PER_1K = PRICE_SEARCH_1K
 
 
 # ── Конфіг + наявна стрічка ──────────────────────────────────────────────────
@@ -242,6 +264,9 @@ def record_spend(mission: str, usage: dict, found: int, note: str = "", extra_us
         "cache_write": usage["cache_creation_input_tokens"],
         "web_searches": usage["web_search_requests"],
         "found": found, "cost_usd": cost, "note": note,
+        # Рівень зусиль у записі — щоб зміну ціни можна було звʼязати зі зміною
+        # налаштування, а не гадати заднім числом.
+        **({"effort": EFFORT} if EFFORT else {}),
         # Поле зʼявляється лише коли оцінка ненульова — щоб у звіті було видно,
         # що частина суми це ПІДОЗРА на списання, а не рахунок від моделі.
         **({"suspect_usd": round(float(extra_usd), 4)} if extra_usd else {}),
@@ -574,6 +599,18 @@ def _post_once(payload, headers):
                 return json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", "replace")[:300]
+            # 🔴 02.09 — САМОРЕМОНТ НА ВІДМОВУ ВІД `output_config`.
+            # Параметр заведено «наосліп»: ключа API в середовищі розробки немає, тож
+            # перевірити його живим прогоном я не міг. Без цієї гілки одна відмова
+            # означала б, що агент мовчки не пише НІЧОГО до наступної правки коду.
+            # 🔑 Знімаємо саме той ключ, на який лається API, і повторюємо той самий
+            # запит — а не глушимо помилку взагалі.
+            if e.code == 400 and "output_config" in payload and (
+                    "output_config" in body or "effort" in body):
+                print(f"⚠ API не прийняв output_config ({body}) — знімаю і повторюю БЕЗ нього")
+                payload.pop("output_config", None)
+                data = json.dumps(payload).encode("utf-8")
+                continue
             if e.code in (429, 500, 502, 503, 504, 529) and attempt < 2:
                 wait = 2 ** (attempt + 1)
                 print(f"  ↻ транзиентна HTTP {e.code} — повтор через {wait}с (той самий запит)…")
@@ -631,6 +668,8 @@ def call_agent(prompt: str):
                        "max_uses": MAX_SEARCHES_PER_MISSION}],
             "messages": messages,
         }
+        if EFFORT:
+            payload["output_config"] = {"effort": EFFORT}
         resp = _post_once(payload, headers)   # backoff-повтор ТОГО САМОГО запиту всередині
         if resp is None:
             ok = False
