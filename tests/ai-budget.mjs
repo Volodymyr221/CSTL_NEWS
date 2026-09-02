@@ -12,7 +12,7 @@
 // ми дивимось, чи він каже «стоп». Плюс контроль: на порожньому журналі він
 // мусить мовчати, інакше «спиняє завжди» теж зійшло б за успіх.
 import { execFileSync } from 'child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, symlinkSync, cpSync } from 'fs';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -214,5 +214,225 @@ ok('🔴 агент спільноти не кличе модель, коли т
 const brandPy = readFileSync(join(ROOT, 'editor/writers/brand_writer.py'), 'utf-8');
 ok('без ключа модель не кличеться взагалі',
    /немає ANTHROPIC_API_KEY — пропускаю/.test(brandPy));
+
+// ── 9. ЛІНІЯ ТЕМПУ: БЮДЖЕТУ МАЄ ВИСТАЧИТИ ДО КІНЦЯ МІСЯЦЯ ────────────────────
+// 🔴 02.09 — ПРЯМА ВИМОГА ВОВИ: «нам потрібно, щоб агенти працювали цілий місяць».
+// 📐 Що було виміряно в журналі того дня: $1.99 з $3.00 за ДВІ доби. Дві старі
+// стелі цього не ловлять — вони не суперечать одна одній, але разом дозволяють
+// спалити місяць за 2.5 доби: $3.00 ÷ 30 = $0.10/добу, а добова стеля $1.20,
+// тобто у ДВАНАДЦЯТЬ разів більша за темп, який місяць витримує.
+// 🛑 Міряємо ЗАПУСКОМ функції на підробленому журналі, а не наявністю слова
+// «темп» у коді: перевірка на слово зеленіє й тоді, коли темп порахували, але
+// не спинились на ньому.
+function темп(журнал, env = {}) {
+  const д = mkdtempSync(join(tmpdir(), 'cstl-pace-'));
+  mkdirSync(join(д, 'data'), { recursive: true });
+  writeFileSync(join(д, 'data', 'ai_spend.json'), JSON.stringify(журнал));
+  const код = `
+import importlib.util
+spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(m.month_pace_left_usd())`;
+  return Number(execFileSync('python3', ['-c', код], {
+    cwd: д, encoding: 'utf-8', env: { ...process.env, ...env },
+  }).trim());
+}
+
+const день = new Date().getUTCDate();
+const дібУМісяці = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0)).getUTCDate();
+const набігло = 3.0 * день / дібУМісяці;      // скільки дозволяє лінія станом на сьогодні
+
+// Витратили ВСЮ місячну стелю в перші дні — лінія темпу мусить піти в мінус.
+const заШвидко = темп({ runs: [], totals: {}, months: { [місяць]: { cost_usd: 3.0, runs: 10 } } });
+ok('🔴 темп попереду бюджету → запас відʼємний (місяця б не вистачило)',
+   заШвидко < 0, `запас $${заШвидко} (лінія дозволяє $${набігло.toFixed(4)})`);
+
+// 🔑 КОНТРОЛЬ: на чистому журналі запас мусить бути ДОДАТНИЙ, інакше «завжди
+// мінус» теж зійшло б за працюючий прилад — і агент не написав би нічого ніколи.
+const чистийТемп = темп({ runs: [], totals: {}, months: {} });
+ok('КОНТРОЛЬ: на чистому журналі темп НЕ блокує (запас додатний)',
+   чистийТемп > 0, `запас $${чистийТемп}`);
+
+// 🔴 І головне: лінія рахується від ПОЧАТКУ МІСЯЦЯ, а не «стеля ділена на 30».
+// Друге означало б, що невитрачене вчора згорає, і агент, який мовчав тиждень,
+// не мав би права наздогнати. Перевіряємо саме перенесення залишку вперед.
+ok('🔴 невитрачене переноситься вперед (лінія від початку місяця, не «на добу»)',
+   Math.abs(чистийТемп - набігло) < 0.01,
+   `запас $${чистийТемп} проти набіглих $${набігло.toFixed(4)}`);
+
+// Стеля місяця, від якої рахується лінія, лишається змінною середовища.
+const строгийТемп = темп({ runs: [], totals: {}, months: {} }, { AI_NEWS_MAX_MONTH_USD: '0.03' });
+ok('лінію темпу можна затиснути змінною середовища, не правкою коду',
+   строгийТемп < чистийТемп, `$${строгийТемп} проти $${чистийТемп}`);
+
+// 🔴 І головне: лінія має не рахуватись, а СПИНЯТИ. Тут стенд запускає САМ
+// скрипт агента цілком (не функцію!) у пісочниці з підробленим журналом і
+// дивиться, чи прогін завершиться, не дійшовши до моделі.
+// 🛑 Перевірка «у файлі згадується `month_pace_left_usd()`» була б порожньою:
+// ця назва є вже в самому `def`, тож вона зеленіла б і на коді, де хвіртку
+// прибрали. Перевірено контролем — саме так вона й повелася.
+// ⚠️ Ключів у середовищі немає навмисно: без них жоден мережевий виклик не
+// відбудеться, а всі читання файлів у скрипті fail-soft.
+function прогінАгента(журнал) {
+  const д = mkdtempSync(join(tmpdir(), 'cstl-run-'));
+  // Пісочниця = симлінки на репозиторій + СВОЇ теки, куди агент може писати.
+  // 🛑 `data` і `editor` саме КОПІЮЮТЬСЯ, а не симлінкуються: запис через симлінк
+  // пішов би у справжній репозиторій, і стенд мовчки правив би бойові файли
+  // (памʼять агента, план історичної спільноти, журнал витрат).
+  const свої = new Set(['data', 'editor']);
+  for (const e of readdirSync(ROOT)) {
+    if (свої.has(e)) continue;
+    symlinkSync(join(ROOT, e), join(д, e));
+  }
+  for (const e of свої) cpSync(join(ROOT, e), join(д, e), { recursive: true });
+  writeFileSync(join(д, 'data', 'ai_spend.json'), JSON.stringify(журнал));
+  const env = { ...process.env };
+  delete env.ANTHROPIC_API_KEY;
+  delete env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    return execFileSync('python3', ['scripts/ai_news_agent.py', '--mission', 'Громада'],
+                        { cwd: д, encoding: 'utf-8', env, timeout: 60000 });
+  } catch (e) {
+    return `${e.stdout || ''}${e.stderr || ''}`;
+  }
+}
+
+const журналПоТемпу = {
+  runs: [], totals: { cost_usd: набігло, runs: 1, web_searches: 0 },
+  months: { [місяць]: { cost_usd: Number((набігло + 0.0001).toFixed(4)), runs: 1, web_searches: 0 } },
+};
+const вивідПоТемпу = прогінАгента(журналПоТемпу);
+if (день < дібУМісяці) {
+  ok('🔴 темп попереду бюджету СПИНЯЄ прогін (а не просто рахується)',
+     /темп випереджає бюджет/.test(вивідПоТемпу),
+     вивідПоТемпу.split('\n').filter(Boolean).slice(-2).join(' | ') || '— мовчить');
+} else {
+  // В останню добу місяця лінія темпу дорівнює стелі — витратити «швидше за
+  // темп», не впершись у місячну стелю, фізично неможливо. Це не діра: у цей
+  // день бюджет і має бути доступний повністю.
+  ok('в останню добу місяця темп ≡ стеля, спиняє місячний запобіжник',
+     /місячна стеля/.test(вивідПоТемпу), вивідПоТемпу.slice(-160) || '— мовчить');
+}
+
+// 🔑 КОНТРОЛЬ: із чистим журналом той самий прогін НЕ мусить казати про темп —
+// інакше стенд зеленів би на агенті, який спиняється завжди.
+const вивідЧистий = прогінАгента({ runs: [], totals: {}, months: {} });
+ok('КОНТРОЛЬ: на чистому журналі прогін про темп не заїкається',
+   !/темп випереджає бюджет/.test(вивідЧистий),
+   вивідЧистий.split('\n').filter(Boolean).slice(-1)[0] || '(тиша)');
+
+// ── 10. МІСЯЧНА СТЕЛЯ ПЕРЕВІРЯЄТЬСЯ І ПОСЕРЕД ПРОГОНУ ────────────────────────
+// 🔴 Знахідка аудиту гонок 02.09: стеля читалась ОДИН раз до циклу, далі прогін
+// витрачав до $1.20 без повторної перевірки. Перевищення було закладене в
+// конструкцію — і воно сталося: серпень закрився на $3.3587 при стелі $3.00.
+const iЦикл = newsPy.indexOf('while len(кошик) < ліміт');
+const тіло = newsPy.slice(iЦикл, iЦикл + 1400);
+ok('🔴 місячна стеля перевіряється ВСЕРЕДИНІ циклу пакетів, а не лише на старті',
+   /month_spend_usd\(\) >= MAX_MONTH_COST_USD/.test(тіло),
+   'усередині циклу пакетів немає повторної перевірки місяця');
+
+// ── 11. «ПІДОЗРА НА СПИСАННЯ» ПЕРЕЖИВАЄ ПРОГІН ───────────────────────────────
+// 🔴 Було: мережа рвала виклик, Anthropic міг списати гроші server-side, клієнт
+// бачив usage = 0, і оцінку додавали ЛИШЕ до `run_cost` — змінної в памʼяті.
+// У журнал ішов нуль, контейнер раннера вмирав, і гроші зникали з обліку:
+// наступний прогін рахував стелю по заниженій сумі.
+const дірПідозри = mkdtempSync(join(tmpdir(), 'cstl-suspect-'));
+mkdirSync(join(дірПідозри, 'data'), { recursive: true });
+writeFileSync(join(дірПідозри, 'data', 'ai_spend.json'),
+  JSON.stringify({ runs: [], totals: { cost_usd: 0, runs: 0, web_searches: 0 }, months: {} }));
+const післяПідозри = execFileSync('python3', ['-c', `
+import importlib.util, json
+spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+нуль = dict(input_tokens=0, output_tokens=0, cache_read_input_tokens=0,
+            cache_creation_input_tokens=0, web_search_requests=0)
+m.record_spend('тест', нуль, 0, note='мережевий збій', extra_usd=m.SUSPECT_CHARGE_USD)
+print(json.dumps({'місяць': m.month_spend_usd(), 'доба': m.day_spend_usd()}))`],
+  { cwd: дірПідозри, encoding: 'utf-8' });
+// `record_spend` друкує рядок «💸 витрата …» — нам потрібен ОСТАННІЙ рядок виводу.
+const підозра = JSON.parse(післяПідозри.trim().split('\n').pop());
+ok('🔴 підозра на списання ДОЇЖДЖАЄ в журнал (місячна стеля її бачить)',
+   підозра.місяць >= 0.29, `у журналі за місяць $${підозра.місяць}`);
+ok('…і добове вікно її теж бачить',
+   підозра.доба >= 0.29, `за добу $${підозра.доба}`);
+
+// 🔑 КОНТРОЛЬ: без підозри той самий виклик мусить дати НУЛЬ — інакше стенд
+// зеленів би від будь-якого запису, а не від нашої правки.
+const дірБезПідозри = mkdtempSync(join(tmpdir(), 'cstl-nosuspect-'));
+mkdirSync(join(дірБезПідозри, 'data'), { recursive: true });
+writeFileSync(join(дірБезПідозри, 'data', 'ai_spend.json'),
+  JSON.stringify({ runs: [], totals: { cost_usd: 0, runs: 0, web_searches: 0 }, months: {} }));
+const безПідозри = Number(execFileSync('python3', ['-c', `
+import importlib.util
+spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+нуль = dict(input_tokens=0, output_tokens=0, cache_read_input_tokens=0,
+            cache_creation_input_tokens=0, web_search_requests=0)
+m.record_spend('тест', нуль, 0)
+print(m.month_spend_usd())`], { cwd: дірБезПідозри, encoding: 'utf-8' }).trim().split('\n').pop());
+ok('КОНТРОЛЬ: звичайний порожній виклик у журнал грошей НЕ додає',
+   безПідозри === 0, `$${безПідозри}`);
+
+// ── 12. ЧЕРГА ГАМАНЦЯ: ОДИН ФАЙЛ — ОДНА ГРУПА ────────────────────────────────
+// 🔴 Знахідка аудиту гонок 02.09. `data/ai_spend.json` переписують ЧОТИРИ
+// воркфлови (read-modify-write). Ре-база тут безсила: обидва прогони чіпають
+// перші й останні рядки того самого JSON, тож конфлікт гарантований — і той,
+// хто програв, губить запис про вже СПЛАЧЕНІ гроші.
+// 📐 Заміряно: `olyka-agent` стартує о 07:10, `ai-news-agent` — о 07:15, а
+// прогін новин тривав 379 с. Тобто вони перетинаються щоразу, коли в олицького
+// агента є тема.
+const конкуренція = JSON.parse(execFileSync('python3', ['-c', `
+import glob, json, yaml
+out = {}
+for f in sorted(glob.glob('.github/workflows/*.yml')):
+    d = yaml.safe_load(open(f, encoding='utf-8')) or {}
+    c = d.get('concurrency')
+    if not c:
+        job = next(iter((d.get('jobs') or {}).values()), {}) or {}
+        c = job.get('concurrency')
+    out[f.split('/')[-1]] = c or {}
+print(json.dumps(out))`], { cwd: ROOT, encoding: 'utf-8' }));
+
+const гаманець = ['ai-news-agent.yml', 'editor-holidays.yml', 'olyka-agent.yml', 'istoriya-agent.yml'];
+const групи = [...new Set(гаманець.map(f => (конкуренція[f] || {}).group))];
+ok('🔴 усі чотири писарі гаманця стоять в ОДНІЙ черзі (паралельний запис = втрачені витрати)',
+   групи.length === 1 && !!групи[0], `групи: ${JSON.stringify(групи)}`);
+
+// 🛑 І жоден із них не має права скасовувати сусіда: скасування могло б убити
+// ПЛАТНИЙ прогін між «модель уже виставила рахунок» і «витрату закомічено».
+const скасовує = гаманець.filter(f => (конкуренція[f] || {})['cancel-in-progress'] === true);
+ok('🔴 жоден писар гаманця не скасовує сусіда посеред платного виклику',
+   скасовує.length === 0, `скасовують: ${скасовує.join(', ') || '—'}`);
+
+// Ті самі граблі на файлах стрічки: `rss-parser` і `cms-sync` обидва переписують
+// `data/articles.json` та `data/events.json`.
+const стрічкаГрупи = [...new Set(['rss-parser.yml', 'cms-sync.yml']
+  .map(f => (конкуренція[f] || {}).group))];
+ok('🔴 парсер стрічки і синк кабінету — в одній черзі (спільні articles/events)',
+   стрічкаГрупи.length === 1 && !!стрічкаГрупи[0], `групи: ${JSON.stringify(стрічкаГрупи)}`);
+
+// ── 13. АГЕНТИ СПІЛЬНОТИ ПУШАТЬ ІЗ РЕ-БАЗОЮ, А НЕ ГОЛИМ `git push` ───────────
+// 🔴 Було: `git push` під `set -euo pipefail`. Поки агент писав пост, `main` міг
+// піти вперед — пуш відлітав з «fetch first», крок падав, АЛЕ пост уже лежав у
+// Supabase. Губилась лише памʼять «цю тему написано» — і наступний прогін брав
+// ТУ САМУ тему вдруге, платячи за неї вдруге.
+for (const f of ['olyka-agent.yml', 'istoriya-agent.yml']) {
+  const yml = readFileSync(join(ROOT, '.github/workflows', f), 'utf-8');
+  ok(`🔴 ${f}: памʼять пушиться з ре-базою і повторами`,
+     /git rebase origin\/main/.test(yml) && /git push origin HEAD:main/.test(yml));
+  // Без повної історії ре-база не має на що спертись — checkout мусить її дати.
+  ok(`${f}: checkout бере повну історію (інакше ре-база неможлива)`,
+     /fetch-depth:\s*0/.test(yml));
+}
+
+// ── 14. ПАРСЕР РОЗКЛАДУ НЕ ЗЕЛЕНІЄ, КОЛИ РОЗКЛАД НЕ ДОЇХАВ ───────────────────
+// 🔴 Було: після трьох невдалих спроб крок ішов далі й прогін ставав зелений —
+// коміт із новим розкладом лишався в контейнері раннера і вмирав разом із ним.
+// Виглядало як «парсер працює», а на сайті висів старий розклад.
+const vopas = readFileSync(join(ROOT, '.github/workflows/vopas-parser.yml'), 'utf-8');
+ok('🔴 vopas: невдалий пуш = червоний прогін, а не тихий зелений',
+   /pushed"?\s*=\s*true\s*\]\s*\|\|\s*\{[^}]*exit 1/.test(vopas), 'немає exit 1 після циклу пушу');
+ok('vopas: збій тригера деплою теж не ковтається',
+   !/gh workflow run deploy\.yml[^\n]*\|\|/.test(vopas), 'тригер деплою досі під `|| echo`');
 
 done();

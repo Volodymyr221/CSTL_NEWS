@@ -15,9 +15,12 @@ on:
 permissions:
   contents: write
 
+# 02.09 — спільна черга гаманця, пояснення повністю в `ai-news-agent.yml`.
+# Коротко: `data/ai_spend.json` переписують чотири воркфлови, і паралельний
+# запис губить рахунок за вже сплачений виклик моделі.
 concurrency:
-  group: "ai-editor-holidays"
-  cancel-in-progress: true
+  group: "ai-spend-writers"
+  cancel-in-progress: false
 
 jobs:
   editor:
