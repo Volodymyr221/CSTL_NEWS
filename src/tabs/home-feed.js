@@ -165,7 +165,13 @@ function postHtml(p, page = null) {
   // 🔑 Стеля має бути ОДНА, і саме та, що міряє РЯДКИ: `-webkit-line-clamp` рахує
   // намальовані рядкові коробки (порожній рядок абзацу теж), а символи їх лише
   // вгадують. Тут лишається запас, щоб clamp завжди встигав спрацювати першим.
-  const txt = preview(p.text, img ? 170 : 700, !!img);
+  // 🔴 02.09 — 170 → 400 ДЛЯ КАРТКИ ЗІ ЗНІМКОМ. Підпис більше не має фіксованих
+  // чотирьох рядків: коли кадр широкий, він займає менше висоти, і вивільнене місце
+  // віддається тексту (`--hm-fd-lines` рахує `fitPhotoCards`). Зі старим лімітом
+  // 170 символів показувати в тих рядках було б НІЧОГО — текст закінчувався раніше.
+  // 🛑 Це навмисно ЗАПАС, а не друга стеля: різати має лише `line-clamp` (урок 28.08
+  // — дві стелі на тому самому тексті означають, що одна завжди зайва).
+  const txt = preview(p.text, img ? 400 : 700, !!img);
   const ava = page.avatar_url
     ? `<img src="${escapeHtml(page.avatar_url)}" alt="">`
     : `<span class="hm-fd-p-tx">${escapeHtml(initial(name))}</span>`;
@@ -289,6 +295,59 @@ export async function renderHomeFeed() {
 const NAME_MIN_PX = 8;
 let _measureCtx = null;
 
+// 🔴 02.09 — РІДНА ПРОПОРЦІЯ ЗНІМКА У ВІДЖЕТІ + ПІДПИС НА ВИВІЛЬНЕНЕ МІСЦЕ.
+// 🗣️ Вова: «якщо вертикально фотографія менша, ніж місце для фотографій — показується
+// повна фотографія. Якщо більше — картка стримує висоту». Віджет при цьому НЕ росте.
+//
+// 🔑 Пишемо дві змінні, решту робить CSS:
+//   `--hm-fd-ar`    — рідна пропорція файлу (`naturalWidth/naturalHeight`);
+//   `--hm-fd-lines` — скільки рядків підпису влазить у те, що лишилось.
+//
+// 🛑 ЧОМУ ВІЛЬНЕ МІСЦЕ МІРЯЄМО, А НЕ РАХУЄМО. Спокуса була вивести його формулою
+// (висота картки мінус відступи, шапка й фото). Але відступи живуть у трьох різних
+// місцях — `padding` картки, `margin-top` підпису, `margin-top` знімка — і будь-яка
+// правка стилів мовчки зробила б формулу неправдою. Тому підсумовуємо ФАКТИЧНІ
+// висоти дітей із їхніми полями: скільки б їх не було і як би вони не звалися.
+const РЯДКІВ_МІН = 4;    // стільки було завжди — нижче не опускаємось
+const РЯДКІВ_МАКС = 12;  // запобіжник: підпис не має права стати «простинею»
+
+function fitPhotoCard(card) {
+  const box = card.querySelector('.hm-fd-p-img');
+  const img = box && box.querySelector('img');
+  if (!img || !img.naturalWidth || !img.naturalHeight) return;
+
+  box.style.setProperty('--hm-fd-ar', (img.naturalWidth / img.naturalHeight).toFixed(4));
+
+  const txt = card.querySelector('.hm-fd-p-txt');
+  if (!txt) return;
+  txt.style.removeProperty('--hm-fd-lines');            // міряємо від базових 4 рядків
+
+  const cs = getComputedStyle(card);
+  let зайнято = 0;
+  for (const діт of card.children) {
+    const s = getComputedStyle(діт);
+    зайнято += діт.getBoundingClientRect().height
+             + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
+  }
+  const вільно = card.clientHeight - (parseFloat(cs.paddingTop) || 0)
+               - (parseFloat(cs.paddingBottom) || 0) - зайнято;
+  if (вільно <= 0) return;                              // кадр високий — місця немає, 4 рядки
+
+  const рядок = parseFloat(getComputedStyle(txt).lineHeight) || 22;
+  const рядків = Math.min(РЯДКІВ_МАКС, РЯДКІВ_МІН + Math.floor(вільно / рядок));
+  if (рядків > РЯДКІВ_МІН) txt.style.setProperty('--hm-fd-lines', String(рядків));
+}
+
+function fitPhotoCards(root) {
+  root.querySelectorAll('.hm-fd-post--photo').forEach(card => {
+    const img = card.querySelector('.hm-fd-p-img img');
+    if (!img) return;
+    // Знімок приходить із мережі пізніше за розмітку — до `load` розміру ще немає.
+    if (img.complete) fitPhotoCard(card);
+    else img.addEventListener('load', () => fitPhotoCard(card), { once: true });
+  });
+}
+
 function fitCircleNames(root) {
   const names = [...root.querySelectorAll('.hm-fd-c-name')];
   if (!names.length) return;
@@ -325,6 +384,7 @@ function fitCircleNames(root) {
     body.classList.add('hm-appear');
     // Після вставки в документ: до цього `clientWidth` дорівнює нулю і міряти нічого.
     fitCircleNames(body);
+    fitPhotoCards(body);
 
     startFeedCarousel(body);
   } catch {

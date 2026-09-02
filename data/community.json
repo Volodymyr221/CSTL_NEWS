@@ -55,7 +55,8 @@
       "category": "medical",
       "icon": "hospital",
       "group": "local",
-      "address": "вул. Шевченка, 58а, м. Олика"
+      "address": "вул. Шевченка, 58а, м. Олика",
+      "phone2": "050 479 02 13"
     },
     {
       "id": "social",
