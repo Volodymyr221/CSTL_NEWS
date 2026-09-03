@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788435362180,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 510,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
       "ts": 1788350703988,
       "mission": "olyka:news:в-олицькій-громаді-можна",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0082,
       "note": ""
-    },
-    {
-      "ts": 1787210674295,
-      "mission": "holiday:🇺🇦 День Незалежності України",
-      "model": "claude-sonnet-5",
-      "input_tokens": 477,
-      "output_tokens": 469,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0085,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 10.8232,
-    "runs": 139,
+    "cost_usd": 10.8314,
+    "runs": 140,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.3549,
-      "runs": 14,
+      "cost_usd": 2.3631,
+      "runs": 15,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788350703988
+  "updated_ts": 1788435362180
 }
