@@ -616,7 +616,29 @@ function міткаОчікування(a) {
 // історичне → спільнота «Історія Громади», решта новин → стрічка новин.
 const ІСТОРИЧНІ_КАТЕГОРІЇ = ['істор', 'краєзнав'];
 
+// 🔑 ІМʼЯ СПІЛЬНОТИ ЗА НОМЕРОМ — з того списку, що вже завантажено (`myPages`),
+// із запасним варіантом на випадок, коли список ще не приїхав.
+function назваСпільноти(id) {
+  const п = myPages.find(x => Number(x.id) === Number(id))
+         || communities.find(x => Number(x.id) === Number(id));
+  return (п && п.name) || ('спільнота #' + id);
+}
+
 function призначення(a) {
+  // 🔴 03.09 — РУЧНИЙ ВИБІР ПЕРЕБИВАЄ ПРАВИЛО ЗА КАТЕГОРІЄЮ.
+  // 🗣️ Слово Вови на пряме питання «правило чи вибір людини» — «перебивати».
+  // 🛑 Саме тому прапорець `target_locked` окремий: без нього «Новини, бо так
+  // обрала людина» і «Новини, бо категорія не історична» були б одним і тим
+  // самим порожнім значенням, і ручний вибір тихо програвав би правилу.
+  if (a.target_locked) {
+    if (a.target_page_id) {
+      const назва = назваСпільноти(a.target_page_id);
+      return { текст: '📣 → ' + назва, колір: '#6b4a8a',
+               підказка: `Обрано вручну: стаття вийде ДОПИСОМ у стрічці спільноти «${назва}», а не в новинах. Заголовок стане першим рядком великими літерами, фото — каруселлю.` };
+    }
+    return { текст: '📰 → Новини', колір: '#31708f',
+             підказка: 'Обрано вручну: стаття вийде у стрічку новин — навіть якщо категорія тягне її у спільноту.' };
+  }
   const кат = String(a.category || '').toLowerCase();
   if (ІСТОРИЧНІ_КАТЕГОРІЇ.some(к => кат.includes(к))) {
     return { текст: '🏛 → Історія Громади', колір: '#6b4a8a',
@@ -630,6 +652,28 @@ function призначення(a) {
              підказка: 'Свято з календаря: вийде як святковий матеріал, окремо від новинної стрічки.' };
   return { текст: '📰 → Новини', колір: '#31708f',
            підказка: 'Вийде у стрічку новин застосунку після того, як синк (cms-sync) забере статтю з кабінету.' };
+}
+
+// ── СЕЛЕКТ ПРИЗНАЧЕННЯ ─────────────────────────────────────────────────────
+// Один список для форми редагування і для швидкого вибору просто на картці:
+// дві копії варіантів розійшлись би при першій же правці (цей проєкт уже мав
+// таке з правилом «історія» в адмінці та синку).
+function варіантиПризначення(a) {
+  const обране = !a.target_locked ? 'auto' : (a.target_page_id ? 'page:' + a.target_page_id : 'news');
+  const вар = [['auto', '⚙️ Автоматично (за категорією)'], ['news', '📰 Новини']];
+  myPages.forEach(p => вар.push(['page:' + p.id, '📣 ' + p.name]));
+  // 🛑 Якщо статтю вже спрямовано у спільноту, якої немає в МОЄМУ списку (її обрав
+  // адмін застосунку, а дивиться редактор), варіант треба ДОДАТИ. Інакше селект
+  // мовчки показав би «Автоматично» і перше ж збереження перебило б чужий вибір.
+  if (обране.startsWith('page:') && !вар.some(([v]) => v === обране))
+    вар.push([обране, '📣 ' + назваСпільноти(a.target_page_id)]);
+  return вар.map(([v, l]) => `<option value="${v}"${обране === v ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('');
+}
+
+function читатиПризначення(v) {
+  if (v === 'news') return { target_locked: true,  target_page_id: null };
+  if (String(v).startsWith('page:')) return { target_locked: true, target_page_id: Number(String(v).slice(5)) };
+  return { target_locked: false, target_page_id: null };
 }
 
 function showToast(msg, ms = 2500) {
@@ -710,6 +754,7 @@ let adReports      = [];      // скарги на оголошення (ad_repo
 let articles       = [];      // чернетки/готове до публікації (cms_articles)
 let articleDraft   = null;    // null = список; об'єкт = форма створення/редагування
 let communities    = [];      // спільноти-канали «Стрічки» (pages), відсортовані за sort_order
+let myPages        = [];      // спільноти, у які ЦЯ людина може постити (див. fetchMyPages)
 let ownerCounts    = {};      // page_id → кількість власників/адмінів (для підпису в списку)
 // 🆕 09.08 — жителі для розділу «Люди» (офіційна галочка).
 // ⚠️ Вантажаться ОКРЕМО від loadAll() і лише при вході в розділ: `profiles` під
@@ -805,6 +850,12 @@ async function saveArticle(a) {
   if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
   if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
   if (a.source_article_id !== undefined) row.source_article_id = a.source_article_id;  // Потік 8: слід копії в Найближчі події
+  // Призначення (03.09). Пишемо ОБИДВА поля разом: `target_page_id` без
+  // `target_locked` не діє, а `target_locked` без другого поля означав би «Новини».
+  if (a.target_locked !== undefined) {
+    row.target_locked  = !!a.target_locked;
+    row.target_page_id = a.target_locked ? (a.target_page_id || null) : null;
+  }
   if (a.id) {
     if (a.type) row.type = a.type;   // тип можна змінити й при редагуванні
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
@@ -1095,7 +1146,28 @@ async function loadAll() {
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
     articles = await fetchArticles();
+    myPages  = await fetchMyPages();
   }
+}
+
+// 🔴 03.09 — СПИСОК СПІЛЬНОТ, У ЯКІ ЦЯ ЛЮДИНА МОЖЕ ПОСТИТИ.
+// 🗣️ Рішення Вови дослівно: «Кожен свої, і адмінк застосунку всі». Тобто редактор
+// бачить лише ті спільноти, де він власник або адмін (рядок у `page_admins`), а
+// адміністратор ЗАСТОСУНКУ — усі.
+// ⚠️ Це підказка інтерфейсу, а НЕ захист. Справжній гейт лишається там, де був:
+// RLS на `page_posts` і сервісний ключ синку. Список лише не пропонує людині
+// того, чого їй однаково не можна — щоб вибір не виглядав зламаним постфактум.
+async function fetchMyPages() {
+  if (!currentUser) return [];
+  try {
+    if (isAdmin) {
+      const { data } = await supa.from('pages').select('id, name')
+        .order('sort_order', { ascending: true }).order('id', { ascending: true });
+      return data || [];
+    }
+    const { data } = await supa.from('page_admins').select('page_id, pages(name)').eq('uid', currentUser.id);
+    return (data || []).map(r => ({ id: r.page_id, name: (r.pages && r.pages.name) || ('Спільнота #' + r.page_id) }));
+  } catch { return []; }
 }
 
 // ── Векторні іконки вкладок (Tabler Icons, MIT — tabler.io/icons) замість
@@ -2543,6 +2615,11 @@ function renderArticles(el) {
               : ''}
             <button class="btn btn--reject" data-art-del="${a.id}">🗑 Видалити</button>
           </div>
+          ${a.status === 'published' ? '' : `
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;color:#666">
+            Куди:
+            <select class="art-inp" data-art-target="${a.id}" style="flex:1;min-width:0;padding:4px 6px;font-size:13px">${варіантиПризначення(a)}</select>
+          </label>`}
         </article>`;
     }).join('');
     bind();
@@ -2558,6 +2635,26 @@ function renderArticles(el) {
           `<div class="card-text" style="white-space:pre-wrap">${escapeHtml(a.content || '(порожньо)')}</div>`;
         box.hidden = false;
       } else box.hidden = true;
+    }));
+    // 🔴 03.09 — ВИБІР ПРЯМО НА КАРТЦІ, БЕЗ ЗАХОДУ В РЕДАКТОР.
+    // Замовлення Вови стосується саме ПОТОКУ спарсених статей: їх десятки, і
+    // відкривати редактор заради одного випадаючого списку означало б, що
+    // можливість є, а користуватись нею ніхто не буде.
+    listEl.querySelectorAll('[data-art-target]').forEach(sel => sel.addEventListener('change', async () => {
+      const a = articles.find(x => String(x.id) === sel.dataset.artTarget);
+      if (!a) return;
+      const п = читатиПризначення(sel.value);
+      sel.disabled = true;
+      const { error } = await supa.from('cms_articles')
+        .update({ ...п, updated_at: new Date().toISOString() }).eq('id', a.id);
+      sel.disabled = false;
+      // 🛑 Стан у памʼяті міняємо ТІЛЬКИ після відповіді бази: інакше картка
+      // показала б новий маршрут, якого в базі немає (та сама вада, що й
+      // «позначили published до того, як пост створено»).
+      if (error) { alert('Не вдалося зберегти призначення: ' + error.message); return; }
+      Object.assign(a, п);
+      showToast('Призначення збережено: ' + призначення(a).текст);
+      paint();
     }));
     listEl.querySelectorAll('[data-art-edit]').forEach(b => b.addEventListener('click', () => {
       articleDraft = { ...articles.find(a => String(a.id) === b.dataset.artEdit) }; renderApp();
@@ -2640,6 +2737,14 @@ function renderArticleForm(el) {
           <select class="art-inp" id="af-cat"><option value="">—</option>${ART_CATEGORIES.map(c => `<option ${d.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
         </label>
       </div>
+      <label class="art-lbl">Куди публікувати
+        <select class="art-inp" id="af-target">${варіантиПризначення(d)}</select>
+        <span style="display:block;font-size:12px;color:#777;margin-top:4px">
+          «Автоматично» — як було: історичне йде у спільноту «Історія Громади», решта — у Новини.
+          Вибір спільноти перебиває це правило: стаття вийде звичайним ДОПИСОМ (заголовок першим
+          рядком великими літерами), а не статтею з заголовком, бо в стрічці поля заголовка немає.
+        </span>
+      </label>
       <label class="art-lbl">Дата свята/події (для «Шо в селі», необовʼязково для новин)
         <input class="art-inp" id="af-eventdate" type="date" value="${escapeHtml(d.event_date || '')}">
       </label>
@@ -2675,6 +2780,7 @@ function renderArticleForm(el) {
     category: document.getElementById('af-cat').value,
     event_date: document.getElementById('af-eventdate').value || null,
     type: document.getElementById('af-type').value,
+    ...читатиПризначення(document.getElementById('af-target').value),
   });
   document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
   // Розклад: показати/сховати вибір дати-часу + зробити кнопку зрозумілою.
