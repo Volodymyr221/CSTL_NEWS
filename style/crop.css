@@ -36,5 +36,5 @@
 .crop-frame--round { border-radius: 50%; }
 
 .crop-bottom { flex: 0 0 auto; padding: 12px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
-.crop-hint { font-size: 12.5px; opacity: 0.65; text-align: center; line-height: 1.4; }
+.crop-hint { font-size: 12px; opacity: 0.65; text-align: center; line-height: 1.4; }
 .crop-zoom { width: 100%; accent-color: #E9B7BD; }

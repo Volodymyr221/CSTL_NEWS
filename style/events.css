@@ -19,7 +19,7 @@
   gap: 10px;
   padding: 14px 16px 4px;
 }
-.shotam-head-title { font-size: 22px; font-weight: 800; color: var(--ink); }
+.shotam-head-title { font-size: 22px; font-weight: 700; color: var(--ink); }
 
 /* Картка стрічки — обкладинка на ВСЮ ШИРИНУ зверху + тіло під нею */
 .shotam-card {
@@ -134,7 +134,7 @@
 .cal-pill.active .cal-pill-wd { color: rgba(255,255,255,0.85); }
 .cal-pill-num {
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
   line-height: 1.1;
 }

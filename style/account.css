@@ -32,12 +32,12 @@
   border-radius: 50%;
 }
 .acc-title {
-  font-size: 19px; font-weight: 800;
+  font-size: 19px; font-weight: 700;
   color: var(--ink, #2B2B2B);
   margin: 0 0 6px;
 }
 .acc-sub {
-  font-size: 13.5px; line-height: 1.45;
+  font-size: 13px; line-height: 1.45;
   color: var(--ink-soft, #888);
   margin: 0 0 18px;
 }
@@ -57,7 +57,7 @@
 }
 .acc-google:active { background: #F4F5F7; }
 .acc-g {
-  font-weight: 800;
+  font-weight: 700;
   color: #4285F4;   /* фірмовий синій Google */
   font-size: 17px;
 }
@@ -97,10 +97,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 .acc-fb:active { background: #F4F5F7; }
-.acc-f { font-weight: 800; color: #1877F2; font-size: 18px; }   /* фірмовий синій Meta */
+.acc-f { font-weight: 700; color: #1877F2; font-size: 18px; }   /* фірмовий синій Meta */
 
 /* Значок способу входу в Кабінеті — той самий кружечок, що в решти рядків */
-.acc-lg-badge { font-weight: 800; font-size: 16px; }
+.acc-lg-badge { font-weight: 700; font-size: 16px; }
 /* Привʼязка пошти: поля живуть ПІД рядком, у самому кабінеті (не модалкою) */
 .acc-lg-add { padding: 4px 2px 2px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -150,7 +150,7 @@
 .acc-code {
   text-align: center;
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 8px;
   padding: 14px 10px;
   font-variant-numeric: tabular-nums;
@@ -198,7 +198,7 @@
   width: 100%;
   margin-top: 10px;
   padding: 8px;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink-soft, #888);
   background: none; border: none;
   cursor: pointer;
@@ -293,7 +293,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 .acc-cab-back:active { opacity: 0.7; }
-.acc-cab-top b { font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
+/* 03.09 — назва екрана кабінету без капсу (дизайн-аудит) */
+.acc-cab-top b { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .acc-cab-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 
 .acc-cab-hero {
@@ -346,9 +347,9 @@
   overflow: hidden; border: 1.5px solid var(--red, #722F37); }
 .account-btn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .acc-cab-hi { min-width: 0; }
-.acc-cab-name { font-size: 24px; font-weight: 800; letter-spacing: -0.2px; line-height: 1.15; }
+.acc-cab-name { font-size: 24px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.15; }
 .acc-cab-email { font-size: 14px; opacity: 0.82; margin-top: 3px; word-break: break-all; }
-.acc-cab-place { font-size: 12.5px; opacity: 0.68; margin-top: 2px; }
+.acc-cab-place { font-size: 12px; opacity: 0.68; margin-top: 2px; }
 .acc-cab-trust {
   display: inline-flex; align-items: center; gap: 5px;
   margin-top: 11px;
@@ -383,7 +384,7 @@
   box-shadow: 0 2px 14px rgba(0,0,0,0.05);
 }
 .acc-cab-sec h3 {
-  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
   color: var(--ink-soft, #8a8a8a); padding: 12px 18px 8px;
 }
 /* Рядок анкети (iOS-Settings): плитка-іконка · підпис+поле · декоративна стрілка.
@@ -418,7 +419,7 @@
 .acc-cab-save {
   display: block; margin: 10px 14px 12px; width: calc(100% - 28px);
   background: var(--brand-grad-sm); color: #fff; border: 0;
-  height: 52px; padding: 0; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer;
+  height: 52px; padding: 0; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer;
   box-shadow: 0 4px 14px rgba(114,47,55,0.26);
 }
 .acc-cab-save:active { opacity: 0.92; }
@@ -444,7 +445,7 @@
 }
 .acc-cab-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .acc-cab-row-name { font-size: 16px; font-weight: 600; color: var(--ink, #2b2b2b); }
-.acc-cab-row-desc { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); line-height: 1.3; }
+.acc-cab-row-desc { font-size: 12px; color: var(--ink-soft, #8a8a8a); line-height: 1.3; }
 .acc-cab-row i { flex-shrink: 0; color: #c4bdb2; font-style: normal; font-size: 18px; display: inline-flex; align-items: center; }
 .acc-cab-row--tog { cursor: default; }
 .acc-tog {
@@ -488,8 +489,8 @@
 
 /* ── Підтвердження видалення акаунта ──────────────────────────────────────── */
 .acc-del { padding: 4px 2px; }
-.acc-del-h { margin: 0 0 12px; font-size: 19px; font-weight: 800; color: var(--ink, #2b2b2b); }
-.acc-del-p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.45; color: var(--ink, #2b2b2b); }
+.acc-del-h { margin: 0 0 12px; font-size: 19px; font-weight: 700; color: var(--ink, #2b2b2b); }
+.acc-del-p { margin: 0 0 10px; font-size: 14px; line-height: 1.45; color: var(--ink, #2b2b2b); }
 .acc-del-p--warn { color: #C0392B; font-weight: 600; }
 .acc-del-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 /* 🔑 Кнопки стовпчиком, а НЕ поруч: назва небезпечної дії довга («Видалити
@@ -527,7 +528,7 @@
   width: 38px; height: 4px; border-radius: 2px;
   background: #d9d2c7; margin: 2px auto 10px;
 }
-.shub-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+.shub-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
 /* «Збережене» тримає ТЕКСТ ЛЮДЕЙ (пости, оголошення) — одне довге посилання
    розпирало б скролер убік (у нього через `overflow-y: auto` є й горизонтальна
    прокрутка). `break-word` переносить лише те, що інакше не влізе (27.07). */
@@ -563,7 +564,7 @@
   border-radius: 50%; font-size: 16px; color: var(--black, #222);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.shub-detail-title { font-size: 15px; font-weight: 800; color: var(--black, #222); }
+.shub-detail-title { font-size: 15px; font-weight: 700; color: var(--black, #222); }
 .shub-count {
   display: inline-block; min-width: 18px; text-align: center;
   background: var(--red, #722F37); color: #fff;
@@ -584,7 +585,7 @@
 }
 .shub-card-meta { font-size: 12px; color: var(--gray, #888); }
 .shub-empty { text-align: center; color: var(--gray, #777); padding: 26px 8px; font-size: 14px; line-height: 1.5; }
-.shub-hint { font-size: 12.5px; }
+.shub-hint { font-size: 12px; }
 .shub-login {
   margin-top: 12px; background: var(--brand-grad-sm); color: #fff;
   border: none; border-radius: 12px; padding: 10px 26px;
@@ -611,7 +612,7 @@
   box-shadow: 0 6px 20px rgba(0,0,0,0.16);
 }
 .pcard-av--img img, .pcard-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pcard-name { font-size: 20px; font-weight: 800; color: var(--ink, #2b2b2b); }
+.pcard-name { font-size: 20px; font-weight: 700; color: var(--ink, #2b2b2b); }
 /* Мета-лінія: 📍громада · N років */
 .pcard-meta {
   display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center;
@@ -621,7 +622,7 @@
 .pcard-dot { opacity: 0.5; }
 .pcard-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12.5px; font-weight: 700; color: #2E7D46;
+  font-size: 12px; font-weight: 700; color: #2E7D46;
   background: rgba(76,175,80,0.14); padding: 5px 12px; border-radius: 20px;
 }
 /* «Про себе» — м'який блок (лише коли є текст) */
@@ -630,14 +631,14 @@
   background: rgba(0,0,0,0.03); border-radius: 12px; padding: 12px 14px; margin-top: 2px;
 }
 .pcard-bio-h {
-  display: block; font-size: 11px; font-weight: 800; text-transform: uppercase;
+  display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.6px; color: var(--ink-soft, #8a8a8a); margin-bottom: 5px;
 }
 .pcard-bio p {
   margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink, #2b2b2b);
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.pcard-since { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); margin-top: 2px; }
+.pcard-since { font-size: 12px; color: var(--ink-soft, #8a8a8a); margin-top: 2px; }
 
 /* ── ОГОЛОШЕННЯ АВТОРА В КАРТЦІ ПРОФІЛЮ (06.08, замовлення Вови) ─────────────
    Мова рядка — та сама, що в списку Дошки з 01.08: фото ліворуч, назва капсом,
@@ -653,7 +654,7 @@
   text-align: left;
 }
 .pcard-ads-h {
-  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--ink-soft, #8a8a8a);
   margin-bottom: 2px;
 }
@@ -683,8 +684,9 @@
 /* Назва в ОДИН рядок із трикрапкою: у списку з трьох позицій важливо впізнати
    оголошення, а не прочитати його — повний текст на відстані одного тапу. */
 .pcard-ad-title {
-  font-size: 13.5px; font-weight: 700; color: var(--ink, #2b2b2b);
-  text-transform: uppercase; letter-spacing: -0.01em;
+  /* 03.09 — половинний кегль → цілий, капс знято (дизайн-аудит) */
+  font-size: 14px; font-weight: 600; color: var(--ink, #2b2b2b);
+  letter-spacing: -0.01em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .pcard-ad-price { font-size: 12px; font-weight: 600; color: var(--red, #722F37); }
@@ -693,7 +695,7 @@
   padding: 8px;
   border: 0; border-radius: 10px;
   background: transparent;
-  font: inherit; font-size: 12.5px; font-weight: 700;
+  font: inherit; font-size: 12px; font-weight: 700;
   color: var(--red, #722F37);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;

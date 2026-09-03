@@ -571,7 +571,7 @@
    🛑 Кегль опису НЕ чіпаємо далі: 13.5px тут уже мінімум, за яким рядок стає
    дрібним для старших людей, а це та аудиторія, заради якої віджет і роблять. */
 @media (max-width: 389px) {
-  .hm-wx-desc { font-size: 13.5px; }
+  .hm-wx-desc { font-size: 13px; }
   .hm-wx-sub  { font-size: 12px; }
 }
 
@@ -721,7 +721,7 @@
 /* Обраний — і кольором, і галочкою. Лише колір читався б як «наведення»,
    лише галочка губилась би у списку з двадцяти рядків. */
 .wxp-row--on { background: var(--board-card); font-weight: 700; }
-.wxp-row-ok  { color: var(--red); font-weight: 800; }
+.wxp-row-ok  { color: var(--red); font-weight: 700; }
 /* Шпилька в рядку «За моїм місцем» — той самий вектор, що в кнопці. */
 .wxp-row-n { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .wxp-row-ic { display: inline-flex; flex: 0 0 auto; color: var(--red); }
@@ -931,7 +931,7 @@
   .hm-wx-main { gap: 6px; }
   .hm-wx-t { font-size: 26px; }
   .hm-wx-now { font-size: 22px; }
-  .hm-wx-place { padding: 6px 8px; font-size: 11.5px; max-width: 32%; }
+  .hm-wx-place { padding: 6px 8px; font-size: 12px; max-width: 32%; }
   .hm-wx-place-pin svg { width: 14px; height: 14px; }
   .hm-wx-toggle { width: 30px; height: 30px; }
   .hm-wx-toggle svg { width: 18px; height: 18px; }
@@ -1725,7 +1725,7 @@
    бейджі: підпис лежить на темному багряному, і бордове слово на ньому зникло б. */
 #cm-content.hm .hm-kicker-cat--own {
   color: #FFF1F3;
-  font-weight: 800;
+  font-weight: 700;
 }
 /* Роздільник лишається тихим: підсвічуємо НАЗВУ, а не пунктуацію. */
 #cm-content.hm .hm-kicker-cat--own::before { color: rgba(255, 255, 255, .58); }

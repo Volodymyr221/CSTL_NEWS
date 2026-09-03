@@ -181,8 +181,8 @@
 .pwa-guide-pic svg { display: block; width: 100%; height: auto; aspect-ratio: 260 / 150; }
 
 .pwa-guide-step { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
-.pwa-guide-name { font-size: 15.5px; font-weight: 700; color: #2a1a1c; }
-.pwa-guide-text { font-size: 13.5px; line-height: 1.5; color: #5a4a46; }
+.pwa-guide-name { font-size: 15px; font-weight: 700; color: #2a1a1c; }
+.pwa-guide-text { font-size: 13px; line-height: 1.5; color: #5a4a46; }
 .pwa-guide-text b { color: #2a1a1c; }
 
 .pwa-guide-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
