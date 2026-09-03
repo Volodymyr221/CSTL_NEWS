@@ -11,6 +11,12 @@
 // запобіжник ЗАПУСКАЄТЬСЯ по-справжньому — на підробленому журналі витрат — і
 // ми дивимось, чи він каже «стоп». Плюс контроль: на порожньому журналі він
 // мусить мовчати, інакше «спиняє завжди» теж зійшло б за успіх.
+// 🛑 03.09 — PYTHON-МОДУЛІ ТУТ КОМПІЛЮЮТЬСЯ З ДЖЕРЕЛА (`compile()`), а не
+// підвантажуються через `importlib`. 📐 Заміряно того дня на `news-dedup`:
+// контрольний прогін міняв стелю `0.03` → `1.00` — рядки ОДНАКОВОЇ довжини, тож
+// розмір файлу не змінився, і Python віддав СТАРИЙ байт-код із `__pycache__`.
+// Стенд світився зеленим на коді, якого вже не існувало.
+// ⚠️ Не «спрощувати» назад до `importlib`: сторож мусить міряти джерело правди.
 import { execFileSync } from 'child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, symlinkSync, cpSync } from 'fs';
 import { tmpdir } from 'os';
@@ -106,9 +112,10 @@ ok('`--dry-run` стеля не глушить (він не витрачає г�
 // Він окремий скрипт зі своїм лічильником, тому перевіряємо його теж запуском,
 // а не збігом слів: підсовуємо витрату $1.5 за годину тому і питаємо функцію.
 const деньНовин = execFileSync('python3', ['-c', `
-import importlib.util, json, time
-spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+import types, json, time
+_src = open(${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}
+exec(compile(_src, ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, 'exec'), m.__dict__)
 print(m.day_spend_usd(), m.MAX_DAY_COST_USD)`], {
   cwd: (() => {
     const d = mkdtempSync(join(tmpdir(), 'cstl-news-budget-'));
@@ -182,9 +189,10 @@ ok('🔴 сума кишень не перевищує спільну стелю
 // зміниться `MAX_DRAFTS_TOTAL` чи правило — зміниться й відповідь тут.
 const лімітПри = (чернеток) => {
   const код = `
-import importlib.util
-spec = importlib.util.spec_from_file_location('ag', 'scripts/ai_news_agent.py')
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+import types
+_src = open('scripts/ai_news_agent.py', encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = 'scripts/ai_news_agent.py'
+exec(compile(_src, 'scripts/ai_news_agent.py', 'exec'), m.__dict__)
 slots = m.MAX_DRAFTS_TOTAL - ${чернеток}
 повні = slots <= 0
 slots = max(1, slots)
@@ -229,9 +237,10 @@ function темп(журнал, env = {}) {
   mkdirSync(join(д, 'data'), { recursive: true });
   writeFileSync(join(д, 'data', 'ai_spend.json'), JSON.stringify(журнал));
   const код = `
-import importlib.util
-spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+import types
+_src = open(${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}
+exec(compile(_src, ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, 'exec'), m.__dict__)
 print(m.month_pace_left_usd())`;
   return Number(execFileSync('python3', ['-c', код], {
     cwd: д, encoding: 'utf-8', env: { ...process.env, ...env },
@@ -341,9 +350,10 @@ mkdirSync(join(дірПідозри, 'data'), { recursive: true });
 writeFileSync(join(дірПідозри, 'data', 'ai_spend.json'),
   JSON.stringify({ runs: [], totals: { cost_usd: 0, runs: 0, web_searches: 0 }, months: {} }));
 const післяПідозри = execFileSync('python3', ['-c', `
-import importlib.util, json
-spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+import types, json
+_src = open(${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}
+exec(compile(_src, ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, 'exec'), m.__dict__)
 нуль = dict(input_tokens=0, output_tokens=0, cache_read_input_tokens=0,
             cache_creation_input_tokens=0, web_search_requests=0)
 m.record_spend('тест', нуль, 0, note='мережевий збій', extra_usd=m.SUSPECT_CHARGE_USD)
@@ -363,9 +373,10 @@ mkdirSync(join(дірБезПідозри, 'data'), { recursive: true });
 writeFileSync(join(дірБезПідозри, 'data', 'ai_spend.json'),
   JSON.stringify({ runs: [], totals: { cost_usd: 0, runs: 0, web_searches: 0 }, months: {} }));
 const безПідозри = Number(execFileSync('python3', ['-c', `
-import importlib.util
-spec = importlib.util.spec_from_file_location('ag', ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))})
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+import types
+_src = open(${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}
+exec(compile(_src, ${JSON.stringify(join(ROOT, 'scripts/ai_news_agent.py'))}, 'exec'), m.__dict__)
 нуль = dict(input_tokens=0, output_tokens=0, cache_read_input_tokens=0,
             cache_creation_input_tokens=0, web_search_requests=0)
 m.record_spend('тест', нуль, 0)
@@ -446,11 +457,12 @@ ok('vopas: збій тригера деплою теж не ковтається
 // копію прайсу, яка розійдеться так само, як розійшлись перші дві. Питання тут одне:
 // чи бере агент ціну тієї моделі, яку кличе, з ОДНОГО спільного джерела.
 const цінник = JSON.parse(execFileSync('python3', ['-c', `
-import importlib.util, json, sys
+import types, json, sys
 sys.path.insert(0, '.')
 from editor.core import spend
-spec = importlib.util.spec_from_file_location('ag', 'scripts/ai_news_agent.py')
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+_src = open('scripts/ai_news_agent.py', encoding='utf-8').read()
+m = types.ModuleType('ag'); m.__file__ = 'scripts/ai_news_agent.py'
+exec(compile(_src, 'scripts/ai_news_agent.py', 'exec'), m.__dict__)
 print(json.dumps({
     'модель': m.MODEL,
     'таблиця': spend.PRICES,
