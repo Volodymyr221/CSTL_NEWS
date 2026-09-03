@@ -10,30 +10,36 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-03 05:03 UTC
+**Зріз на:** 2026-09-03 05:28 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-wzboev` |
-| останній коміт людини | `a8724a2c` 03.09 05:01 — Merge remote-tracking branch 'origin/main' into claude/startuem-wzboev |
+| останній коміт людини | `c947d586` 03.09 05:04 — fix(новини): ретро-дедуп — правило діє й на вже збережену стрічку |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260902-1947` |
 | останній PR у `main` | #1141 |
 | стендів на диску | 135 |
-| незакомічених файлів | 7 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-03 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- ✅ нічого. Уся робота гілки вже в `main`.
+- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `_session-log/vova-2026-09-01c.md`
+- `scripts/parse_rss.py`
+- `tests/ai-budget.mjs`
+- `tests/cms-chain.mjs`
+- `tests/news-dedup.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `c947d586` 03.09 05:04 — fix(новини): ретро-дедуп — правило діє й на вже збережену стрічку
 - `a8724a2c` 03.09 05:01 — Merge remote-tracking branch 'origin/main' into claude/startuem-wzboev
 - `4f4ca8a1` 02.09 21:25 — Merge remote-tracking branch 'origin/main' into claude/startuem-wzboev
 - `88bf370d` 02.09 21:25 — 🖼 Знімок у віджеті Стрічки не зумиться · ☎️ контакти амбулаторії · 💰 агент рахувався за чужим прайсом (#1141)
 - `b8cba685` 02.09 20:44 — docs(пульс): авто-блок звірено з git
-- `cdc0c3b2` 02.09 20:16 — test(olyka-agent): перевірка ціни Opus 5 — з грепу на виконання
 
 <!-- AUTO:END -->
 
