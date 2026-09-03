@@ -17,6 +17,12 @@
 //
 // 🔑 Тому цей сторож іншого класу: він бере СПРАВЖНІ файли даних і питає не
 // «чи правильний код», а «чи доходить опубліковане до людини».
+// 🛑 03.09 — PYTHON-МОДУЛІ ТУТ КОМПІЛЮЮТЬСЯ З ДЖЕРЕЛА (`compile()`), а не
+// підвантажуються через `importlib`. 📐 Заміряно того дня на `news-dedup`:
+// контрольний прогін міняв стелю `0.03` → `1.00` — рядки ОДНАКОВОЇ довжини, тож
+// розмір файлу не змінився, і Python віддав СТАРИЙ байт-код із `__pycache__`.
+// Стенд світився зеленим на коді, якого вже не існувало.
+// ⚠️ Не «спрощувати» назад до `importlib`: сторож мусить міряти джерело правди.
 import { readFileSync, writeFileSync, mkdtempSync, copyFileSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
@@ -93,10 +99,11 @@ const прогін = (() => {
   copyFileSync('data/articles.json', art);
   const драйвер = join(dir, 'run.py');
   writeFileSync(драйвер, `
-import importlib.util, json, os, pathlib
+import types, json, os, pathlib
 os.environ['SUPABASE_SERVICE_ROLE_KEY'] = 'stub'
-spec = importlib.util.spec_from_file_location('sc', 'scripts/sync_cms.py')
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+_src = open('scripts/sync_cms.py', encoding='utf-8').read()
+m = types.ModuleType('sc'); m.__file__ = 'scripts/sync_cms.py'
+exec(compile(_src, 'scripts/sync_cms.py', 'exec'), m.__dict__)
 m.pr.DATA_PATH = pathlib.Path(${JSON.stringify(art)})
 m.PENDING_PATH = pathlib.Path(${JSON.stringify(join(dir, 'pend.json'))})
 m.fetch_ready = lambda: [{"id": 4, "title": "Тестова стаття кабінету про Олику XVI століття",
