@@ -234,14 +234,16 @@ import scripts.sync_cms as sc  # noqa: E402
 ]
 
 def _прогін():
-    """Один такт `sync_history` на двох рядках. Повертає, що куди поїхало.
+    """Один такт `sync_pages` на двох рядках. Повертає, що куди поїхало.
 
     🔑 Підмінюємо ЛИШЕ два мережні виходи — читання рядків і запис допису. Сама
-    логіка розвезення лишається справжньою: якби ми підмінили `sync_history`,
+    логіка розвезення лишається справжньою: якби ми підмінили `sync_pages`,
     стенд перевіряв би власну вигадку про неї.
+    ⚠️ 03.09 перейменовано слідом за кодом: `fetch_ready_history`/`sync_history`
+    стали `fetch_ready_pages`/`sync_pages`, бо спільнота вже не лише історична.
     """
     здано = {"пости": [], "позначено": []}
-    справжні = (sc.fetch_ready_history, sc.mark_published, sc.urllib.request.urlopen)
+    справжні = (sc.fetch_ready_pages, sc.mark_published, sc.urllib.request.urlopen)
 
     class _Відповідь:
         def read(self): return b'[{"id": 4242}]'
@@ -252,18 +254,18 @@ def _прогін():
         здано["пости"].append(json.loads(req.data.decode("utf-8")))
         return _Відповідь()
 
-    sc.fetch_ready_history = lambda: [r for r in РЯДКИ if sc.це_історія(r)]
+    sc.fetch_ready_pages = lambda: [r for r in РЯДКИ if sc.маршрут(r) is not None]
     sc.mark_published = lambda rid, gid: здано["позначено"].append((rid, gid))
     sc.urllib.request.urlopen = _пост
     try:
-        sc.sync_history()
+        sc.sync_pages()
     finally:
-        (sc.fetch_ready_history, sc.mark_published, sc.urllib.request.urlopen) = справжні
+        (sc.fetch_ready_pages, sc.mark_published, sc.urllib.request.urlopen) = справжні
     return здано
 
 
 здано = _прогін()
-новинні = [r["id"] for r in РЯДКИ if not sc.це_історія(r)]
+новинні = [r["id"] for r in РЯДКИ if sc.маршрут(r) is None]
 
 ok("🔴 історична стаття НЕ їде в новинний потік",
    901 not in новинні, "у новинах: " + ", ".join(str(i) for i in новинні))
@@ -278,8 +280,10 @@ ok("🔑 допис ОПУБЛІКОВАНИЙ, а не чернетка (люд
 ok("абзаци статті доїхали в допис цілими",
    здано["пости"] and здано["пости"][0]["text"].count("\n\n") >= 2,
    repr(здано["пости"][0]["text"][:60]) if здано["пости"] else "—")
-ok("заголовок статті став першим рядком допису",
-   здано["пости"] and здано["пости"][0]["text"].startswith("Жорнище"),
+# 🔴 03.09 — ВЕЛИКИМИ. Пряме формулювання Вови: «заголовку в постах, у стрічці,
+# немає, тому потрібно писати його великими буквами, але як звичайний пост».
+ok("заголовок статті став першим рядком допису — і саме ВЕЛИКИМИ",
+   здано["пости"] and здано["пости"][0]["text"].startswith("ЖОРНИЩЕ"),
    repr(здано["пости"][0]["text"][:30]) if здано["пости"] else "—")
 ok("знімок статті доїхав і в `image_url`, і в `image_urls`",
    здано["пости"] and здано["пости"][0].get("image_url")
