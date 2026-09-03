@@ -704,7 +704,7 @@ body:has(.fd-sheet-back) .app-main { overflow: hidden; }
      Тому стеля тепер проста — `max-height` у рядках. */
   max-height: calc(1.35em * 4 + 22px);   /* 4 рядки + вертикальні падінги */
   overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--elev-dark-2);
 }
 .toast.visible { opacity: 1; transform: translateY(0); }   /* translateX більше не потрібен — центрує margin:auto */
 
@@ -833,7 +833,7 @@ body:has(.fd-sheet-back) .app-main { overflow: hidden; }
   background: linear-gradient(135deg, #2F3E36 0%, #1F2B25 100%);
   border-radius: 12px;
   padding: 16px 18px 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: var(--elev-1);
   color: #ffffff;
   position: relative;
 }

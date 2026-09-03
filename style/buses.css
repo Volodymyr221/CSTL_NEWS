@@ -216,7 +216,7 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.16);
   color: white;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  box-shadow: var(--elev-dark-3);
   min-height: 160px;
   background: var(--brand-grad-sm);
 }
@@ -913,7 +913,7 @@
   background: var(--white);
   border-radius: 10px;
   padding: 0 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  box-shadow: var(--elev-1);
   height: 44px;
 }
 
@@ -966,7 +966,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  box-shadow: var(--elev-1);
   transition: background 0.15s;
 }
 .bs-swap-btn:active { background: var(--gray-light); }
@@ -1044,7 +1044,7 @@
   padding: 0;
   border-radius: 8px 8px 12px 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+  box-shadow: var(--elev-2);
 }
 .bs-stop-row:first-child { padding-top: 9px; }
 .bs-stop-row:last-child  { padding-bottom: 11px; }

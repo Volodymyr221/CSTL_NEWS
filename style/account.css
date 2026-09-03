@@ -217,7 +217,7 @@
   color: var(--ink, #2B2B2B);
   background: #F4F5F7;
   border: none;
-  border-radius: 13px;
+  border-radius: 12px;
   text-align: left;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -318,7 +318,7 @@
   background: rgba(255,255,255,0.15);
   display: flex; align-items: center; justify-content: center;
   font-size: 36px; flex-shrink: 0; overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  box-shadow: var(--elev-dark-2);
 }
 /* Спільний кружечок-аватар (utils.avatarCircle, cls=acc-av) — фото на всю площу */
 .acc-av { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center;
@@ -337,7 +337,7 @@
   border: 2.5px solid #2E0C14;
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  box-shadow: var(--elev-1);
 }
 .acc-cab-avcam svg { width: 16px; height: 16px; }
 .acc-cab-avcam:disabled { opacity: 0.6; }
@@ -381,7 +381,7 @@
   border: 1px solid var(--news-line, #C9CBCE);
   border-radius: 20px;
   padding: 6px 0;
-  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+  box-shadow: var(--elev-1);
 }
 .acc-cab-sec h3 {
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
@@ -420,7 +420,7 @@
   display: block; margin: 10px 14px 12px; width: calc(100% - 28px);
   background: var(--brand-grad-sm); color: #fff; border: 0;
   height: 52px; padding: 0; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(114,47,55,0.26);
+  box-shadow: var(--elev-2);
 }
 .acc-cab-save:active { opacity: 0.92; }
 .acc-cab-save:disabled { opacity: 0.6; box-shadow: none; }
@@ -568,7 +568,7 @@
 .shub-count {
   display: inline-block; min-width: 18px; text-align: center;
   background: var(--red, #722F37); color: #fff;
-  border-radius: 9px; font-size: 11px; padding: 1px 5px; margin-left: 4px;
+  border-radius: 8px; font-size: 11px; padding: 1px 5px; margin-left: 4px;
 }
 .shub-card {
   display: flex; flex-direction: column; gap: 3px;
@@ -672,7 +672,7 @@
 .pcard-ad-ph {
   flex: none;
   width: 40px; height: 40px;
-  border-radius: 9px;
+  border-radius: 8px;
   background-size: cover; background-position: center;
   background-color: rgba(0, 0, 0, 0.05);
 }

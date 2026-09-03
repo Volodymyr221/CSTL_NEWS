@@ -182,7 +182,7 @@
 }
 /* Шапка на фото вуалі більше не потребує власного градієнта на всю площину —
    але лишається бордовою, бо це бренд. Тінь під нею відділяє її від фото. */
-#cm-content.hm .hm-top { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+#cm-content.hm .hm-top { box-shadow: var(--elev-dark-3); }
 
 /* Секція = заголовок + вміст. Проміжок між секціями — один і той самий. */
 .hm-sec { padding: var(--hm-s6) var(--hm-pad) 0; }
@@ -1007,7 +1007,7 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .15) 100%);
   -webkit-backdrop-filter: blur(16px) saturate(1.6);
           backdrop-filter: blur(16px) saturate(1.6);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .34);
+  box-shadow: var(--elev-dark-3), inset 0 1px 0 rgba(255, 255, 255, .34);
   color: #fff; text-align: left;
 }
 .hm-cap2:active {
@@ -1194,7 +1194,7 @@
   background: rgba(26, 20, 22, .46);
   border: 1px solid rgba(255, 255, 255, .17);
   -webkit-backdrop-filter: blur(18px) saturate(120%); backdrop-filter: blur(18px) saturate(120%);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .24);
+  box-shadow: var(--elev-dark-3);
 }
 
 /* Верхній ряд: сума ліворуч, кільце по центру, ціль праворуч.

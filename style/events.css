@@ -112,7 +112,7 @@
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--elev-1);
   transition: background 0.15s, transform 0.08s;
 }
 .cal-pill:active { transform: scale(0.95); }

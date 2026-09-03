@@ -284,7 +284,7 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30);
+  box-shadow: var(--elev-2);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s ease, background 0.15s;
 }
@@ -334,7 +334,7 @@
   margin-bottom: 0;   /* нижній відступ дає padding .cm-board-modal-head (підзаголовок у шапці) */
   margin-left: 30px;  /* вирівняти під ТЕКСТ заголовка (олівець 22px + gap 8px), не під олівець */
 }
-.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }   /* тінь — щоб поле не зливалось з фоном */
+.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: var(--elev-1); }   /* тінь — щоб поле не зливалось з фоном */
 .app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
 /* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
    як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
@@ -765,7 +765,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--brand-grad-sm);
   border: 1.5px solid var(--red);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
+  box-shadow: var(--elev-dark-3);
 }
 .board-trigger--fixed .cm-board-trigger-text { display: none; }
 /* ТРИ накладені іконки (плюс · конверт · ✕) — плавний cross-fade.
@@ -808,7 +808,7 @@ textarea.cm-board-input.bm-invalid {
 .board-trigger-badge {
   position: absolute; top: -3px; right: -3px;
   min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: 9px; background: var(--red, #722F37); color: #fff;
+  border-radius: 8px; background: var(--red, #722F37); color: #fff;
   font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
   border: 2px solid #fff; box-sizing: content-box;
   /* Видимістю керує КЛАС (`is-on` ставить paintUnreadBadge), а не інлайн-стиль:
@@ -1359,7 +1359,7 @@ textarea.cm-board-input.bm-invalid {
   font-weight: 700;
   letter-spacing: 0.2px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(114, 47, 55, 0.28);
+  box-shadow: var(--elev-1);
   transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1367,7 +1367,7 @@ textarea.cm-board-input.bm-invalid {
 .cm-board-write-btn:active {
   transform: scale(0.98);
   filter: brightness(0.94);
-  box-shadow: 0 1px 4px rgba(114, 47, 55, 0.28);
+  box-shadow: var(--elev-1);
 }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
   margin-top: 0;
@@ -1640,7 +1640,7 @@ textarea.cm-board-input.bm-invalid {
      картками; верх під шапкою застосунку — прямий. */
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--elev-2);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1689,7 +1689,7 @@ textarea.cm-board-input.bm-invalid {
   border-radius: 14px;
   padding: 0 12px;
   height: 40px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: var(--elev-2);
 }
 .bd-search-icon {
   font-size: 16px;   /* 1em-масштаб SVG-лупи (ICONS.search) */
@@ -1906,7 +1906,7 @@ textarea.cm-board-input.bm-invalid {
 #board-content .bd-cat-filter {
   background: #FFFFFF;
   border-color: rgba(16, 18, 22, 0.12);
-  box-shadow: 0 1px 3px rgba(16, 18, 22, 0.06);
+  box-shadow: var(--elev-1);
 }
 /* Кружечок «×» усередині поля пошуку. Базове правило дає йому `--paper-deep`
    (#EAE4D2) — на кремовому полі це читалось, а на БІЛОМУ (правило вище) кремовий
@@ -2086,7 +2086,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--card-cream);
   border: 1.5px solid rgba(0,0,0,0.22);
   border-radius: 14px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: var(--elev-2);
   color: var(--black);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -2108,7 +2108,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--board-card);
   border: 1px solid rgba(0,0,0,0.15);
   border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  box-shadow: var(--elev-dark-3);
   overflow: hidden;
   padding: 4px;
 }
@@ -2252,7 +2252,7 @@ textarea.cm-board-input.bm-invalid {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s, color 0.15s, border-color 0.15s, background 0.15s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: var(--elev-1);
 }
 .bd-icon-btn:active { transform: scale(0.88); }
 .bd-icon-btn svg { display: block; }
@@ -2735,7 +2735,7 @@ textarea.cm-board-input.bm-invalid {
   /* Тінь переїхала сюди з `.bd-controls` (замовлення Вови «перекинути на
      бордовий»). Значення те саме — вигляд «підняття» не змінюється, змінюється
      лише те, ЩО саме кидає тінь: тепер сам бордовий блок, а не світла рамка. */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--elev-2);
   /* 🔴 06.08 — ТОЙ САМИЙ БОРДОВИЙ, ЩО НА ГРОМАДІ (замовлення Вови: «блок зроби
      таким самим бордовим як і на громаді»).
      Було: власний `linear-gradient(162deg, #7B303C → #722F37 → #481C24)` плюс дві

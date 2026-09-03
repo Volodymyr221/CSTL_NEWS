@@ -621,7 +621,7 @@ img.nc-img { display: block; object-fit: cover; }
 .nc--line {
   display: flex; align-items: center; gap: 11px;
   padding: 11px;
-  border-radius: 13px;
+  border-radius: 12px;
   background: var(--nc-line-bg, rgba(255, 255, 255, .10));
   border: 1px solid var(--nc-line-br, rgba(255, 255, 255, .16));
   /* Мініатюра квадратна й невелика: рядок має лишитись тихим. Розміри йдуть

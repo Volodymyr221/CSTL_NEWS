@@ -22,7 +22,7 @@
      перерахувати текст на кожному кадрі. */
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--elev-1);
 }
 .chip.active {
   background: var(--brand-grad-sm);
