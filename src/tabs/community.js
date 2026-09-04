@@ -53,7 +53,7 @@
 // `community-blocks.js` шукають саме їх; кнопка кабінету `[data-account-btn]`;
 // делегування `[data-switch-tab]`.
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, firstNameOf } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange, authReady } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
 import { renderHomeCaps } from './home-caps.js';
@@ -79,7 +79,11 @@ function getGreeting() {
   // технічна заглушка профілю, людині вона нічого не каже).
   let who = 'громадо';
   if (isLoggedIn()) {
-    const name = (currentUserName() || '').trim().split(/\s+/)[0];
+    // 🛑 ТУТ СВІДОМО ЛИШЕ ІМʼЯ, попри загальне правило «імʼя + прізвище» (04.09).
+    // Рішення Вови: у звертанні прізвище звучить казенно — «Доброго дня,
+    // Володимире Шевчук» замість «Володимире». Друге таке місце — цитата
+    // відповіді в картці Питання (`board-discussions.js`).
+    const name = firstNameOf(currentUserName());
     if (name && name !== 'Житель') who = name;
   }
   return `${hello}, ${who}`;

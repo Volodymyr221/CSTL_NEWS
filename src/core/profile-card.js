@@ -11,7 +11,7 @@
 
 import { openModal, closeModal } from './modal.js';
 import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, nameSlotStatic, largePhotoUrl } from './supabase.js';
-import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice } from './utils.js';
+import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice, fullName } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
 import { cardTitleText } from './board-shared.js';   // той самий заголовок, що на Дошці
@@ -34,7 +34,10 @@ function joinDate(iso) {
 }
 
 function cardHtml(p) {
-  const name = (p && p.name && p.name.trim()) ? p.name.trim() : 'Житель громади';
+  // 🆕 04.09 — картка показує ПОВНЕ імʼя: `get_public_profile` віддає `surname`
+  // з міграції `surname_split_and_public_rpc`. Тут людину впізнають — це рівно
+  // те місце, де прізвище доцільне найбільше.
+  const name = fullName(p && p.name, p && p.surname) || 'Житель громади';
   const url  = (p && p.avatar_url) || cachedAvatar(p && p.uid) || '';
   // 🔵 23.08 — КАРТКА БЕРЕ ВЕЛИКУ ВЕРСІЮ ФОТО, і це друга половина фіксу.
   // Скарга Вови була про два різні місця, і дрібного файла бракувало ОБОМ:

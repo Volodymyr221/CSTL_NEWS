@@ -6,7 +6,7 @@
 // Тип 💬 Розмова (chat) прибрано 01.07.2026 — обговорення створюються
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
-import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea, formatPrice } from '../core/utils.js';
+import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea, formatPrice, fullName } from '../core/utils.js';
 import { submitPost, updateBoardPost, isSupabaseReady, logEvent, getAnonId } from '../core/supabase.js';
 import { uploadBlobWithRetry } from '../core/upload.js';   // повтор upload при збої (blob уже стиснуто для прев'ю)
 import { isLoggedIn, currentUserName, getProfile, currentUserId } from '../core/auth.js';
@@ -79,16 +79,20 @@ function clearInvalid(el) {
   el.removeAttribute('aria-invalid');
 }
 
-// Лише ім'я (перше слово) без прізвища.
-// 'Житель' — службовий дефолт (не справжнє ім'я) → вважаємо порожнім.
-function firstNameOnly(full) {
-  const w = String(full || '').trim().split(/\s+/)[0] || '';
-  return w === 'Житель' ? '' : w;
+// 🆕 04.09 — ПІДПИС ОГОЛОШЕННЯ ПОКАЗУЄ ІМʼЯ **І ПРІЗВИЩЕ** (замовлення Вови).
+// Раніше тут різалось до першого слова (`firstNameOnly`) — саме на це Вова й
+// скаржився: «автор пише просто імʼя, а треба, щоб писав імʼя та прізвище».
+// 🛑 'Житель' — службова заглушка, а не справжнє імʼя: вважаємо її порожньою,
+// щоб вона не підставлялась замість імені, яке ще не приїхало. Ця частина
+// поведінки лишилась незмінною.
+function realNameOrEmpty(full) {
+  const s = String(full || '').trim();
+  return s === 'Житель' ? '' : s;
 }
 
-// Ім'я для підпису поста = ім'я з акаунта (без прізвища).
+// Імʼя для підпису оголошення = повне імʼя з акаунта.
 function accountAuthorName() {
-  return firstNameOnly(currentUserName()) || 'Житель';
+  return realNameOrEmpty(currentUserName()) || 'Житель';
 }
 
 // compressImage винесено у core/utils.js (спільна з «Стрічкою»). Дошка стискає
@@ -590,7 +594,9 @@ export function openBoardModal(opts = {}) {
         const cEl = dynamicEl.querySelector('#bm-contact');
         if (cEl) cEl.value = state.contact;
       }
-      const nm = firstNameOnly((p && p.name) || currentUserName()) || 'Житель';
+      // ⚠️ `p` — сирий рядок `profiles`, тож прізвище тут окремою колонкою і
+      // його треба склеїти самому; `currentUserName()` уже віддає повне імʼя.
+      const nm = realNameOrEmpty(fullName(p && p.name, p && p.surname) || currentUserName()) || 'Житель';
       if (nm !== state.author) {
         state.author = nm;
         // ⚠️ Тільки текстовий вузол імені. Раніше тут стояв `el.textContent = …`, і

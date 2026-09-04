@@ -17,7 +17,7 @@ import {
   leaveGroup, fetchGroupMembers, fetchGroupMessages, sendGroupMessage,
   subscribeGroupMessages, approveMember, rejectMember, transferGroupOwner,
 } from './supabase.js';
-import { escapeHtml, showToast, postTime } from './utils.js';
+import { escapeHtml, showToast, postTime, firstNameOf } from './utils.js';
 import { buildScreen, clockTime, threadListTime } from './chat-core.js';
 import { ICONS } from './icons.js';
 
@@ -313,7 +313,7 @@ export function openGroupChat(group) {
     const addMsg = (m) => { if (m && !ids.has(m.id)) { ids.add(m.id); messages.push(m); } };
 
     // Імена учасників (денормалізовані в chat_group_members — не з profiles, бо RLS).
-    const firstName = (n) => (String(n || '').trim().split(/\s+/)[0]) || 'Житель';
+    const firstName = (n) => firstNameOf(n, 'Житель') || 'Житель';
     const members = await fetchGroupMembers(group.id);
     names = new Map(members.map(m => [m.uid, firstName(m.name)]));
     (await fetchGroupMessages(group.id)).forEach(addMsg);
