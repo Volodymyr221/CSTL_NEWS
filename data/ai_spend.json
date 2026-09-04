@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788523559979,
+      "mission": "olyka:news:всесвітній-день-прибирання-2026",
+      "model": "claude-opus-5",
+      "input_tokens": 5853,
+      "output_tokens": 364,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0384,
+      "note": "Всесвітній день прибирання 2026: Олицька громада запрошує долучитися"
+    },
+    {
       "ts": 1788521855663,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0235,
       "note": "Подія в громаді: 🇺🇦 День знань"
-    },
-    {
-      "ts": 1787215931100,
-      "mission": "olyka:weather-compact",
-      "model": "claude-opus-5",
-      "input_tokens": 3392,
-      "output_tokens": 323,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.025,
-      "note": "Погода на головному екрані більше не займає пів екрана"
     }
   ],
   "totals": {
-    "cost_usd": 10.8403,
-    "runs": 141,
+    "cost_usd": 10.8787,
+    "runs": 142,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.372,
-      "runs": 16,
+      "cost_usd": 2.4104,
+      "runs": 17,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788521855663
+  "updated_ts": 1788523559979
 }
