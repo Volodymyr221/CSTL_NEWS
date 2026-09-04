@@ -9,7 +9,12 @@ import { projectFile } from './_lib.mjs';
 const SRC = projectFile('src/core/utils.js');
 
 const from = SRC.indexOf('const TOAST_MIN');
-const to   = SRC.indexOf('// Перегляд фото на весь екран');
+// 🔴 04.09 — МЕЖУ ЗМІНЕНО НА ЯВНУ. Тут стояв `indexOf('// Перегляд фото на весь
+// екран')` — тобто стенд тримався за коментар СУСІДНЬОЇ функції. Коли її
+// прибрали (переглядачі фото звели в один), стенд упав із «не знайшов блок
+// toast», хоча toast не змінився ні на символ — сторож звинуватив справний код.
+// ➡️ Тепер межа названа явно і живе в `utils.js` як `── КІНЕЦЬ БЛОКА TOAST ──`.
+const to   = SRC.indexOf('// ── КІНЕЦЬ БЛОКА TOAST');
 if (from < 0 || to < 0) { console.log('❌ не знайшов блок toast у utils.js'); process.exit(1); }
 const block = SRC.slice(from, to).replace(/^export /gm, '');
 
