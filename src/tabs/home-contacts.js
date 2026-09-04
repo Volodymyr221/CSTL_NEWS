@@ -187,10 +187,37 @@ function emergencyHtml(list) {
 // лівіше, а там, де піна немає, ця ширина дістається тексту.
 // 🔑 Тобто вимога Вови виконується двома способами, і дешевший — цей.
 // ─────────────────────────────────────────────────────────────────────────────
+// 🔴 04.09 — АДРЕСА, ЯКУ ШУКАЄ КАРТА, І ТЕКСТ, ЯКИЙ ЧИТАЄ ЛЮДИНА, — РІЗНІ РЕЧІ.
+//
+// 🗣️ Скарга Вови: «натискаю на кнопку локації, мене перекидає Замкова, 17, але
+// не Олика… мене перекидає Замкова, 17 в місті Луцьк, в тому, в якому я
+// знаходжусь».
+//
+// 🔬 Причина була в ДАНИХ, не в коді: у ЦНАП поле `address` містило
+// «вул. Замкова, 17 — вхід ліворуч від головного», тобто **без міста** і ще й з
+// підказкою про вхід. Увесь цей рядок ішов у пошук карти — Google не знаходив
+// такого і падав на найближчу «Замкову, 17», тобто в поточному місті людини.
+//
+// ✅ Розділено: `address` — рівно те, що можна знайти на карті (з містом),
+// `note` — підказка на місці. Тепер їх видно окремими рядками, і в карту йде
+// лише адреса.
+//
+// 🔑 До запиту додається ОБЛАСТЬ, але лише в посилання, не на екран: «Олика» в
+// Україні одна (Волинська обл.), проте пошук за коротким рядком усе одно тягне
+// до поточного розташування. Область це знімає, а рядок на картці лишається
+// коротким.
+const MAP_REGION = 'Волинська область, Україна';
+const mapHref = addr =>
+  `https://maps.google.com/?q=${encodeURIComponent(addr + ', ' + MAP_REGION)}`;
+
 function contactHtml(c) {
   const tel = telOf(c.phone);
   const tel2 = c.phone2 ? telOf(c.phone2) : '';
-  const meta = [c.hours, c.address].filter(Boolean).map(escapeHtml).join(' · ');
+  // 🔴 ТРИ ОКРЕМІ РЯДКИ, А НЕ ОДИН ЧЕРЕЗ «·». Замовлення Вови: «графік, коли
+  // працює… знизу вулиця, місто Олика… і знизу тільки вхід ліворуч».
+  // ⚠️ Це не додає висоти: злитий рядок і так переносився на два — просто
+  // перенос стояв у випадковому місці, а не там, де закінчується думка.
+  const рядки = [c.hours, c.address, c.note].filter(Boolean);
   return `
     <div class="hm-ct">
       <span class="hm-ct-ic" aria-hidden="true">${iconOf(c)}</span>
@@ -198,11 +225,11 @@ function contactHtml(c) {
         <span class="hm-ct-name">${escapeHtml(c.name)}</span>
         <a class="hm-ct-main hm-ct-phone" href="tel:${escapeHtml(tel)}">${escapeHtml(c.phone)}</a>
         ${tel2 ? `<a class="hm-ct-alt hm-ct-phone" href="tel:${escapeHtml(tel2)}">${escapeHtml(c.phone2)}</a>` : ''}
-        ${meta ? `<span class="hm-ct-meta">${meta}</span>` : ''}
+        ${рядки.map(t => `<span class="hm-ct-meta">${escapeHtml(t)}</span>`).join('')}
       </span>
       <span class="hm-ct-acts">
         ${c.address
-          ? `<a class="hm-ct-act" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${ICONS.pin}</a>`
+          ? `<a class="hm-ct-act" href="${mapHref(c.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${ICONS.pin}</a>`
           : ''}
         <button class="hm-ct-act" type="button" data-copy="${escapeHtml(c.phone)}" aria-label="Копіювати номер">${ICONS.copy}</button>
       </span>

@@ -240,7 +240,7 @@
 .hm-more {
   appearance: none; -webkit-appearance: none; cursor: pointer; white-space: nowrap;
   display: inline-flex; align-items: center;
-  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .11em; text-transform: uppercase;
   color: #fff;
   background: rgba(255, 255, 255, .16);
@@ -601,10 +601,10 @@
    🔑 Чому саме так: слово можна впізнати з іконки поруч, число — ні. Обрізане
    «13° / 2…» було б не менш зручним, а НЕПРАВДИВИМ. */
 .hm-wx-when {
-  font: 600 12.5px/1.2 system-ui, -apple-system, sans-serif;
+  font: 600 12px/1.2 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .78);
 }
-.hm-wx-desc { font: 400 13.5px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+.hm-wx-desc { font: 400 13px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
               flex: 0 1 auto; min-width: 0; }
 .hm-wx-mm   { flex: 0 0 auto; white-space: nowrap; }
@@ -792,7 +792,7 @@
   width: 100%; padding: 13px 12px;
   border: 0; border-radius: var(--hm-r-tile);
   background: none; text-align: left;
-  font: 500 15.5px/1.2 system-ui, -apple-system, sans-serif;
+  font: 500 15px/1.2 system-ui, -apple-system, sans-serif;
   color: var(--black);
 }
 .wxp-row:active { background: var(--board-press); }
@@ -810,7 +810,7 @@
    що застосунок помилився. */
 .wxp-note {
   margin: 18px 2px 4px;
-  font: 400 12.5px/1.45 system-ui, -apple-system, sans-serif;
+  font: 400 12px/1.45 system-ui, -apple-system, sans-serif;
   color: var(--hm-quiet);
 }
 
@@ -935,7 +935,7 @@
    сусідніх рядках стояли одне під одним — інакше рядок без дощу «зʼїжджав» би. */
 .hm-wx-rain {
   display: inline-flex; align-items: center; gap: 3px;
-  font: 600 11.5px/1 system-ui, -apple-system, sans-serif;
+  font: 600 12px/1 system-ui, -apple-system, sans-serif;
   color: #cfe4ff; min-width: 38px;
 }
 .hm-wx-rain svg { width: 13px; height: 13px; }
@@ -1118,7 +1118,7 @@
    📐 Заміряно 17.08: мітка тримає 30 символів КАПСОМ на 390pt, 29 на 375pt і
    лише 21 на 320pt — саме тому стеля НЕ вписана числом у код. */
 .hm-cap2-k {
-  font: 700 9.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 10px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .11em; text-transform: uppercase; color: rgba(255, 255, 255, .82);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -1233,7 +1233,7 @@
   padding: 8px 13px 8px 10px; border-radius: var(--hm-r-pill);
   background: var(--brand-grad-sm);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .28);
-  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .1em; text-transform: uppercase;
   color: #fff;
 }
@@ -1242,13 +1242,13 @@
 
 .hm-fund-ttl {
   margin: 0;
-  font: 800 22px/1.18 system-ui, -apple-system, sans-serif;
+  font: 700 22px/1.18 system-ui, -apple-system, sans-serif;
   letter-spacing: -.02em; color: #fff;
   text-shadow: 0 1px 12px rgba(0, 0, 0, .45);
 }
 .hm-fund-note {
   margin: 7px 0 0;
-  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif;
+  font: 400 13px/1.45 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .80);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
@@ -1311,7 +1311,7 @@
    🛑 Обрізане число про гроші — це не «трохи менш зручно», це НЕПРАВДА; стенд
    `tests/home.mjs` міряє саме переповнення (`scrollWidth > clientWidth`). */
 .hm-fund-v--big {
-  font: 800 clamp(15px, 4.3vw, 19px)/1.15 system-ui, -apple-system, sans-serif;
+  font: 700 clamp(15px, 4.3vw, 19px)/1.15 system-ui, -apple-system, sans-serif;
   letter-spacing: -.01em; white-space: nowrap;
   display: block; overflow: hidden; text-overflow: ellipsis;
 }
@@ -1367,7 +1367,7 @@
   border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff; text-decoration: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .30);
-  font: 800 clamp(11px, 3.3vw, 12.5px)/1.2 system-ui, -apple-system, sans-serif;
+  font: 700 clamp(11px, 3.3vw, 12px)/1.2 system-ui, -apple-system, sans-serif;
   letter-spacing: 0;
 }
 .hm-fund-go:active { background: var(--brand-grad-press); }
@@ -1385,12 +1385,12 @@
 .hm-fund--closed { opacity: .72; }
 .hm-fund-done {
   margin: var(--hm-s3) 0 0; text-align: center;
-  font: 800 14px/1.2 system-ui, -apple-system, sans-serif; color: #fff;
+  font: 700 14px/1.2 system-ui, -apple-system, sans-serif; color: #fff;
 }
 .hm-fund-hint {
   display: flex; align-items: center; justify-content: center; gap: 5px;
   margin: var(--hm-s2) 0 0;
-  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif;
+  font: 400 12px/1.3 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .55);
 }
 .hm-fund-hic { display: inline-flex; }
@@ -1473,7 +1473,7 @@
    ⚠️ `overflow-wrap: anywhere` — на випадок назви одним довгим словом без
    пробілів: без нього таке слово вилазить за межі колонки, а не переноситься. */
 .hm-fd-c-name {
-  max-width: 100%; font: 500 9.5px/1.15 system-ui, -apple-system, sans-serif;
+  max-width: 100%; font: 500 10px/1.15 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .8); text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden; white-space: normal; overflow-wrap: anywhere;
@@ -1499,11 +1499,11 @@
 .hm-fd-p-av img { width: 100%; height: 100%; object-fit: cover; }
 .hm-fd-p-tx { font: 700 14px/1 system-ui, -apple-system, sans-serif; }
 .hm-fd-p-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.hm-fd-p-name { font: 700 14.5px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink); }
+.hm-fd-p-name { font: 700 14px/1.2 system-ui, -apple-system, sans-serif; color: var(--ink); }
 .hm-fd-p-when { font: 400 11px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
 .hm-fd-p-txt {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  font: 400 13.5px/1.4 system-ui, -apple-system, sans-serif; color: var(--ink-soft);
+  font: 400 13px/1.4 system-ui, -apple-system, sans-serif; color: var(--ink-soft);
   margin-top: var(--hm-s2);
   /* 🔴 28.08 — АБЗАЦИ ВИДНО. Скарга Вови: у віджеті допис іде суцільною плитою, а в
      Стрічці він розбитий. Причин було ДВІ, і одна тут: без `pre-wrap` браузер ковтає
@@ -1838,7 +1838,7 @@
    екрані вже є один спосіб малювати дію, і другий тут не потрібен. */
 .hm-nerr-btn {
   appearance: none; -webkit-appearance: none; cursor: pointer;
-  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .11em; text-transform: uppercase;
   color: #fff;
   background: rgba(255, 255, 255, .16);
@@ -1898,7 +1898,7 @@
 }
 .hm-ad-meta {
   display: flex; justify-content: space-between; align-items: center; gap: var(--hm-s2);
-  font: 400 11.5px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); margin-top: 6px;
+  font: 400 12px/1 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); margin-top: 6px;
 }
 .hm-ad-loc { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
 .hm-ad-loc svg { flex: 0 0 auto; }
@@ -1944,12 +1944,24 @@
    контакті. Причина: у цьому блоці людина шукає «102», а не «Поліція»; у
    критичний момент вона ціляється в цифру, яку знає напам'ять.
    Тап веде одразу в дзвінок — жодного проміжного екрана. */
-.hm-sos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-/* 🔴 `minmax(0, 1fr)`, а НЕ просто `1fr`. Це не педантизм: `1fr` означає
-   `minmax(auto, 1fr)`, тобто колонка не може стати вужчою за свій ВМІСТ.
-   Назви «Швидка допомога» і «Аварійна газу» розпирали колонки, сітка виростала
-   ширшою за екран, і пʼята плитка (112) виїжджала за правий край.
-   Знайдено контрольним знімком 04.08 — у розмітці все виглядало правильно. */
+/* 🔴 04.09 — ПʼЯТЬ В РЯД → ТРИ + ДВА ПО ЦЕНТРУ.
+   🗣️ Скарга Вови: «101, 102, 103 — не влазить повністю вся назва… швидка
+   допомога, аварійна і не видно, що там пише, єдиний екстрений. Повна назва не
+   влазить. Можливо тоді розтягнути… відцентрувати».
+   📐 Арифметика, чому пʼять було приречено: 390px екрана − 32px полів − 4×6px
+   проміжків = **67px на плитку**. «Швидка допомога» не вміщується в 67px на
+   ЖОДНОМУ кеглі, який ще можна читати — тому й стояло `nowrap` з трикрапкою,
+   тобто назва свідомо ховалась. У трьох колонках плитка виростає до **113px**,
+   і назва вміщується цілком у два рядки.
+   🔑 `flex` + `wrap`, а не `grid`: у сітці з трьох колонок останній ряд із двох
+   плиток притиснувся б ліворуч, а Вова просив саме центрування. Тут другий ряд
+   центрує `justify-content`.
+   ⚠️ Ширина рахується формулою від 100%, а не задається числом: інакше на
+   вужчому екрані (320px) плитки не влізли б, а на ширшому лишалась би дірка. */
+.hm-sos {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+}
+.hm-sos > * { flex: 0 0 calc((100% - 12px) / 3); }
 .hm-sos-b {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   min-height: 58px; padding: 8px 2px; border-radius: 14px; text-decoration: none;
@@ -1960,12 +1972,16 @@
 }
 .hm-sos-b:active { background: rgba(255, 255, 255, .26); }
 .hm-sos-n { font: 700 17px/1 system-ui, -apple-system, sans-serif; letter-spacing: -.01em; }
-/* Назва служби у п'яти колонках по ~66px — саме тому 9px і перенос заборонено:
-   «Аварійна газу» інакше розповзлась би на три рядки і зламала висоту сітки. */
+/* 🔴 04.09 — НАЗВА БІЛЬШЕ НЕ ХОВАЄТЬСЯ. Було 9px + `nowrap` + трикрапка, бо в
+   67px «Швидка допомога» не вміщувалась ніяк. У трьох колонках плитка 113px —
+   назва вміщується цілком, тож перенос ДОЗВОЛЕНО, а кегль піднято 9 → 11px
+   (9px був нижчий за все, що є в застосунку, і читався погано).
+   🛑 Трикрапку прибрано свідомо: людині в критичну мить треба знати, КОМУ вона
+   дзвонить. «Швидка до…» цього не каже. */
 .hm-sos-t {
-  font: 500 9px/1.1 system-ui, -apple-system, sans-serif;
-  color: rgba(255, 255, 255, .72); text-align: center;
-  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font: 500 11px/1.15 system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, .78); text-align: center;
+  max-width: 100%; text-wrap: balance;
 }
 
 /* ── Групи контактів громади ─────────────────────────────────────────────────
@@ -2026,8 +2042,21 @@
      лишається 105.8px проти 103.9px до правки — тобто там, де вміст і так
      високий, різниці майже немає. */
   padding: 8px var(--hm-s3);
-  background: var(--board-card); border: 1px solid var(--board-line);
-  border-radius: var(--hm-r-card); box-shadow: var(--hm-shadow); overflow: hidden;
+  /* 🔴 04.09 — БІЛА КАРТКА → СКЛО ТІЄЇ САМОЇ РОДИНИ, ЩО ПЛИТКИ ЕКСТРЕНИХ.
+     🗣️ Вова: «можна навіть поміняти, якісь зробити сучасніший вигляд цього
+     всього… щоб не на білому фоні було»; і окремо, головне: «екстрені служби,
+     телефони громади — це одне і те саме, це один і той самий блок».
+     🔑 Саме друга фраза й вирішує, ЯКИЙ має бути фон. Плитки екстрених уже
+     скляні на цьому ж фото-тлі; білі острови над ними читались як інший блок —
+     тобто вигляд СУПЕРЕЧИВ задуму. Тепер обидві половини однієї родини, і блок
+     читається як один.
+     ⚠️ Значення взяті з `.hm-sos-b` БЕЗ змін — це не «схожий» фон, а той самий.
+     Розійдуться — блок знову розпадеться надвоє. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .08) 100%);
+  border: 1px solid rgba(255, 255, 255, .22);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  color: #fff;
+  border-radius: var(--hm-r-card); overflow: hidden;
 }
 /* Значок контакту. 🆕 31.08 — замість емодзі.
    📐 Коробка 34px із тихою підкладкою, значок усередині 18px. Коробка потрібна
@@ -2036,16 +2065,29 @@
    ⚠️ `flex: 0 0 34px` — щоб довга назва не стискала значок у смужку. */
 .hm-ct-ic {
   flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center;
-  border-radius: 10px; background: var(--board-press); color: var(--hm-quiet);
+  border-radius: 10px;
+  /* На склі підкладка значка мусить бути світлішою за саму картку, інакше
+     значок «тоне»: сірий `--board-press` тут просто зник би. */
+  background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .78);
 }
 .hm-ct-ic svg { width: 18px; height: 18px; }
 /* 🔴 `flex: 1` ОБОВʼЯЗКОВИЙ. Саме його бракувало `.hm-ct-row`, і через це
    кнопки ставали «зразу за текстом» — тим далі, чим довша назва. Тепер колонка
    забирає всю вільну ширину, і стовпець дій стоїть на місці ЗАВЖДИ. */
-.hm-ct-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.hm-ct-name  { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: var(--ink); }
-.hm-ct-phone { font: 500 13px/1.3 system-ui, -apple-system, sans-serif; color: var(--red); text-decoration: none; }
-.hm-ct-meta  { font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+/* 📐 Проміжок 2 → 1px: разом із тіснішим інтерліньяжем мети це і є та
+   «компактність», про яку просив Вова. Більше з рядків зняти не можна —
+   решту висоти тримають ТАП-ЦІЛІ (36px на другому номері), а їх зменшувати
+   означало б платити влучністю пальця за красу. */
+.hm-ct-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hm-ct-name  { font: 600 14px/1.25 system-ui, -apple-system, sans-serif; color: #fff; }
+/* 🛑 Номер БІЛИЙ-БРЕНДОВИЙ, а не `--red`: бордове слово на темному склі поверх
+   фото зникає — це вже задокументована пастка проєкту (бейдж новин, підпис
+   розділу). `#FFF1F3` — той самий «брендовий світлий», що вже названий у
+   `home.css` для виділення Громади. */
+.hm-ct-phone { font: 500 13px/1.3 system-ui, -apple-system, sans-serif; color: #FFF1F3; text-decoration: none; }
+/* 🔴 Кегль 11.5 → 12px: половинних кеглів у проєкті більше немає (дизайн-аудит
+   03.09), а цей ховався від сторожа в скороченому записі `font:`. */
+.hm-ct-meta  { font: 400 12px/1.25 system-ui, -apple-system, sans-serif; color: rgba(255, 255, 255, .72); }
 
 /* 🛑 РОЗТЯГНУТА ЦІЛЬ. Перший номер — звичайний рядок тексту, але його `::after`
    накриває картку цілком, тож тап будь-де лишається дзвінком на перший номер
@@ -2053,7 +2095,17 @@
    ⚠️ Накладка НЕ рухає розкладку — з-під пальця між `pointerdown` і `click`
    нічого не зникає (HOT_RULES №10). */
 .hm-ct-main::after { content: ''; position: absolute; inset: 0; }
-.hm-ct-main:active::after { background: var(--board-press); }
+/* 🔴 04.09 — ЗАЛИВКУ З НАКЛАДКИ ЗНЯТО. ЦЕ БУВ ОПИСАНИЙ ВОВОЮ БАГ.
+   🗣️ «я натискаю на номер, і він зразу пропадає, починає блимати місце
+   натиску».
+   🔬 Причина точна: накладка розтягнута на ВСЮ картку (`inset: 0`) і лежить
+   ПОВЕРХ тексту. Заливка `--board-press` непрозора — тож на дотик вона
+   накривала і номер, і назву, і адресу. Тобто «пропадає» це не глюк рендера, а
+   рівно те, що ми самі малювали: сіру плиту поверх усього вмісту.
+   ✅ Відгук тепер дає САМ номер (нижче), а накладка лишається невидимою ціллю.
+   🛑 Саму накладку НЕ прибирати: тап будь-де по картці = дзвінок на перший
+   номер, це перевірена пальцем поведінка 01.09 (HOT_RULES №9). */
+.hm-ct-main:active { opacity: .5; }
 
 /* Другий номер. Стоїть ПІД першим, у тій самій колонці — це й була претензія
    Вови №1 («номер має бути під номером»); адреса тепер під обома.
@@ -2069,9 +2121,24 @@
    перевірку, не навпаки. Ціна — +6px висоти і лише на картці, де другий номер є. */
 .hm-ct-alt {
   position: relative; z-index: 1; align-self: flex-start;
-  display: flex; align-items: center; min-height: 36px;
+  /* 🔴 04.09 — `center` → `flex-start`, І ЦЕ НЕ КОСМЕТИКА.
+     🗣️ Скарга Вови: «номер телефону один, великий відступ, номер телефону
+     другий, великий відступ і пише вулиця».
+     📐 Порожнеча звідси: ціль пальця 36px, а рядок цифр ~17px — тобто 19px
+     мусять десь бути. При `center` вони ділились навпіл і лягали ПО ОБИДВА
+     БОКИ другого номера: 9px над ним (розриваючи пару «номер під номером») і
+     9px під ним. Читалось це як два випадкові провали.
+     ✅ При `flex-start` цифри стають одразу під першим номером, а вся вільна
+     висота збирається ВНИЗУ — рівно там, де відступ і потрібен: між блоком
+     номерів і блоком адреси.
+     🛑 Саму ціль 36px НЕ чіпаємо: вона куплена виміром (перший замір дав 22px,
+     палець промахувався), і сторож `home-contacts` тримає ≥34px. Тут
+     переставляється лише те, ДЕ лежить порожнеча, а не скільки її. */
+  display: flex; align-items: flex-start; min-height: 36px;
 }
-.hm-ct-alt:active { background: var(--board-press); }
+/* Той самий відгук, що в першого номера: гасимо САМ рядок, а не малюємо плиту
+   поверх сусідів (розбір — у блоці `.hm-ct-main:active` вище). */
+.hm-ct-alt:active { opacity: .5; }
 /* 🛑 `.hm-ct-alt-ic` прибрано разом зі значком: див. розбір у `home-contacts.js`
    над `alt` — значок вирівнювався сам, а цифри зʼїжджали на 18px. */
 
@@ -2088,13 +2155,13 @@
 .hm-ct-act {
   appearance: none; -webkit-appearance: none; border: 0; background: none; cursor: pointer;
   width: 44px; min-height: 44px; display: grid; place-items: center;
-  color: var(--hm-quiet); text-decoration: none;
+  color: rgba(255, 255, 255, .82); text-decoration: none;
 }
 /* 44px — ціль пальця за посібником Apple; значок усередині 17px.
    Розмір задано ТУТ, а не через `font-size`: у векторної іконки немає кегля,
    і старе `font-size: 15px` після заміни емодзі не керувало б нічим. */
 .hm-ct-act svg { width: 17px; height: 17px; }
-.hm-ct-act:active { background: var(--board-press); }
+.hm-ct-act:active { background: rgba(255, 255, 255, .22); }
 
 /* ══ ОДНА МОВА КАРТОК НА ВСЮ ГОЛОВНУ ══════════════════════════════════════════
    🔴 Аудит 04.08 знайшов на одному екрані СІМ візуальних мов: бордова шапка ·
@@ -2181,7 +2248,7 @@ button.hm-card:active,
 
 /* ══ ТИПОГРАФІЧНІ РОЛІ ════════════════════════════════════════════════════════ */
 .hm-title { font: 600 15px/1.28 system-ui, -apple-system, sans-serif; letter-spacing: -.01em; color: var(--ink); }
-.hm-body  { font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--ink-soft); }
+.hm-body  { font: 400 13px/1.45 system-ui, -apple-system, sans-serif; color: var(--ink-soft); }
 .hm-quiet { font: 400 12px/1.35 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
 
 /* ══ ПОЯВА КОНТЕНТУ ═══════════════════════════════════════════════════════════
@@ -2220,7 +2287,7 @@ button.hm-card:active,
 .hm-empty, .hm-error {
   padding: var(--hm-s5) var(--hm-s4);
   text-align: center;
-  font: 400 13.5px/1.45 system-ui, -apple-system, sans-serif;
+  font: 400 13px/1.45 system-ui, -apple-system, sans-serif;
   color: var(--hm-quiet);
 }
 .hm-error { color: var(--ink-soft); }
@@ -2250,7 +2317,7 @@ button.hm-card:active,
   display: inline-flex; align-items: center; gap: 3px;
   margin: 9px 0 0; padding: 6px 0;      /* вертикальні поля — під палець, не під око */
   border: 0; background: transparent; cursor: pointer;
-  font: 600 12.5px/1.2 system-ui, -apple-system, sans-serif;
+  font: 600 12px/1.2 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .78);
 }
 .hm-fund-more:active { color: #fff; }
@@ -2274,21 +2341,21 @@ button.hm-card:active,
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 11px 6px 9px; border-radius: var(--hm-r-pill);
   background: var(--brand-grad-sm); color: #fff;
-  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .1em; text-transform: uppercase;
 }
 .app-modal--fund .fmod-kind-ic { display: inline-flex; }
 .app-modal--fund .fmod-kind-ic svg { width: 14px; height: 14px; }
 .app-modal--fund .fmod-ttl {
   margin: 10px 0 0;
-  font: 800 21px/1.22 system-ui, -apple-system, sans-serif;
+  font: 700 21px/1.22 system-ui, -apple-system, sans-serif;
   letter-spacing: -.02em; color: var(--black);
 }
 /* 🔑 ОПИС БЕЗ ОБРІЗКИ — заради цього модалка й існує. На картці він у 2 рядки;
    тут `-webkit-line-clamp` не ставимо НІ ЗА ЯКИХ УМОВ. */
 .app-modal--fund .fmod-note {
   margin: 8px 0 0;
-  font: 400 14.5px/1.55 system-ui, -apple-system, sans-serif;
+  font: 400 14px/1.55 system-ui, -apple-system, sans-serif;
   color: #3E434A; overflow-wrap: anywhere;
 }
 /* Рядки «ключ → значення». Список, а не сітка: значення бувають різної довжини
@@ -2323,7 +2390,7 @@ button.hm-card:active,
   margin: 18px 0 0; min-height: 52px; padding: 8px 14px;
   border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff; text-decoration: none;
-  font: 800 clamp(12px, 3.6vw, 14.5px)/1.2 system-ui, -apple-system, sans-serif;
+  font: 700 clamp(12px, 3.6vw, 14px)/1.2 system-ui, -apple-system, sans-serif;
   text-align: center;
 }
 .app-modal--fund .fmod-go:active { background: var(--brand-grad-press); }

@@ -362,7 +362,7 @@ img.nc-img { display: block; object-fit: cover; }
 .nc--tile .nc-body { padding: 10px 12px 12px; gap: 0; min-width: 0; }
 .nc--tile .nc-meta { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
 .nc--tile .nc-title {
-  font: 700 14.5px/1.28 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
+  font: 700 14px/1.28 system-ui, -apple-system, sans-serif; letter-spacing: -.01em;
   margin-top: 6px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
@@ -370,7 +370,7 @@ img.nc-img { display: block; object-fit: cover; }
    як обірваний, три вже змагаються із заголовком за увагу. */
 .nc--tile .nc-excerpt {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  font: 400 12.5px/1.4 system-ui, -apple-system, sans-serif;
+  font: 400 12px/1.4 system-ui, -apple-system, sans-serif;
   color: var(--nc-quiet, #6E727A); margin-top: 5px;
 }
 .nc--tile .nc-foot { margin-top: 8px; }
@@ -480,7 +480,7 @@ img.nc-img { display: block; object-fit: cover; }
       потоці, а тут наступний блок (підпис) сам ставить собі відступ зверху, і
       два відступи поспіль розсунули б текст на зайві 6px висоти. */
 .nc--hero .nc-excerpt {
-  font: 400 13.5px/1.42 system-ui, -apple-system, sans-serif;
+  font: 400 13px/1.42 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .90);
   text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
   margin: 4px 0 0;
@@ -577,7 +577,7 @@ img.nc-img { display: block; object-fit: cover; }
    `handleImgError` міняє один клас, і картка перебудовується без JS-логіки. */
 .nc-kicker {
   display: none;
-  font: 800 10px/1 system-ui, -apple-system, sans-serif;
+  font: 700 10px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .14em; text-transform: uppercase;
   color: rgba(255, 255, 255, .55);
   margin-bottom: 8px;
@@ -589,7 +589,7 @@ img.nc-img { display: block; object-fit: cover; }
 .nc-mark {
   display: none;
   position: absolute; top: -14px; right: -10px;
-  font: 800 132px/1 system-ui, -apple-system, sans-serif;
+  font: 700 132px/1 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .055);
   pointer-events: none; user-select: none;
 }
@@ -633,7 +633,7 @@ img.nc-img { display: block; object-fit: cover; }
 .nc--line:active { background: var(--nc-line-press, rgba(255, 255, 255, .18)); }
 .nc--line .nc-title {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  font: 600 14.5px/1.32 system-ui, -apple-system, sans-serif;
+  font: 600 14px/1.32 system-ui, -apple-system, sans-serif;
   letter-spacing: -.1px;
   color: var(--nc-line-fg, #fff);
   margin: 0;
@@ -643,6 +643,6 @@ img.nc-img { display: block; object-fit: cover; }
   /* Джерело буває довге («Українська правда»), а рядок не має права переносити
      підпис на другий рядок — інакше картка стрибне на 14px. */
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  font: 400 11.5px/1 system-ui, -apple-system, sans-serif;
+  font: 400 12px/1 system-ui, -apple-system, sans-serif;
   color: var(--nc-line-quiet, rgba(255, 255, 255, .62));
 }
