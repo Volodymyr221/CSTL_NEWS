@@ -2,7 +2,14 @@ import { bootApp } from './core/boot.js';
 import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
 import { initNews, openArticleById } from './tabs/news.js';
-import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка» (events.js лишається для Етапу 6 — Афіша громади)
+import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка» + афіша громади (`openEventsScreen`)
+// 🗑 04.09 — `src/tabs/events.js` ВИДАЛЕНО (270 рядків, 0 імпортерів, у збірці
+// його не було взагалі). Він лишався «для Етапу 6 — Афіша громади», і цей
+// коментар збивав: афіша ніби вже почата. Насправді той модуль читав
+// `data/events.json` — світ, з якого події спільнот прибрали 04.09.
+// ⚠️ САМІ ФАЙЛИ `data/events.json` і `data/holidays.json` ЖИВІ: їх читає
+// ШІ-редактор новин (`editor/sources/calendar.py`, `editor/sources/plan.py`).
+// Перевірено грепом перед видаленням — інакше я зніс би джерело агента.
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';

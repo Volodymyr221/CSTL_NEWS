@@ -237,7 +237,7 @@ function renderSkeleton() {
     <section id="hm-events" class="hm-sec" hidden>
       <div class="hm-sec-head">
         <h2 class="hm-kicker">Події громади</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">Стрічка →</button>
+        <button class="hm-more" id="hm-events-all" type="button">Усі →</button>
       </div>
       <div id="cm-event-content" class="hm-list"></div>
     </section>

@@ -23,6 +23,7 @@ import {
   nameSlot, nameSlotStatic,
   logEvent, getAnonId,   // аналітика подій дій (26.08)
   eventState, feedSortKey, isReminderOn, loadMyEventReminders, toggleEventReminder,   // 🗓 події спільнот (04.09)
+  eventDayStart, fetchUpcomingEvents,   // 🗓 афіша громади: усі майбутні події (04.09, третій захід)
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -2709,6 +2710,103 @@ function screenListHtml(tab, pagePosts) {
   return pagePosts.length
     ? pagePosts.map(p => postCardHtml(p, true)).join('')
     : '<div class="fd-empty">Тут ще немає постів.</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🗓 АФІША ГРОМАДИ — ПОВНЕ МІСЦЕ ДЛЯ ПОДІЙ (04.09, третій захід)
+//
+// 🗣️ Вова: «мені здається, ти не до кінця продумав логіку подій від спільноти та
+// логіку віджетів подій і віджетів стрічки… ти сам не розумієш, для чого ти це
+// робиш». Справедливо — ось модель, з якої тепер росте код.
+//
+// 🔑 ПОДІЯ — ЦЕ ДОПИС ІЗ ДАТОЮ. Один запис, одні коментарі, одні лайки. Різні
+// місця застосунку — це різні ПОГЛЯДИ на нього, а не різні сутності:
+//
+//   • СТРІЧКА — хронологія того, що спільноти СКАЗАЛИ. Подія тут — оголошення,
+//     і стоїть за часом публікації (плюс піднімається в день події).
+//   • ЕКРАН СПІЛЬНОТИ, сегмент «Події» — розклад ОДНІЄЇ спільноти.
+//   • АФІША (цей екран) — розклад УСІЄЇ громади, за датою ПОДІЇ.
+//   • ВІДЖЕТ на Громаді — три найближчі, тобто ЗРІЗ афіші, а не окремий світ.
+//
+// 🔴 ЧОГО БРАКУВАЛО І ЧОМУ ЛОГІКА НЕ СХОДИЛАСЬ. Розклад однієї спільноти був
+// (сегмент «Події»), а розкладу ВСІЄЇ громади не існувало ніде. Віджет показував
+// три події й обривався: його кнопка вела в загальну Стрічку, де подія лежить
+// серед дописів за датою публікації — тобто відповіді на питання «що буде в
+// громаді» не було в застосунку взагалі.
+// ⚠️ І це та сама причина, через яку 04.08 секцію подій прибирали з Громади:
+// «вести з неї не було куди». Я секцію повернув, а місця, куди вести, не зробив.
+//
+// 📐 ЧОМУ ГРУПИ «СЬОГОДНІ / ЗАВТРА / ЦЬОГО ТИЖНЯ / ДАЛІ», А НЕ ЗАГОЛОВОК НА
+// КОЖЕН ДЕНЬ: точну дату несе сама картка (блок числа ліворуч), і заголовок над
+// кожною подією повторював би її вдруге. Групи ж відповідають на інше питання —
+// «чи встигаю я», — якого на картці немає.
+// 🛑 Картка та сама, що в Стрічці (`postCardHtml`): другої розмітки події в
+// проєкті бути не має, інакше вони розійдуться — це вже сталося з переглядачами
+// фото (їх було три) і з подіями (два джерела).
+const АФІША_МАКС = 60;
+
+export async function openEventsScreen() {
+  const screen = document.createElement('div');
+  screen.className = 'fd-screen fd-screen--events';
+  screen.innerHTML = `
+    <div class="fd-screen-fixedbar fd-screen-fixedbar--solid">
+      <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      <span class="fd-screen-bartitle">Події громади</span>
+    </div>
+    <div class="fd-screen-body fd-screen-body--plain">
+      <div class="fd-screen-list"><div class="fd-empty">Завантажую…</div></div>
+    </div>`;
+
+  const screenCleanup = [];
+  const layer = openLayer(
+    () => { screen.remove(); screenCleanup.forEach(fn => { try { fn(); } catch (_) {} }); },
+    { el: screen, animateOut: () => screen.classList.remove('open') },
+  );
+  screen.querySelector('.fd-screen-back')
+    .addEventListener('click', () => closeLayer(layer, { animate: 240 }));
+
+  document.body.appendChild(screen);
+  requestAnimationFrame(() => screen.classList.add('open'));
+
+  // 🔑 Ходимо в базу, а не беремо з `posts`: у стрічці лежать 60 найсвіжіших
+  // ДОПИСІВ, і подія, оголошена місяць тому, туди могла не потрапити — а вона
+  // від того не перестала бути найближчою.
+  const events = await fetchUpcomingEvents(АФІША_МАКС);
+  const list = screen.querySelector('.fd-screen-list');
+  if (!list.isConnected) return;   // екран уже закрили, поки йшов запит
+
+  list.innerHTML = events.length ? afishaHtml(events) : `
+    <div class="fd-empty">
+      Найближчих подій немає.<br>
+      Події планують спільноти — щойно зʼявиться нова, вона буде тут.
+    </div>`;
+  wireCards(screen); wireGalleries(screen); wireClamps(screen);
+}
+
+// Розкладка афіші: групи за близькістю, картки — звичайні картки подій.
+// ⚠️ Назва латиницею навмисно: `scripts/check-imports.js` розбирає ідентифікатори
+// ASCII-регулярками, і кирилична назва ФУНКЦІЇ ламає йому розбір (виклик
+// `афішаHtml(...)` він читає як `Html(...)` і звітує «не імпортовано»). У проєкті
+// й так конвенція: функції — латиницею, кирилиця лишається локальним змінним.
+function afishaHtml(events) {
+  const днів = (dateStr) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((eventDayStart(dateStr) - today.getTime()) / 86400000);
+  };
+  const групи = [
+    { мітка: 'Сьогодні',     годиться: d => d === 0 },
+    { мітка: 'Завтра',       годиться: d => d === 1 },
+    { мітка: 'Цього тижня',  годиться: d => d > 1 && d <= 7 },
+    { мітка: 'Далі',         годиться: d => d > 7 },
+  ];
+  return групи.map(г => {
+    const свої = events.filter(p => г.годиться(днів(p.event_date)));
+    if (!свої.length) return '';
+    return `<div class="fd-afisha-group">
+        <h2 class="fd-afisha-kicker">${г.мітка}</h2>
+        ${свої.map(p => postCardHtml(p)).join('')}
+      </div>`;
+  }).join('');
 }
 
 // reopen=true — екран переоткривають одразу після того, як його прибрали з DOM вручну

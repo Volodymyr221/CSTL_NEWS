@@ -1366,3 +1366,38 @@
   font: 400 12px/1.3 system-ui, -apple-system, sans-serif;
   color: var(--hm-quiet, #6b6b6b); flex: 1 1 120px;
 }
+
+/* ══ 🗓 АФІША ГРОМАДИ — ЕКРАН УСІХ ПОДІЙ (04.09, третій захід) ════════════════
+   🗣️ Вова: «продумай логіку подій від спільноти та логіку віджетів подій і
+   віджетів стрічки». Афіша — це і є те повне місце, у яке веде віджет: розклад
+   УСІЄЇ громади за датою події (у Стрічці порядок за датою публікації, а в
+   спільноті — розклад лише однієї).
+
+   🔑 ЧОМУ ШАПКА ТУТ СУЦІЛЬНА, А НЕ ПРОЗОРА, ЯК НА ЕКРАНІ СПІЛЬНОТИ. Там кнопки
+   лежать ПОВЕРХ банера, і темний кружечок із блюром — єдиний спосіб їх побачити
+   на будь-якому знімку. В афіші банера немає: той самий кружечок висів би на
+   світлому тлі як пляма, а назви екрана не було б узагалі. */
+.fd-screen-fixedbar--solid {
+  height: auto; display: flex; align-items: center; gap: 10px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+  background: var(--fd-surface); border-bottom: 1px solid var(--fd-line);
+}
+/* Кнопка «назад» у суцільній шапці — звичайна, у потоці: перекривати нема чого. */
+.fd-screen-fixedbar--solid .fd-screen-back {
+  position: static; background: none; color: var(--fd-ink);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.fd-screen-bartitle { font-size: 17px; font-weight: 700; color: var(--fd-ink); }
+/* Тіло без банера — просто список, без заокруглення під картинку. */
+.fd-screen-body--plain { border-radius: 0; padding-top: 4px; }
+
+/* Група афіші — «Сьогодні · Завтра · Цього тижня · Далі».
+   📐 Мітка відповідає на питання «чи встигаю я»; точну дату несе сама картка
+   (блок числа ліворуч), тож заголовок над кожною подією повторював би її вдруге.
+   🛑 Кегль 13 і вага 700 — з чинної шкали; капс тут НЕ ставимо: 13px вище межі
+   12.5px, за якою дизайн-система дозволяє великі літери. */
+.fd-afisha-group { margin-top: 6px; }
+.fd-afisha-kicker {
+  margin: 14px 16px 6px; font-size: 13px; font-weight: 700;
+  color: var(--fd-muted); letter-spacing: 0.1px;
+}
