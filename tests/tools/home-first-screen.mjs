@@ -60,6 +60,23 @@ console.log(await p.evaluate(() => {
     кегль: cs && cs.fontSize, вага: cs && cs.fontWeight,
     рядків: hi ? Math.round(hi.getBoundingClientRect().height / parseFloat(cs.lineHeight)) : null,
     капсули: box('.hm-caps'), погода: box('.hm-wx'),
+    // Симетрія країв шапки: скільки лишається ліворуч від тексту і праворуч
+    // від ВИДИМОГО кружечка кнопки (не від тап-цілі — око бачить кружечок).
+    краї: (() => {
+      const top = document.querySelector('.hm-top');
+      const ava = document.querySelector('.hm-ava');
+      const дата = document.querySelector('.hm-date');
+      if (!top || !ava || !дата) return null;
+      const T = top.getBoundingClientRect(), A = ava.getBoundingClientRect(), D = дата.getBoundingClientRect();
+      const cs = getComputedStyle(ava);
+      const кружечок = 50, центр = A.left + A.width / 2;
+      return {
+        зліва_до_тексту: Math.round(D.left - T.left),
+        справа_від_тапцілі: Math.round(T.right - A.right),
+        справа_від_кружечка: Math.round(T.right - (центр + кружечок / 2)),
+        margin: cs.marginRight,
+      };
+    })(),
     блоки, висота_сторінки: root ? Math.round(root.getBoundingClientRect().height) : null,
   };
 }));
