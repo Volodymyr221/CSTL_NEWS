@@ -38,7 +38,7 @@
 .fs-back:active { opacity: .6; }
 .fs-title {
   margin: 0;
-  font: 800 19px/1.2 system-ui, -apple-system, sans-serif;
+  font: 700 19px/1.2 system-ui, -apple-system, sans-serif;
   letter-spacing: -.01em; color: #fff;
 }
 
@@ -67,7 +67,7 @@
    безпеки Дошки. Це найважливіше речення екрана про гроші, тому воно перше. */
 .fs-lead {
   margin: 0 0 16px;
-  font: 400 13.5px/1.5 system-ui, -apple-system, sans-serif;
+  font: 400 13px/1.5 system-ui, -apple-system, sans-serif;
   color: var(--hm-quiet);
 }
 
@@ -89,7 +89,7 @@
   width: 100%; min-height: 52px; margin-top: var(--hm-s5);
   border: 0; border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff;
-  font: 800 15px/1.2 system-ui, -apple-system, sans-serif;
+  font: 700 15px/1.2 system-ui, -apple-system, sans-serif;
   cursor: pointer;
 }
 .fs-cta:active { background: var(--brand-grad-press); }
@@ -104,7 +104,7 @@
 /* Мої заявки — щоб звернення не зникало в порожнечу. */
 .fs-sub {
   margin: var(--hm-s6) 0 var(--hm-s3);
-  font: 800 11px/1.2 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1.2 system-ui, -apple-system, sans-serif;
   letter-spacing: .1em; text-transform: uppercase; color: var(--hm-quiet);
 }
 .fs-req {
@@ -130,12 +130,12 @@
 /* ── ФОРМА ЗАЯВКИ (аркуш `core/modal.js`) ────────────────────────────────── */
 .fsf-lead {
   margin: 0 0 14px;
-  font: 400 13.5px/1.5 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  font: 400 13px/1.5 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
 }
 .fsf-lead b { color: var(--black); }
 .fsf-l {
   display: block; margin-bottom: 12px;
-  font: 600 12.5px/1.3 system-ui, -apple-system, sans-serif; color: #4A4F57;
+  font: 600 12px/1.3 system-ui, -apple-system, sans-serif; color: #4A4F57;
 }
 .fsf-req { color: var(--red); margin-left: 2px; }
 /* 🔴 16px — НЕ СТИЛЬОВЕ ЧИСЛО. Нижче цього iOS сам зумить сторінку при фокусі
@@ -156,14 +156,14 @@
 
 .fsf-agree {
   display: flex; align-items: flex-start; gap: 9px; margin: 4px 0 16px;
-  font: 400 12.5px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
+  font: 400 12px/1.45 system-ui, -apple-system, sans-serif; color: var(--hm-quiet);
   cursor: pointer;
 }
 .fsf-agree input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 1px; }
 .fsf-send {
   width: 100%; min-height: 52px; border: 0; border-radius: var(--hm-r-card);
   background: var(--brand-grad-sm); color: #fff;
-  font: 800 15px/1.2 system-ui, -apple-system, sans-serif; cursor: pointer;
+  font: 700 15px/1.2 system-ui, -apple-system, sans-serif; cursor: pointer;
 }
 .fsf-send:active { background: var(--brand-grad-press); }
 .fsf-send:disabled { opacity: .6; }

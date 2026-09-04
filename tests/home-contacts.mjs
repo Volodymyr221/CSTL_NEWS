@@ -18,7 +18,12 @@
 // вихідний код, тут або бреше, або змушує викинути пояснення. Тому міряємо те,
 // що бачить людина: вміст вузлів на екрані.
 import { chromium } from 'playwright';
-import { launch, serve, blockExternal, reporter } from './_lib.mjs';
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { launch, serve, blockExternal, reporter, ROOT, projectFile } from './_lib.mjs';
+
+const CSS_REV = process.env.CSS_REV || '';
+const BUNDLE_REV = process.env.BUNDLE_REV || '';
 
 const { ok, done } = reporter();
 const { url, stop } = await serve();
@@ -29,7 +34,24 @@ await blockExternal(p);
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 
+// 🔴 04.09 — ДОДАНО ПІДТРИМКУ РЕВІЗІЙ, БО КОНТРОЛЮ ТУТ НЕ БУЛО ВЗАГАЛІ.
+// Прогін `CSS_REV=origin/main BUNDLE_REV=origin/main` давав 29/29 — тобто
+// «контроль» ішов по свіжому коду і не доводив нічого. Це рівно та хвороба, від
+// якої проєкт страждав уже двадцять разів: перевірка, яка не вміє впасти, не є
+// перевіркою. Тепер обидві змінні справді підміняють зібраний файл і стилі.
+// ⚠️ Потрібні саме ДВІ: правки 04.09 лежать і в логіці (`home-contacts.js` →
+// `bundle.js`), і в стилях (`home.css`).
+if (BUNDLE_REV) {
+  const body = projectFile('bundle.js', BUNDLE_REV);
+  await p.route('**/bundle.js', r => r.fulfill({ contentType: 'text/javascript; charset=utf-8', body }));
+}
 await p.goto(url, { waitUntil: 'domcontentloaded' });
+if (CSS_REV) {
+  await p.evaluate(() => document.querySelectorAll('link[rel=stylesheet]').forEach(l => l.disabled = true));
+  const css = readdirSync(join(ROOT, 'style')).filter(f => f.endsWith('.css'))
+    .map(f => { try { return projectFile('style/' + f, CSS_REV); } catch { return ''; } }).join('\n');
+  await p.addStyleTag({ content: css });
+}
 await p.evaluate(() => window.switchTab && window.switchTab('community'));
 await p.waitForSelector('#cm-contacts-content .hm-ct', { timeout: 15000 });
 await p.waitForTimeout(300);
@@ -203,6 +225,70 @@ ok('🔴 (3) значок і кнопки центровані по картці
    `найбільший зсув ${найгірший.toFixed(1)}px`);
 
 ok('помилок у консолі нема', errs.length === 0, errs.slice(0, 2).join(' | '));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 04.09 — ПʼЯТЬ СКАРГ ВОВИ ПРО ЦЕЙ БЛОК, КОЖНА ЗІ СВОЄЮ ПЕРЕВІРКОЮ
+// ═══════════════════════════════════════════════════════════════════════════
+const нове = await p.evaluate(() => {
+  const карта = [...document.querySelectorAll('.hm-ct-act[href]')].map(a => decodeURIComponent(a.getAttribute('href')));
+  const мета = [...document.querySelectorAll('.hm-ct')].map(c =>
+    [...c.querySelectorAll('.hm-ct-meta')].map(m => m.textContent.trim()));
+  const плитки = [...document.querySelectorAll('.hm-sos-b')].map(e => {
+    const t = e.querySelector('.hm-sos-t'), r = e.getBoundingClientRect();
+    return { назва: t ? t.textContent.trim() : '',
+             обрізано: t ? t.scrollWidth > t.clientWidth + 1 : true,
+             top: Math.round(r.top) };
+  });
+  return { карта, мета, плитки };
+});
+
+// (1) 🗣️ «мене перекидає Замкова, 17 в місті Луцьк, в тому, в якому я знаходжусь».
+// Причина була в ДАНИХ: адреса без міста. Міряємо ПОСИЛАННЯ, бо саме воно їде
+// в карту — перевірка «в JSON є слово Олика» зеленіла б і тоді, коли посилання
+// збирається з іншого поля.
+нове.карта.length
+  ? ok(`🔴 кожне посилання на карту називає МІСТО (${нове.карта.length} шт.)`,
+       нове.карта.every(h => /Олика/.test(h)),
+       нове.карта.find(h => !/Олика/.test(h)) || 'усі з містом')
+  : ok('🔴 кожне посилання на карту називає МІСТО', false, 'посилань немає');
+ok('посилання на карту звужене областю (інакше пошук тягне до поточного міста)',
+   нове.карта.every(h => /Волинськ/.test(h)));
+
+// (2) 🗣️ «вулиця, місто Олика, і знизу тільки вхід ліворуч… але не разом, бо
+// воно переноситься так і так в два рядка». Тобто адреса і підказка про вхід —
+// РІЗНІ рядки, а не один злитий.
+const цнап = нове.мета.find(m => m.some(t => /вхід ліворуч/.test(t)));
+цнап
+  ? ok('🔴 адреса і підказка про вхід — ОКРЕМІ рядки',
+       цнап.some(t => /Олика/.test(t)) && цнап.some(t => /вхід ліворуч/.test(t) && !/Замкова/.test(t)),
+       цнап.join(' | '))
+  : ok('🔴 адреса і підказка про вхід — ОКРЕМІ рядки', false, 'картки з підказкою немає');
+
+// (3) 🗣️ «не влазить повністю вся назва… швидка допомога, аварійна і не видно,
+// що там пише». 🛑 Міряємо ОБРІЗКУ (`scrollWidth > clientWidth`), а не кегль:
+// назва може вміститись і на 9px, і не вміститись на 12 — питання у ширині
+// колонки, а не в шрифті.
+ok(`🔴 жодна назва екстреної служби не обрізана (${нове.плитки.length} шт.)`,
+   нове.плитки.length >= 5 && нове.плитки.every(t => !t.обрізано),
+   нове.плитки.filter(t => t.обрізано).map(t => t.назва).join(', ') || 'усі повні');
+
+// (4) Пʼять плиток в один ряд і були причиною обрізки: 67px на плитку. Тому
+// стережеться саме РЯДІВ ≥2 — це умова, за якої повна назва взагалі можлива.
+const ряди = new Set(нове.плитки.map(t => t.top));
+ok('екстрені стоять у два ряди (у пʼяти колонках повна назва не вміщується)',
+   ряди.size >= 2, `рядів: ${ряди.size}`);
+
+// (5) 🗣️ «натискаю на номер, і він зразу пропадає, починає блимати місце
+// натиску». 🛑 ЧЕСНО ПРО МЕЖУ: стан `:active` браузером не емулюється, тож це
+// перевірка ДЖЕРЕЛА — єдина можлива тут. Вона тримає рівно те, що ламалось:
+// накладка розтягнута на всю картку і лежить ПОВЕРХ тексту, тож будь-який
+// непрозорий фон на ній ховає вміст.
+// ⚠️ Читаємо CSS ТІЄЇ ревізії, яку перевіряємо, — інакше при `CSS_REV`
+// джерельна перевірка дивилась би на свіжий файл і зеленіла б над старим кодом.
+const css = CSS_REV ? projectFile('style/home.css', CSS_REV) : readFileSync(join(ROOT, 'style/home.css'), 'utf8');
+const заливка = /\.hm-ct-main:active::after\s*\{[^}]*background/.test(css);
+ok('🔴 на натиск номера НЕ малюється плита поверх тексту (інакше номер зникає)',
+   !заливка, заливка ? 'у .hm-ct-main:active::after є background' : 'відгук дає сам номер');
 
 await browser.close();
 await stop();

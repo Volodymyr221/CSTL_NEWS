@@ -1242,7 +1242,7 @@
   display: inline-block; margin-bottom: 8px;
   padding: 4px 9px; border-radius: 6px;
   background: #FFF3CD; color: #7A5B00;
-  font: 800 10.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 11px/1 system-ui, -apple-system, sans-serif;
   letter-spacing: .06em; text-transform: uppercase;
 }
 .fd-draft-actions {
@@ -1254,12 +1254,12 @@
   appearance: none; -webkit-appearance: none; border: 0; cursor: pointer;
   padding: 9px 16px; border-radius: var(--hm-r-pill, 999px);
   background: var(--red, #4A121C); color: #fff;
-  font: 700 13.5px/1 system-ui, -apple-system, sans-serif;
+  font: 700 13px/1 system-ui, -apple-system, sans-serif;
 }
 .fd-draft-pub:active { opacity: .8; }
 .fd-draft-pub:disabled { opacity: .55; }
 /* Підказка тиха: вона потрібна один раз, поки людина не звикла до потоку. */
 .fd-draft-hint {
-  font: 400 11.5px/1.3 system-ui, -apple-system, sans-serif;
+  font: 400 12px/1.3 system-ui, -apple-system, sans-serif;
   color: var(--hm-quiet, #6b6b6b); flex: 1 1 120px;
 }
