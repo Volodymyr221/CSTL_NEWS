@@ -222,7 +222,20 @@ function contactHtml(c) {
   // 🔑 Дужки ставить РЕНДЕР, а не дані: у полі `note` лишається чистий факт,
   // тож його можна показати й інакше (у списку, у пошуку), не тягнучи за собою
   // розділові знаки чужого оформлення.
-  const рядки = [c.hours, c.address, c.note ? `(${c.note})` : null].filter(Boolean);
+  // 🔴 04.09 — ПІДКАЗКА ДІСТАЛА ВЛАСНИЙ КЛАС, бо мусить вміщуватись в ОДИН
+  // рядок (замовлення Вови: «зроби його рівним… місце там є»).
+  // 📐 Місця насправді рівно 154px — це ЛАЙОУТНЕ число (колонка тексту = ширина
+  // екрана мінус значок 34, стовпець дій 88 і проміжки), тобто від шрифту воно
+  // не залежить. За знімком Вови зміряно 5.48pt на символ у цьому кеглі:
+  //   «(вхід ліворуч від головного входу)» 34 симв. ≈ **186pt** — не влазить;
+  //   «(ліворуч від головного входу)»      29 симв. ≈ **159pt** — теж ні;
+  //   те саме на 11px                                ≈ **146pt** — влазить.
+  // Тому змін дві, і потрібні обидві: коротший текст І дрібніший кегль.
+  const рядки = [
+    c.hours && { t: c.hours },
+    c.address && { t: c.address },
+    c.note && { t: `(${c.note})`, hint: true },
+  ].filter(Boolean);
   return `
     <div class="hm-ct">
       <span class="hm-ct-ic" aria-hidden="true">${iconOf(c)}</span>
@@ -230,7 +243,7 @@ function contactHtml(c) {
         <span class="hm-ct-name">${escapeHtml(c.name)}</span>
         <a class="hm-ct-main hm-ct-phone" href="tel:${escapeHtml(tel)}">${escapeHtml(c.phone)}</a>
         ${tel2 ? `<a class="hm-ct-alt hm-ct-phone" href="tel:${escapeHtml(tel2)}">${escapeHtml(c.phone2)}</a>` : ''}
-        ${рядки.map(t => `<span class="hm-ct-meta">${escapeHtml(t)}</span>`).join('')}
+        ${рядки.map(r => `<span class="hm-ct-meta${r.hint ? ' hm-ct-meta--hint' : ''}">${escapeHtml(r.t)}</span>`).join('')}
       </span>
       <span class="hm-ct-acts">
         ${c.address

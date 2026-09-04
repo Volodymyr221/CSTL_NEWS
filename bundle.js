@@ -1707,14 +1707,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(h)
           <span class="hm-sos-n">${p(a.phone)}</span>
           <span class="hm-sos-t">${p(a.name)}</span>
         </a>`).join("")}
-    </div>`}var S4="Волинська область, Україна",A4=t=>`https://maps.google.com/?q=${encodeURIComponent(t+", "+S4)}`;function cM(t){let e=od(t.phone),n=t.phone2?od(t.phone2):"",a=[t.hours,t.address,t.note?`(${t.note})`:null].filter(Boolean);return`
+    </div>`}var S4="Волинська область, Україна",A4=t=>`https://maps.google.com/?q=${encodeURIComponent(t+", "+S4)}`;function cM(t){let e=od(t.phone),n=t.phone2?od(t.phone2):"",a=[t.hours&&{t:t.hours},t.address&&{t:t.address},t.note&&{t:`(${t.note})`,hint:!0}].filter(Boolean);return`
     <div class="hm-ct">
       <span class="hm-ct-ic" aria-hidden="true">${k4(t)}</span>
       <span class="hm-ct-txt">
         <span class="hm-ct-name">${p(t.name)}</span>
         <a class="hm-ct-main hm-ct-phone" href="tel:${p(e)}">${p(t.phone)}</a>
         ${n?`<a class="hm-ct-alt hm-ct-phone" href="tel:${p(n)}">${p(t.phone2)}</a>`:""}
-        ${a.map(s=>`<span class="hm-ct-meta">${p(s)}</span>`).join("")}
+        ${a.map(s=>`<span class="hm-ct-meta${s.hint?" hm-ct-meta--hint":""}">${p(s.t)}</span>`).join("")}
       </span>
       <span class="hm-ct-acts">
         ${t.address?`<a class="hm-ct-act" href="${A4(t.address)}" target="_blank" rel="noopener noreferrer" aria-label="Відкрити на карті">${T.pin}</a>`:""}
