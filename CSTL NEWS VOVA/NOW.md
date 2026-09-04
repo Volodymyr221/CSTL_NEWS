@@ -10,50 +10,35 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-04 08:36 UTC
+**Зріз на:** 2026-09-04 09:24 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-31pmy4` |
-| останній коміт людини | `420512c5` 04.09 08:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-31pmy4 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260904-0833` |
-| останній PR у `main` | #1143 |
-| стендів на диску | 139 |
-| незакомічених файлів | 3 ⚠️ |
+| останній коміт людини | `f1ecf8a3` 04.09 09:05 — design: привітання Громади помітніше + «ГРОМАДА» в таб-барі капсом |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260904-0924` |
+| останній PR у `main` | #1144 |
+| стендів на диску | 140 |
+| незакомічених файлів | 8 ⚠️ |
 | журнал за 2026-09-04 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/AUDIT_DESIGN_2026-09.md`
 - `_session-log/vova-2026-09-03b.md`
-- `bundle.js`
-- `src/tabs/buses.js`
-- `style/account.css`
-- `style/base.css`
-- `style/board.css`
-- `style/buses.css`
-- `style/community.css`
-- `style/crop.css`
-- `style/desktop-gate.css`
-- `style/dev-lock.css`
-- `style/events.css`
-- `style/feed.css`
-- `style/filters.css`
 - `style/home.css`
-- `style/install.css`
-- …ще 19
+- `style/tabbar.css`
+- `sw.js`
+- `tests/design-system.mjs`
+- `tests/tools/home-first-screen.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `420512c5` 04.09 08:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-31pmy4
-- `0f4cea3e` 04.09 07:56 — docs(пульс): авто-блок звірено з git
-- `65cb820e` 04.09 07:55 — design(кроки 5-7): зони дотику 44px, бордові тумблери, привітання в один рядок
-- `de917bc1` 03.09 22:19 — docs(пульс): авто-блок звірено з git
-- `9e1bf3ba` 03.09 22:19 — design: ієрархія назва↔ціна відновлена, два сторожі оновлено під замовлення
+- `f1ecf8a3` 04.09 09:05 — design: привітання Громади помітніше + «ГРОМАДА» в таб-барі капсом
+- `41ba5a57` 04.09 08:37 — 🎨 Дизайн-аудит усього застосунку: капс 97→0, ваги 800/900 83→0, зони дотику 1/5→5/5 (#1144)
+- `a86f12c1` 03.09 19:28 — 🔐 Немає прихованих входів у шапці + 📣 стаття кабінету йде туди, куди обрала людина (#1143)
+- `a7293094` 03.09 11:36 — ai(editor): свята-чернетки 03.09 11:36 UTC
 
 <!-- AUTO:END -->
 
