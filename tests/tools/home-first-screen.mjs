@@ -40,6 +40,23 @@ console.log(await p.evaluate(() => {
   });
   return {
     привітання: box('.hm-hi'),
+    текст: hi && hi.textContent.trim(),
+    коробка_px: hi && Math.round(hi.clientWidth),
+    // 🔴 `scrollWidth` тут БРЕШЕ: у `-webkit-box` із `line-clamp` він дорівнює
+    // ширині коробки завжди. Природну ширину рядка дає лише КЛОН без обрізки.
+    природна: hi && (() => {
+      const прим = txt => {
+        const c = document.createElement('span');
+        const cs = getComputedStyle(hi);
+        c.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing}`;
+        c.textContent = txt; document.body.appendChild(c);
+        const w = Math.round(c.getBoundingClientRect().width); c.remove(); return w;
+      };
+      return { зараз: прим(hi.textContent.trim()),
+               ранок_Володимир: прим('Добрий ранок, Володимир'),
+               ніч_Володимире: прим('Доброї ночі, Володимире'),
+               довге_імʼя: прим('Добрий ранок, Костянтин') };
+    })(),
     кегль: cs && cs.fontSize, вага: cs && cs.fontWeight,
     рядків: hi ? Math.round(hi.getBoundingClientRect().height / parseFloat(cs.lineHeight)) : null,
     капсули: box('.hm-caps'), погода: box('.hm-wx'),
