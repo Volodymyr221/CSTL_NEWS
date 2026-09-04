@@ -1707,7 +1707,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(h)
           <span class="hm-sos-n">${p(a.phone)}</span>
           <span class="hm-sos-t">${p(a.name)}</span>
         </a>`).join("")}
-    </div>`}var S4="Волинська область, Україна",A4=t=>`https://maps.google.com/?q=${encodeURIComponent(t+", "+S4)}`;function cM(t){let e=od(t.phone),n=t.phone2?od(t.phone2):"",a=[t.hours,t.address,t.note].filter(Boolean);return`
+    </div>`}var S4="Волинська область, Україна",A4=t=>`https://maps.google.com/?q=${encodeURIComponent(t+", "+S4)}`;function cM(t){let e=od(t.phone),n=t.phone2?od(t.phone2):"",a=[t.hours,t.address,t.note?`(${t.note})`:null].filter(Boolean);return`
     <div class="hm-ct">
       <span class="hm-ct-ic" aria-hidden="true">${k4(t)}</span>
       <span class="hm-ct-txt">
