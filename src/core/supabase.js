@@ -1917,12 +1917,18 @@ export async function markThreadSeenRemote(postId) {
 // Теми, які реально відповідають наявним push (звірено 24.08 по всіх сімох
 // функціях). 🛑 Ключа під те, чого не існує, тут бути не може — саме це й було
 // суттю B-33.
-export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed'];
+// 🔑 ЦЕЙ СПИСОК — БІЛЕ ПРАВИЛО, а не довідка: `saveNotifPref` мовчки відхиляє
+// тему, якої тут немає. Додав тумблер у кабінет і забув рядок тут — вимикач
+// клацає, знімок на пристрої оновлюється, а В БАЗУ не доїжджає нічого; сервер
+// далі шле сповіщення, які людина щойно вимкнула. Рівно клас B-33 («вимикач,
+// що підтверджує дію, якої не сталось»), тільки з іншого боку.
+// 🗓 `events` додано 04.09 разом із нагадуваннями про події спільнот.
+export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed', 'events'];
 
 export async function fetchNotifPrefs(uid) {
   if (!supa || !uid) return null;
   const { data, error } = await supa
-    .from('notif_prefs').select('buses, board, questions, feed').eq('uid', uid).maybeSingle();
+    .from('notif_prefs').select('buses, board, questions, feed, events').eq('uid', uid).maybeSingle();
   if (error) { console.warn('[supabase] fetchNotifPrefs:', error.message); return null; }
   return data || null;   // null = рядка ще немає (людина не міняла нічого)
 }
@@ -2339,6 +2345,123 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
   }
   return data || [];
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🗓 ПОДІЇ СПІЛЬНОТ (04.09.2026, замовлення Вови)
+//
+// 🔑 ПОДІЯ — ЦЕ ДОПИС ІЗ ДАТОЮ, а не нова сутність. `page_posts.event_date`
+// існує з 23.07; ми не заводимо другу таблицю, тому подія безкоштовно має
+// коментарі, лайки, редагування, мʼяке видалення і realtime.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Початок дня події в мілісекундах (локально).
+// ⚠️ Через `new Date('2026-09-14T00:00:00')` БЕЗ `Z`: рядок із «Z» браузер читає
+// як UTC і на київському пристрої дає 03:00 попереднього дня — подія «сьогодні»
+// вважалася б учорашньою рівно до третьої ночі.
+export function eventDayStart(dateStr) {
+  if (!dateStr) return 0;
+  const t = new Date(String(dateStr) + 'T00:00:00').getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+// 🔴 РЕПУБЛІКАЦІЯ В ДЕНЬ ПОДІЇ — рішення Вови 04.09: «вона піднімається і не
+// залишається закріпленою, тільки так ніби републікація».
+//
+// Ключ сортування стрічки = БІЛЬШЕ з двох: коли опублікували / початок дня події.
+//   • опублікували 1 вересня → подія вгорі, далі осідає як звичайний допис;
+//   • настав день події → ключ стрибає на «сьогодні 00:00», подія знову вгорі;
+//   • кожен НОВИЙ допис того дня її обганяє — тому це републікація, а не
+//     закріплення (закріплене трималось би вгорі попри все);
+//   • наступного дня ключ уже в минулому → осідає назавжди.
+//
+// 🛑 Саме ПОЧАТОК ДНЯ, а не час події: інакше подія о 18:00 стояла б вище за все
+// від півночі до вечора, тобто поводилась би як закріплена — рівно те, чого
+// Вова просив не робити.
+// 🔑 `created_at` при цьому НЕ чіпаємо: «опубліковано 1 вересня» лишається
+// правдою. Ми міняємо ПОРЯДОК ПОКАЗУ, а не дані.
+export function feedSortKey(post) {
+  const created = new Date(post?.created_at || 0).getTime() || 0;
+  if (!post?.event_date) return created;
+  return Math.max(created, eventDayStart(post.event_date));
+}
+
+// Стан події відносно сьогодні: 'today' | 'future' | 'past'.
+// Один вираз на весь застосунок — картка, віджет і сортування питають його.
+export function eventState(dateStr) {
+  if (!dateStr) return '';
+  const day = eventDayStart(dateStr);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (day === today.getTime()) return 'today';
+  return day > today.getTime() ? 'future' : 'past';
+}
+
+// Найближчі події ГРОМАДИ — для віджета на Громаді.
+// 🔴 Це і є «зведення двох світів» (рішення Вови «зводь»): віджет читає ТІ САМІ
+// події спільнот, що й Стрічка, а не окремий файл `data/events.json`, який
+// пролежав протухлим (7 записів, 0 майбутніх) і з подіями спільнот не мав
+// жодного звʼязку.
+export async function fetchUpcomingEvents(limit = 3) {
+  if (!supa) return [];
+  const today = new Date();
+  const iso = [today.getFullYear(),
+               String(today.getMonth() + 1).padStart(2, '0'),
+               String(today.getDate()).padStart(2, '0')].join('-');
+  const { data, error } = await supa.from('page_posts')
+    .select('id, page_id, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url, official)')
+    .is('deleted_at', null)
+    .not('event_date', 'is', null)
+    .gte('event_date', iso)
+    .order('event_date', { ascending: true })
+    .limit(limit);
+  if (error) { console.warn('[supabase] fetchUpcomingEvents:', error.message); return []; }
+  return data || [];
+}
+
+// ── НАГАДУВАННЯ: підписка людини на подію ───────────────────────────────────
+// Кеш «мої нагадування» — щоб кнопка малювалась одразу, без походу в мережу на
+// кожну картку. Живе до перезапуску; правда в базі.
+const _myReminders = new Set();
+let _remindersLoaded = false;
+
+export function isReminderOn(postId) { return _myReminders.has(Number(postId)); }
+export function remindersReady() { return _remindersLoaded; }
+
+// Читає ВСІ мої нагадування одним запитом (їх у людини одиниці, не тисячі).
+export async function loadMyEventReminders() {
+  // 🔑 `freshUserId()`, а не кеш «хто я»: RLS звіряє рядки з ЖИВИМ токеном, і
+  // запит без чинної сесії просто поверне порожньо — тоді кнопки мовчки
+  // показували б «нагадування вимкнене» тому, хто його вмикав.
+  if (!supa || !(await freshUserId())) { _remindersLoaded = true; return; }
+  const { data, error } = await supa.from('event_reminders').select('post_id');
+  if (!error) {
+    _myReminders.clear();
+    (data || []).forEach(r => _myReminders.add(Number(r.post_id)));
+  }
+  _remindersLoaded = true;
+}
+
+// Перемкнути нагадування. Повертає новий стан або null при збої.
+// 🔑 Одна дія замість «спробуй insert, спіймай дубль, зроби delete»: рішення
+// ухвалює база (`toggle_event_reminder`), клієнт лише показує результат.
+export async function toggleEventReminder(postId) {
+  if (!supa) return null;
+  const { data, error } = await supa.rpc('toggle_event_reminder', { p_post_id: Number(postId) });
+  if (error) { console.warn('[supabase] toggleEventReminder:', error.message); return null; }
+  const on = data === true;
+  if (on) _myReminders.add(Number(postId)); else _myReminders.delete(Number(postId));
+  return on;
+}
+
+// Скільки людей чекає на подію (публічне число, без імен).
+// ⚠️ Через RPC, а не прямим запитом: RLS навмисно ховає ЧУЖІ рядки, тож
+// звичайний count завжди давав би 0 або 1.
+export async function fetchEventReminderCounts(postIds) {
+  if (!supa || !postIds?.length) return new Map();
+  const { data, error } = await supa.rpc('event_reminder_counts', { post_ids: postIds.map(Number) });
+  if (error) { console.warn('[supabase] event_reminder_counts:', error.message); return new Map(); }
+  return new Map((data || []).map(r => [Number(r.post_id), Number(r.cnt)]));
+}
+
 
 // ── ОСТАННІЙ ДОПИС КОЖНОЇ СПІЛЬНОТИ (25.08) ─────────────────────────────────
 // Для віджета Стрічки на Громаді: ряд спільнот упорядкований за тим, ХТО ПИСАВ

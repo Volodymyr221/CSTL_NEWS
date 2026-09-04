@@ -19,6 +19,8 @@ import { COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { weatherCodeInfo } from '../core/weather-icons.js';
 import { ICONS } from '../core/icons.js';
 import { openShotamModal } from './events.js';
+import { focusFeedPost } from './feed.js';          // 🗓 тап по події → сама подія у Стрічці
+import { fetchUpcomingEvents } from '../core/supabase.js';   // 🗓 події спільнот (одне джерело, 04.09)
 import {
   nowMinutes,
   getStopMins as scheduleGetStopMins,
@@ -1395,70 +1397,61 @@ function eventCountdown(ev, now) {
 }
 
 export async function renderEventBlock() {
-  const el = document.getElementById('cm-event-content');
-  if (!el) return;
+  const sec = document.getElementById('hm-events');
+  const el  = document.getElementById('cm-event-content');
+  if (!el || !sec) return;
 
   // Зупиняємо попередню ротацію (перерендер/повернення на вкладку) — без витоку інтервалів
   if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
 
+  // 🔴 04.09 — ДЖЕРЕЛО ЗМІНЕНО: події СПІЛЬНОТ із бази замість data/events.json.
+  //
+  // 🗣️ Рішення Вови: «зводь» (одне джерело подій замість двох).
+  // 📐 Чому це не косметика: файл лежав протухлим — 7 записів, 0 майбутніх, усі
+  // з квітня-травня, — і з подіями спільнот НЕ МАВ ЖОДНОГО ЗВʼЯЗКУ. Тобто
+  // міськрада могла опублікувати концерт, і у віджет він не потрапив би НІКОЛИ.
+  //
+  // 🛑 Свята (holidays.json) як запасний вміст ПРИБРАНО свідомо: секція зветься
+  // «Події громади», а свято ніхто в громаді не планував і відповідальності за
+  // нього не несе. Показувати його тут означало б заповнювати порожнечу чужим
+  // змістом — рівно те, за що 05.08 прибрали демо-оголошення Дошки.
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const items = await fetchUpcomingEvents(EVENT_ROWS);
+    if (!items.length) { sec.hidden = true; return; }   // ховається (рішення Вови)
+    sec.hidden = false;
 
-    // 1) Майбутні події громади (не-auto), відсортовані за датою, до 5
-    let items = [];
-    try {
-      const res    = await fetch('./data/events.json');
-      const events  = await res.json();
-      items = events
-        .filter(e => !e.auto)  // RSS-новини (auto:true) виключаємо — як у вкладці Подій
-        .filter(e => new Date(e.date + 'T00:00:00') >= today)
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 5)
-        .map(e => ({ kind: 'event', id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
-    } catch {}
+    _evItems = items.map(p => ({
+      kind: 'event', id: p.id,
+      date: p.event_date, time: p.event_time,
+      title: firstLineOf(p.text),
+      location: p.event_location,
+      page: p.pages && p.pages.name,
+    }));
+    el.innerHTML = _evItems.map(evRowHtml).join('');
 
-    // 2) Fallback (Г-16): якщо майбутніх подій нема — найближчі свята з holidays.json
-    if (!items.length) {
-      try {
-        const hres = await fetch('./data/holidays.json');
-        const hall = await hres.json();
-        const harr = Array.isArray(hall) ? hall : (hall.holidays || []);
-        items = harr
-          .filter(h => new Date(h.date + 'T00:00:00') >= today)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 5)
-          .map(h => ({ kind: 'holiday', id: h.id, date: h.date, title: h.title, category: h.category || 'Свято', emoji: h.cover_emoji, gradient: h.cover_gradient }));
-      } catch {}
-    }
-
-    if (!items.length) {
-      el.innerHTML = '<div class="hm-empty">Поки немає запланованих подій у громаді</div>';
-      return;
-    }
-
-    // 🔴 04.08 — КАРУСЕЛЬ ЗНЯТО. Було: 5 слайдів, автоматична зміна кожні 6с,
-    // крапки-індикатори, фіолетовий градієнт свята. Тобто з пʼяти подій людина
-    // бачила ОДНУ, решту треба було дочекатись — і це був один із чотирьох
-    // автоматичних рухів сторінки (діагноз №4 аудиту 03.08).
-    // Плюс фіолетовий був сьомою візуальною мовою на екрані.
-    // Стало: ТРИ рядки в тій самій мові, що новини й оголошення. Видно одразу
-    // три замість однієї, ніщо не рухається саме.
-    _evItems = items;
-    el.innerHTML = items.slice(0, EVENT_ROWS).map(evRowHtml).join('');
-
-    // Тап → та сама картка події, що була (openShotamModal). Перехід не змінено.
+    // Тап → сама подія у Стрічці. Це і є те, чого бракувало 04.08, коли секцію
+    // прибирали: тоді вести з неї не було куди.
     if (!el.dataset.wired) {
       el.dataset.wired = '1';
       el.addEventListener('click', e => {
         const row = e.target.closest('[data-ev-id]');
         if (!row) return;
-        const it = (_evItems || []).find(x => String(x.id) === row.dataset.evId);
-        if (it && it.kind === 'event') openShotamModal(it.id);
+        // 🔑 Та сама функція, якою відкриває допис deep-link зі сповіщення —
+        // другого шляху до події не заводимо (у проєкті вже розходились копії).
+        focusFeedPost(Number(row.dataset.evId));
       });
     }
   } catch {
-    el.innerHTML = '<div class="hm-empty">Події недоступні</div>';
+    // Збій мережі — секції просто немає. Порожній блок із написом «недоступні»
+    // займав би місце і не казав нічого корисного.
+    sec.hidden = true;
   }
+}
+
+// Назва події — перший рядок допису (там її й пишуть).
+function firstLineOf(text) {
+  const line = String(text || '').split('\n')[0].trim();
+  return line || 'Подія';
 }
 
 // Скільки подій показує головна. Три — рівно стільки, скільки вміщується без
@@ -1486,6 +1479,7 @@ function evRowHtml(it) {
       <span class="hm-ev-body">
         <span class="hm-ev-ttl">${escapeHtml(it.title)}</span>
         <span class="hm-ev-meta">${escapeHtml(when)}${it.time ? ' · ' + escapeHtml(it.time) : ''}${it.location ? ' · ' + escapeHtml(it.location) : ''}</span>
+        ${it.page ? `<span class="hm-ev-who">${escapeHtml(it.page)}</span>` : ''}
       </span>
     </article>`;
 }

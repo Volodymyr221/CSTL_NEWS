@@ -22,6 +22,7 @@ import {
   fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
   nameSlot, nameSlotStatic,
   logEvent, getAnonId,   // аналітика подій дій (26.08)
+  eventState, feedSortKey, isReminderOn, loadMyEventReminders, toggleEventReminder,   // 🗓 події спільнот (04.09)
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -165,9 +166,17 @@ async function loadData() {
     fetchPageCommentReactions(currentUserId()),
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
+    // 🗓 Мої нагадування про події — щоб дзвіночок одразу малювався у правильному
+    // стані. Без цього кнопка показувала б «Нагадати» тому, хто вже ввімкнув, і
+    // тап вимикав би нагадування замість вмикати.
+    isLoggedIn() ? loadMyEventReminders()    : Promise.resolve(),
   ]);
   // Чернетки — ПЕРШИМИ: це те, що чекає на дію, а не те, що читають.
   pages = orderPages(pg); posts = [...dr, ...ps]; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  // 🗓 Порядок стрічки з урахуванням републікації події в її день (feedSortKey).
+  // ⚠️ Чернетки лишаються зверху: вони не в цьому сортуванні, бо це не «що
+  // читати», а «що чекає на дію».
+  posts = [...dr, ...ps.sort((a, b) => feedSortKey(b) - feedSortKey(a))];
   // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
   // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
   commentMap = new Map(); commentPaging = new Map(); commentError = new Map();
@@ -692,14 +701,64 @@ function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStag
 }
 
 // Плашка події на картці: «🗓 12 серпня, субота · 10:00 📍 місце» (якщо пост — подія).
-function eventBadgeHtml(post) {
+// 🗓 ШАПКА ПОДІЇ — ЗАМІСТЬ ТОНКОГО РЯДКА З ЕМОДЗІ (04.09, замовлення Вови).
+//
+// 🔴 ЩО БУЛО НЕ ТАК. Подія малювалась як звичайний допис, під яким стояв сірий
+// рядок «🗓 24 серпня · 18:00». Тобто ПОДІЯ НЕ ЧИТАЛАСЬ ЯК ПОДІЯ: та сама
+// картка, та сама вага, різниця в одному рядку — око не вирізняло її в стрічці.
+//
+// 🔑 ДАТА БЛОКОМ ЛІВОРУЧ, бо це перше питання про подію — «коли». У рядку вона
+// стояла останньою і читалась після всього тексту. Блок дає їй вагу, не
+// збільшуючи кегль (принцип «ієрархія вагою і місцем, а не розміром»).
+//
+// 🛑 ЕМОДЗІ 🗓 ПРИБРАНО. Дизайн-аудит 03.09 вичистив емодзі з інтерфейсу — у
+// телефонах громади сторож `home-contacts` вимагає їх повної відсутності. Знак
+// події тепер несе сама форма блока з датою, а не картинка зі шрифту.
+//
+// 📐 ТРИ СТАНИ, і акцент має РІВНО ОДИН:
+//   • майбутня — нейтральна, як решта карток;
+//   • СЬОГОДНІ — бордовий акцент і крапка. Стан рідкісний (один день у житті
+//     події), тому має право на колір бренду; якби так світилась кожна майбутня
+//     подія, акцент знецінився б і перестав щось означати;
+//   • минула — приглушена ціла шапка.
+function eventHeadHtml(post) {
   if (!post.event_date) return '';
-  const when = formatEventDate(post.event_date) + (post.event_time ? ` · ${escapeHtml(post.event_time)}` : '');
-  const past = post.event_date < todayKey();   // подія в минулому — приглушена
-  const loc  = post.event_location
-    ? `<span class="fd-evb-loc">${escapeHtml(post.event_location)}</span>` : '';
-  return `<div class="fd-evb${past ? ' fd-evb--past' : ''}">
-    <span class="fd-evb-when">🗓 ${when}</span>${loc}</div>`;
+  const st = eventState(post.event_date);
+  const d = new Date(String(post.event_date) + 'T00:00:00');
+  const day = Number.isFinite(d.getTime()) ? d.getDate() : '';
+  const mon = Number.isFinite(d.getTime()) ? MONTH_SHORT[d.getMonth()] : '';
+  const мітка = st === 'today' ? 'СЬОГОДНІ' : 'ПОДІЯ';
+  const рядок = [post.event_time ? escapeHtml(post.event_time) : '',
+                 post.event_location ? escapeHtml(post.event_location) : '']
+    .filter(Boolean).join(' · ');
+  return `<div class="fd-ev fd-ev--${st}">
+      <div class="fd-ev-date"><b>${day}</b><span>${mon}</span></div>
+      <div class="fd-ev-txt">
+        <span class="fd-ev-tag">${мітка}</span>
+        ${рядок ? `<span class="fd-ev-meta">${рядок}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+// Скорочені місяці для блока дати. У родовому відмінку — «14 вересня», а не
+// «14 вересень»: блок читається як дата, а не як заголовок календаря.
+const MONTH_SHORT = ['січ', 'лют', 'бер', 'квіт', 'трав', 'черв',
+                     'лип', 'серп', 'вер', 'жовт', 'лист', 'груд'];
+
+// Кнопка «Нагадати» — тільки для МАЙБУТНІХ подій і тільки для тих, хто увійшов.
+// 🔑 Нагадування приходить ЛИШЕ тому, хто натиснув (рішення Вови: «в тому
+// випадку якщо людина сама вибрала»). Це та сама межа, що в правилі капсул:
+// показуємо і надсилаємо те, що людина сама ввімкнула.
+// 🛑 Для минулої події кнопки немає зовсім — нагадувати нема про що, а вимкнена
+// кнопка обіцяла б дію, якої не існує.
+function eventRemindHtml(post) {
+  if (!post.event_date) return '';
+  if (eventState(post.event_date) === 'past') return '';
+  const on = isReminderOn(post.id);
+  return `<button class="fd-ev-remind${on ? ' fd-ev-remind--on' : ''}"
+      data-remind="${post.id}" type="button" aria-pressed="${on ? 'true' : 'false'}">
+      ${on ? IC_BELL_F : IC_BELL}<span>${on ? 'Нагадаю' : 'Нагадати'}</span>
+    </button>`;
 }
 
 // onPage — картка малюється на екрані КОНКРЕТНОЇ спільноти (а не в головній стрічці).
@@ -750,7 +809,7 @@ function postCardHtml(post, onPage = false) {
       ${photo}
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
         ${чернетка ? '<div class="fd-draft-badge">ЧЕРНЕТКА · її бачиш лише ти</div>' : ''}
-        ${eventBadgeHtml(post)}
+        ${eventHeadHtml(post)}
         <div class="fd-text fd-text--preclip">${escapeHtml(post.text)}</div>
         ${author}
         ${чернетка && canEditPost ? `<div class="fd-draft-actions">
@@ -758,6 +817,7 @@ function postCardHtml(post, onPage = false) {
           <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
         </div>` : ''}
         <footer class="fd-actions">
+          ${eventRemindHtml(post)}
           <button class="fd-like${rx.my ? ' fd-like--on' : ''}" data-like="${post.id}" type="button">
             <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ''}</span>
           </button>
@@ -789,7 +849,7 @@ async function publishDraft(postId, btn) {
   // чернетки і поїхати вгору стрічки за новим часом.
   const i = posts.findIndex(p => p.id === postId);
   if (i >= 0) posts[i] = { ...posts[i], ...r.post };
-  posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  posts.sort((a, b) => feedSortKey(b) - feedSortKey(a));   // 🗓 подія в свій день піднімається (див. feedSortKey)
   renderFeed();
   showToast('Опубліковано — тепер це бачать усі', 0, 'ok');
 }
@@ -1273,7 +1333,7 @@ function renderNewPostsPill() {
         await loadData();                    // сторінка невідома → перечитуємо все
       } else {
         posts = [...пачка, ...posts]
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          .sort((a, b) => feedSortKey(b) - feedSortKey(a));   // 🗓 як вище
       }
       renderFeed();
       document.getElementById('feed-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1367,6 +1427,50 @@ function planCollapsedPad(el) {
 // 🔑 Черга на ПОСТ, а не глобальна: лайки різних постів не мають чекати один одного.
 // Оптимістичний малюнок лишається миттєвим — у чергу стає лише похід у мережу.
 const _likeQueue = new Map();
+// 🗓 УВІМКНУТИ/ВИМКНУТИ НАГАДУВАННЯ ПРО ПОДІЮ (04.09).
+//
+// 🔑 ПОРЯДОК КРОКІВ ТУТ НЕ ДОВІЛЬНИЙ. Спершу вхід, потім ДОЗВІЛ БРАУЗЕРА, і лише
+// потім запис у базу. Якби ми писали підписку першою, людина побачила б
+// «Нагадаю», а телефон не мав би права дзвонити — тобто вимикач підтверджував би
+// дію, якої не станеться. Це рівно вада B-33 («Все працює», а не працює нічого).
+//
+// 🛑 ВИМКНЕННЯ дозволу НЕ питає: зняти нагадування має бути можливо завжди,
+// навіть якщо людина відкликала право на сповіщення в налаштуваннях телефона.
+async function toggleRemind(postId, btn) {
+  if (!isLoggedIn()) { requireAuth('увімкнути нагадування', () => {}); return; }
+  const wasOn = isReminderOn(postId);
+
+  if (!wasOn) {
+    const ok = await ensurePushSubscription();
+    if (!ok) { showToast(pushBlockedMsg(), 4000, 'error'); return; }
+  }
+
+  // Оптимістично малюємо новий стан — палець не має чекати на мережу.
+  paintRemind(btn, !wasOn);
+  const res = await toggleEventReminder(postId);
+  if (res === null) {
+    paintRemind(btn, wasOn);                       // не вийшло — вертаємо як було
+    showToast('Не вдалося змінити нагадування — спробуй ще раз', 4000, 'error');
+    return;
+  }
+  // ⚠️ Малюємо ФАКТИЧНИЙ стан із бази, а не наш здогад: два швидкі тапи могли
+  // розійтись із чергою, і тоді екран показував би не те, що записано.
+  paintRemind(btn, res);
+  if (res) showToast('Нагадаємо за добу і за годину до події', 3000, 'ok');
+}
+
+// Точкове перемальовування ОДНІЄЇ кнопки. Повний `renderFeed()` тут заборонений:
+// він скинув би прокрутку рівно в мить, коли палець на екрані (урок 27.07).
+function paintRemind(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle('fd-ev-remind--on', !!on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const txt = btn.querySelector('span');
+  if (txt) txt.textContent = on ? 'Нагадаю' : 'Нагадати';
+  const svg = btn.querySelector('svg');
+  if (svg) svg.outerHTML = on ? IC_BELL_F : IC_BELL;
+}
+
 function toggleLike(postId) {
   if (!isLoggedIn()) { requireAuth('вподобати пост', () => {}); return; }  // гейт входу
   const uid = currentUserId();
@@ -3768,6 +3872,10 @@ function wireCards(root) {
     if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
     const pubBtn = e.target.closest('[data-publish]');   // чернетка → в ефір
     if (pubBtn) { publishDraft(Number(pubBtn.dataset.publish), pubBtn); return; }
+    // 🗓 Нагадування про подію. Стоїть ПЕРЕД лайком: кнопка лежить у тому самому
+    // рядку дій, і без раннього виходу тап по ній пішов би далі по делегатах.
+    const remindBtn = e.target.closest('[data-remind]');
+    if (remindBtn) { toggleRemind(Number(remindBtn.dataset.remind), remindBtn); return; }
     const likeBtn = e.target.closest('[data-like]');
     if (likeBtn) { toggleLike(Number(likeBtn.dataset.like)); return; }
     const comBtn = e.target.closest('[data-comments]');
