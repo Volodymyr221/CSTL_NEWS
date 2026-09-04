@@ -2406,9 +2406,14 @@ export async function fetchUpcomingEvents(limit = 3) {
   const iso = [today.getFullYear(),
                String(today.getMonth() + 1).padStart(2, '0'),
                String(today.getDate()).padStart(2, '0')].join('-');
+  // 🛑 ТІЛЬКИ ОПУБЛІКОВАНЕ. Без цього фільтра редактор спільноти бачив би у
+  // віджеті ГРОМАДИ власну ЧЕРНЕТКУ події поруч зі справжніми — база йому її
+  // законно віддає (він її автор), а віджет каже «події громади», тобто те, що
+  // вже оголошено. Той самий фільтр стоїть у стрічці (`fetchPagePosts`).
   const { data, error } = await supa.from('page_posts')
     .select('id, page_id, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
+    .eq('status', 'published')
     .not('event_date', 'is', null)
     .gte('event_date', iso)
     .order('event_date', { ascending: true })

@@ -1176,28 +1176,37 @@
 /* Минула — приглушена ЦІЛА шапка, а не лише текст: подія перестала бути дією. */
 .fd-ev--past { opacity: 0.55; }
 
-/* Кнопка «Нагадати» — перша в рядку дій, бо це головна дія саме події.
-   Форма пігулки відрізняє її від круглих лайка/коментаря: різна роль — різна
-   форма, інакше око читає їх як один ряд однакових кнопок. */
-.fd-ev-remind {
-  display: inline-flex; align-items: center; gap: 6px;
-  margin-right: auto; padding: 7px 12px;
-  border: 1px solid var(--fd-line); border-radius: 999px;
-  background: var(--fd-surface); color: var(--fd-ink);
-  font-size: 13px; font-weight: 600; cursor: pointer;
+/* ── 🔔 ДЗВІНОЧОК «НАГАДАТИ» — У ШАПЦІ КАРТКИ, БІЛЯ «⋯» (04.09, друга правка) ──
+   🔴 БУЛО ЗЛАМАНЕ ТАК: пігулка стояла ПЕРШОЮ в рядку дій із `margin-right:auto`
+   і фізично розсувала лайк, коментар і поділитись. Вова: «лайки та коментарі
+   поставити на місце, де вони знаходяться… так само, як в постах». Рука
+   тягнеться до цих трьох кнопок не читаючи — зсув ламає мʼязову памʼять.
+   🔑 Нагадування — не реакція на допис, а налаштування МОЄЇ підписки на подію,
+   тож його місце поруч із керуванням дописом («⋯»), а не серед реакцій.
+   📐 Ціль дотику 40×40 при іконці 20px: рівно як у сусіднього «⋯», інакше два
+   сусідні кружечки мали б різну зону натиску при однаковому вигляді. */
+.fd-remind-btn {
+  margin-left: auto; flex: none;
+  width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--fd-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   /* Відгук на НАТИСК, а не на відпускання (Apple HIG: реакція має бути миттєвою) */
-  transition: transform 100ms ease-out, background 140ms ease-out;
+  transition: transform 100ms ease-out, background 140ms ease-out, color 140ms ease-out;
 }
-.fd-ev-remind:active { transform: scale(0.97); }
-.fd-ev-remind svg { width: 17px; height: 17px; }
-.fd-ev-remind--on {
-  background: color-mix(in srgb, var(--fd-accent) 10%, var(--fd-surface));
-  border-color: color-mix(in srgb, var(--fd-accent) 34%, transparent);
+.fd-remind-btn:active { transform: scale(0.92); }
+.fd-remind-btn svg { width: 20px; height: 20px; }
+/* Увімкнено — бордовий дзвіночок на тихій підкладці. Стан МУСИТЬ читатись без
+   підпису: кнопка без тексту, і колір тут єдиний носій відповіді «я підписаний». */
+.fd-remind-btn--on {
   color: var(--fd-accent);
+  background: color-mix(in srgb, var(--fd-accent) 10%, transparent);
 }
+/* Сусідство з «⋯»: авто-відступ уже забрав дзвіночок, меню просто стає поруч. */
+.fd-remind-btn + .fd-card-menu { margin-left: 2px; }
+.fd-pin-badge ~ .fd-remind-btn { margin-left: 4px; }
 @media (prefers-reduced-motion: reduce) {
-  .fd-ev-remind { transition: none; }
-  .fd-ev-remind:active { transform: none; }
+  .fd-remind-btn { transition: none; }
+  .fd-remind-btn:active { transform: none; }
 }
 .fd-evb-loc::before { content: "📍 "; }
 .fd-evb--past { opacity: 0.55; filter: grayscale(0.4); }

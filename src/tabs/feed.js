@@ -745,19 +745,42 @@ function eventHeadHtml(post) {
 const MONTH_SHORT = ['січ', 'лют', 'бер', 'квіт', 'трав', 'черв',
                      'лип', 'серп', 'вер', 'жовт', 'лист', 'груд'];
 
-// Кнопка «Нагадати» — тільки для МАЙБУТНІХ подій і тільки для тих, хто увійшов.
+// Дзвіночок «Нагадати» — тільки для МАЙБУТНІХ подій.
 // 🔑 Нагадування приходить ЛИШЕ тому, хто натиснув (рішення Вови: «в тому
 // випадку якщо людина сама вибрала»). Це та сама межа, що в правилі капсул:
 // показуємо і надсилаємо те, що людина сама ввімкнула.
 // 🛑 Для минулої події кнопки немає зовсім — нагадувати нема про що, а вимкнена
 // кнопка обіцяла б дію, якої не існує.
+//
+// 🔴 04.09 (друга правка) — ВІН ПЕРЕЇХАВ У ШАПКУ КАРТКИ, ДО «⋯».
+//
+// 🗣️ Вова: «лайки та коментарі поставити на місце, де вони знаходяться, тобто
+// так само, як вони знаходяться в постах. А нагадування десь розмістити, чи
+// зверху, біля кнопки 3 крапки, чи знизу посередині, але не можна його так
+// робити. Ти неправильно взагалі реалізував».
+//
+// 🔴 І він має рацію: пігулка стояла ПЕРШОЮ в рядку дій із `margin-right: auto`,
+// тобто фізично РОЗСУВАЛА лайк, коментар і поділитись. У людини на кожній
+// картці події ті самі три кнопки опинялись не там, де на всіх інших картках, —
+// а рука тягнеться до них не читаючи. Це поламана мʼязова памʼять, не смак.
+//
+// 🔑 ЧОМУ САМЕ ШАПКА, А НЕ «ЗНИЗУ ПОСЕРЕДИНІ» (обидва варіанти Вова дозволив):
+// рядок дій — це РЕАКЦІЇ на допис (подобається · відповісти · поділитись), і
+// вони однакові для всього, що є в стрічці. Нагадування ж — не реакція, а
+// налаштування МОЄЇ підписки на цю подію. Місце такої дії — біля «⋯», де вже
+// живе керування самим дописом; так само в застосунках, які люди знають:
+// дзвіночок стоїть у шапці, а не серед лайків.
 function eventRemindHtml(post) {
   if (!post.event_date) return '';
   if (eventState(post.event_date) === 'past') return '';
   const on = isReminderOn(post.id);
-  return `<button class="fd-ev-remind${on ? ' fd-ev-remind--on' : ''}"
-      data-remind="${post.id}" type="button" aria-pressed="${on ? 'true' : 'false'}">
-      ${on ? IC_BELL_F : IC_BELL}<span>${on ? 'Нагадаю' : 'Нагадати'}</span>
+  // ⚠️ Підпис несе `aria-label`, а не текст усередині: у шапці немає ширини на
+  // слово, а кнопка без імені для читача з екранним диктором — просто «кнопка».
+  return `<button class="fd-remind-btn${on ? ' fd-remind-btn--on' : ''}"
+      data-remind="${post.id}" type="button" aria-pressed="${on ? 'true' : 'false'}"
+      aria-label="${on ? 'Нагадування увімкнено' : 'Нагадати про подію'}"
+      title="${on ? 'Нагадування увімкнено' : 'Нагадати про подію'}">
+      ${on ? IC_BELL_F : IC_BELL}
     </button>`;
 }
 
@@ -804,6 +827,7 @@ function postCardHtml(post, onPage = false) {
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
+        ${eventRemindHtml(post)}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
       ${photo}
@@ -817,7 +841,6 @@ function postCardHtml(post, onPage = false) {
           <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
         </div>` : ''}
         <footer class="fd-actions">
-          ${eventRemindHtml(post)}
           <button class="fd-like${rx.my ? ' fd-like--on' : ''}" data-like="${post.id}" type="button">
             <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ''}</span>
           </button>
@@ -851,6 +874,9 @@ async function publishDraft(postId, btn) {
   if (i >= 0) posts[i] = { ...posts[i], ...r.post };
   posts.sort((a, b) => feedSortKey(b) - feedSortKey(a));   // 🗓 подія в свій день піднімається (див. feedSortKey)
   renderFeed();
+  // 🗓 Чернетка події щойно стала публічною — віджет Громади про це має знати
+  // (у нього фільтр `status = published`, тож до цієї миті події там і не було).
+  if (r.post && r.post.event_date) window.dispatchEvent(new CustomEvent('cstl-events-changed'));
   showToast('Опубліковано — тепер це бачать усі', 0, 'ok');
 }
 
@@ -1463,10 +1489,14 @@ async function toggleRemind(postId, btn) {
 // він скинув би прокрутку рівно в мить, коли палець на екрані (урок 27.07).
 function paintRemind(btn, on) {
   if (!btn) return;
-  btn.classList.toggle('fd-ev-remind--on', !!on);
+  btn.classList.toggle('fd-remind-btn--on', !!on);
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  const txt = btn.querySelector('span');
-  if (txt) txt.textContent = on ? 'Нагадаю' : 'Нагадати';
+  // ⚠️ 04.09 (друга правка): кнопка переїхала в шапку і стала БЕЗ ТЕКСТУ, тож
+  // стан несе `aria-label`/`title`, а не підпис усередині. Кнопка без імені —
+  // для екранного диктора просто «кнопка», а для пальця — загадка.
+  const назва = on ? 'Нагадування увімкнено' : 'Нагадати про подію';
+  btn.setAttribute('aria-label', назва);
+  btn.setAttribute('title', назва);
   const svg = btn.querySelector('svg');
   if (svg) svg.outerHTML = on ? IC_BELL_F : IC_BELL;
 }
@@ -3534,6 +3564,16 @@ function openComposer(pageId, editPost = null) {
         // порожнім, прокрутка обрізалась до нуля. Тепер міняється рівно одна картка.
         if (edit) patchPostCard(res.post.id);
         else insertPostCard(res.post);
+        // 🗓 04.09 (друга правка) — ВІДЖЕТ «ПОДІЇ ГРОМАДИ» ПРО ЦЕ ДІЗНАЄТЬСЯ.
+        // 🔴 Скарга Вови: він опублікував подію і не побачив її у віджеті на
+        // Громаді. Віджет малювався один раз на старті застосунку, а перехід
+        // між вкладками нічого не перемальовує — тож щойно створена подія
+        // просто не мала способу туди потрапити.
+        // ⚠️ Сигнал шлемо і при РЕДАГУВАННІ: змінена дата чи знята подія так
+        // само робить показане у віджеті неправдою.
+        if (eventFields.event_date || (editPost && editPost.event_date)) {
+          window.dispatchEvent(new CustomEvent('cstl-events-changed'));
+        }
       } else {
         // Текст і фото лишаються у формі — людина просто тисне ще раз.
         showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
@@ -3867,7 +3907,11 @@ function openPostMenu(postId) {
     if (!confirm('Видалити пост?')) return;
     const res = await deletePagePost(postId);
     if (!res.ok) { showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 4000, 'error'); return; }
+    // 🗓 Видалили подію — віджет Громади мусить перестати її показувати.
+    // ⚠️ Перевіряємо ДО фільтра: після нього поста в памʼяті вже немає.
+    const булаПодія = !!(posts.find(p => p.id === postId) || {}).event_date;
     posts = posts.filter(p => p.id !== postId);
+    if (булаПодія) window.dispatchEvent(new CustomEvent('cstl-events-changed'));
     close();
     // Знімаємо саме цю картку. Решта списку лишається тими самими вузлами — тобто
     // не блимає і не перезавантажує фото, а екран не «стрибає» на позицію 0.

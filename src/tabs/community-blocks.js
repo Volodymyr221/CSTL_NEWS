@@ -18,7 +18,9 @@ import { catColor, catIcon, catShort } from '../core/board-categories.js';
 import { COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { weatherCodeInfo } from '../core/weather-icons.js';
 import { ICONS } from '../core/icons.js';
-import { openShotamModal } from './events.js';
+// ⚠️ 04.09: імпорт `openShotamModal` прибрано разом із каруселлю — вона була
+// його єдиним споживачем. Імпорт, який нікуди не веде, тримає в збірці цілий
+// модуль і бреше про звʼязки між екранами.
 import { focusFeedPost } from './feed.js';          // 🗓 тап по події → сама подія у Стрічці
 import { fetchUpcomingEvents } from '../core/supabase.js';   // 🗓 події спільнот (одне джерело, 04.09)
 import {
@@ -46,10 +48,16 @@ import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } fr
 // каруселлю — вона була єдиним вкладеним скролером сторінки і одним із
 // чотирьох автоматичних рухів. Деталі — у шапці «Блок 4» нижче.
 
-// Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
+// 🗓 ПОДІЇ ГРОМАДИ — стан віджета.
+// ⚠️ 04.09: каруселі тут більше немає (`_evIdx`, `_evTimer`, `evSlideHtml`,
+// `renderEvCarousel`, `startEvRotator` видалено). Вона перестала бути досяжною
+// ще тоді, коли віджет перевели на події спільнот і список рядків, — і лишалась
+// сотнею рядків коду, який наступна сесія читала б як живий. Мертвий код гірший
+// за відсутній: він відповідає на питання «як це працює» НЕПРАВДОЮ.
 let _evItems = [];
-let _evIdx   = 0;
-let _evTimer = null;
+// Коли віджет востаннє ходив у базу. Потрібно, щоб повернення на вкладку не
+// перетворилось на запит при кожному тапі по таб-бару.
+let _evFetchedAt = 0;
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -1396,15 +1404,30 @@ function eventCountdown(ev, now) {
   return `ЧЕРЕЗ ${months} ${pluralUA(months, 'МІСЯЦЬ', 'МІСЯЦІ', 'МІСЯЦІВ')}`;
 }
 
-export async function renderEventBlock() {
+// 🔴 04.09 (друга правка) — ВІДЖЕТ ОНОВЛЮЄТЬСЯ, А НЕ ЖИВЕ ЗІ СТАРТУ ЗАСТОСУНКУ.
+//
+// 🗣️ Скарга Вови: «чому немає віджету подій в загальному організованих подій?».
+// 🔴 ЗАМІРЯНО: у базі на той момент СТОЯЛА жива подія («Концерт до дня міста»,
+// 18 вересня), а секція лишалась прихованою. Причина не в даних і не в запиті:
+// `renderEventBlock()` кликався РІВНО ОДИН РАЗ — з `initCommunity()` на старті
+// застосунку. `switchTab` у `app.js` лише ховає й показує сторінки, нічого не
+// перемальовуючи. Тобто подія, опублікована ПІСЛЯ відкриття застосунку, не
+// зʼявилась би у віджеті ніколи — до повного перезавантаження.
+//
+// ➡️ Тому віджет тепер слухає `cstl-tab-changed` (той самий механізм, яким
+// користуються Дошка і Стрічка) і переміряє себе на вході на Громаду.
+// ⚠️ Не частіше ніж раз на `EV_REFRESH_MS`: тап по активній вкладці — це «вгору»,
+// і людина може тиснути його підряд. Публікація ж скидає лічильник миттєво
+// (`cstl-events-changed` нижче), бо там оновлення потрібне саме зараз.
+const EV_REFRESH_MS = 60000;
+
+export async function renderEventBlock({ force = false } = {}) {
   const sec = document.getElementById('hm-events');
   const el  = document.getElementById('cm-event-content');
   if (!el || !sec) return;
+  if (!force && _evFetchedAt && Date.now() - _evFetchedAt < EV_REFRESH_MS) return;
 
-  // Зупиняємо попередню ротацію (перерендер/повернення на вкладку) — без витоку інтервалів
-  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
-
-  // 🔴 04.09 — ДЖЕРЕЛО ЗМІНЕНО: події СПІЛЬНОТ із бази замість data/events.json.
+  // 🔴 04.09 — ДЖЕРЕЛО: події СПІЛЬНОТ із бази замість data/events.json.
   //
   // 🗣️ Рішення Вови: «зводь» (одне джерело подій замість двох).
   // 📐 Чому це не косметика: файл лежав протухлим — 7 записів, 0 майбутніх, усі
@@ -1417,7 +1440,12 @@ export async function renderEventBlock() {
   // змістом — рівно те, за що 05.08 прибрали демо-оголошення Дошки.
   try {
     const items = await fetchUpcomingEvents(EVENT_ROWS);
-    if (!items.length) { sec.hidden = true; return; }   // ховається (рішення Вови)
+    _evFetchedAt = Date.now();
+    // 🛑 Порожньо → секції немає ЗОВСІМ. Це рішення Вови на пряме питання
+    // «що робити, коли подій нема» — «ховається», і воно того самого класу, що
+    // у зборів і дайджесту Стрічки: порожній блок із написом «подій немає»
+    // займає екран і не каже нічого, чого не сказала б його відсутність.
+    if (!items.length) { sec.hidden = true; el.innerHTML = ''; return; }
     sec.hidden = false;
 
     _evItems = items.map(p => ({
@@ -1427,7 +1455,8 @@ export async function renderEventBlock() {
       location: p.event_location,
       page: p.pages && p.pages.name,
     }));
-    el.innerHTML = _evItems.map(evRowHtml).join('');
+    const now = new Date();
+    el.innerHTML = _evItems.map(it => evRowHtml(it, now)).join('');
 
     // Тап → сама подія у Стрічці. Це і є те, чого бракувало 04.08, коли секцію
     // прибирали: тоді вести з неї не було куди.
@@ -1442,10 +1471,27 @@ export async function renderEventBlock() {
       });
     }
   } catch {
-    // Збій мережі — секції просто немає. Порожній блок із написом «недоступні»
-    // займав би місце і не казав нічого корисного.
-    sec.hidden = true;
+    // Збій мережі — лишаємо те, що вже показано (якщо показано). Замінювати
+    // живий список написом «недоступні» через одну невдалу спробу означало б
+    // забрати в людини дані, які в неї вже були.
+    if (!_evItems.length) sec.hidden = true;
   }
+}
+
+// ── КОЛИ ВІДЖЕТ ПЕРЕМІРЯЄ СЕБЕ ──────────────────────────────────────────────
+// 🔑 Два приводи, і обидва — момент, коли людина МОЖЕ побачити зміну:
+//   • вхід на Громаду (тротлінг `EV_REFRESH_MS`);
+//   • публікація або редагування події у Стрічці — тоді `force`, бо людина
+//     щойно її створила і йде дивитись саме на неї.
+export function wireEventBlockRefresh() {
+  window.addEventListener('cstl-tab-changed', () => {
+    if (document.querySelector('.app-main')?.dataset.tab !== 'community') return;
+    renderEventBlock();
+  });
+  window.addEventListener('cstl-events-changed', () => {
+    _evFetchedAt = 0;                 // наступний вхід на Громаду піде в базу
+    renderEventBlock({ force: true });
+  });
 }
 
 // Назва події — перший рядок допису (там її й пишуть).
@@ -1460,135 +1506,36 @@ const EVENT_ROWS = 3;
 
 // Один РЯДОК події. Ліворуч — дата стовпчиком (число + місяць): це те, за чим
 // подію шукають очима, і воно читається швидше за будь-яку іконку.
-// ⚠️ Свята (kind: 'holiday') не мають картки для відкриття — вони не клікабельні
-// і тому не отримують `data-ev-id`. Мовчазний тап у нікуди гірший за його
-// відсутність.
+//
+// 🆕 04.09 (друга правка) — ВІДЛІК СПРАВА ОКРЕМОЮ ПІГУЛКОЮ.
+// 🗣️ Замовлення Вови: «це має бути сучасний віджет, інтегрований в дизайн та
+// логіку додатку». 🔑 «Коли» — не одне питання, а два: КОТРОГО ЧИСЛА (дата
+// ліворуч) і СКІЛЬКИ ЩЕ ЧЕКАТИ (пігулка праворуч). Друге раніше тонуло в
+// сірому рядку меж часом і місцем — тобто головне про подію читалось останнім.
+// 🛑 Акцент бренду має РІВНО ОДИН стан — «СЬОГОДНІ»: він рідкісний (один день у
+// житті події), і саме тому має на колір право. Світилась би кожна майбутня —
+// акцент не означав би нічого. Та сама шкала, що на картці події у Стрічці.
 const EV_MONTHS_SHORT = ['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
-function evRowHtml(it) {
+function evRowHtml(it, now = new Date()) {
   const d = new Date(it.date + 'T00:00:00');
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const today = new Date(now); today.setHours(0, 0, 0, 0);
   const days = Math.round((d - today) / 86400000);
-  const when = days === 0 ? 'сьогодні' : days === 1 ? 'завтра' : `через ${days} дн.`;
-  const isEvent = it.kind === 'event';
+  const сьогодні = days === 0;
+  // Час і місце — рядок під назвою; відлік звідси прибрано, він праворуч.
+  const meta = [it.time || '', it.location || ''].filter(Boolean).join(' · ');
   return `
-    <article class="hm-card${isEvent ? ' hm-card--tap' : ''} hm-ev"${isEvent ? ` data-ev-id="${escapeHtml(String(it.id))}"` : ''}>
+    <article class="hm-card hm-card--tap hm-ev${сьогодні ? ' hm-ev--today' : ''}" data-ev-id="${escapeHtml(String(it.id))}">
       <span class="hm-ev-date">
         <span class="hm-ev-d">${d.getDate()}</span>
         <span class="hm-ev-m">${EV_MONTHS_SHORT[d.getMonth()]}</span>
       </span>
       <span class="hm-ev-body">
         <span class="hm-ev-ttl">${escapeHtml(it.title)}</span>
-        <span class="hm-ev-meta">${escapeHtml(when)}${it.time ? ' · ' + escapeHtml(it.time) : ''}${it.location ? ' · ' + escapeHtml(it.location) : ''}</span>
+        ${meta ? `<span class="hm-ev-meta">${escapeHtml(meta)}</span>` : ''}
         ${it.page ? `<span class="hm-ev-who">${escapeHtml(it.page)}</span>` : ''}
       </span>
+      <span class="hm-ev-when">${escapeHtml(eventCountdown(it, now))}</span>
     </article>`;
-}
-
-// Одна картка каруселі — подія (табло-стиль) або свято (cover_emoji + градієнт).
-function evSlideHtml(it, now) {
-  const eventDay = new Date(it.date + 'T00:00:00');
-  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-  const isUrgent = dayDiff <= 1;
-  const dateStr   = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-  const catStr    = escapeHtml(it.category || '');
-  const countdown = escapeHtml(eventCountdown(it, now));
-
-  if (it.kind === 'holiday') {
-    const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : '';
-    return `
-      <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? ' tablo-hero--urgent' : ''}"${grad} data-ev-id="${it.id}">
-          <div class="evh-top">
-            <span class="tablo-countdown">${countdown}</span>
-            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
-          </div>
-          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || '🎉')}</div>
-          <div class="evh-title">${escapeHtml(it.title)}</div>
-          <div class="evh-meta tablo-soft">${dateStr}</div>
-        </article>
-      </div>
-    `;
-  }
-
-  const timeStr = it.time ? escapeHtml(it.time) : '';
-  const locStr  = it.location ? escapeHtml(it.location) : '';
-  // Мініатюра фото (якщо є) — маленький квадрат у кутку картки, текст лишається зліва.
-  const thumb = it.image
-    ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">`
-    : '';
-  return `
-    <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}${it.image ? ' evh-card--photo' : ''}" data-ev-id="${it.id}">
-        ${thumb}
-        <div class="evh-top">
-          <span class="tablo-countdown">${countdown}</span>
-          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
-        </div>
-        <div class="evh-time tablo-time-mono">
-          <span class="evh-date tablo-time-accent">${dateStr}</span>
-          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ''}
-        </div>
-        <div class="evh-title">${escapeHtml(it.title)}</div>
-        ${locStr ? `<div class="evh-meta tablo-soft">📍 ${locStr}</div>` : ''}
-      </article>
-    </div>
-  `;
-}
-
-// Рендер каруселі: трек зі слайдів + крапки. Одна картка видима, авто-ротація ~6с.
-function renderEvCarousel(el) {
-  const now    = new Date();
-  const slides = _evItems.map(it => evSlideHtml(it, now)).join('');
-  const dots   = _evItems.length > 1
-    ? `<div class="cm-ev-dots">${_evItems.map((_, i) =>
-        `<span class="cm-ev-dot${i === _evIdx ? ' active' : ''}" data-ev-idx="${i}"></span>`).join('')}</div>`
-    : '';
-
-  el.innerHTML = `
-    <div class="cm-ev-carousel" id="cm-ev-carousel">
-      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
-      ${dots}
-    </div>
-  `;
-
-  // Крапки — ручний перехід (зупиняє й перезапускає авто-ротацію)
-  el.querySelectorAll('.cm-ev-dot').forEach(dot => {
-    dot.addEventListener('click', e => {
-      e.stopPropagation();
-      _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
-      updateEvPosition(el);
-      startEvRotator(el);   // рестарт таймера від нового індексу
-    });
-  });
-
-  // Тап по картці → відкрити САМЕ цю подію/свято в статейній модалці (не просто вкладку).
-  el.querySelectorAll('.evh-card[data-ev-id]').forEach(card => {
-    card.addEventListener('click', () => {
-      const id = Number(card.dataset.evId);
-      if (Number.isFinite(id)) openShotamModal(id);
-    });
-  });
-
-  startEvRotator(el);
-}
-
-// Зсув треку + активна крапка
-function updateEvPosition(el) {
-  const track = el.querySelector('.cm-ev-track');
-  if (track) track.style.transform = `translateX(-${_evIdx * 100}%)`;
-  el.querySelectorAll('.cm-ev-dot').forEach((d, i) => d.classList.toggle('active', i === _evIdx));
-}
-
-// Авто-ротація 6с (реюз патерну hero-ротатора). Стоп коли каруселі нема в DOM.
-function startEvRotator(el) {
-  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
-  if (_evItems.length < 2) return;
-  _evTimer = setInterval(() => {
-    if (!document.getElementById('cm-ev-carousel')) { clearInterval(_evTimer); _evTimer = null; return; }
-    _evIdx = (_evIdx + 1) % _evItems.length;
-    updateEvPosition(el);
-  }, 6000);
 }
 
 // ── Блок 7: Контакти ─────────────────────────────────────────────────────────
