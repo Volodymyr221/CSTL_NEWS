@@ -8,9 +8,14 @@
 // 256×256 (`maxDim: 256`), а показувався двома різними за розміром місцями, і
 // обидва більші за нього:
 //   • кружечок картки жителя 120px × щільність екрана 3 = **360 точок**;
-//   • тап по кружечку → фото на весь екран (`.pm-lightbox img{max-width:96%}`),
-//     на iPhone Pro Max це 1238 точок завширшки, а для портретного фото 3:4
-//     більша сторона виходить **1651** — розтяг у 4.5 раза.
+//   • тап по кружечку → фото на весь екран, на iPhone Pro Max це ~1238 точок
+//     завширшки, а для портретного фото 3:4 більша сторона виходить **1651** —
+//     розтяг у 4.5 раза.
+// ⚠️ 04.09 — МІСЦЕ ПОКАЗУ ПЕРЕЇХАЛО. Було `.pm-lightbox` (`style/messages.css`),
+// стало `.fd-viewer` (`style/feed.css`): три переглядачі фото зведено в один,
+// із зумом. Стенд міряє НОВЕ місце, вимога та сама. 🛑 Не помітити переїзд було
+// б найгірше: без CSS `<img>` розтягується в натуральну величину (4000 точок),
+// перевірка червоніє — і виглядає як «фото стало гіршим», хоча воно те саме.
 // «Стиснути без втрати якості» тут неможливо в принципі: деталей, яких у файлі
 // немає, не поверне ніщо. Тому стенд міряє РІВНО ЦЕ — чи вистачає пікселів.
 //
@@ -36,7 +41,7 @@ const account = projectFile('src/core/account-ui.js');
 const card = projectFile('src/core/profile-card.js');
 const supabase = projectFile('src/core/supabase.js');
 const accountCss = projectFile('style/account.css');
-const messagesCss = projectFile('style/messages.css');
+const feedCss = projectFile('style/feed.css');   // 04.09: перегляд фото живе тут
 
 // ── 1. РОЗМІРИ, ЯКІ КОД ОБІЦЯЄ ЗБЕРЕГТИ ────────────────────────────────────
 const pair = utils.match(/avatarPairBlobs\(file,\s*\{\s*small\s*=\s*(\d+),\s*large\s*=\s*(\d+)/);
@@ -84,15 +89,16 @@ await p.setContent(`<!doctype html><html><head><meta charset="utf-8">
  :root{--ink:#2b2b2b;--ink-soft:#8a8a8a;--red:#722F37}
  body{background:#fff}
  ${accountCss}
- ${messagesCss}
+ ${feedCss}
 </style></head><body>
  <div class="pcard"><div class="pcard-avwrap"><span class="pcard-av pcard-av--img">
    <img src="${ПОРТРЕТ}" alt=""></span></div></div>
- <div class="pm-lightbox"><img src="${ПОРТРЕТ}" alt="фото"></div>
+ <div class="fd-viewer"><div class="fd-viewer-track">
+   <div class="fd-viewer-slide"><img src="${ПОРТРЕТ}" alt="фото"></div></div></div>
 </body></html>`, { waitUntil: 'load' });
 
 const заміри = await p.evaluate(async () => {
-  const im = document.querySelector('.pm-lightbox img');
+  const im = document.querySelector('.fd-viewer img');
   if (!im.complete) await new Promise(r => { im.onload = r; im.onerror = r; });
   const dpr = window.devicePixelRatio;
   const кружечок = document.querySelector('.pcard-av').getBoundingClientRect();
@@ -144,8 +150,12 @@ ok('Кабінет вантажить ПАРУ, а не один файл',
 ok('🔴 Картка просить ВЕЛИКУ версію', /largePhotoUrl\(url\)/.test(card));
 ok('🔴 Картка має відкат на дрібну (аватари, старші за 23.08)',
    /pcardPhotoSm/.test(card) && /fellBack/.test(card));
-ok('🔴 Лайтбокс теж уміє відкат', /openPhotoLightbox\(url, small\)/.test(card)
-   && /fallbackUrl/.test(utils));
+// 04.09: відкат переїхав разом із переглядачем — картка передає запасну адресу
+// третім аргументом, а тримає її `core/photo-viewer.js`, а не `utils.js`.
+const viewer = projectFile('src/core/photo-viewer.js');
+ok('🔴 Перегляд фото теж уміє відкат',
+   /openPhotoViewer\(url, 0, \{ fallbackUrl: small \}\)/.test(card)
+   && /fallbackUrl/.test(viewer));
 ok('Адреса великої версії виводиться з дрібної одним правилом',
    /export function largePhotoUrl/.test(supabase) && /LARGE_PHOTO_SUFFIX/.test(supabase));
 // У базу мусить іти адреса ДРІБНОЇ: її читають усі наявні списки, і якби туди
