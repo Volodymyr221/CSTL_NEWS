@@ -448,9 +448,18 @@
 .acc-cab-row-desc { font-size: 12px; color: var(--ink-soft, #8a8a8a); line-height: 1.3; }
 .acc-cab-row i { flex-shrink: 0; color: #c4bdb2; font-style: normal; font-size: 18px; display: inline-flex; align-items: center; }
 .acc-cab-row--tog { cursor: default; }
+/* 🔴 04.09 — УВІМКНЕНИЙ СТАН БОРДОВИЙ, А НЕ ЗЕЛЕНИЙ (дизайн-аудит, крок 6).
+   `#2E9E5B` був ЄДИНОЮ зеленою поверхнею у всьому кабінеті — тобто найпомітніший
+   елемент екрана налаштувань не належав бренду. Зелень тут нічого й не означала:
+   вона не про «безпечно» і не про «успіх», це просто типовий колір перемикача iOS.
+   🔑 Береться `--brand-grad-sm`, а не `--red`: правило проєкту (CLAUDE.md) каже, що
+   `--red` це колір ТЕКСТУ й тонких іконок, а ПЛОЩИНИ бренду малює градієнт. Доріжка
+   перемикача — площина.
+   ⚠️ Вимкнений стан лишається нейтральним сірим: він мусить читатись як «нічого
+   не увімкнено», а не як другий колір бренду. */
 .acc-tog {
   margin-left: auto; width: 42px; height: 26px; border-radius: 20px;
-  background: #2E9E5B; border: 0; position: relative; cursor: pointer; flex-shrink: 0;
+  background: var(--brand-grad-sm); border: 0; position: relative; cursor: pointer; flex-shrink: 0;
   transition: background 0.2s ease;
 }
 .acc-tog.off { background: #c9c9c9; }
