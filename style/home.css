@@ -1919,6 +1919,10 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .hm-ev-meta { font: 400 12px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); }
+/* 🗓 04.09 — ХТО ПЛАНУЄ ПОДІЮ. Без цього рядка віджет казав «що і коли», але не
+   казав «хто» — а подію громади робить конкретна спільнота, і саме вона несе за
+   неї відповідальність. Тихіше за час і місце: це підпис, а не заголовок. */
+.hm-ev-who { font: 500 11px/1.3 system-ui, -apple-system, sans-serif; color: var(--hm-quiet); opacity: 0.85; }
 
 /* ══ ТЕЛЕФОНИ: ЕКСТРЕНІ ОКРЕМО, ГРОМАДА ОКРЕМО ════════════════════════════════
    Скарга Вови 04.08: «заголовок "Телефони громади", а зверху екстрені служби,

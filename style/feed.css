@@ -1123,16 +1123,82 @@
   font-size: 16px; font-family: inherit; color: var(--fd-ink); outline: none;
 }
 
-/* Плашка події — компактна картка під фото (дата + місце окремими рядками) */
-.fd-evb {
-  display: flex; flex-direction: column; gap: 3px;
+/* ── 🗓 ШАПКА ПОДІЇ (04.09) ──────────────────────────────────────────────────
+   Замінила рядок `.fd-evb` («🗓 24 серпня · 18:00»), у якому подія не читалась
+   як подія: та сама вага, що в решти тексту, і дата — останньою.
+
+   🔑 ДАТА БЛОКОМ ЛІВОРУЧ: «коли» — перше питання про подію, тож воно стоїть
+   першим і має власну форму, а не тоне в рядку. Ієрархія тримається МІСЦЕМ і
+   ВАГОЮ, а не збільшенням кегля (правило дизайн-системи 03.09).
+   🛑 Кеглі з чинної шкали, ваги ≤700, радіус із `--modal-radius`-родини —
+   нових значень не вводимо, інакше `design-system` почервоніє законно. */
+.fd-ev {
+  display: flex; align-items: center; gap: 12px;
   margin: 10px 14px 2px; padding: 10px 12px;
-  background: color-mix(in srgb, var(--fd-accent) 6%, var(--fd-surface));
-  border: 1px solid color-mix(in srgb, var(--fd-accent) 20%, transparent);
-  border-radius: 12px;
+  background: var(--fd-surface);
+  border: 1px solid var(--fd-line);
+  border-radius: 14px;
 }
-.fd-evb-when { font-size: 14px; font-weight: 700; color: var(--fd-accent); }
-.fd-evb-loc  { font-size: 12px; color: var(--fd-muted); }
+/* Блок дати: число велике, місяць малий під ним — форма відривного календаря,
+   яку впізнають без підпису (принцип «спирайся на знайоме»). */
+.fd-ev-date {
+  flex: none; width: 46px; text-align: center; line-height: 1.05;
+  padding: 4px 0; border-radius: 10px;
+  background: var(--fd-chip); color: var(--fd-ink);
+}
+.fd-ev-date b    { display: block; font-size: 19px; font-weight: 700; }
+.fd-ev-date span { display: block; font-size: 11px; font-weight: 600; color: var(--fd-muted); }
+.fd-ev-txt  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* Мітка — РОЛЬ рядка («ПОДІЯ» / «СЬОГОДНІ»), тому капсом. 11px ≤ 12.5px, тобто
+   в межах винятку дизайн-системи для дрібних міток. */
+.fd-ev-tag  {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--fd-muted);
+}
+.fd-ev-meta { font-size: 13px; color: var(--fd-ink); overflow-wrap: break-word; }
+
+/* СЬОГОДНІ — єдиний стан з акцентом бренду. Рідкісний (один день у житті
+   події), тому має на нього право; світилась би кожна майбутня — акцент
+   перестав би щось означати. */
+.fd-ev--today {
+  border-color: color-mix(in srgb, var(--fd-accent) 38%, transparent);
+  background: color-mix(in srgb, var(--fd-accent) 5%, var(--fd-surface));
+}
+.fd-ev--today .fd-ev-date { background: var(--fd-accent); color: #fff; }
+.fd-ev--today .fd-ev-date span { color: rgba(255,255,255,0.82); }
+.fd-ev--today .fd-ev-tag  { color: var(--fd-accent); }
+/* Крапка після мітки — тихий знак «це зараз», без анімації: миготіння в стрічці
+   змагалося б за увагу з усім іншим. */
+.fd-ev--today .fd-ev-tag::after {
+  content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 5px;
+  border-radius: 50%; background: var(--fd-accent); vertical-align: middle;
+}
+/* Минула — приглушена ЦІЛА шапка, а не лише текст: подія перестала бути дією. */
+.fd-ev--past { opacity: 0.55; }
+
+/* Кнопка «Нагадати» — перша в рядку дій, бо це головна дія саме події.
+   Форма пігулки відрізняє її від круглих лайка/коментаря: різна роль — різна
+   форма, інакше око читає їх як один ряд однакових кнопок. */
+.fd-ev-remind {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-right: auto; padding: 7px 12px;
+  border: 1px solid var(--fd-line); border-radius: 999px;
+  background: var(--fd-surface); color: var(--fd-ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  /* Відгук на НАТИСК, а не на відпускання (Apple HIG: реакція має бути миттєвою) */
+  transition: transform 100ms ease-out, background 140ms ease-out;
+}
+.fd-ev-remind:active { transform: scale(0.97); }
+.fd-ev-remind svg { width: 17px; height: 17px; }
+.fd-ev-remind--on {
+  background: color-mix(in srgb, var(--fd-accent) 10%, var(--fd-surface));
+  border-color: color-mix(in srgb, var(--fd-accent) 34%, transparent);
+  color: var(--fd-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-ev-remind { transition: none; }
+  .fd-ev-remind:active { transform: none; }
+}
 .fd-evb-loc::before { content: "📍 "; }
 .fd-evb--past { opacity: 0.55; filter: grayscale(0.4); }
 
