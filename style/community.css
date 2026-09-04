@@ -1425,69 +1425,12 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Повноекранний перегляд фото (lightbox) — свайп між кадрами ── */
-.cm-photo-lightbox {
-  position: fixed;
-  inset: 0;
-  /* 🔴 02.08 — 300 → 1200. Модалку оголошення підняли на 1100 (щоб вона перекривала
-     таб-бар), і повноекранний перегляд фото раптом опинився ПІД нею: тап по фото
-     нібито «нічого не робив», а насправді картинка на весь екран малювалась позаду
-     аркуша і визирала збоку. Саме це Вова побачив як «фото в повний розмір».
-     ⚠️ Міняєш z-index модалки — перевір і цей: вони пов'язані. */
-  z-index: 1200;
-  background: rgba(0,0,0,0.93);
-  display: flex;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.cm-photo-lightbox.open { opacity: 1; }
-.cm-photo-lightbox-track {
-  display: flex;
-  width: 100%;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.cm-photo-lightbox-track::-webkit-scrollbar { display: none; }
-.cm-photo-lightbox-slide {
-  flex: 0 0 100%;
-  scroll-snap-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cm-photo-lightbox-slide img {
-  max-width: 100%;
-  max-height: 100dvh;
-  object-fit: contain;
-}
-.cm-photo-lightbox-close {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
-  right: 16px;
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.15);
-  color: #fff;
-  /* 08.08 — векторний ✕, як у примітиві модалок; flex центрує SVG (гліф центрувався сам). */
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  cursor: pointer;
-  z-index: 2;
-}
-.cm-photo-lightbox-count {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-  left: 50%;
-  transform: translateX(-50%);
-  color: #fff;
-  font-size: 14px;
-  background: rgba(0,0,0,0.4);
-  padding: 4px 12px;
-  border-radius: 12px;
-}
+/* 🔴 04.09 — `.cm-photo-lightbox` ПРИБРАНО: це була ТРЕТЯ реалізація перегляду
+   фото, зведена у спільний `.fd-viewer` (style/feed.css) разом із зумом.
+   ⚠️ Застереження звідси не загублено, воно переїхало у спільний блок: перегляд
+   мусить лежати ВИЩЕ за аркуш оголошення, інакше повертається баг 02.08 —
+   картинка малюється позаду аркуша і тап «нібито нічого не робить». */
+
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .bd-controls { background: rgba(244, 241, 230, 0.94); }
 }

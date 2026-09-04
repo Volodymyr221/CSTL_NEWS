@@ -37,7 +37,8 @@ import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
 // Циклу немає: board-discussions.js НЕ імпортує board-chat.js (звірено 30.07).
 import { unseenDiscussionsCount } from './board-discussions.js';
-import { escapeHtml, showToast, postTime, containsProfanity, openPhotoLightbox } from '../core/utils.js';
+import { escapeHtml, showToast, postTime, containsProfanity } from '../core/utils.js';
+import { openPhotoViewer } from '../core/photo-viewer.js';   // 04.09 — єдиний переглядач фото (щипок + свайп)
 import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
   setupKeyboardResize, setupBubbleGestures, groupConversations,
@@ -197,8 +198,10 @@ export async function openChat(convOrThread, post, activeId = null) {
   const startReply = (m) => { editing = null; replyTo = m; showCompose('reply', m); input.focus(); };
   const startEdit  = (m) => { replyTo = null; editing = m; showCompose('edit', m); input.value = m.text || ''; input.focus(); };
 
-  // Перегляд фото на повний екран — спільний lightbox (utils.openPhotoLightbox).
-  const openPhoto = openPhotoLightbox;
+  // Перегляд фото на повний екран — ЄДИНИЙ переглядач (core/photo-viewer.js).
+  // 04.09: був `utils.openPhotoLightbox` без зуму; тепер щипок і свайп-закриття
+  // приїхали сюди тим самим зведенням, без окремої правки чату.
+  const openPhoto = (url) => openPhotoViewer(url);
 
   // Рендер однієї бульбашки (цитата відповіді + фото + текст + час; видалене/редаговане)
   const renderBubble = (m) => {

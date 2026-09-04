@@ -798,14 +798,10 @@
 .pm-actions-danger .pm-act-ic { color: #B3261E; }
 .pm-actions-cancel { margin-top: 8px; border-radius: 16px; font-weight: 700; justify-content: center; }
 
-/* Лайтбокс фото (поверх чату) */
-.pm-lightbox {
-  position: fixed; inset: 0; z-index: 3600;   /* фото на весь екран — вище картки профілю (3500) і всіх сторінок */
-  background: rgba(0,0,0,0.92);
-  display: flex; align-items: center; justify-content: center;
-  animation: pm-fade-in 0.18s ease;
-}
-.pm-lightbox img { max-width: 96%; max-height: 92%; border-radius: 8px; }
+/* 🔴 04.09 — `.pm-lightbox` ПРИБРАНО: перегляд фото у застосунку тепер один
+   (`.fd-viewer`, style/feed.css), і саме він уміє щипок та свайп на закриття.
+   Звідси у спільний переїхали дві речі: z-index 3600 (він тут був найвищим із
+   трьох переглядачів) і запасна адреса фото для картки жителя. */
 
 /* ── Вкладка «Чати» — хаб-лаунчер (Етап 2a) ──────────────────────── */
 .chats-hub {

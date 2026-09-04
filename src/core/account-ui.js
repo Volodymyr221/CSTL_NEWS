@@ -30,7 +30,7 @@ import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { ICONS } from './icons.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
-import { escapeHtml, showToast, avatarCircle } from './utils.js';
+import { escapeHtml, showToast, avatarCircle, fullName } from './utils.js';
 import { uploadAvatarPair } from './upload.js';   // дрібне+велике фото жителя за один захід
 import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
@@ -664,7 +664,7 @@ async function openAccount() {
     bio: p.bio || '',
     avatar_url: p.avatar_url || '',
   };
-  const fullName = [val.name, val.surname].filter(Boolean).join(' ') || 'Житель';
+  const повнеІмʼя = fullName(val.name, val.surname) || 'Житель';
   const place = val.settlement || 'Учасник спільноти';
   const prefs = loadNotifPrefs(u.id);
   const today = new Date().toISOString().slice(0, 10);
@@ -700,12 +700,12 @@ async function openAccount() {
     <div class="acc-cab-scroll">
       <div class="acc-cab-hero">
         <div class="acc-cab-avwrap">
-          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: fullName, url: val.avatar_url, cls: 'acc-av' })}</div>
+          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: повнеІмʼя, url: val.avatar_url, cls: 'acc-av' })}</div>
           <button class="acc-cab-avcam" type="button" id="acc-av-btn" aria-label="Змінити фото">${ICONS.photo}</button>
           <input type="file" id="acc-av-file" accept="image/*" hidden>
         </div>
         <div class="acc-cab-hi">
-          <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
+          <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(повнеІмʼя)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
           <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
           ${trustHtml}
@@ -859,7 +859,7 @@ async function openAccount() {
     btn.disabled = false; btn.textContent = 'Зберегти анкету';
     if (!res.ok) { showToast(netErrorText(res.error), 4000, 'error'); return; }
     // Оновлюємо шапку кабінету наживо
-    cab.querySelector('#acc-hero-name').textContent = [fields.name, fields.surname].filter(Boolean).join(' ') || 'Житель';
+    cab.querySelector('#acc-hero-name').textContent = fullName(fields.name, fields.surname) || 'Житель';
     cab.querySelector('#acc-hero-place').textContent = fields.settlement || 'Учасник спільноти';
     // ЧЕСНИЙ статус: partial = база ще без розширених колонок (село/прізвище/
     // телефон НЕ збереглись) — не брешемо «збережено», кажемо що саме сталося.

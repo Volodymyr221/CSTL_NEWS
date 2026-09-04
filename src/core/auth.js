@@ -10,7 +10,7 @@
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
 import { getSupabase, sdkLoaded, netErrorText, netCall, releasePushDevice, setAnalyticsUid } from './supabase.js';
-import { showToast } from './utils.js';
+import { showToast, fullName } from './utils.js';   // склейка «імʼя + прізвище» — спільна на застосунок
 
 let _user = null;        // поточний користувач (або null якщо гість)
 let _profileName = null; // кеш імені з профілю (для підпису коментарів) — без зайвих запитів
@@ -609,7 +609,11 @@ export async function getProfile() {
   if (!supa || !_user) return null;
   const { data, error } = await supa.from('profiles').select('*').eq('uid', _user.id).maybeSingle();
   if (error) { console.warn('[auth] getProfile:', error.message); return null; }
-  if (data && data.name) _profileName = data.name;   // кеш для currentUserName()
+  // 🆕 04.09 — у кеш лягає ПОВНЕ імʼя (`name` + `surname`), бо саме `_profileName`
+  // віддає `currentUserName()`, а з нього підписуються МОЇ коментарі, дописи й
+  // питання. Умова лишається на `data.name`: рядок без імені — не привід
+  // затирати те, що вже знали (див. розбір регресії 04.09 нижче).
+  if (data && data.name) _profileName = fullName(data.name, data.surname);
   if (data && 'avatar_url' in data) _profileAvatar = data.avatar_url || null;   // кеш аватара
   // 🔑 Дзеркалимо правду на пристрій — саме звідси її візьме ПЕРШИЙ КАДР
   // наступного холодного старту (розбір — блок «ЯК МЕНЕ ЗВАТИ» вище).
@@ -652,7 +656,12 @@ export async function saveProfile(fields = {}) {
     error = r.ok ? null : r.rawError;
   }
   if (error) return { ok: false, error: r.error };   // r.error — уже людський текст
-  if (row.name) _profileName = row.name;   // кеш для currentUserName()
+  // 🆕 04.09 — повне імʼя, як і в `getProfile()`.
+  // 🛑 При `partial` прізвище В БАЗУ НЕ ПОТРАПИЛО (колонки ще немає), тож і в
+  // памʼять кладемо саме імʼя. Інакше екран показував би прізвище, якого в базі
+  // не існує, — і воно зникло б на першому ж перезавантаженні, без жодного
+  // сліду про причину.
+  if (row.name) _profileName = partial ? row.name : fullName(row.name, row.surname);
   if (!partial && 'avatar_url' in row) _profileAvatar = row.avatar_url || null;   // кеш аватара
   // 🔴 БЕЗ ЦЬОГО РЯДКА ВЕСЬ ФІКС БУВ БИ ЛАТКОЮ: людина міняє імʼя, у памʼяті воно
   // нове, а на пристрої лежить старе — і наступний холодний старт показав би
