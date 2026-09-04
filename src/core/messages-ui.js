@@ -313,6 +313,12 @@ export function openGroupChat(group) {
     const addMsg = (m) => { if (m && !ids.has(m.id)) { ids.add(m.id); messages.push(m); } };
 
     // Імена учасників (денормалізовані в chat_group_members — не з profiles, бо RLS).
+    // 🛑 04.09 — ТУТ СВІДОМО ЛИШИЛОСЬ КОРОТКЕ ІМʼЯ, попри правило «імʼя + прізвище».
+    // Причина не в тісноті: групових чатів у застосунку НЕМАЄ. Кнопка «Групи»
+    // схована в `index.html` (`display:none`, «до версії 2»), хаб `#page-chats`
+    // позначений там же як осиротілий, а 4 групи в базі створені 26-28.06 і
+    // мертві відтоді. 🗣️ Вова 04.09: «в нас немає ще групових чатів».
+    // ➡️ Оживлятимемо групи — тоді й вирішувати, як підписувати учасників.
     const firstName = (n) => firstNameOf(n, 'Житель') || 'Житель';
     const members = await fetchGroupMembers(group.id);
     names = new Map(members.map(m => [m.uid, firstName(m.name)]));
