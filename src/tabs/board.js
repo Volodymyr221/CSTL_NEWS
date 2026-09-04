@@ -35,6 +35,7 @@ import { search as smartSearch } from '../core/search.js';   // єдиний п�
 // той самий механізм, що й екран спільноти у «Стрічці» (див. `core/layers.js`).
 import { openLayer, closeLayer } from '../core/layers.js';
 import { openModal } from '../core/modal.js';
+import { openPhotoViewer } from '../core/photo-viewer.js';   // 04.09 — єдиний переглядач фото (щипок + свайп)
 import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
@@ -579,7 +580,7 @@ function wireAdModalChrome(modal, close) {
     gallery.querySelectorAll('img[data-photo-idx]').forEach(im => {
       im.addEventListener('click', e => {
         e.stopPropagation();
-        openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
+        openPhotoViewer(photoUrls, Number(im.dataset.photoIdx) || 0);
       });
     });
     const dots = modal.querySelectorAll('.cm-board-modal-dot');
@@ -1112,43 +1113,10 @@ function renderAdBottomBar(p) {
     </div>`;
 }
 
-// Повноекранний перегляд фото зі свайпом між кадрами. Відкривається тапом по фото
-// в галереї модалки. Закриття: ✕, тап по фону, свайп вниз.
-function openPhotoLightbox(photos, startIdx) {
-  if (!photos || !photos.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'cm-photo-lightbox';
-  wrap.innerHTML = `
-    <!-- 08.08: ✕ векторний (ICONS.close), як у примітиві core/modal.js — лайтбокс
-         будується власним кодом, тож єдиної правки в примітиві йому не досить. -->
-    <button class="cm-photo-lightbox-close" type="button" aria-label="Закрити">${ICONS.close}</button>
-    <div class="cm-photo-lightbox-track">
-      ${photos.map(ph => `<div class="cm-photo-lightbox-slide"><img src="${escapeHtml(ph)}" alt=""></div>`).join('')}
-    </div>
-    ${photos.length > 1 ? '<div class="cm-photo-lightbox-count"></div>' : ''}`;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  const track = wrap.querySelector('.cm-photo-lightbox-track');
-  const countEl = wrap.querySelector('.cm-photo-lightbox-count');
-  const updateCount = () => {
-    if (!countEl || !track.clientWidth) return;
-    const i = Math.round(track.scrollLeft / track.clientWidth);
-    countEl.textContent = `${i + 1} / ${photos.length}`;
-  };
-  requestAnimationFrame(() => {
-    track.scrollLeft = (startIdx || 0) * track.clientWidth;
-    updateCount();
-    wrap.classList.add('open');
-  });
-  track.addEventListener('scroll', () => requestAnimationFrame(updateCount), { passive: true });
-  const close = () => {
-    wrap.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    setTimeout(() => wrap.remove(), 200);
-  };
-  wrap.querySelector('.cm-photo-lightbox-close').addEventListener('click', close);
-  wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
-}
+// 🔴 04.09 — ЛОКАЛЬНА КОПІЯ ПЕРЕГЛЯДАЧА ПРИБРАНА, тіло переїхало у спільний
+// `core/photo-viewer.js` (замовлення Вови: зум скрізь). Тут була ТРЕТЯ
+// реалізація того самого, і вона ще й називалась так само, як експорт з
+// `core/utils.js` — `openPhotoLightbox`. Різний код під одним іменем.
 
 
 // OFFICIAL: офіційне оголошення сільради (для табу «Усі»)

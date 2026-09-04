@@ -561,31 +561,13 @@ export function showToast(msg, duration = 0, type = '', action = null) {
   toastQueue.push(item);
 }
 
-// Перегляд фото на весь екран (спільний lightbox — переюз `.pm-lightbox`).
-// Раніше локальна копія жила в board-chat.js (openPhoto); винесено сюди, бо
-// картку профілю (тап по аватару) теж треба вміти збільшувати.
-// `fallbackUrl` (23.08) — запасна адреса, якщо основна не завантажилась.
-// Потрібна рівно картці жителя: з 23.08 вона просить ВЕЛИКУ версію фото, якої
-// в аватарів старших за цю дату не існує. Без відкату там був би чорний екран
-// зі зламаною картинкою — гірше, ніж дрібне фото, яке людина бачила вчора.
-// Не передано → поведінка байт-у-байт як раніше (чат нічого не помітив).
-export function openPhotoLightbox(url, fallbackUrl = '') {
-  if (!url) return;
-  const ov = document.createElement('div');
-  ov.className = 'pm-lightbox';
-  ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
-  if (fallbackUrl && fallbackUrl !== url) {
-    const im = ov.querySelector('img');
-    // Умова «ще не підміняли» боронить від кола, якщо запасна теж не долетить.
-    im.addEventListener('error', () => {
-      if (!im.dataset.fellBack) { im.dataset.fellBack = '1'; im.src = fallbackUrl; }
-    });
-  }
-  // Спільний механізм шарів (core/layers.js): жест «назад» закриває саме фото.
-  const layer = openLayer(() => ov.remove());
-  ov.addEventListener('click', () => closeLayer(layer));
-  document.body.appendChild(ov);
-}
+// 🔴 04.09 — `openPhotoLightbox` ЗВІДСИ ПРИБРАНО. Перегляд фото у застосунку
+// тепер ОДИН: `core/photo-viewer.js` (`openPhotoViewer`), і саме він уміє щипок,
+// панораму і свайп на закриття — замовлення Вови «зумити будь-які фото».
+// 🛑 Тут жила ДРУГА з трьох реалізацій, причому під тим самим іменем, що й
+// локальна копія в `tabs/board.js`. Різний код під одним іменем — рівно те, що
+// в цьому проєкті вже давало «вада продукту замість розсинхрону».
+// ⚠️ `openLayer`/`closeLayer` лишаються в імпортах файлу: їх бере `showToast`.
 
 // ── Фільтр матюків / образливих слів / спаму (клієнтський) ───────────────────
 // Бувабельний (до Фази Б — серверний тригер). Мета: відсікати очевидні образи

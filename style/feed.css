@@ -315,11 +315,36 @@
 .fd-gal-dot.on { background: #fff; }
 
 /* ── Повноекранний перегляд фото ── */
-.fd-viewer { position: fixed; inset: 0; z-index: 1400; background: rgba(0,0,0,0.96); }
-.fd-viewer-track { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+/* ── ЄДИНИЙ ПЕРЕГЛЯД ФОТО (щипок · свайп між кадрами · свайп на закриття) ──
+   🔴 04.09 — сюди зведено ще два переглядачі: `pm-lightbox` (приватні
+   повідомлення, аватар у картці жителя) і `cm-photo-lightbox` (фото в
+   оголошенні Дошки). Розбір — у шапці `src/core/photo-viewer.js`.
+   🔴 Z-INDEX 1400 → 3600: узято НАЙВИЩИЙ із трьох зведених, бо перегляд мусить
+   лягати поверх картки жителя (3500), чату (2401) і аркуша оголошення (1100).
+   Менше значення повторило б баг 02.08 — фото малювалось ПІД аркушем. */
+.fd-viewer { position: fixed; inset: 0; z-index: 3600; background: rgba(0,0,0,0.96); }
+.fd-viewer-track { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  /* 🔑 `pan-x` віддає браузеру горизонтальне гортання (його нативний скрол
+     плавніший за будь-який наш), а вертикаль лишає НАМ — це і є жест закриття.
+     Без цього рядка браузер починав власну прокрутку і жест «дьоргався». */
+  touch-action: pan-x; }
 .fd-viewer-track::-webkit-scrollbar { display: none; }
+/* Кадр наближено → гортання між фото мовчить, палець веде панораму. */
+.fd-viewer-track--locked { overflow-x: hidden; touch-action: none; }
 .fd-viewer-slide { flex: 0 0 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.fd-viewer-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.fd-viewer-slide img { max-width: 100%; max-height: 100%; object-fit: contain;
+  /* Малюємо на GPU: трансформація йде щокадру під пальцем. */
+  will-change: transform; transform-origin: center center;
+  /* Довге натискання не має пропонувати «зберегти зображення» посеред жесту. */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Наближений кадр більше не тримається padding-у — інакше межі панорами
+   рахувались би від обрізаної області, і фото впиралось раніше за свій край. */
+.fd-viewer-slide--zoomed { padding: 0; }
+/* Поки палець тягне на закриття — прибираємо власний перехід картинки, щоб вона
+   йшла РІВНО за пальцем, без запізнення на 0.22s. */
+.fd-viewer--dragging .fd-viewer-slide img { transition: none !important; }
+.fd-viewer-count { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: 14px; background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 12px; pointer-events: none; }
 .fd-viewer-close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 2;
   width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(255,255,255,0.15);
   color: #fff; display: flex; align-items: center; justify-content: center; }

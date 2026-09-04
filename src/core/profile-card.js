@@ -11,7 +11,8 @@
 
 import { openModal, closeModal } from './modal.js';
 import { fetchPublicProfile, fetchAuthorAds, cachedAvatar, nameSlotStatic, largePhotoUrl } from './supabase.js';
-import { avatarCircle, escapeHtml, openPhotoLightbox, formatPrice, fullName } from './utils.js';
+import { openPhotoViewer } from './photo-viewer.js';   // 04.09 — єдиний переглядач фото (щипок + свайп)
+import { avatarCircle, escapeHtml, formatPrice, fullName } from './utils.js';
 import { ICONS } from './icons.js';
 import { MONTHS_GEN } from './chat-core.js';   // укр. місяці в родовому (реюз)
 import { cardTitleText } from './board-shared.js';   // той самий заголовок, що на Дошці
@@ -189,7 +190,9 @@ export async function openProfileCard(uid) {
         // Лайтбокс отримує ОБИДВІ адреси: якщо великої немає, він сам відкотиться
         // на дрібну. Покладатись лише на обробник кружечка не можна — людина може
         // тапнути раніше, ніж повернеться 404.
-        avwrap.addEventListener('click', () => openPhotoLightbox(url, small));
+        // `fallbackUrl` — та сама страховка, що була в `pm-lightbox`: велика
+        // версія існує не в усіх аватарів, старших за 23.08.
+        avwrap.addEventListener('click', () => openPhotoViewer(url, 0, { fallbackUrl: small }));
       }
 
       // Оголошення автора — другим, тихим запитом (див. розбір при `adRowHtml`).
