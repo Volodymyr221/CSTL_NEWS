@@ -344,7 +344,10 @@
    йшла РІВНО за пальцем, без запізнення на 0.22s. */
 .fd-viewer--dragging .fd-viewer-slide img { transition: none !important; }
 .fd-viewer-count { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); left: 50%; transform: translateX(-50%);
-  color: #fff; font-size: 14px; background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 12px; pointer-events: none; }
+  /* Підкладка через ТОКЕН, а не сире число: стенд `modal-standard` стереже саме
+     це — «найдешевший спосіб зламати стандарт — вписати таке саме число руками».
+     Плашка потрібна, бо лічильник лягає поверх самого фото, а воно буває світле. */
+  color: #fff; font-size: 14px; background: var(--modal-backdrop); padding: 4px 12px; border-radius: 12px; pointer-events: none; }
 .fd-viewer-close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 2;
   width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; background: rgba(255,255,255,0.15);
   color: #fff; display: flex; align-items: center; justify-content: center; }
