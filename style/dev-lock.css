@@ -93,7 +93,7 @@
 }
 .dev-lock-title {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   margin: 12px 0 8px;
 }
 .dev-lock-text {
@@ -110,7 +110,7 @@
 .dev-lock-label {
   display: block;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.60);
@@ -148,7 +148,7 @@
   background: #fff;
   color: var(--red);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
 }

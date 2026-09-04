@@ -36,8 +36,8 @@
   justify-content: center;
   gap: 10px;
   margin: 6px 16px 2px;
-  font-size: 12.5px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   /* 🔴 28.07 — ПЕРЕВЕДЕНО НА СВІТЛИЙ ФОН. Було `rgba(245,232,210,0.88)` + темний ореол:
@@ -114,11 +114,11 @@
 }
 .cm-board-cat--official {
   color: #B45309;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 .cm-board-official-title {
-  font-size: 14.5px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   color: #1a1a1a;
   margin: 4px 0 6px;
   line-height: 1.3;
@@ -158,7 +158,7 @@
   gap: 4px;
   background: rgba(114, 47, 55, 0.09);
   color: #7A3040;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -211,7 +211,7 @@
    колонках корка не «танцювали» одна відносно одної. */
 .cm-board-price {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.2px;
   font-variant-numeric: tabular-nums;
@@ -228,7 +228,7 @@
   word-wrap: break-word;
 }
 .cm-board-text {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.45;
   margin-bottom: 10px;
@@ -284,7 +284,7 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30);
+  box-shadow: var(--elev-2);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s ease, background 0.15s;
 }
@@ -313,11 +313,11 @@
 }
 .cm-board-modal-title {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
   margin-bottom: 0;            /* підзаголовок ближче до заголовка (фідбек Вови) */
   line-height: 1.15;
-  text-transform: uppercase;   /* «НОВЕ ОГОЛОШЕННЯ» великими (розмір не змінено) */
+  letter-spacing: -0.01em;   /* 03.09 — без капсу (дизайн-аудит) */
   display: flex;
   align-items: center;
   gap: 8px;                     /* відступ вектор-олівець → текст */
@@ -334,7 +334,7 @@
   margin-bottom: 0;   /* нижній відступ дає padding .cm-board-modal-head (підзаголовок у шапці) */
   margin-left: 30px;  /* вирівняти під ТЕКСТ заголовка (олівець 22px + gap 8px), не під олівець */
 }
-.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }   /* тінь — щоб поле не зливалось з фоном */
+.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: var(--elev-1); }   /* тінь — щоб поле не зливалось з фоном */
 .app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
 /* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
    як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
@@ -375,7 +375,7 @@
 }
 .bm-negot input { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; }
 /* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
-.cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
+.cm-board-price--word { font-size: 14px; letter-spacing: 0; }
 .cm-board-input {
   width: 100%;
   padding: 9px 11px;
@@ -397,11 +397,12 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   font-family: inherit;
-  text-transform: uppercase;    /* «ОПУБЛІКУВАТИ» великими */
-  letter-spacing: 1px;          /* трохи більший відступ між буквами */
+  /* 🔴 03.09 — головна дія без капсу: 14px капсом із tracking 1px виглядало
+     дрібнішим за свою роль. 16px/600 звичайним — читабельніше і спокійніше. */
+  letter-spacing: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -448,7 +449,7 @@
 .bm-label-count {
   float: right;
   font-weight: 600;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--ink-mute);
   font-variant-numeric: tabular-nums;   /* цифри однакової ширини — число не «стрибає» */
 }
@@ -650,7 +651,7 @@ textarea.cm-board-input.bm-invalid {
 }
 .bm-preview-label {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   /* 🔴 29.07 — той самий колір, що підказка порожнього стану Дошки (`.bd-group-empty-hint`,
      `--ink-soft` = 5.83:1). Було `#FFF4D6` + тінь — світлий текст під темний корок; на
      світлому фоні він засліп би (1.05:1). Пряме прохання Вови: «підбери такий колір,
@@ -764,7 +765,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--brand-grad-sm);
   border: 1.5px solid var(--red);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
+  box-shadow: var(--elev-dark-3);
 }
 .board-trigger--fixed .cm-board-trigger-text { display: none; }
 /* ТРИ накладені іконки (плюс · конверт · ✕) — плавний cross-fade.
@@ -807,7 +808,7 @@ textarea.cm-board-input.bm-invalid {
 .board-trigger-badge {
   position: absolute; top: -3px; right: -3px;
   min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: 9px; background: var(--red, #722F37); color: #fff;
+  border-radius: 8px; background: var(--red, #722F37); color: #fff;
   font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
   border: 2px solid #fff; box-sizing: content-box;
   /* Видимістю керує КЛАС (`is-on` ставить paintUnreadBadge), а не інлайн-стиль:
@@ -962,10 +963,9 @@ textarea.cm-board-input.bm-invalid {
   background: var(--board-bg);
   border: 1.5px solid rgba(114, 47, 55, 0.55);
   color: var(--ink, #2B2B2B);
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;   /* 03.09 — підписи пунктів FAB без капсу (дизайн-аудит) */
   padding: 8px 14px;
   border-radius: 12px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.16), inset 0 1px 2px rgba(255,255,255,0.65);
@@ -1359,7 +1359,7 @@ textarea.cm-board-input.bm-invalid {
   font-weight: 700;
   letter-spacing: 0.2px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(114, 47, 55, 0.28);
+  box-shadow: var(--elev-1);
   transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1367,7 +1367,7 @@ textarea.cm-board-input.bm-invalid {
 .cm-board-write-btn:active {
   transform: scale(0.98);
   filter: brightness(0.94);
-  box-shadow: 0 1px 4px rgba(114, 47, 55, 0.28);
+  box-shadow: var(--elev-1);
 }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
   margin-top: 0;
@@ -1409,7 +1409,7 @@ textarea.cm-board-input.bm-invalid {
    нею створював два заголовки поспіль. Зменшено разом із внутрішніми відступами,
    інакше пігулка лишилась би того самого розміру з дрібним текстом усередині. */
 .cm-board-modal-note .cm-board-cat {
-  font-size: 11.5px;
+  font-size: 12px;
   padding: 3px 9px 3px 7px;
   margin-bottom: 8px;
 }
@@ -1640,7 +1640,7 @@ textarea.cm-board-input.bm-invalid {
      картками; верх під шапкою застосунку — прямий. */
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--elev-2);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1689,7 +1689,7 @@ textarea.cm-board-input.bm-invalid {
   border-radius: 14px;
   padding: 0 12px;
   height: 40px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: var(--elev-2);
 }
 .bd-search-icon {
   font-size: 16px;   /* 1em-масштаб SVG-лупи (ICONS.search) */
@@ -1770,7 +1770,7 @@ textarea.cm-board-input.bm-invalid {
   border: none;
   padding: 0;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;   /* назви НП великими буквами */
@@ -1906,7 +1906,7 @@ textarea.cm-board-input.bm-invalid {
 #board-content .bd-cat-filter {
   background: #FFFFFF;
   border-color: rgba(16, 18, 22, 0.12);
-  box-shadow: 0 1px 3px rgba(16, 18, 22, 0.06);
+  box-shadow: var(--elev-1);
 }
 /* Кружечок «×» усередині поля пошуку. Базове правило дає йому `--paper-deep`
    (#EAE4D2) — на кремовому полі це читалось, а на БІЛОМУ (правило вище) кремовий
@@ -2086,7 +2086,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--card-cream);
   border: 1.5px solid rgba(0,0,0,0.22);
   border-radius: 14px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  box-shadow: var(--elev-2);
   color: var(--black);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -2108,7 +2108,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--board-card);
   border: 1px solid rgba(0,0,0,0.15);
   border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  box-shadow: var(--elev-dark-3);
   overflow: hidden;
   padding: 4px;
 }
@@ -2252,7 +2252,7 @@ textarea.cm-board-input.bm-invalid {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s, color 0.15s, border-color 0.15s, background 0.15s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: var(--elev-1);
 }
 .bd-icon-btn:active { transform: scale(0.88); }
 .bd-icon-btn svg { display: block; }
@@ -2563,7 +2563,7 @@ textarea.cm-board-input.bm-invalid {
    класи `cat-c-*`, тобто семантика категорій лишається спільною з рештою Дошки. */
 :is(#board-content, #cm-board-content) .bd-ad-type {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
@@ -2585,13 +2585,21 @@ textarea.cm-board-input.bm-invalid {
    📐 Заміряно на 390px: блок назви 248px завширшки, у два рядки капсом при 16px/800
    влазить ~34-40 символів. Довше — обрізає клемп із багатокрапкою, і 80 символів
    (стеля поля вводу) картку не розвалять за побудовою. */
+/* 🔴 03.09 — ЗАГОЛОВОК ОГОЛОШЕННЯ БІЛЬШЕ НЕ КАПСОМ (дизайн-аудит).
+   📐 Заміряно: 62 вузли по 16px/800 капсом. Пʼять карток поспіль — і кожна
+   кричить; саме це найсильніше читалось як «дитячий» вигляд Дошки.
+   ✅ 16px/600 звичайним регістром: та сама висота рядка, але без крику.
+   🛑 БУВ 17px — І Я ЙОГО ПОВЕРНУВ НА 16. Підняття кеглю здавалось безкоштовним,
+   а воно розігнало РОЗКИД ВИСОТ карток: 47px при стелі 45 (`board-card-row`).
+   Ємність рядка при цьому не впала: капс ширший за той самий кегль у рядковому
+   наборі, тож 16px звичайним ≈ 16px капсом по довжині. Головне тут — знятий
+   капс і вага 800→600, а не зайвий піксель кегля. */
 :is(#board-content, #cm-board-content) .bd-ad-title {
   margin: 0;
   font-size: 16px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1.22;
-  text-transform: uppercase;
   color: #141414;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2642,7 +2650,7 @@ textarea.cm-board-input.bm-invalid {
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--news-accent, #722F37);
   overflow: hidden;
   white-space: nowrap;
@@ -2655,7 +2663,7 @@ textarea.cm-board-input.bm-invalid {
   flex: none;
   margin: 0;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--news-accent, #722F37);
 }
 :is(#board-content, #cm-board-content) .bd-ad .cm-board-price--word { font-size: 12px; font-weight: 700; }
@@ -2730,7 +2738,7 @@ textarea.cm-board-input.bm-invalid {
   /* Тінь переїхала сюди з `.bd-controls` (замовлення Вови «перекинути на
      бордовий»). Значення те саме — вигляд «підняття» не змінюється, змінюється
      лише те, ЩО саме кидає тінь: тепер сам бордовий блок, а не світла рамка. */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--elev-2);
   /* 🔴 06.08 — ТОЙ САМИЙ БОРДОВИЙ, ЩО НА ГРОМАДІ (замовлення Вови: «блок зроби
      таким самим бордовим як і на громаді»).
      Було: власний `linear-gradient(162deg, #7B303C → #722F37 → #481C24)` плюс дві
@@ -2857,20 +2865,21 @@ textarea.cm-board-input.bm-invalid {
   gap: 12px;
 }
 #board-content .bd-hero-text { flex: 1; min-width: 0; }
+/* 🔴 03.09 — назва екрана без капсу (дизайн-аудит): 19px/800 капсом читалось
+   як газетний заголовок. 20px/700 звичайним — та сама вага в композиції. */
 #board-content .bd-hero-title {
   margin: 0;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  line-height: 1.15;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
   color: #fff;
-  text-transform: uppercase;
 }
 /* Слоган — це половина відповіді на «що це таке»: назва лише називає, дієслова
    кажуть, що тут РОБЛЯТЬ. Саме тому підзаголовок тут не декор. */
 #board-content .bd-hero-sub {
   margin: 2px 0 0;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.25;
   color: rgba(255, 236, 240, 0.78);
 }
@@ -3297,9 +3306,12 @@ textarea.cm-board-input.bm-invalid {
      головним на екрані було слово, яке нічого не повідомляє.
      🔑 Правило, за яким тут тримати число: заголовок — найбільший елемент екрана
      завжди. Піднімеш ціну вище 23px — поверни й це. */
-  font-size: 23px;
-  text-transform: uppercase;
-  font-weight: 800;
+  /* 🔴 03.09 — заголовок сторінки оголошення без капсу (дизайн-аудит).
+     23px/800 капсом — найбільший «крик» у застосунку. 22px/700 звичайним
+     лишається головним елементом сторінки, але вже не кричить. */
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   line-height: 1.18;
   color: #111;
 }
@@ -3317,10 +3329,17 @@ textarea.cm-board-input.bm-invalid {
 /* Ціна-ЧИСЛО (і «Безкоштовно») — гучна, бо повідомляє головне після назви.
    28 → 22px: не тому що ціна стала менш важливою, а тому що вона більше не має права
    переростати заголовок. Різниця з назвою (23) лишилась мала — це другий голос, а не
-   шепіт. */
+   шепіт.
+   🔴 03.09 — 22 → 20px, і це НЕ нове рішення про ціну, а наслідок правила, яке
+   вже стояло рядком вище: «заголовок — найбільший елемент екрана завжди».
+   Дизайн-аудит опустив назву 23 → 22 (знявши капс), і назва з ціною зрівнялись —
+   тобто ієрархія зникла мовчки, самим лише рухом іншого числа. Сторож
+   `ad-sheet-swipe` це й спіймав («назва 22px проти ціни 22px»).
+   ⚠️ Тримай ПАРУ, а не число: міняєш кегль назви — перевір, що ціна лишилась
+   меншою. Різниця 2px мала навмисно — ціна другий голос, а не шепіт. */
 .cm-ad-price {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--news-accent, #722F37);
   letter-spacing: -0.5px;
 }
@@ -3347,7 +3366,7 @@ textarea.cm-board-input.bm-invalid {
 .cm-ad-meta {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   margin-top: 8px;              /* ТІСНО: факти — продовження назви, та сама думка */
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.45;
   color: #6C6C6C;
 }
@@ -3403,7 +3422,7 @@ textarea.cm-board-input.bm-invalid {
 .cm-ad-seller { margin-top: 28px; }
 .cm-ad-seller-cap {
   margin: 0 0 10px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
   color: #8A8A8A;
@@ -3421,7 +3440,7 @@ textarea.cm-board-input.bm-invalid {
   background: #fff;
   color: #6C6C6C;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 800;
+  font-size: 15px; font-weight: 700;
 }
 .cm-ad-author-name { font-size: 17px; font-weight: 700; color: #111; }
 
@@ -3557,7 +3576,7 @@ textarea.cm-board-input.bm-invalid {
   background: var(--board-press, #E4E4E1);
   color: #6C6C6C;
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; font-weight: 800;
+  font-size: 17px; font-weight: 700;
   overflow: hidden;   /* фото має лягти під круг, а не вилізти квадратом */
 }
 .cm-ad-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -3571,14 +3590,14 @@ textarea.cm-board-input.bm-invalid {
    в різних оголошеннях (скарга Вови: «не в кожного пише інформація»). Тепер підпис є
    завжди з розмітки («Учасник спільноти»), а запит його лише уточнює до дати, тож
    ховати нема чого і висота не стрибає. */
-.cm-ad-author-since { font-size: 12.5px; color: #6C6C6C; }
+.cm-ad-author-since { font-size: 12px; color: #6C6C6C; }
 /* 🆕 06.08 — «Ще N оголошень автора» ОКРЕМИМ РЯДКОМ (замовлення Вови по знімку).
    Було одним рядком через « · », і при довгій даті він переносився навпіл:
    «Учасник CSTL LIFE з червня 2026 · ще 6 / оголошень» — розрив падав усередину
    другої думки, тобто оформлення різало те, що мало лишатись цілим.
    Два рядки роблять поділ явним: перший каже, ХТО це, другий — що в нього є ще
    що подивитись. Другий трохи темніший: це не підпис, а вхід у профіль. */
-.cm-ad-author-more { font-size: 12.5px; font-weight: 600; color: #4A4A4A; }
+.cm-ad-author-more { font-size: 12px; font-weight: 600; color: #4A4A4A; }
 .cm-ad-verified {
   display: inline-flex; align-items: center; justify-content: center;
   width: 15px; height: 15px;
@@ -3586,7 +3605,7 @@ textarea.cm-board-input.bm-invalid {
   border-radius: 50%;
   background: #1D74E8;
   color: #fff;
-  font-size: 10px; font-weight: 800;
+  font-size: 10px; font-weight: 700;
   vertical-align: middle;
 }
 /* Стрілка векторна (див. `CHEVRON_ICON_SVG`): текстовий «›» тонший за решту знаків
@@ -3679,7 +3698,7 @@ textarea.cm-board-input.bm-invalid {
    порожньому стані — там він доречний, бо там нема чого читати. */
 #disc-content .qa-hero-note {
   margin: 5px 0 0;
-  font-size: 14.5px;
+  font-size: 14px;
   line-height: 1.38;
   color: var(--qa-ink-2);
 }
@@ -4277,7 +4296,7 @@ textarea.cm-board-input.bm-invalid {
 
 .qa-answer-text {
   margin: 2px 0 0;
-  font-size: 15.5px; line-height: 1.45; color: var(--qa-ink);
+  font-size: 15px; line-height: 1.45; color: var(--qa-ink);
   white-space: pre-wrap; word-break: break-word;
 }
 /* 🔑 ЗГАДКА АДРЕСАТА — саме вона відповідає на «хто кому написав». Бордовим, бо

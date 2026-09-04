@@ -27,7 +27,7 @@
   backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid rgba(114, 47, 55, 0.18);
   border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--elev-3);
   transform: translateY(160%);
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -181,8 +181,8 @@
 .pwa-guide-pic svg { display: block; width: 100%; height: auto; aspect-ratio: 260 / 150; }
 
 .pwa-guide-step { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
-.pwa-guide-name { font-size: 15.5px; font-weight: 700; color: #2a1a1c; }
-.pwa-guide-text { font-size: 13.5px; line-height: 1.5; color: #5a4a46; }
+.pwa-guide-name { font-size: 15px; font-weight: 700; color: #2a1a1c; }
+.pwa-guide-text { font-size: 13px; line-height: 1.5; color: #5a4a46; }
 .pwa-guide-text b { color: #2a1a1c; }
 
 .pwa-guide-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }

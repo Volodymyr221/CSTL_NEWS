@@ -161,13 +161,14 @@
 
 /* Заголовок над розкладом */
 .bus-list-title {
-  font-size: 16.5px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  /* 🔴 03.09 — назва розділу без капсу (дизайн-аудит): 16.5px капсом із
+      tracking 1px читалось як шапка газети. Заразом половинний кегль → цілий. */
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: #1C1C1E;
   text-shadow: 0 1px 3px rgba(0,0,0,0.15);
   padding: 26px 16px 26px;
-  text-transform: uppercase;
   text-align: center;
   position: relative;
 }
@@ -215,7 +216,7 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.16);
   color: white;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  box-shadow: var(--elev-dark-3);
   min-height: 160px;
   background: var(--brand-grad-sm);
 }
@@ -333,7 +334,7 @@
 /* Велика назва маршруту */
 .bhv4-route-name {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.3px;
   line-height: 1.15;
   margin-bottom: 4px;
@@ -547,7 +548,7 @@
   white-space: nowrap;
   text-transform: uppercase;
 }
-.bhv4-label--a { color: #7DDA58; font-weight: 800; }
+.bhv4-label--a { color: #7DDA58; font-weight: 700; }
 .bhv4-label--b { color: rgba(255,255,255,0.6); }
 
 /* Порожній стан — темніший центр, насиченість спадає до країв */
@@ -589,11 +590,10 @@
   margin-bottom: 12px;
 }
 .bhv4-empty-msg {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   line-height: 1.45;
-  text-transform: uppercase;
   color: #fff;
   max-width: 240px;
   text-shadow: 0 1px 4px rgba(0,0,0,0.4);
@@ -721,7 +721,7 @@
 }
 .bus-smart-timer {
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--navy);
   line-height: 1.1;
   margin-bottom: 4px;
@@ -913,7 +913,7 @@
   background: var(--white);
   border-radius: 10px;
   padding: 0 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  box-shadow: var(--elev-1);
   height: 44px;
 }
 
@@ -966,7 +966,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  box-shadow: var(--elev-1);
   transition: background 0.15s;
 }
 .bs-swap-btn:active { background: var(--gray-light); }
@@ -1044,7 +1044,7 @@
   padding: 0;
   border-radius: 8px 8px 12px 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+  box-shadow: var(--elev-2);
 }
 .bs-stop-row:first-child { padding-top: 9px; }
 .bs-stop-row:last-child  { padding-bottom: 11px; }
@@ -1152,7 +1152,7 @@
   flex-shrink: 0;
   margin-right: 6px;
 }
-.bs-stop-icon--next    { color: var(--black); font-size: 14px; font-weight: 900; }
+.bs-stop-icon--next    { color: var(--black); font-size: 14px; font-weight: 700; }
 .bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; font-size: 11px; color: var(--gray); }
 
 /* Бейджики статусу (status badge — cancelled, delayed) */
@@ -1415,7 +1415,7 @@
 .pw-onboarding-icon { font-size: 44px; margin-bottom: 12px; }
 .pw-onboarding-title {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--black);
   margin: 0 0 8px;
 }
@@ -1561,7 +1561,7 @@
 }
 .pw-block-label {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1584,7 +1584,7 @@
 }
 .pw-now-label {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--red);
   text-transform: uppercase;
   letter-spacing: 0.7px;
@@ -1790,7 +1790,7 @@
   top: 7px;
   left: 0;
   right: 0;
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 500;
   color: rgba(0,0,0,0.38);
   letter-spacing: 0.8px;

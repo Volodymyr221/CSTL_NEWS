@@ -62,7 +62,7 @@ function formatBusDayTitle() {
 }
 
 function buildListTitleHtml(updatedStr) {
-  return `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
+  return `<div class="bus-list-title">Розклад автобусних маршрутів<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
 }
 
 // Для hero-картки: для не-сьогоднішніх днів скидаємо state→'waiting',
@@ -497,8 +497,8 @@ function buildBannerTexts(route, tracked) {
   const segTimeStr  = (segFromTime && segToTime) ? `${segFromTime} → ${segToTime}` : timeStr;
 
   const heading    = hasSeg
-    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}`
-    : `${a.toUpperCase()} → ${b.toUpperCase()}`;
+    ? `${segFrom} - ${segTo}`
+    : `${a} → ${b}`;
 
   const dateStr    = tracked.trackDate ? fmtBannerDate(tracked.trackDate) : '';
   const timeLabel  = hasSeg ? segTimeStr : timeStr;
@@ -595,7 +595,7 @@ function checkSingleTracked(tracked, forceInitial) {
           }
           if (forceShow) showBanner(
             minsToBoard <= 15
-              ? `До ${tracked.boardingStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
+              ? `До ${tracked.boardingStop} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
             heading, false, tracked);
           return;
@@ -1178,12 +1178,12 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
     if (hasSeg) {
       const boardMins = getStopMins(route, segFrom);
       if (boardMins !== null && boardMins - nowMinutes() > 0) {
-        nextStopContent = `ДО ${segFrom.toUpperCase()} ЗА ${fmtMins(boardMins - nowMinutes()).toUpperCase()}`;
+        nextStopContent = `До ${segFrom} за ${fmtMins(boardMins - nowMinutes())}`;
       } else {
-        nextStopContent = `НАСТУПНА ЗУПИНКА — ${displayNext.toUpperCase()}`;
+        nextStopContent = `Наступна зупинка — ${displayNext}`;
       }
     } else {
-      nextStopContent = `НАСТУПНА ЗУПИНКА — ${displayNext.toUpperCase()}`;
+      nextStopContent = `Наступна зупинка — ${displayNext}`;
     }
   } else if (timings.state === 'waiting' && timings.minsToDeparture !== null) {
     nextStopContent = formatCountdownUpper(timings.minsToDeparture);
@@ -1202,7 +1202,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
   // Повний маршрут — eyebrow (надзаголовок) НАД назвою сегмента. Тільки при
   // сегментному відстеженні (коли назва-заголовок = проміжний відрізок).
   const routeFullHtml = hasSeg
-    ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}</div>`
+    ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA)} → ${escapeHtml(routeB)}</div>`
     : '';
 
   // Статичні елементи (не фейдяться при свайпі): іконка автобуса, рамка капсули часу
@@ -1234,7 +1234,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
         <div class="bhv4-body">
           <div class="bhv4-left">
             ${routeFullHtml}
-            <div class="bhv4-route-name bhv4-dyn">${escapeHtml(hasSeg ? `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}` : `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`)}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml(hasSeg ? `${segFrom} → ${segTo}` : `${routeA} → ${routeB}`)}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span></span>
               <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
@@ -1252,8 +1252,8 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
 // Враховує фільтр Звідки/Куди і чи дивимось сьогодні/інший день.
 function emptyHeroMessage() {
   if (fromStop || toStop) {
-    const seg = `${fromStop ? 'З ' + fromStop.toUpperCase() : ''}${fromStop && toStop ? ' ДО ' : ''}${toStop ? toStop.toUpperCase() : ''}`;
-    return `РЕЙСІВ ${seg} ${isViewingToday() ? 'СЬОГОДНІ' : 'НА ЦЕЙ ДЕНЬ'} НЕМАЄ`;
+    const seg = `${fromStop ? 'з ' + fromStop : ''}${fromStop && toStop ? ' до ' : ''}${toStop ? toStop : ''}`;
+    return `Рейсів ${seg} ${isViewingToday() ? 'сьогодні' : 'на цей день'} немає`;
   }
   return isViewingToday()
     ? 'СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО'
@@ -1408,17 +1408,17 @@ function switchHeroCard() {
     const existingFull  = card.querySelector('.bhv4-route-full');
     if (nameEl) {
       if (hasSeg) {
-        nameEl.textContent = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
+        nameEl.textContent = `${segFrom} → ${segTo}`;
         if (existingFull) {
-          existingFull.textContent = `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`;
+          existingFull.textContent = `${routeA} → ${routeB}`;
         } else {
           const fullEl = document.createElement('div');
           fullEl.className = 'bhv4-route-full bhv4-dyn';
-          fullEl.textContent = `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`;
+          fullEl.textContent = `${routeA} → ${routeB}`;
           nameEl.insertAdjacentElement('beforebegin', fullEl);   // eyebrow НАД назвою
         }
       } else {
-        nameEl.textContent = `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`;
+        nameEl.textContent = `${routeA} → ${routeB}`;
         if (existingFull) existingFull.remove();
       }
     }
@@ -1452,12 +1452,12 @@ function switchHeroCard() {
         if (hasSeg) {
           const boardMins = getStopMins(route, segFrom);
           if (boardMins !== null && boardMins - nowMinutes() > 0) {
-            nextContent = `ДО ${segFrom.toUpperCase()} ЗА ${fmtMins(boardMins - nowMinutes()).toUpperCase()}`;
+            nextContent = `До ${segFrom} за ${fmtMins(boardMins - nowMinutes())}`;
           } else {
-            nextContent = `НАСТУПНА ЗУПИНКА — ${dispNext.toUpperCase()}`;
+            nextContent = `Наступна зупинка — ${dispNext}`;
           }
         } else {
-          nextContent = `НАСТУПНА ЗУПИНКА — ${dispNext.toUpperCase()}`;
+          nextContent = `Наступна зупинка — ${dispNext}`;
         }
       } else if (isUrgent || (timings.state === 'waiting' && timings.minsToDeparture !== null)) {
         nextContent = formatCountdownUpper(timings.minsToDeparture);
@@ -1606,7 +1606,7 @@ function renderRouteList() {
       return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name.toUpperCase())}</span>
+          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name)}</span>
           ${priceHtml}
         </div>`;
     }).join('');
@@ -1635,10 +1635,10 @@ function renderRouteList() {
     const routeTimeStr   = (routeStartTime && routeEndTime) ? ` | ${routeStartTime} → ${routeEndTime}` : '';
     // Заголовок = сегмент (без часу), підзаголовок = повний маршрут великими + час маршруту
     const routeLabel = anySegment
-      ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}`
-      : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
+      ? `${effFrom} - ${effTo}`
+      : `${ep1} → ${ep2}`;
     const fullLabel = anySegment
-      ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
+      ? `<span class="bs-route-full">${escapeHtml(ep1)} → ${escapeHtml(ep2)}${escapeHtml(routeTimeStr)}</span>`
       : '';
     // Підзаголовок відстежуваного сегменту: коли немає активного фільтру але є відстежуваний сегмент
     const trackedSegDepTime    = hasTrackedSeg ? getStopHHMM(route, trackedSeg.boardingStop)  : null;
@@ -1647,7 +1647,7 @@ function renderRouteList() {
       ? ` | ${trackedSegDepTime} - ${trackedSegArrival}`
       : (trackedSegDepTime ? ` | ${trackedSegDepTime}` : '');
     const trackedSegSubtitle = (!anySegment && hasTrackedSeg)
-      ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} - ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${escapeHtml(trackedSegTimeStr)}</span>`
+      ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop)} - ${escapeHtml(trackedSeg.alightingStop)}${escapeHtml(trackedSegTimeStr)}</span>`
       : '';
 
     // Закладка відстеження: проміжний (сегментний) рейс → завжди бордова (.tracked-seg),
@@ -1688,7 +1688,7 @@ function renderRouteList() {
         </div>
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-               ${expanded ? 'СХОВАТИ ЗУПИНКИ' : 'ВСІ ЗУПИНКИ'} <span class="bs-toggle-arr">${expanded ? '▴' : '▾'}</span>
+               ${expanded ? 'Сховати зупинки' : 'Всі зупинки'} <span class="bs-toggle-arr">${expanded ? '▴' : '▾'}</span>
              </button>
              <div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
           : route.vopas_url
@@ -2289,7 +2289,7 @@ export async function initBuses() {
         </div>
         <button class="btb-bell sr-bell sr-bell--on" type="button" aria-label="Нагадування">${SR_BELL_ON_SVG}</button>
       </div>
-      <div class="btb-hint">СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО</div>`;
+      <div class="btb-hint">Сповіщення про рейс активовано</div>`;
     document.body.appendChild(banner);
     // Свайп вниз — закрити банер
     let _swipeStartY = 0;

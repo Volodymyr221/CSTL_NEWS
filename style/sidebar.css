@@ -319,7 +319,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+  box-shadow: var(--elev-2);
   padding: 14px 14px 12px;
   border-bottom: 1px solid var(--news-line, #C9CBCE);
 }
@@ -420,11 +420,11 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
 .sb-card[hidden] { display: none; }
 .sb-card-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .sb-card-name {
-  font-size: 16px; font-weight: 800;
+  font-size: 16px; font-weight: 700;
   color: var(--ink, #2b2b2b);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sb-card-sub { font-size: 12.5px; color: #5A5E66; }
+.sb-card-sub { font-size: 12px; color: #5A5E66; }
 .sb-card-go { display: flex; flex-shrink: 0; font-size: 18px; color: #B9BCC1; }
 
 /* Аватар. Класи `--img` / `--anon` ставить спільний `avatarCircle` у utils.js —
@@ -435,7 +435,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
   overflow: hidden;
-  font-size: 18px; font-weight: 800; color: #fff;
+  font-size: 18px; font-weight: 700; color: #fff;
 }
 .sb-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sb-av--anon { background: rgba(0, 0, 0, 0.06); }
@@ -471,8 +471,8 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
    Раніше пункти ділили анонімні лінії: границя була, назви — ні. */
 .sb-cap {
   padding: 16px 18px 6px;
-  font-size: 11.5px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.7px;
   text-transform: uppercase;
   color: #5A5E66;
@@ -496,7 +496,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   background: transparent;
   color: var(--ink, #2b2b2b);
   font: inherit;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -523,7 +523,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
    зайнята — саме нею таб-бар показує непрочитане (`.tab-dot`). Два значення
    одного знака поруч читаються як помилка, тому «тут» тепер каже підсвітка. */
 .sidebar-item--here { background: rgba(114, 47, 55, 0.07); }
-.sidebar-item--here .sidebar-item-label { color: var(--red, #722F37); font-weight: 800; }
+.sidebar-item--here .sidebar-item-label { color: var(--red, #722F37); font-weight: 700; }
 
 /* 🔴 КРАПКА = «Є НОВЕ», і нічого іншого. Той самий знак і той самий колір, що в
    таб-барі (`.tab-dot`), бо це та сама подія — просто показана в іншому місці.
@@ -545,7 +545,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   border-radius: 999px;
   background: var(--red, #722F37);
   color: #fff;
-  font-size: 12px; font-weight: 800; line-height: 1;
+  font-size: 12px; font-weight: 700; line-height: 1;
 }
 .sidebar-item-badge[hidden] { display: none; }
 .sidebar-item-go { display: flex; flex-shrink: 0; font-size: 18px; color: #B9BCC1; }
@@ -621,7 +621,7 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   border: 1.5px solid rgba(114, 47, 55, 0.28);
   background: rgba(114, 47, 55, 0.05);
   color: var(--red, #722F37);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -651,13 +651,13 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   padding: 10px 0 4px; margin-bottom: 6px;
 }
 .legal-toc a {
-  font-size: 12.5px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   color: var(--red, #722F37); text-decoration: none;
   background: rgba(114,47,55,0.08); padding: 6px 11px; border-radius: 999px;
 }
-.legal-h { font-size: 17px; font-weight: 800; margin: 18px 0 2px; color: var(--ink, #2b2b2b); }
+.legal-h { font-size: 17px; font-weight: 700; margin: 18px 0 2px; color: var(--ink, #2b2b2b); }
 .legal-upd { font-size: 12px; color: var(--gray, #6b6b6b); margin-bottom: 8px; }
-.legal-note { font-size: 12.5px; color: var(--gray, #6b6b6b); margin-top: 14px; font-style: italic; }
+.legal-note { font-size: 12px; color: var(--gray, #6b6b6b); margin-top: 14px; font-style: italic; }
 
 /* ── Банер згоди (перший вхід) ── */
 .consent-bar {
@@ -671,11 +671,11 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   transform: translateY(140%); transition: transform 0.3s var(--ease-out);
 }
 .consent-bar--show { transform: translateY(0); }
-.consent-text { flex: 1; font-size: 12.5px; line-height: 1.4; }
+.consent-text { flex: 1; font-size: 12px; line-height: 1.4; }
 .consent-link { color: #ffd36b; text-decoration: underline; }
 .consent-accept {
   flex-shrink: 0; border: 0; border-radius: 10px;
   background: var(--brand-grad-sm); color: #fff;
-  font-size: 13.5px; font-weight: 700; padding: 10px 16px; cursor: pointer;
+  font-size: 13px; font-weight: 700; padding: 10px 16px; cursor: pointer;
 }
 .consent-accept:active { opacity: 0.85; }
