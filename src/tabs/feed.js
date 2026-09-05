@@ -829,20 +829,21 @@ function postCardHtml(post, onPage = false) {
            🔴 БУЛО: позначка «Закріплено», дзвіночок і «⋯» стояли В ОДНОМУ РЯДКУ
            з назвою і забирали в неї ширину — довга офіційна назва стискалась у
            вузьку колонку і розсипалась на ЧОТИРИ рядки.
-           🔑 Тепер шапка це ДВА яруси: назва (перший, на всю ширину до «⋯») і
-           службовий рядок під нею — час · закріплено · нагадування. «⋯» лишився
-           там, де був: угорі праворуч, навпроти назви. -->
+           🔑 Тепер шапка це СІТКА 3×2: аватарка (обидва рядки) · назва · «⋯»,
+           а під назвою — службовий ряд, що тягнеться ДО ПРАВОГО КРАЮ картки.
+           🗣️ 05.09, друга правка: «позначку закріплено і позначку дзвіночка
+           треба з правої частини розташувати». Тому ряд і займає обидві праві
+           колонки — інакше він обривався б там, де починається «⋯», і позначка
+           стояла б на 42px лівіше за нього. -->
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
-        <span class="fd-head-txt">
-          <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
-          <span class="fd-head-meta">
-            <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
-            ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
-            ${eventRemindHtml(post)}
-          </span>
-        </span>
+        <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
+        <span class="fd-head-meta">
+          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
+          ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
+          ${eventRemindHtml(post)}
+        </span>
       </header>
       ${photo}
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">

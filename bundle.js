@@ -1345,20 +1345,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(g)
            🔴 БУЛО: позначка «Закріплено», дзвіночок і «⋯» стояли В ОДНОМУ РЯДКУ
            з назвою і забирали в неї ширину — довга офіційна назва стискалась у
            вузьку колонку і розсипалась на ЧОТИРИ рядки.
-           🔑 Тепер шапка це ДВА яруси: назва (перший, на всю ширину до «⋯») і
-           службовий рядок під нею — час · закріплено · нагадування. «⋯» лишився
-           там, де був: угорі праворуч, навпроти назви. -->
+           🔑 Тепер шапка це СІТКА 3×2: аватарка (обидва рядки) · назва · «⋯»,
+           а під назвою — службовий ряд, що тягнеться ДО ПРАВОГО КРАЮ картки.
+           🗣️ 05.09, друга правка: «позначку закріплено і позначку дзвіночка
+           треба з правої частини розташувати». Тому ряд і займає обидві праві
+           колонки — інакше він обривався б там, де починається «⋯», і позначка
+           стояла б на 42px лівіше за нього. -->
       <header class="fd-card-head${c?" fd-card-head--onphoto":""}" data-open-page="${t.page_id}">
         <span class="fd-ava-wrap">${en(n.avatar_url,n.name,"fd-ava")}</span>
-        <span class="fd-head-txt">
-          <span class="fd-page-name">${p(n.name||"Сторінка")}</span>
-          <span class="fd-head-meta">
-            <span class="fd-time">${Wh(t.created_at,{longDate:!0})}</span>
-            ${e&&t.pinned_at?'<span class="fd-pin-badge">'+Hh+"Закріплено</span>":""}
-            ${LD(t)}
-          </span>
-        </span>
+        <span class="fd-page-name">${p(n.name||"Сторінка")}</span>
         ${d?`<button class="fd-card-menu" data-post-menu="${t.id}" type="button" aria-label="Меню поста">${Fh}</button>`:""}
+        <span class="fd-head-meta">
+          <span class="fd-time">${Wh(t.created_at,{longDate:!0})}</span>
+          ${e&&t.pinned_at?'<span class="fd-pin-badge">'+Hh+"Закріплено</span>":""}
+          ${LD(t)}
+        </span>
       </header>
       ${i}
       <div class="fd-card-body${c?" fd-card-body--onphoto":""}">

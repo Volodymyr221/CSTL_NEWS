@@ -30,15 +30,13 @@ const card = (photo) => `
   <article class="fd-card">
     <header class="fd-card-head${photo ? ' fd-card-head--onphoto' : ''}">
       <span class="fd-ava-wrap" style="background:#ddd;border-radius:50%"></span>
-      <span class="fd-head-txt">
-        <span class="fd-page-name">${ДОВГА_НАЗВА}</span>
-        <span class="fd-head-meta">
-          <span class="fd-time">23 липня</span>
-          ${badge}
-          ${дзвінок}
-        </span>
-      </span>
+      <span class="fd-page-name">${ДОВГА_НАЗВА}</span>
       <button class="fd-card-menu">···</button>
+      <span class="fd-head-meta">
+        <span class="fd-time">23 липня</span>
+        ${badge}
+        ${дзвінок}
+      </span>
     </header>
     ${photo ? '<div style="height:120px;background:#888"></div>' : ''}
     <div class="fd-card-body${photo ? ' fd-card-body--onphoto' : ''}"><div class="fd-text">текст</div></div>
@@ -100,7 +98,15 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
             znachkyNyzhche: r.top >= name.bottom - 1 && bell.top >= name.bottom - 1,
             // «⋯» лишається навпроти ПЕРШОГО рядка назви (слово Вови: «повинні
             // залишатися там де є»).
-            menuNaPershomu: menu.top < name.top + 26 };
+            menuNaPershomu: menu.top < name.top + 26,
+            // 🔴 05.09 — позначки праворуч, час ліворуч (слово Вови: «позначку
+            // закріплено і позначку дзвіночка треба з правої частини розташувати»).
+            // Міряємо ДВІ речі: правий край дзвіночка стоїть під правим краєм «⋯»,
+            // а час лишається біля лівого краю ярусу.
+            pravyiKrai: Math.round(menu.right - bell.right),
+            chasZlivaVid: Math.round(
+              document.querySelector('#' + root + ' .fd-time').getBoundingClientRect().left
+              - name.left) };
  };
 </script></body></html>`;
 
@@ -152,6 +158,15 @@ ok('🔴 назва займає майже всю ширину між ават�
 ok('🛑 «Закріплено» і дзвіночок стоять ПІД назвою, а не поруч із нею',
    bez.znachkyNyzhche && foto.znachkyNyzhche);
 ok('«⋯» лишився навпроти першого рядка назви', bez.menuNaPershomu && foto.menuNaPershomu);
+// 🔴 05.09: службовий ярус вирівняний по правому краю картки.
+// 🛑 Пара перевірок, і саме ПАРА: без другої «праворуч» проходило б і тоді,
+// якби праворуч поїхав УВЕСЬ ярус разом із датою.
+ok('🔴 «Закріплено» і дзвіночок стоять ПРАВОРУЧ, під «⋯»',
+   Math.abs(bez.pravyiKrai) <= 6 && Math.abs(foto.pravyiKrai) <= 6,
+   `розбіжність із правим краєм «⋯»: ${bez.pravyiKrai}px`);
+ok('🛑 …а час лишився біля ЛІВОГО краю, під назвою',
+   bez.chasZlivaVid <= 2 && foto.chasZlivaVid <= 2,
+   `час зміщений від назви на ${bez.chasZlivaVid}px`);
 // 📐 Довга офіційна назва мусить перестати розсипатись: у 390px їй тепер
 // вистачає двох рядків замість чотирьох у вузькій колонці.
 ok('🔴 довга назва більше не розсипається на чотири рядки',
@@ -164,6 +179,11 @@ const feedSrc = projectFile('src/tabs/feed.js');
 const шапка = (feedSrc.match(/<header class="fd-card-head[\s\S]*?<\/header>/) || [''])[0];
 ok('🛑 сцена дзеркалить справжню шапку: службовий рядок існує в коді',
    /<span class="fd-head-meta">/.test(шапка));
+// 🛑 І що обгортки-колонки більше немає: у сітці назва, «⋯» і службовий ряд —
+// ПРЯМІ діти шапки. Копія з обгорткою мала б іншу геометрію, і стенд знову
+// міряв би не те, що на екрані.
+ok('🛑 …і назва з «⋯» лежать прямо в шапці (сітка, а не колонка-обгортка)',
+   !/fd-head-txt/.test(шапка));
 ok('🛑 …і «Закріплено» з дзвіночком лежать САМЕ в ньому',
    /fd-head-meta[\s\S]*?fd-pin-badge[\s\S]*?eventRemindHtml[\s\S]*?<\/span>/.test(шапка));
 
