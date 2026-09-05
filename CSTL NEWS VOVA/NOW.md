@@ -10,48 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-05 20:05 UTC
+**Зріз на:** 2026-09-05 21:10 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-i9wyz6` |
-| останній коміт людини | `9b610d5d` 05.09 19:44 — 🔗 «Збережене» зведено: тап веде в сам запис, дубль-екран прибрано, зняття в хабі |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260905-1942` |
-| останній PR у `main` | #1166 |
-| стендів на диску | 145 |
-| незакомічених файлів | 1 ⚠️ |
+| останній коміт людини | `922fd078` 05.09 20:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260905-2110` |
+| останній PR у `main` | #1167 |
+| стендів на диску | 146 |
+| незакомічених файлів | 7 ⚠️ |
 | журнал за 2026-09-05 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-05b.md`
-- `bundle.js`
-- `editor/core/facts.py`
-- `editor/sources/plan.py`
-- `scripts/ai_news_agent.py`
-- `scripts/test_history_routing.py`
-- `src/core/saved-hub.js`
-- `src/tabs/board-chat.js`
-- `src/tabs/board.js`
-- `src/tabs/buses.js`
-- `style/account.css`
-- `sw.js`
-- `tests/modal-surface.mjs`
-- `tests/saved-hub.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9b610d5d` 05.09 19:44 — 🔗 «Збережене» зведено: тап веде в сам запис, дубль-екран прибрано, зняття в хабі
-- `856242f0` 05.09 19:28 — docs: оновлено авто-блок пульсу після комітів редизайну
-- `d39ed786` 05.09 17:45 — Три червоні стенди після редизайну — усі мої, усі закриті
-- `7dc6fe65` 05.09 17:42 — 🎨 Редизайн хабу «Збережені»: беж прибрано, шапка зведена в одну
-- `a7da4fbd` 05.09 17:16 — docs: аудит хабу «Збережені» перед редизайном
+- `922fd078` 05.09 20:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6
+- `ea20624a` 05.09 20:38 — 🔖 «Збережене» перероблено + сусідні класи неправди в агентів (#1167)
+- `8f6fbd6c` 05.09 20:09 — docs: русизм у журналі 05.09«b» («упёрся» → «уперся»)
+- `2ea5e43c` 05.09 20:07 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6
+- `830c7db1` 05.09 20:06 — docs: пульс і літопис під підсумок сесії 05.09«b»
 
 <!-- AUTO:END -->
 
