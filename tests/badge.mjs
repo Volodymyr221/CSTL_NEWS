@@ -12,11 +12,18 @@ import { readFileSync } from 'fs';
 import { ROOT, launch, projectFile } from './_lib.mjs';
 const R = ROOT;
 
-const css = projectFile('style/feed.css');
+// 🔴 КОНТРОЛЬ: BUNDLE_REV=origin/main node tests/badge.mjs
+// Тоді і стилі, і `fitCardHeads` беруться з тієї ревізії — і перевірки цієї
+// сесії мусять там упасти. Без цього вони нічого не доводять.
+// ⚠️ Додано 05.09 саме після того, як контроль показав 10px і на зламаному
+// коді: стенд читав ЖИВИЙ файл незалежно від змінної, тобто «контроль» був
+// звичайним прогоном під іншою назвою.
+const REV = process.env.BUNDLE_REV || '';
+const css = projectFile('style/feed.css', REV);
 // 🔴 Ярусний стан вмикає JS після виміру, тож сцена мусить ВИКОНАТИ справжню
 // `fitCardHeads` із `src/tabs/feed.js`. Копія в стенді розійшлась би з кодом —
 // саме через розхід дзеркала цей стенд і не побачив вади 05.09.
-const feedJs = projectFile('src/tabs/feed.js');
+const feedJs = projectFile('src/tabs/feed.js', REV);
 const fitSrc = (() => {
   const i = feedJs.indexOf('function fitCardHeads(root) {');
   const j = feedJs.indexOf('\n}', i);
@@ -117,6 +124,15 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
             w: Math.round(r.width), h: Math.round(r.height),
             zazor: Math.round(menu.left - r.right),
             doKrayu: Math.round(head.right - menu.right),
+            // 🔴 05.09 — ПРОМІЖОК АВАТАРКА → НАЗВА. Скарга Вови: «чому назви
+            // позміщувались вліво до іконки?». Причина була в сітці: колонка
+            // задана жорстко 40px, і margin-right аватарки всередині неї нічого
+            // не розсував. Тепер поле стоїть на самій назві — і міряємо саме
+            // ВІДСТАНЬ, а не наявність правила.
+            vidstupNazvy: Math.round(name.left - ava.right),
+            vidstupChasu: Math.round(
+              document.querySelector('#' + root + ' .fd-time').getBoundingClientRect().left
+              - ava.right),
             // Скільки місця назві лишилось від того, що є між аватаркою і «⋯».
             nameW: Math.round(name.width),
             dostupno: Math.round(menu.left - ava.right - 10),
@@ -188,6 +204,16 @@ ok('позначка не налазить на «⋯»', bez.zazor >= 0 && foto
 // 📐 Міряємо НАСЛІДОК: скільки ширини дісталось назві з того, що є між
 // аватаркою і «⋯». Правило в CSS («flex: 1») можна написати і мати вузьку
 // колонку — якщо поруч у рядку стоїть щось, що забирає місце.
+// 🛑 Проміжок від аватарки — той самий, що був завжди (10px). Пара «назва + час»
+// навмисно: вони стоять одне під одним, і зсув лише одного з них читався б як
+// перекіс, а не як відступ.
+ok('🔴 назва не липне до аватарки — проміжок 10px',
+   bez.vidstupNazvy === 10 && korot.vidstupNazvy === 10,
+   `довга ${bez.vidstupNazvy}px · коротка ${korot.vidstupNazvy}px`);
+ok('🛑 …і час під нею стоїть по тій самій лівій межі',
+   bez.vidstupChasu === 10 && korot.vidstupChasu === 10,
+   `довга ${bez.vidstupChasu}px · коротка ${korot.vidstupChasu}px`);
+
 ok('🔴 назва займає майже всю ширину між аватаркою і «⋯»',
    bez.nameW >= bez.dostupno * 0.92,
    `${bez.nameW}px із доступних ${bez.dostupno}px`);
@@ -232,7 +258,7 @@ ok('🔴 …а при довгій назві — під нею', bez.tagyNaRiad
 // ── 🛑 ДЗЕРКАЛО ЗВІРЕНЕ З КОДОМ ─────────────────────────────────────────────
 // ⚠️ Саме через розхід копії з оригіналом цей стенд і не побачив вади: він
 // тримав РОЗМІТКУ, якої в застосунку вже не було. Тепер розхід ловиться.
-const feedSrc = projectFile('src/tabs/feed.js');
+const feedSrc = projectFile('src/tabs/feed.js', REV);
 const шапка = (feedSrc.match(/<header class="fd-card-head[\s\S]*?<\/header>/) || [''])[0];
 ok('🛑 сцена дзеркалить справжню шапку: група позначок існує в коді',
    /headTagsHtml\(post, onPage\)/.test(шапка) && /class="fd-head-tags"/.test(feedSrc));

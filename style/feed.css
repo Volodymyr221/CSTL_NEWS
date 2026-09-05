@@ -180,20 +180,27 @@
   column-gap: 0; align-items: center; padding: 12px 14px 8px; cursor: pointer;
 }
 /* Аватарка тримає обидва ряди — так вона стоїть по центру пари «назва + час». */
+/* 🔴 05.09 — ПРОМІЖОК ЖИВЕ НА НАЗВІ, А НЕ НА АВАТАРЦІ.
+   Скарга Вови: «чому назви позміщувались вліво до іконки?».
+   📐 Причина: колонка сітки задана ЖОРСТКО (`40px`), і `margin-right` аватарки
+   всередині неї нічого не розсуває — доріжка як була 40px, так і лишилась, тож
+   назва починалась одразу за краєм кружечка. Поле ж на самій назві зсуває саме
+   те, що треба, і рівно там, де воно є. */
 .fd-ava-wrap { width: 40px; height: 40px; flex: none;
-  grid-column: 1; grid-row: 1 / span 2; margin-right: 10px; }
+  grid-column: 1; grid-row: 1 / span 2; }
 .fd-ava--ph { font-size: 17px; }
 /* `flex: 1` — та сама «максимальна горизонтальна розтяжка»: колонка забирає все,
    що лишилось від аватарки й «⋯», а не ділиться ще й з позначками. */
 .fd-head-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1 1 auto; }
-.fd-page-name { grid-column: 2; grid-row: 1; font-weight: 700; font-size: 14px; color: var(--fd-ink); min-width: 0; }
+.fd-page-name { grid-column: 2; grid-row: 1; margin-left: 10px;
+  font-weight: 700; font-size: 14px; color: var(--fd-ink); min-width: 0; }
 /* Позначки шапки: «Закріплено» + дзвіночок. У компактному стані — праворуч від
    назви, перед «⋯»; у ярусному їдуть під назву (правило нижче). */
 .fd-head-tags { grid-column: 3; grid-row: 1; display: flex; align-items: center; gap: 8px; margin-left: 8px; }
 /* Службовий рядок: час · «Закріплено» · дзвіночок нагадування.
    ⚠️ `flex-wrap` обовʼязковий: на вузькому екрані три елементи можуть не влізти
    в рядок, і без переносу вони б стиснули один одного до нечитабельного. */
-.fd-time { grid-column: 2; grid-row: 2; font-size: 12px; color: var(--fd-muted); }
+.fd-time { grid-column: 2; grid-row: 2; margin-left: 10px; font-size: 12px; color: var(--fd-muted); }
 
 /* ── ЯРУСНИЙ СТАН: НАЗВА НЕ ВМІСТИЛАСЬ ──────────────────────────────────────
    🗣️ Вова: «позначку закріплено і позначку дзвіночка треба з правої частини
