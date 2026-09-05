@@ -13,22 +13,14 @@ import { ROOT, launch, projectFile } from './_lib.mjs';
 const R = ROOT;
 
 // 🔴 КОНТРОЛЬ: BUNDLE_REV=origin/main node tests/badge.mjs
-// Тоді і стилі, і `fitCardHeads` беруться з тієї ревізії — і перевірки цієї
+// Тоді і стилі, і розмітка беруться з тієї ревізії — і перевірки цієї
 // сесії мусять там упасти. Без цього вони нічого не доводять.
 // ⚠️ Додано 05.09 саме після того, як контроль показав 10px і на зламаному
 // коді: стенд читав ЖИВИЙ файл незалежно від змінної, тобто «контроль» був
 // звичайним прогоном під іншою назвою.
 const REV = process.env.BUNDLE_REV || '';
 const css = projectFile('style/feed.css', REV);
-// 🔴 Ярусний стан вмикає JS після виміру, тож сцена мусить ВИКОНАТИ справжню
-// `fitCardHeads` із `src/tabs/feed.js`. Копія в стенді розійшлась би з кодом —
-// саме через розхід дзеркала цей стенд і не побачив вади 05.09.
-const feedJs = projectFile('src/tabs/feed.js', REV);
-const fitSrc = (() => {
-  const i = feedJs.indexOf('function fitCardHeads(root) {');
-  const j = feedJs.indexOf('\n}', i);
-  return i < 0 ? '' : feedJs.slice(i, j + 2);
-})();
+
 const badge = '<span class="fd-pin-badge"><svg viewBox="0 0 24 24"><path d="M15 4.5l-4 4"/></svg>Закріплено</span>';
 // 🔴 05.09 — НАЗВА НАВМИСНО ДОВГА, І ЦЕ НЕ ПРИКРАСА СЦЕНИ.
 // 🗣️ Вова саме на такій назві й показав ваду: «КЦ «Центр культури, спорту та
@@ -49,14 +41,17 @@ const дзвінок = '<button class="fd-remind-btn" data-remind="1"><svg viewB
 // короткою (мусить лишитись компактною, як було завжди). З однією перевірка
 // довела б лише половину правила — і саме половина зробила б регрес непомітним.
 const КОРОТКА_НАЗВА = 'ОЛИЦЬКА МІСЬКА РАДА';
-const card = (photo, назва = ДОВГА_НАЗВА, теги = badge + дзвінок) => `
+const card = (photo, назва = ДОВГА_НАЗВА, закріп = badge) => `
   <article class="fd-card">
     <header class="fd-card-head${photo ? ' fd-card-head--onphoto' : ''}">
       <span class="fd-ava-wrap" style="background:#ddd;border-radius:50%"></span>
       <span class="fd-page-name">${назва}</span>
+      ${дзвінок}
       <button class="fd-card-menu">···</button>
-      <span class="fd-time">23 липня</span>
-      <span class="fd-head-tags">${теги}</span>
+      <span class="fd-head-meta">
+        <span class="fd-time">23 липня</span>
+        ${закріп}
+      </span>
     </header>
     ${photo ? '<div style="height:120px;background:#888"></div>' : ''}
     <div class="fd-card-body${photo ? ' fd-card-body--onphoto' : ''}"><div class="fd-text">текст</div></div>
@@ -75,7 +70,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
       CASTLE, «10 год», дзвіночок). З «Закріплено» на 390px навіть коротка назва
       не вміщується в рядок, і ярус там був би ПРАВИЛЬНОЮ поведінкою — тобто
       сцена перевіряла б не те правило. -->
- <div id="korotka">${card(false, КОРОТКА_НАЗВА, дзвінок)}</div>
+ <div id="korotka">${card(false, КОРОТКА_НАЗВА, '')}</div>
 <script>
  // Тло, яке РЕАЛЬНО бачить око: власне тло елемента часто прозоре, і колір дає
  // предок (тут — біла картка). Перша версія міряла власне тло і показала «різне»
@@ -117,12 +112,15 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
    // друге оголошення тим самим імʼям робило б увесь цей скрипт синтаксично
    // невалідним — сцена мовчки лишалась би без window.__badge.
    const headEl = document.querySelector('#' + root + ' .fd-card-head');
-   const tags = document.querySelector('#' + root + ' .fd-head-tags').getBoundingClientRect();
+   // Дзвіночок тепер у ВЕРХНЬОМУ ряду поруч із «⋯» — його і міряємо.
+   const bellR = bell;
    return { color: cs && cs.color, bg: cs && cs.backgroundColor,
             border: cs && cs.borderTopColor,
             headBg: window.__effBg(document.querySelector('#' + root + ' .fd-card-head')),
             w: Math.round(r.width), h: Math.round(r.height),
             zazor: Math.round(menu.left - r.right),
+            zazorChasu: e ? Math.round(r.left
+              - document.querySelector('#' + root + ' .fd-time').getBoundingClientRect().right) : null,
             doKrayu: Math.round(head.right - menu.right),
             // 🔴 05.09 — ПРОМІЖОК АВАТАРКА → НАЗВА. Скарга Вови: «чому назви
             // позміщувались вліво до іконки?». Причина була в сітці: колонка
@@ -135,14 +133,19 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
               - ava.right),
             // Скільки місця назві лишилось від того, що є між аватаркою і «⋯».
             nameW: Math.round(name.width),
-            dostupno: Math.round(menu.left - ava.right - 10),
+            // ⚠️ Доступне назві — до ДЗВІНОЧКА, а не до «⋯»: з 05.09 дзвіночок
+            // стоїть між ними, і мірка «до меню» завищувала б місце на 42px,
+            // тобто вимагала б від назви ширини, якої в неї бути не може.
+            dostupno: Math.round(bell.left - ava.right - 10),
             rowsNazvy: rows,
             // Службові позначки мусять стояти НИЖЧЕ назви, а не поруч.
-            znachkyNyzhche: r.top >= name.bottom - 1 && bell.top >= name.bottom - 1,
-            // Ярусний стан вмикається ВИМІРОМ, а не завжди (слово Вови).
-            yarusnyi: headEl.classList.contains('fd-card-head--stacked'),
-            // У компактному стані позначки стоять НА ОДНОМУ рядку з назвою.
-            tagyNaRiadkuNazvy: tags.top < name.bottom && tags.bottom > name.top,
+            znachkyNyzhche: r.top >= name.bottom - 1,
+            // 🔴 05.09 — дзвіночок стоїть у ВЕРХНЬОМУ ряду, на рівні назви й «⋯»
+            // (слово Вови: «тут є місце, можливо дзвоник вміститься сюди без
+            // особливого переносу?»). Заміряно: так, вміщується.
+            dzvinokNaRiadkuNazvy: bellR.top < name.bottom && bellR.bottom > name.top,
+            dzvinokBiliaMenu: Math.round(menu.left - bellR.right),
+            zhodnohoYarusu: !headEl.classList.contains('fd-card-head--stacked'),
             // «⋯» лишається навпроти ПЕРШОГО рядка назви (слово Вови: «повинні
             // залишатися там де є»).
             menuNaPershomu: menu.top < name.top + 26,
@@ -150,7 +153,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
             // закріплено і позначку дзвіночка треба з правої частини розташувати»).
             // Міряємо ДВІ речі: правий край дзвіночка стоїть під правим краєм «⋯»,
             // а час лишається біля лівого краю ярусу.
-            pravyiKrai: Math.round(menu.right - bell.right),
+            pravyiKrai: e ? Math.round(menu.right - r.right) : null,
             chasZlivaVid: Math.round(
               document.querySelector('#' + root + ' .fd-time').getBoundingClientRect().left
               - name.left) };
@@ -160,13 +163,11 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 const b = await launch(chromium);
 const p = await b.newPage({ viewport: { width: 390, height: 844 } });
 await p.setContent(html); await p.waitForTimeout(120);
-// Той самий вимір, що робить застосунок після малювання карток.
-await p.evaluate((src) => {
-  // eslint-disable-next-line no-eval
-  (0, eval)(src + '; window.__fit = fitCardHeads;');
-  window.__fit(document.body);
-}, fitSrc);
-await p.waitForTimeout(60);
+// ⚠️ 05.09: жодного JS-виміру шапка більше не потребує — розкладка безумовна.
+// Раніше тут виконувалась `fitCardHeads`, яка рахувала рядки назви і вмикала
+// «ярусний стан». Її прибрано разом із самим станом: дзвіночок-іконка стоїть
+// нагорі поруч із «⋯», а текстова пігулка «Закріплено» — у службовому ряду,
+// і назві нічого не тисне в жодному випадку.
 
 const bez   = await p.evaluate(() => window.__badge('bez'));
 const foto  = await p.evaluate(() => window.__badge('zfoto'));
@@ -196,7 +197,11 @@ ok('позначка бордова, а не сіра', bez.color === 'rgb(114, 
 console.log('   «⋯» від правого краю шапки:', bez.doKrayu, '(без фото) ·', foto.doKrayu, '(з фото)');
 ok('«⋯» лишається біля правого краю', bez.doKrayu <= 16 && foto.doKrayu <= 16,
    `${bez.doKrayu} / ${foto.doKrayu}`);
-ok('позначка не налазить на «⋯»', bez.zazor >= 0 && foto.zazor >= 0, `зазор ${bez.zazor} / ${foto.zazor}`);
+// ⚠️ 05.09: «⋯» переїхав у ВЕРХНІЙ ряд, а позначка лишилась у службовому — вони
+// фізично не можуть налізти одне на одного. Тепер міряємо сусіда в ЇЇ ж ряду:
+// час ліворуч не має торкатись пігулки праворуч.
+ok('позначка не налазить на час у своєму ряду',
+   bez.zazorChasu >= 8 && foto.zazorChasu >= 8, `зазор ${bez.zazorChasu} / ${foto.zazorChasu}`);
 
 // ── 🔴 05.09: НАЗВА СПІЛЬНОТИ НА ВСЮ ШИРИНУ ─────────────────────────────────
 // 🗣️ Вова: «сама назва спільноти в пості має бути максимально горизонтально
@@ -220,14 +225,14 @@ ok('🔴 назва займає майже всю ширину між ават�
 // 🛑 Зустрічна межа: службові позначки мусять бути НИЖЧЕ назви. Без неї
 // перевірка вище проходила б і в розкладці, де назва широка, а «Закріплено»
 // налізло на неї збоку і тисне текст.
-ok('🛑 «Закріплено» і дзвіночок стоять ПІД назвою, а не поруч із нею',
+ok('🛑 «Закріплено» стоїть ПІД назвою, у службовому ряду',
    bez.znachkyNyzhche && foto.znachkyNyzhche);
 ok('«⋯» лишився навпроти першого рядка назви', bez.menuNaPershomu && foto.menuNaPershomu);
 // 🔴 05.09: службовий ярус вирівняний по правому краю картки.
 // 🛑 Пара перевірок, і саме ПАРА: без другої «праворуч» проходило б і тоді,
 // якби праворуч поїхав УВЕСЬ ярус разом із датою.
-ok('🔴 «Закріплено» і дзвіночок стоять ПРАВОРУЧ, під «⋯»',
-   Math.abs(bez.pravyiKrai) <= 6 && Math.abs(foto.pravyiKrai) <= 6,
+ok('🔴 «Закріплено» стоїть ПРАВОРУЧ, рівно під «⋯»',
+   Math.abs(bez.pravyiKrai) <= 2 && Math.abs(foto.pravyiKrai) <= 2,
    `розбіжність із правим краєм «⋯»: ${bez.pravyiKrai}px`);
 ok('🛑 …а час лишився біля ЛІВОГО краю, під назвою',
    bez.chasZlivaVid <= 2 && foto.chasZlivaVid <= 2,
@@ -237,20 +242,25 @@ ok('🛑 …а час лишився біля ЛІВОГО краю, під на
 ok('🔴 довга назва більше не розсипається на чотири рядки',
    bez.rowsNazvy <= 2, `${bez.rowsNazvy} рядки`);
 
-// ── 🔴 05.09, ТРЕТЯ ПРАВКА: ЯРУС ЛИШЕ ДЛЯ ДОВГОЇ НАЗВИ ──────────────────────
-// 🗣️ Вова: «переносити потрібно тільки якщо назва довга, в другому скріні все
-// добре, там як раніше має бути».
-// 🔑 Стан вмикає справжня `fitCardHeads` після виміру — вона й виконується в
-// сцені вище. Регулярка «є клас --stacked у CSS» довела б лише те, що правило
-// написане, а не те, що воно вмикається САМЕ там, де треба.
-ok('🔴 довга назва → шапка стає ЯРУСНОЮ', bez.yarusnyi === true);
-// 🛑 Зустрічна межа, і без неї перша перевірка нічого не варта: ярус, увімкнений
-// завжди, теж пройшов би її.
-ok('🛑 КОРОТКА назва → шапка лишається КОМПАКТНОЮ, як було завжди',
-   korot.yarusnyi === false);
-ok('🛑 …і позначки в ній стоять НА ОДНОМУ рядку з назвою',
-   korot.tagyNaRiadkuNazvy === true);
-ok('🔴 …а при довгій назві — під нею', bez.tagyNaRiadkuNazvy === false);
+// ── 🔴 05.09, ЧЕТВЕРТА ПРАВКА: ДЗВІНОЧОК НАГОРІ, БЕЗ ЖОДНОГО ЯРУСУ ─────────
+// 🗣️ Вова (знімок із обведеним місцем біля «⋯»): «так тут є місце, можливо
+// дзвоник вміститься сюди без особливого переносу?».
+// 🔑 Різниця не між «довгою» і «короткою» назвою, а між ІКОНКОЮ і ТЕКСТОМ:
+// дзвіночок 34px майже нічого не забирає, а «Закріплено» — пігулка ~110px.
+// Тому дзвіночок нагорі, пігулка в службовому ряду, і вимірювати нема чого.
+ok('🔴 дзвіночок стоїть у верхньому ряду, на рівні назви',
+   bez.dzvinokNaRiadkuNazvy === true && korot.dzvinokNaRiadkuNazvy === true);
+ok('🔴 …і саме поруч із «⋯», а не десь окремо',
+   bez.dzvinokBiliaMenu >= 0 && bez.dzvinokBiliaMenu <= 6,
+   `${bez.dzvinokBiliaMenu}px між дзвіночком і «⋯»`);
+// 🛑 І головне з цієї правки: жодного «ярусного стану» більше не існує —
+// розкладка однакова для довгої й короткої назви.
+ok('🛑 ярусного стану більше немає — розкладка одна на всі назви',
+   bez.zhodnohoYarusu && korot.zhodnohoYarusu);
+// 🔴 ГОЛОВНА ЦІНА, ЯКУ ТРЕБА БУЛО ЗАМІРЯТИ: дзвіночок нагорі забирає в назви
+// ~42px. Питання Вови було саме про це — «вміститься без переносу?».
+ok('🔴 довга назва від цього НЕ втратила рядок (як була у 2, так і лишилась)',
+   bez.rowsNazvy <= 2, `${bez.rowsNazvy} рядки`);
 // ⚠️ Колір позначки в короткій картці не міряємо: її там немає навмисно —
 // сцена дзеркалить екран Вови, де в OLYKA CASTLE лише дзвіночок. Рівність
 // кольорів між станами вже доведена парою «без фото / з фото» вище.
@@ -260,21 +270,23 @@ ok('🔴 …а при довгій назві — під нею', bez.tagyNaRiad
 // тримав РОЗМІТКУ, якої в застосунку вже не було. Тепер розхід ловиться.
 const feedSrc = projectFile('src/tabs/feed.js', REV);
 const шапка = (feedSrc.match(/<header class="fd-card-head[\s\S]*?<\/header>/) || [''])[0];
-ok('🛑 сцена дзеркалить справжню шапку: група позначок існує в коді',
-   /headTagsHtml\(post, onPage\)/.test(шапка) && /class="fd-head-tags"/.test(feedSrc));
+// 🛑 Шукаємо саме ОГОЛОШЕННЯ, а не згадку: пояснення «чому прибрано» лишилось у
+// коментарях навмисно, і воно не має валити перевірку (той самий клас помилки,
+// що з мертвою каруселлю 04.09).
+ok('🛑 …і в коді немає ні правила «ярусу», ні функції, яка його вмикала',
+   !/\.fd-card-head--stacked\s*[,{]/.test(css) && !/function fitCardHeads\(/.test(feedSrc));
+ok('🛑 сцена дзеркалить справжню шапку: дзвіночок у ній стоїть до «⋯»',
+   /eventRemindHtml\(post\)[\s\S]{0,300}fd-card-menu/.test(шапка));
 // 🛑 І що обгортки-колонки більше немає: у сітці назва, «⋯» і службовий ряд —
 // ПРЯМІ діти шапки. Копія з обгорткою мала б іншу геометрію, і стенд знову
 // міряв би не те, що на екрані.
 ok('🛑 …і назва з «⋯» лежать прямо в шапці (сітка, а не колонка-обгортка)',
    !/fd-head-txt/.test(шапка));
-const тіло = (feedSrc.match(/function headTagsHtml\(post, onPage\)[\s\S]*?\n\}/) || [''])[0];
-ok('🛑 …і «Закріплено» з дзвіночком збираються САМЕ в неї',
-   /fd-pin-badge/.test(тіло) && /eventRemindHtml/.test(тіло)
-   && /class="fd-head-tags"/.test(тіло));
-// 🛑 Порожньої групи не буває: вона зайняла б колонку сітки і зсунула назву
-// там, де показувати нічого.
-ok('🛑 …а якщо показувати нічого — вузла немає зовсім',
-   /if \(!закріплено && !нагадати\) return '';/.test(тіло));
+// 🛑 Порядок у розмітці і є розкладкою: назва → дзвіночок → «⋯» у першому ряду,
+// час → «Закріплено» у другому. Сітка ставить їх по місцях, але саме цей порядок
+// читає екранний диктор — і він мусить збігатися з тим, що бачить око.
+ok('🛑 порядок у шапці: назва · дзвіночок · «⋯» · час · «Закріплено»',
+   /fd-page-name[\s\S]{0,200}eventRemindHtml\(post\)[\s\S]{0,300}fd-card-menu[\s\S]{0,300}fd-time[\s\S]{0,300}fd-pin-badge/.test(шапка));
 
 await b.close();
 const bad = res.filter(r => !r).length;
