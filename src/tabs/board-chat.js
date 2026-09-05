@@ -1375,76 +1375,22 @@ export function openMyAds() {
   });
 }
 
-// ── «Збережені» — окремий екран (Д-27) ────────────────────────────────────
-// Список збережених оголошень (закладки) у стилі «Мої оголошення» (pm-screen).
-//   posts    — список постів (board.js фільтрує allPosts по savedIds);
-//   opts.onRemove(id) — колбек board.js (оновити свій savedIds + іконку закладки).
-// Тап по картці → cstl-open-ad (повне оголошення). Прибрати → закладка справа.
-export function openSavedAds(posts, opts = {}) {
-  let list = Array.isArray(posts) ? posts.slice() : [];
-
-  const api = buildScreen(`
-    <header class="pm-head pm-head--list">
-      <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-      <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${BOOKMARK_FILLED_SVG}</span>Збережені</div></div>
-    </header>
-    <div class="pm-list" id="pm-saved"><div class="pm-loading">Завантаження…</div></div>
-  `, 'pm-screen--saved');
-
-  const listEl = api.screen.querySelector('#pm-saved');
-  const locOf = (p) => (p.location && p.location !== COMMUNITY_ALL) ? p.location : '';
-
-  function card(p) {
-    const photo = Array.isArray(p.photos) ? p.photos.find(x => x) : null;
-    const thumb = photo
-      ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-      : `<div class="pm-ad-thumb" style="background:linear-gradient(135deg,#ece4d8,#dccfba)"><span class="pm-ad-thumb-ic">${ICONS.clipboard}</span></div>`;
-    const title = escapeHtml((p.title && p.title.trim()) || (p.text || '').trim().slice(0, 54) || 'Оголошення');
-    const meta = [p.category, locOf(p), p.author].filter(Boolean).map(escapeHtml).join(' · ');
-    return `
-      <div class="pm-ad-row">
-        <div class="pm-ad">
-          <div class="pm-ad-main" data-open-ad="${p.id}">
-            ${thumb}
-            <div class="pm-ad-info">
-              <span class="pm-ad-title">${title}</span>
-              <span class="pm-ad-meta">${meta}</span>
-            </div>
-            <button class="pm-saved-remove" type="button" data-unsave="${p.id}" aria-label="Прибрати зі збережених">${BOOKMARK_FILLED_SVG}</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function render() {
-    if (!list.length) {
-      listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">${BOOKMARK_OUTLINE_SVG}</span>У збережених поки порожньо.<br>Натисніть закладку на оголошенні, щоб зберегти.</div>`;
-      return;
-    }
-    listEl.innerHTML = list.map(card).join('');
-  }
-  render();
-
-  listEl.addEventListener('click', async (e) => {
-    const un = e.target.closest('[data-unsave]');
-    if (un) {
-      e.stopPropagation();
-      const id = Number(un.dataset.unsave);
-      const me = currentUserId();
-      if (me) await removeSavedPost(me, id);
-      list = list.filter(p => p.id !== id);
-      opts.onRemove?.(id);
-      render();
-      showToast('Прибрано зі збережених', 2000);
-      return;
-    }
-    const open = e.target.closest('[data-open-ad]');
-    if (open) {
-      const p = list.find(x => String(x.id) === open.dataset.openAd);
-      if (p) window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
-    }
-  });
-}
+// ── «Збережені» (Д-27) — ЕКРАН ВИДАЛЕНО 05.09 ─────────────────────────────
+//
+// Тут жив `openSavedAds()` — окремий повноекранний список збережених оголошень
+// у стилі «Мої оголошення». Прибраний як ДУБЛЬ, за рішенням Вови.
+//
+// 🔴 Збережене оголошення показувалось у ТРЬОХ місцях: хаб у шапці, цей екран
+// і режим «Збережені» самої Дошки. Два останні — той самий вміст, у тому самому
+// місці, різним виглядом; у цей потрапляв лише той, хто знав, що він існує
+// (меню «+» на Дошці).
+// 📐 Звірено перед видаленням: режим Дошки вміє ВСЕ, що вмів цей екран —
+// повні картки з фото, пошук і зняття закладки просто зі списку
+// (`board.js`: `activeType === 'saved' && !nowSaved` → картка зникає).
+// ➡️ Пункт меню «Збережені» лишився і веде тепер у режим Дошки: прибрано дубль,
+// а не вхід.
+// 🗑 Разом із функцією пішов її клас `pm-screen--saved` (більше ніде не вживався)
+// і колбек `onRemove`, яким board.js синхронізував свій стан із чужим екраном.
 
 // ── Точка входу з оголошення: кнопка «Повідомлення» 💬 ────────────────────
 export function startChatFromPost(post) {

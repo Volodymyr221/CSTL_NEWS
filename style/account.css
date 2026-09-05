@@ -647,17 +647,42 @@
   font-size: 15px; font-weight: 600; color: var(--ink-mute, #636872);
   flex: none; font-variant-numeric: tabular-nums;
 }
+/* Рядок = картка (відкрити) + кнопка зняття. Лінія живе на РЯДКУ, а не на
+   картці: інакше вона тяглася б лише під текстом і обривалась перед кнопкою. */
+.shub-row {
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+}
+.shub-row:last-child { border-bottom: 0; }
 .shub-card {
   display: flex; flex-direction: column; gap: 3px;
-  width: 100%; text-align: left;
+  flex: 1; min-width: 0; text-align: left;
   background: transparent; border: 0;
-  border-bottom: 1px solid var(--border, #e5e5e5);
   padding: 12px 2px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: background 0.14s ease;
 }
-.shub-card:last-child { border-bottom: 0; }
 .shub-card:active { background: var(--board-press, #E4E4E1); }
+/* 📐 САМА КНОПКА 44×44, БЕЗ ТРЮКУ З `::after` — і це не стиль, а вимір.
+   Спершу тут стояв той самий прийом, що в кнопці «назад»: видимий кружечок 34px
+   плюс невидимий `::after` 44px. У шапці він працює, а ТУТ — ні: заміряно
+   влучанням, ціль лишалась 34px. Причина — кнопка стоїть біля правого краю
+   всередині `.shub-body`, а в того `overflow-y: auto`, тобто СКРОЛЕР ОБРІЗАЄ
+   все, що виходить за його межі. Невидиме розширення обрізається так само тихо,
+   як видиме, — просто цього не видно оком, і на око я б цього не спіймав.
+   ➡️ Тому росте сам вузол. Вигляд від цього не важчає: фону в спокої немає,
+   видно лише значок; ширшає тільки підсвітка натиску, і це радше на краще.
+   🔑 Бордовий тут доречний і не суперечить рішенню про сірий лічильник: це ДІЯ
+   (прибрати), а не число. Заповнена закладка = «зараз збережено»; тап знімає. */
+.shub-unsave {
+  flex: none; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: 50%;
+  font-size: 20px; color: var(--red, #722F37);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.shub-unsave:active { background: var(--board-press, #E4E4E1); }
+.shub-unsave .cat-ico { fill: currentColor; }
 .shub-card-text {
   font-size: 15px; font-weight: 600; color: var(--ink, #222); line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;

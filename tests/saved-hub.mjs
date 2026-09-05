@@ -27,11 +27,17 @@ const iso = t => new Date(t).toISOString();
 // 📐 Сцена навмисно НЕ мінімальна: чотири категорії і довга назва статті.
 // На одній короткій картці не видно ні ритму списку, ні переносу — а саме на
 // складній сцені 05.09 знайшлись дві вади, яких прості стенди не показували.
+// ⚠️ ДВА оголошення, а не одне: на одному лічильник «2 → 1» не перевіряється
+// взагалі, а категорія зникає вже після першого зняття — і перевірки лічильників
+// зеленіли б ні на чому. Саме на цьому 05.09 спіймався перший варіант стенда.
 const POSTS = [
   { id: 7001, type: 'board', title: 'Продам піч-буржуйку, стан хороший',
     text: '.', status: 'published', ts, created_at: iso(ts), owner_uid: 'u2' },
+  { id: 7002, type: 'board', title: 'Віддам кошенят у добрі руки',
+    text: '.', status: 'published', ts, created_at: iso(ts), owner_uid: 'u3' },
   { id: 7003, type: 'chat', title: 'Коли відновлять освітлення на вулиці Замковій?',
-    text: '.', status: 'published', ts, created_at: iso(ts), owner_uid: 'u4' },
+    text: 'Світло не горить третій тиждень.', status: 'published', ts,
+    created_at: iso(ts), owner_uid: 'u4' },
 ];
 const ARTICLES = [
   { id: 5001, title: 'В Олиці відремонтували дорогу до замку', excerpt: '.', content: '.', geo: 'Громада', ts },
@@ -47,7 +53,8 @@ const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile
 const p = await ctx.newPage();
 await mockSupabase(p, {
   posts: POSTS,
-  saved_posts: [{ uid: 'uid-a', post_id: 7001 }, { uid: 'uid-a', post_id: 7003 }],
+  saved_posts: [{ uid: 'uid-a', post_id: 7001 }, { uid: 'uid-a', post_id: 7002 },
+               { uid: 'uid-a', post_id: 7003 }],
   saved_articles: [{ uid: 'uid-a', article_id: 5001, created_at: iso(ts) },
                    { uid: 'uid-a', article_id: 5002, created_at: iso(ts) }],
   profiles: [],
@@ -89,6 +96,30 @@ const t1 = await теплота();
 const теплі = Object.entries(t1).filter(([, w]) => w !== null && w > 3);
 ok('🔴 жодна поверхня хабу не тепла (обчислений колір, R−B ≤ 3)',
    теплі.length === 0, теплі.map(([s, w]) => `${s} +${w}`).join(', ') || JSON.stringify(t1));
+
+// ── 1-БІС. 🔴 КОНТРОЛЬ НА СПРАВЖНЬОМУ СТАРОМУ CSS ─────────────────────────
+// 🛑 СТОЇТЬ САМЕ ТУТ, А НЕ В КІНЦІ СТЕНДА, І ЦЕ КУПЛЕНО ПОМИЛКОЮ. Спершу цей
+// блок був останнім — а на той момент аркуш уже ЗАКРИТИЙ (перевірка тапу веде
+// в сам запис). Міряти було нічого, `теплота()` віддавала порожньо, і контроль
+// падав у гілку «беж уже прибрано, редизайн злито» — тобто ЗЕЛЕНІВ, нічого не
+// перевіривши. Контроль, який зеленіє через відсутність сцени, гірший за жоден.
+// Перевірка теплоти вище зеленіє над чистим кодом і сама по собі не доводить
+// нічого. Тому підкидаємо в ту саму сторінку `style/account.css` із
+// `origin/main` — тобто рівно той беж, який Вова бачив на екрані. Прилад
+// зобовʼязаний його побачити; не побачив — він не прилад.
+let старийCss = null;
+try { старийCss = projectFile('style/account.css', 'origin/main'); } catch { /* без git пропускаємо */ }
+if (старийCss) {
+  await p.addStyleTag({ content: старийCss });
+  await p.waitForTimeout(200);
+  const t2 = await теплота();
+  const сталоТепло = Object.entries(t2).filter(([, w]) => w !== null && w > 3);
+  const вжеЗлито = сталоТепло.length === 0 && !/--bg-page/.test(старийCss.slice(старийCss.indexOf('.shub-cat-row')));
+  ok('КОНТРОЛЬ: зі старим CSS той самий вимір бачить беж',
+     сталоТепло.length > 0 || вжеЗлито,
+     сталоТепло.map(([s, w]) => `${s} +${w}`).join(', ') || 'у origin/main беж уже прибрано — редизайн злито');
+}
+
 
 // ── 2. СТРУКТУРА: чотири категорії, лічильники, шапка ОДНА ─────────────────
 const кат = await p.evaluate(() =>
@@ -144,22 +175,84 @@ ok('🛑 тіло аркуша не прокручується вбік',
    await p.evaluate(() => { const s = document.querySelector('#shub-body');
      return s.scrollWidth <= s.clientWidth; }));
 
-// ── 5. 🔴 КОНТРОЛЬ НА СПРАВЖНЬОМУ СТАРОМУ CSS ──────────────────────────────
-// Перевірка теплоти вище зеленіє над чистим кодом і сама по собі не доводить
-// нічого. Тому підкидаємо в ту саму сторінку `style/account.css` із
-// `origin/main` — тобто рівно той беж, який Вова бачив на екрані. Прилад
-// зобовʼязаний його побачити; не побачив — він не прилад.
-let старийCss = null;
-try { старийCss = projectFile('style/account.css', 'origin/main'); } catch { /* без git пропускаємо */ }
-if (старийCss) {
-  await p.addStyleTag({ content: старийCss });
-  await p.waitForTimeout(200);
-  const t2 = await теплота();
-  const сталоТепло = Object.entries(t2).filter(([, w]) => w !== null && w > 3);
-  const вжеЗлито = сталоТепло.length === 0 && !/--bg-page/.test(старийCss.slice(старийCss.indexOf('.shub-cat-row')));
-  ok('КОНТРОЛЬ: зі старим CSS той самий вимір бачить беж',
-     сталоТепло.length > 0 || вжеЗлито,
-     сталоТепло.map(([s, w]) => `${s} +${w}`).join(', ') || 'у origin/main беж уже прибрано — редизайн злито');
+// ── 5. ЗНЯТТЯ ЗБЕРЕЖЕННЯ ПРЯМО В ХАБІ (замовлення Вови 05.09) ──────────────
+await p.evaluate(() => document.querySelector('[data-shub-cat="boards"]')?.click());
+await p.waitForTimeout(500);
+const карток = () => p.evaluate(() => document.querySelectorAll('.shub-card').length);
+ok('кнопка зняття є на КОЖНІЙ картці',
+   await p.evaluate(() => document.querySelectorAll('.shub-row').length > 0
+     && document.querySelectorAll('.shub-row').length === document.querySelectorAll('.shub-unsave').length));
+
+// 📐 Та сама пара, що в «назад»: видимий значок малий, ціль 44. І та сама причина
+// міряти ВЛУЧАННЯМ — `::after` не входить у рамку вузла.
+const цільЗняття = await p.evaluate(() => {
+  const b = document.querySelector('.shub-unsave'); if (!b) return 0;
+  const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const влучає = (dx, dy) => { const e = document.elementFromPoint(cx + dx, cy + dy);
+    return !!(e && (e === b || b.contains(e) || e.closest?.('.shub-unsave') === b)); };
+  let s = 0; for (let i = 12; i <= 26; i++) if (влучає(i - 0.6, 0) && влучає(0, i - 0.6)) s = i;
+  return s * 2;
+});
+ok('📐 ціль зняття під палець ≥ 44px', цільЗняття >= 44, `${цільЗняття}px`);
+
+// 🛑 КНОПКА В КНОПЦІ — ЗАБОРОНЕНА РОЗМІТКА, і браузери «лікують» її по-різному
+// (аж до подвійного спрацювання тапу). Тому зняття лежить ПОРУЧ із карткою.
+ok('🛑 кнопка зняття НЕ вкладена в кнопку картки',
+   await p.evaluate(() => ![...document.querySelectorAll('.shub-unsave')]
+     .some(b => b.closest('.shub-card'))));
+
+const булоКарток = await карток();
+await p.evaluate(() => document.querySelector('.shub-unsave')?.click());
+await p.waitForTimeout(900);
+ok('🔴 тап по зняттю прибирає рядок зі списку',
+   (await карток()) === булоКарток - 1, `${булоКарток} → ${await карток()}`);
+ok('лічильник у шапці оновився',
+   await p.evaluate(() => document.querySelector('.shub-head-count')?.textContent.trim() === '1'),
+   await p.evaluate(() => document.querySelector('.shub-head-count')?.textContent.trim() || '—'));
+
+await p.evaluate(() => document.querySelector('[data-shub-back]')?.click());
+await p.waitForTimeout(400);
+ok('лічильник категорії теж оновився',
+   /Оголошення\s*1/.test(await p.evaluate(() =>
+     document.querySelector('[data-shub-cat="boards"]')?.textContent.replace(/\s+/g, ' ') || '')),
+   await p.evaluate(() => document.querySelector('[data-shub-cat="boards"]')?.textContent.replace(/\s+/g,' ').trim() || '—'));
+
+// 🗣️ Рішення Вови 05.09 на питання «показувати порожні категорії»: «Ні, не
+// показуєм, там як зараз». Знімаємо останнє збереження і перевіряємо саме це.
+await p.evaluate(() => document.querySelector('[data-shub-cat="boards"]')?.click());
+await p.waitForTimeout(400);
+await p.evaluate(() => document.querySelector('.shub-unsave')?.click());
+await p.waitForTimeout(900);
+await p.evaluate(() => document.querySelector('[data-shub-back]')?.click());
+await p.waitForTimeout(400);
+ok('🗣️ порожня категорія НЕ показується (рішення Вови)',
+   await p.evaluate(() => !document.querySelector('[data-shub-cat="boards"]')));
+
+// ── 6. 🔴 ТАП ВЕДЕ В САМ ЗАПИС, А НЕ В СПИСОК ─────────────────────────────
+// Було: тап по збереженому оголошенню перемикав Дошку в режим «Збережені»,
+// тобто відкривав ПЕРЕЛІК замість того запису, який людина торкнулась.
+// 🔑 Перевірка дивиться на ФАКТ — чи видно на екрані повну картку саме цього
+// оголошення. Якщо хтось поверне старий виклик, модалки не буде і рядок впаде.
+await p.evaluate(() => document.querySelector('[data-shub-cat="chats"]')?.click());
+await p.waitForTimeout(400);
+const єПитання = await p.evaluate(() => !!document.querySelector('.shub-card'));
+if (єПитання) {
+  await p.evaluate(() => document.querySelector('.shub-card')?.click());
+  await p.waitForTimeout(2000);
+  // 🛑 05.09 — ПЕРША РЕДАКЦІЯ ЦЬОГО РЯДКА БУЛА БРЕХЛИВОЮ, і варто знати як саме.
+  // Вона шукала екран за класами `.bd-chat-modal, [class*=chat-modal], .pm-screen`
+  // і червоніла над СПРАВНИМ кодом: питання відкривається в `.qa-screen`, якого
+  // в тому переліку не було. Тобто прилад «доводив» ваду, якої не існувало, і я
+  // мало не пішов лагодити правильну функцію.
+  // ⚠️ І другий бік тієї ж помилки: шукати ЗАГОЛОВОК питання на екрані теж не
+  // можна — екран питання показує його ТЕКСТ, а картка хабу показує заголовок.
+  // Тому міряємо: екран питання існує і несе текст саме цього запису.
+  const наЕкрані = await p.evaluate(() =>
+    (document.querySelector('.qa-screen')?.innerText || '').replace(/\s+/g, ' '));
+  ok('🔴 тап по збереженому питанню відкриває САМЕ ЙОГО',
+     наЕкрані.includes('Світло не горить третій тиждень'), наЕкрані.slice(0, 70) || 'екрана немає');
+  ok('🛑 і аркуш хабу при цьому закрився',
+     await p.evaluate(() => !document.querySelector('.shub-sheet')));
 }
 
 await b.close();

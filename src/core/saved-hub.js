@@ -20,12 +20,23 @@
 // 🔑 Слово Вови: гість «може тільки переглядати публічну інформацію, а не
 // взаємодіяти в рамках додатку». Збережене — не публічна інформація.
 
-import { escapeHtml } from './utils.js';
+import { escapeHtml, showToast } from './utils.js';
 import { isLoggedIn, currentUserId, requireAuth } from './auth.js';
-import { getSupabase, fetchSavedPostIds } from './supabase.js';
-import { setBoardActiveType, openChatById } from '../tabs/board.js';
-import { getSavedArticleIds, getArticlesByIds, openArticle } from '../tabs/news.js';
-import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
+import { getSupabase, fetchSavedPostIds, removeSavedPost, removeSavedArticle } from './supabase.js';
+// 🔴 05.09 — `openBoardItemById` ЗАМІСТЬ пари `setBoardActiveType` + `openChatById`.
+// Було: тап по збереженому ОГОЛОШЕННЮ перемикав Дошку в режим «Збережені», тобто
+// відкривав СПИСОК замість того запису, який людина щойно торкнулась. Стаття
+// відкривала свою статтю, питання — своє питання, а оголошення — перелік усіх.
+// 🔑 Це рівно те, що `HOT_RULES` №12 називає «тап мусить вести туди, що обіцяє
+// мітка»: інакше він бреше про другу подію так само, як брехало б число.
+// ⚠️ Функція НЕ нова — вона з 23.08 живить deep-link зі сповіщень: сама
+// визначає тип запису (`chat` → Обговорення, інше → модалка оголошення),
+// сама перемикає вкладку і сама каже правду, якщо запису вже немає
+// («це оголошення більше недоступне»). Тобто обидві гілки хабу сходяться в
+// один виклик, а не в два свої.
+import { openBoardItemById } from '../tabs/board.js';
+import { getSavedArticleIds, getArticlesByIds, openArticle, refreshSavedArticles } from '../tabs/news.js';
+import { getSavedRoutesForUI, openSavedRouteOnBuses, unsaveRoute } from '../tabs/buses.js';
 import { ICONS } from './icons.js';
 import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
 
@@ -51,25 +62,47 @@ function closeHub() {
   setTimeout(() => { s.remove(); b?.remove(); }, 240);
 }
 
+// 🔴 05.09 — ЗНЯТТЯ ЗБЕРЕЖЕННЯ ПРЯМО ТУТ (замовлення Вови).
+// Було: щоб прибрати закладку, треба піти в сам матеріал і відтиснути прапорець.
+// А хаб — саме те місце, де людина розбирає накопичене; вимагати заради цього
+// відкрити кожен запис означало вести її туди, куди вона не збиралась.
+//
+// ⚠️ РЯДОК — НЕ КНОПКА В КНОПЦІ. Обгортка `div`, а не `button`: вкладена кнопка
+// у HTML заборонена, і браузери «лікують» це по-різному — від зламаної розмітки
+// до тапу, який спрацьовує двічі. Тому відкриття висить на `[data-shub-open]`,
+// зняття — на сусідньому `[data-shub-unsave]`, і обидва ловить одна делегація.
+const bookmarkOffSvg = ICONS.bookmark;
+
+function unsaveBtnHtml(type, attrs) {
+  return `<button class="shub-unsave" type="button" data-shub-unsave="${type}" ${attrs}
+                  aria-label="Прибрати зі збережених">${bookmarkOffSvg}</button>`;
+}
+
 function cardHtml(p, type) {
   const when = new Date(p.created_at || p.ts || Date.now())
     .toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
   return `
-    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
-      <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без тексту)')}</span>
-      <span class="shub-card-meta">${escapeHtml(when)}</span>
-    </button>`;
+    <div class="shub-row">
+      <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
+        <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без тексту)')}</span>
+        <span class="shub-card-meta">${escapeHtml(when)}</span>
+      </button>
+      ${unsaveBtnHtml(type, `data-shub-id="${p.id}"`)}
+    </div>`;
 }
 
 // Б7.2: автобуси — власна ідентичність (routeId+дата+зупинки, не один числовий id).
 function busCardHtml(r) {
+  const адреса = `data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+                  data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}"`;
   return `
-    <button class="shub-card" type="button" data-shub-type="bus"
-            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
-            data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}">
-      <span class="shub-card-text">${escapeHtml(r.title)}</span>
-      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
-    </button>`;
+    <div class="shub-row">
+      <button class="shub-card" type="button" data-shub-type="bus" ${адреса}>
+        <span class="shub-card-text">${escapeHtml(r.title)}</span>
+        <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
+      </button>
+      ${unsaveBtnHtml('bus', адреса)}
+    </div>`;
 }
 
 async function loadData() {
@@ -247,8 +280,65 @@ function openSavedSheet() {
       setTimeout(() => { sh.remove(); bd?.remove(); }, ms + 20);
     },
   });
+  // 🔴 ЗНЯТТЯ ЗБЕРЕЖЕННЯ — ОПТИМІСТИЧНО, АЛЕ З ЧЕСНИМ ВІДКОТОМ.
+  //
+  // Прибираємо запис зі списку ОДРАЗУ і перемальовуємо: чекати мережу тут нічого
+  // не дає, а затримка читалась би як «не спрацювало». Але якщо база відмовила —
+  // повертаємо рядок на місце і кажемо про це вголос.
+  // 🛑 Саме тут головна пастка класу: інтерфейс, який підтверджує дію, що НЕ
+  // сталась. Так уже було з вимикачами сповіщень (B-33, 25.08) — два з чотирьох
+  // «підтверджували» те, чого ніхто не робив, і зловив це лише палець на живому
+  // пристрої. Тому мовчазного успіху тут немає: або запис зник насправді, або
+  // він повернувся і людина бачить чому.
+  // ⚠️ Успіх НЕ супроводжується тостом навмисно: зникнення рядка і є відповідь.
+  async function знятиЗбереження(btn) {
+    const type = btn.dataset.shubUnsave;
+    const uid  = currentUserId();
+
+    // Автобус адресується не числом, а трійкою (рейс + дата + зупинки) — Б7.2.
+    if (type === 'bus') {
+      const { shubRid, shubDate, shubFrom, shubTo } = btn.dataset;
+      const було = _data.buses;
+      _data.buses = було.filter(r => !(r.routeId === shubRid && r.trackDate === shubDate));
+      render();
+      try {
+        // ⚠️ Саме `unsaveRoute`, а не локальне видалення: за збереженим рейсом
+        // стоїть СЕРВЕРНА push-підписка, і без неї сповіщення приходили б далі.
+        unsaveRoute(shubRid, shubDate, shubFrom || null, shubTo || null);
+      } catch (err) {
+        console.warn('[saved-hub] unsave bus', err);
+        _data.buses = було; render();
+        showToast('Не вдалося прибрати рейс — спробуйте ще раз', 3500);
+      }
+      return;
+    }
+
+    const id = Number(btn.dataset.shubId);
+    const ключ = type === 'article' ? 'articles' : type === 'chat' ? 'chats' : 'boards';
+    const було = _data[ключ];
+    _data[ключ] = було.filter(p => p.id !== id);
+    render();
+
+    const r = type === 'article'
+      ? await removeSavedArticle(uid, id)
+      : await removeSavedPost(uid, id);
+
+    if (!r || r.ok === false) {
+      _data[ключ] = було; render();
+      showToast('Не вдалося прибрати зі збережених — спробуйте ще раз', 3500);
+      return;
+    }
+    // Статті тримають свій перелік у `news.js` — без цього рядка зірочка на самій
+    // статті лишилась би «збереженою», хоч у базі запису вже немає.
+    if (type === 'article') { try { await refreshSavedArticles(); } catch (_) { /* fail-soft */ } }
+  }
+
   // Делегація (не addEventListener одразу — #shub-login вставляється пізніше через render)
   _sheet.addEventListener('click', e => {
+    // 🔑 Зняття перевіряємо ПЕРШИМ: кнопка лежить поруч із карткою, і якби
+    // порядок був зворотний, тап по ній міг би дорогою відкрити сам запис.
+    const unsave = e.target.closest('[data-shub-unsave]');
+    if (unsave) { e.stopPropagation(); знятиЗбереження(unsave); return; }
     if (e.target.closest('#shub-login')) {
       closeHub();
       requireAuth('бачити збережені', () => {});
@@ -279,13 +369,9 @@ function openSavedSheet() {
     const type = card.dataset.shubType;
     closeHub();
     if (type === 'article') {
-      openArticle(id);                     // модалка статті — глобальна, без перемикання вкладки
-    } else if (type === 'chat') {
-      window.switchTab && window.switchTab('discussions');
-      openChatById(id);                    // модалка конкретного обговорення
+      openArticle(id);          // модалка статті — глобальна, без перемикання вкладки
     } else {
-      window.switchTab && window.switchTab('board');
-      setBoardActiveType('saved');         // Дошка → таб «Збережені»
+      openBoardItemById(id);    // питання і оголошення: вкладку й тип вибирає сама
     }
   });
 
