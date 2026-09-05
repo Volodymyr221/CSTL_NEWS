@@ -2405,7 +2405,18 @@ export function eventDayStart(dateStr) {
 export function feedSortKey(post) {
   const created = new Date(post?.created_at || 0).getTime() || 0;
   if (!post?.event_date) return created;
-  return Math.max(created, eventDayStart(post.event_date));
+  const день = eventDayStart(post.event_date);
+  // 🔴 05.09«b» — МАЙБУТНІЙ ДЕНЬ НЕ ПІДНІМАЄ ДОПИС. Це виправлення вади, яку
+  // зняв Вова: «чому події які ми запланували на майбутні дати залишається в
+  // списку стрічки завжди зверху? Не зважаючи на те що вийшли нові дописи?»
+  //
+  // Було `Math.max(created, день)` без цієї умови — і для події на 26 вересня
+  // ключ ставав «26 вересня» ВЖЕ СЬОГОДНІ, тобто допис стояв вище за все, що
+  // вийде за три тижні до неї. Це рівно закріплення, від якого відмовлялись.
+  // 🔑 Задум у коментарі нижче був правильний із самого початку («опублікували
+  // 1 вересня → далі осідає як звичайний допис»), помилка була тільки в коді.
+  if (день > Date.now()) return created;
+  return Math.max(created, день);
 }
 
 // Стан події відносно сьогодні: 'today' | 'future' | 'past'.
