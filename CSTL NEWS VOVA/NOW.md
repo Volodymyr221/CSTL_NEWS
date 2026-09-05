@@ -10,12 +10,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-05 21:32 UTC
+**Зріз на:** 2026-09-05 21:45 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-i9wyz6` |
-| останній коміт людини | `54bbcbb4` 05.09 21:22 — 🚌 Зворотні рейси: А-1 розблоковано після двох місяців |
+| останній коміт людини | `68771680` 05.09 21:33 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260905-2110` |
 | останній PR у `main` | #1167 |
 | стендів на диску | 146 |
@@ -26,8 +26,10 @@
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md`
 - `_session-log/vova-2026-09-05b.md`
 - `bundle.js`
 - `scripts/parse_vopas.py`
@@ -39,11 +41,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `68771680` 05.09 21:33 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6
+- `b2fb6e04` 05.09 21:33 — docs: виправлено звіт про зворотні + А-1 знято з блоку
 - `54bbcbb4` 05.09 21:22 — 🚌 Зворотні рейси: А-1 розблоковано після двох місяців
 - `ffe6a5e1` 05.09 21:11 — 🔴 Регресія: вкладка «Збережені» на Дошці лишилась без інтерфейсу
 - `922fd078` 05.09 20:59 — Merge remote-tracking branch 'origin/main' into claude/startuem-i9wyz6
-- `ea20624a` 05.09 20:38 — 🔖 «Збережене» перероблено + сусідні класи неправди в агентів (#1167)
-- `8f6fbd6c` 05.09 20:09 — docs: русизм у журналі 05.09«b» («упёрся» → «уперся»)
 
 <!-- AUTO:END -->
 
