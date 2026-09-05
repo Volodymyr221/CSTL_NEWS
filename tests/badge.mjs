@@ -13,6 +13,15 @@ import { ROOT, launch, projectFile } from './_lib.mjs';
 const R = ROOT;
 
 const css = projectFile('style/feed.css');
+// 🔴 Ярусний стан вмикає JS після виміру, тож сцена мусить ВИКОНАТИ справжню
+// `fitCardHeads` із `src/tabs/feed.js`. Копія в стенді розійшлась би з кодом —
+// саме через розхід дзеркала цей стенд і не побачив вади 05.09.
+const feedJs = projectFile('src/tabs/feed.js');
+const fitSrc = (() => {
+  const i = feedJs.indexOf('function fitCardHeads(root) {');
+  const j = feedJs.indexOf('\n}', i);
+  return i < 0 ? '' : feedJs.slice(i, j + 2);
+})();
 const badge = '<span class="fd-pin-badge"><svg viewBox="0 0 24 24"><path d="M15 4.5l-4 4"/></svg>Закріплено</span>';
 // 🔴 05.09 — НАЗВА НАВМИСНО ДОВГА, І ЦЕ НЕ ПРИКРАСА СЦЕНИ.
 // 🗣️ Вова саме на такій назві й показав ваду: «КЦ «Центр культури, спорту та
@@ -26,17 +35,21 @@ const дзвінок = '<button class="fd-remind-btn" data-remind="1"><svg viewB
 // назва на всю ширину, під нею службовий рядок. Нижче стоїть перевірка, яка
 // звіряє це дзеркало з кодом: копія, що тихо розійшлась із оригіналом, — це
 // саме те, через що цей стенд і не побачив вади (він мав стару розмітку).
-const card = (photo) => `
+// 🔴 05.09, третя правка — ДВА СТАНИ ШАПКИ.
+// 🗣️ Вова: «переносити потрібно тільки якщо назва довга, в другому скріні все
+// добре, там як раніше має бути».
+// ⚠️ Тому в сцені ОБИДВІ картки: з довгою назвою (мусить стати ярусною) і з
+// короткою (мусить лишитись компактною, як було завжди). З однією перевірка
+// довела б лише половину правила — і саме половина зробила б регрес непомітним.
+const КОРОТКА_НАЗВА = 'ОЛИЦЬКА МІСЬКА РАДА';
+const card = (photo, назва = ДОВГА_НАЗВА, теги = badge + дзвінок) => `
   <article class="fd-card">
     <header class="fd-card-head${photo ? ' fd-card-head--onphoto' : ''}">
       <span class="fd-ava-wrap" style="background:#ddd;border-radius:50%"></span>
-      <span class="fd-page-name">${ДОВГА_НАЗВА}</span>
+      <span class="fd-page-name">${назва}</span>
       <button class="fd-card-menu">···</button>
-      <span class="fd-head-meta">
-        <span class="fd-time">23 липня</span>
-        ${badge}
-        ${дзвінок}
-      </span>
+      <span class="fd-time">23 липня</span>
+      <span class="fd-head-tags">${теги}</span>
     </header>
     ${photo ? '<div style="height:120px;background:#888"></div>' : ''}
     <div class="fd-card-body${photo ? ' fd-card-body--onphoto' : ''}"><div class="fd-text">текст</div></div>
@@ -51,6 +64,11 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 </style></head><body>
  <div id="bez">${card(false)}</div>
  <div id="zfoto">${card(true)}</div>
+ <!-- ⚠️ У короткій картці лише дзвіночок — рівно як на екрані Вови (OLYKA
+      CASTLE, «10 год», дзвіночок). З «Закріплено» на 390px навіть коротка назва
+      не вміщується в рядок, і ярус там був би ПРАВИЛЬНОЮ поведінкою — тобто
+      сцена перевіряла б не те правило. -->
+ <div id="korotka">${card(false, КОРОТКА_НАЗВА, дзвінок)}</div>
 <script>
  // Тло, яке РЕАЛЬНО бачить око: власне тло елемента часто прозоре, і колір дає
  // предок (тут — біла картка). Перша версія міряла власне тло і показала «різне»
@@ -69,9 +87,12 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
    return 'rgb(255, 255, 255)';
  };
  window.__badge = (root) => {
+   // ⚠️ Позначки «Закріплено» може не бути зовсім (коротка картка в сцені саме
+   // така — там лише дзвіночок, як на екрані Вови). Тоді читаємо решту, а поля
+   // позначки віддаємо порожніми, а не падаємо посеред виміру.
    const e = document.querySelector('#' + root + ' .fd-pin-badge');
-   const cs = getComputedStyle(e);
-   const r = e.getBoundingClientRect();
+   const cs = e ? getComputedStyle(e) : null;
+   const r = e ? e.getBoundingClientRect() : { top: 0, right: 0, width: 0, height: 0 };
    const menu = document.querySelector('#' + root + ' .fd-card-menu').getBoundingClientRect();
    const head = document.querySelector('#' + root + ' .fd-card-head').getBoundingClientRect();
    const name = document.querySelector('#' + root + ' .fd-page-name').getBoundingClientRect();
@@ -85,7 +106,13 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
    const rng = document.createRange();
    rng.selectNodeContents(nameEl);
    const rows = [...rng.getClientRects()].filter(x => x.width > 1 && x.height > 1).length;
-   return { color: cs.color, bg: cs.backgroundColor, border: cs.borderTopColor,
+   // ⚠️ Саме headEl, а не head: вище вже є const head із прямокутником шапки, і
+   // друге оголошення тим самим імʼям робило б увесь цей скрипт синтаксично
+   // невалідним — сцена мовчки лишалась би без window.__badge.
+   const headEl = document.querySelector('#' + root + ' .fd-card-head');
+   const tags = document.querySelector('#' + root + ' .fd-head-tags').getBoundingClientRect();
+   return { color: cs && cs.color, bg: cs && cs.backgroundColor,
+            border: cs && cs.borderTopColor,
             headBg: window.__effBg(document.querySelector('#' + root + ' .fd-card-head')),
             w: Math.round(r.width), h: Math.round(r.height),
             zazor: Math.round(menu.left - r.right),
@@ -96,6 +123,10 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
             rowsNazvy: rows,
             // Службові позначки мусять стояти НИЖЧЕ назви, а не поруч.
             znachkyNyzhche: r.top >= name.bottom - 1 && bell.top >= name.bottom - 1,
+            // Ярусний стан вмикається ВИМІРОМ, а не завжди (слово Вови).
+            yarusnyi: headEl.classList.contains('fd-card-head--stacked'),
+            // У компактному стані позначки стоять НА ОДНОМУ рядку з назвою.
+            tagyNaRiadkuNazvy: tags.top < name.bottom && tags.bottom > name.top,
             // «⋯» лишається навпроти ПЕРШОГО рядка назви (слово Вови: «повинні
             // залишатися там де є»).
             menuNaPershomu: menu.top < name.top + 26,
@@ -113,9 +144,17 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 const b = await launch(chromium);
 const p = await b.newPage({ viewport: { width: 390, height: 844 } });
 await p.setContent(html); await p.waitForTimeout(120);
+// Той самий вимір, що робить застосунок після малювання карток.
+await p.evaluate((src) => {
+  // eslint-disable-next-line no-eval
+  (0, eval)(src + '; window.__fit = fitCardHeads;');
+  window.__fit(document.body);
+}, fitSrc);
+await p.waitForTimeout(60);
 
 const bez   = await p.evaluate(() => window.__badge('bez'));
 const foto  = await p.evaluate(() => window.__badge('zfoto'));
+const korot = await p.evaluate(() => window.__badge('korotka'));
 
 const res = []; const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${n}${i ? '  — ' + i : ''}`); };
 
@@ -172,20 +211,44 @@ ok('🛑 …а час лишився біля ЛІВОГО краю, під на
 ok('🔴 довга назва більше не розсипається на чотири рядки',
    bez.rowsNazvy <= 2, `${bez.rowsNazvy} рядки`);
 
+// ── 🔴 05.09, ТРЕТЯ ПРАВКА: ЯРУС ЛИШЕ ДЛЯ ДОВГОЇ НАЗВИ ──────────────────────
+// 🗣️ Вова: «переносити потрібно тільки якщо назва довга, в другому скріні все
+// добре, там як раніше має бути».
+// 🔑 Стан вмикає справжня `fitCardHeads` після виміру — вона й виконується в
+// сцені вище. Регулярка «є клас --stacked у CSS» довела б лише те, що правило
+// написане, а не те, що воно вмикається САМЕ там, де треба.
+ok('🔴 довга назва → шапка стає ЯРУСНОЮ', bez.yarusnyi === true);
+// 🛑 Зустрічна межа, і без неї перша перевірка нічого не варта: ярус, увімкнений
+// завжди, теж пройшов би її.
+ok('🛑 КОРОТКА назва → шапка лишається КОМПАКТНОЮ, як було завжди',
+   korot.yarusnyi === false);
+ok('🛑 …і позначки в ній стоять НА ОДНОМУ рядку з назвою',
+   korot.tagyNaRiadkuNazvy === true);
+ok('🔴 …а при довгій назві — під нею', bez.tagyNaRiadkuNazvy === false);
+// ⚠️ Колір позначки в короткій картці не міряємо: її там немає навмисно —
+// сцена дзеркалить екран Вови, де в OLYKA CASTLE лише дзвіночок. Рівність
+// кольорів між станами вже доведена парою «без фото / з фото» вище.
+
 // ── 🛑 ДЗЕРКАЛО ЗВІРЕНЕ З КОДОМ ─────────────────────────────────────────────
 // ⚠️ Саме через розхід копії з оригіналом цей стенд і не побачив вади: він
 // тримав РОЗМІТКУ, якої в застосунку вже не було. Тепер розхід ловиться.
 const feedSrc = projectFile('src/tabs/feed.js');
 const шапка = (feedSrc.match(/<header class="fd-card-head[\s\S]*?<\/header>/) || [''])[0];
-ok('🛑 сцена дзеркалить справжню шапку: службовий рядок існує в коді',
-   /<span class="fd-head-meta">/.test(шапка));
+ok('🛑 сцена дзеркалить справжню шапку: група позначок існує в коді',
+   /headTagsHtml\(post, onPage\)/.test(шапка) && /class="fd-head-tags"/.test(feedSrc));
 // 🛑 І що обгортки-колонки більше немає: у сітці назва, «⋯» і службовий ряд —
 // ПРЯМІ діти шапки. Копія з обгорткою мала б іншу геометрію, і стенд знову
 // міряв би не те, що на екрані.
 ok('🛑 …і назва з «⋯» лежать прямо в шапці (сітка, а не колонка-обгортка)',
    !/fd-head-txt/.test(шапка));
-ok('🛑 …і «Закріплено» з дзвіночком лежать САМЕ в ньому',
-   /fd-head-meta[\s\S]*?fd-pin-badge[\s\S]*?eventRemindHtml[\s\S]*?<\/span>/.test(шапка));
+const тіло = (feedSrc.match(/function headTagsHtml\(post, onPage\)[\s\S]*?\n\}/) || [''])[0];
+ok('🛑 …і «Закріплено» з дзвіночком збираються САМЕ в неї',
+   /fd-pin-badge/.test(тіло) && /eventRemindHtml/.test(тіло)
+   && /class="fd-head-tags"/.test(тіло));
+// 🛑 Порожньої групи не буває: вона зайняла б колонку сітки і зсунула назву
+// там, де показувати нічого.
+ok('🛑 …а якщо показувати нічого — вузла немає зовсім',
+   /if \(!закріплено && !нагадати\) return '';/.test(тіло));
 
 await b.close();
 const bad = res.filter(r => !r).length;
