@@ -821,14 +821,27 @@ function postCardHtml(post, onPage = false) {
   const чернетка = post.status === 'draft';
   return `
     <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
+      <!-- 🔴 05.09 — НАЗВА СПІЛЬНОТИ НА ВСЮ ШИРИНУ, РЕШТА — ПІД НЕЮ.
+           🗣️ Вова (знімок КЦ «Центр культури, спорту та туризму Олицької міської
+           ради»): «назва спільноти в пості має бути максимально горизонтально
+           розтягнута… під ним вже закріплено, там дзвіночок нагадування якщо він
+           є і так далі. Три крапки… повинні залишатися там де є».
+           🔴 БУЛО: позначка «Закріплено», дзвіночок і «⋯» стояли В ОДНОМУ РЯДКУ
+           з назвою і забирали в неї ширину — довга офіційна назва стискалась у
+           вузьку колонку і розсипалась на ЧОТИРИ рядки.
+           🔑 Тепер шапка це ДВА яруси: назва (перший, на всю ширину до «⋯») і
+           службовий рядок під нею — час · закріплено · нагадування. «⋯» лишився
+           там, де був: угорі праворуч, навпроти назви. -->
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
-          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
+          <span class="fd-head-meta">
+            <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
+            ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
+            ${eventRemindHtml(post)}
+          </span>
         </span>
-        ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
-        ${eventRemindHtml(post)}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
       ${photo}
