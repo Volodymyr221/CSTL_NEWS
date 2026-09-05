@@ -1,0 +1,167 @@
+// Стенд: ХАБ «ЗБЕРЕЖЕНІ» — редизайн 05.09.
+//
+// 🗣️ Замовлення Вови 05.09: «редизайн модалки збережені і всіх категорій… там є
+// старіші колюрації, бежеві такі, плюс вона виглядає несучасно, структурувати
+// якось це так по категоріях… і передивитися логіку».
+//
+// 🔴 НАВІЩО ОКРЕМИЙ СТЕНД, КОЛИ Є `modal-surface.mjs`. Той читає CSS ТЕКСТОМ —
+// і це його свідома межа (більшість модалок будується з даних Supabase). Тут же
+// аркуш підіймається по-справжньому, тож міряється ОБЧИСЛЕНИЙ колір і жива
+// геометрія. Два різні прилади на одну поверхню — не дубль: текстовий ловить
+// новий hex у файлі, живий ловить те, що текст побачити не може (успадкований
+// фон, перекритий десь іншим правилом, зсунуту ціль під палець).
+//
+// 🛑 УРОК, ЧЕРЕЗ ЯКИЙ ЦЕЙ ФАЙЛ ІСНУЄ. Беж дожив тут до вересня не тому, що його
+// не помітили, а тому, що сторож модалок дивився повз: його взірець селекторів
+// не знав префікса `shub-`. Тобто правило було, прилад був, а місце — поза
+// полем зору. Тому нижче стоїть КОНТРОЛЬ на справжньому старому CSS.
+
+import { chromium } from 'playwright';
+import { launch, serve, reporter, projectFile } from './_lib.mjs';
+import { mockSupabase } from './_board-fixture.mjs';
+
+const { ok, done } = reporter();
+const ts = Date.now() - 3 * 864e5;
+const iso = t => new Date(t).toISOString();
+
+// 📐 Сцена навмисно НЕ мінімальна: чотири категорії і довга назва статті.
+// На одній короткій картці не видно ні ритму списку, ні переносу — а саме на
+// складній сцені 05.09 знайшлись дві вади, яких прості стенди не показували.
+const POSTS = [
+  { id: 7001, type: 'board', title: 'Продам піч-буржуйку, стан хороший',
+    text: '.', status: 'published', ts, created_at: iso(ts), owner_uid: 'u2' },
+  { id: 7003, type: 'chat', title: 'Коли відновлять освітлення на вулиці Замковій?',
+    text: '.', status: 'published', ts, created_at: iso(ts), owner_uid: 'u4' },
+];
+const ARTICLES = [
+  { id: 5001, title: 'В Олиці відремонтували дорогу до замку', excerpt: '.', content: '.', geo: 'Громада', ts },
+  { id: 5002, title: 'Волинь отримала нові автобуси на приміські маршрути',
+    excerpt: '.', content: '.', geo: 'Волинь', ts },
+];
+const USER = { id: 'uid-a', email: 'a@example.com', user_metadata: { full_name: 'Володимир' } };
+
+const { url, stop } = await serve();
+const b = await launch(chromium);
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
+                                 hasTouch: true, serviceWorkers: 'block' });
+const p = await ctx.newPage();
+await mockSupabase(p, {
+  posts: POSTS,
+  saved_posts: [{ uid: 'uid-a', post_id: 7001 }, { uid: 'uid-a', post_id: 7003 }],
+  saved_articles: [{ uid: 'uid-a', article_id: 5001, created_at: iso(ts) },
+                   { uid: 'uid-a', article_id: 5002, created_at: iso(ts) }],
+  profiles: [],
+}, { user: USER });
+await p.route('**://api.open-meteo.com/**', r => r.abort());
+await p.route('**/data/articles.json*', r => r.fulfill({ status: 200,
+  contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+  body: JSON.stringify(ARTICLES) }));
+// Автобус досівається у сховище: це лише СЦЕНА (щоб категорій було чотири), а не
+// доказ чогось — урок 31.08 про посів, який «доводив» ваду, створену самим посівом.
+await p.addInitScript(() => localStorage.setItem('bus_track_v2:uid-a', JSON.stringify({
+  routes: [{ routeId: 'r1', trackDate: '2026-09-06', from: 'Олика', to: 'Луцьк',
+             title: 'Олика → Луцьк', dayLabel: 'Завтра', timeStr: '07:20' }] })));
+await p.goto(url, { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(2500);
+await p.evaluate(() => document.querySelector('.consent-accept')?.click());
+await p.waitForTimeout(400);
+await p.evaluate(() => document.getElementById('saved-hub-btn')?.click());
+await p.waitForTimeout(1500);
+
+ok('аркуш «Збережені» відкрився', await p.evaluate(() => !!document.querySelector('.shub-sheet')));
+
+// ── 1. ТЕПЛОТА — ЖИВИМ ВИМІРОМ, НЕ ЧИТАННЯМ ФАЙЛУ ──────────────────────────
+// Критерій той самий, що в `modal-surface.mjs` і `board-cream.mjs`: R−B ≤ 3.
+const теплота = async () => p.evaluate(() => {
+  const rb = el => {
+    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+    if (!m || (m[3] !== undefined && +m[3] === 0)) return null;   // прозоре не рахуємо
+    return +m[0] - +m[2];
+  };
+  const out = {};
+  for (const sel of ['.shub-sheet', '.shub-handle', '.shub-cat-row', '.shub-cat-ic', '.shub-back']) {
+    const el = document.querySelector(sel);
+    if (el) out[sel] = rb(el);
+  }
+  return out;
+});
+const t1 = await теплота();
+const теплі = Object.entries(t1).filter(([, w]) => w !== null && w > 3);
+ok('🔴 жодна поверхня хабу не тепла (обчислений колір, R−B ≤ 3)',
+   теплі.length === 0, теплі.map(([s, w]) => `${s} +${w}`).join(', ') || JSON.stringify(t1));
+
+// ── 2. СТРУКТУРА: чотири категорії, лічильники, шапка ОДНА ─────────────────
+const кат = await p.evaluate(() =>
+  [...document.querySelectorAll('.shub-cat-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
+// ⚠️ Імена лише кирилицею: змішана розкладка в ідентифікаторі (латинська «k»
+// поруч із кирилицею) потім не знаходиться грепом — у проєкті це вже кусало.
+const категоріїОк = k => k.length === 4 && k.every(s => /\d/.test(s));
+ok('категорії показані з лічильниками', категоріїОк(кат), кат.join(' | '));
+
+ok('🛑 заголовок НЕ дублюється (одна шапка, не дві)',
+   await p.evaluate(() => document.querySelectorAll('.shub-head').length === 1
+                       && !document.querySelector('.shub-detail-head')));
+
+// ── 3. ЛОГІКА ПЕРЕХОДУ І «НАЗАД» ───────────────────────────────────────────
+await p.evaluate(() => document.querySelector('[data-shub-cat="articles"]')?.click());
+await p.waitForTimeout(500);
+ok('тап по категорії відкриває її список',
+   await p.evaluate(() => document.querySelectorAll('.shub-card').length === 2));
+ok('шапка називає відкриту категорію',
+   /Статті/.test(await p.evaluate(() => document.querySelector('.shub-head')?.textContent || '')));
+
+// 🔴 Ось те, заради чого шапку зводили в одну: «назад» лежав У СКРОЛЕРІ, тобто
+// зникав при прокрутці довгого списку. Перевірка не на розмітку, а на факт.
+ok('🔴 «назад» ПОЗА скролером (не зникає при прокрутці списку)',
+   await p.evaluate(() => {
+     const b = document.querySelector('.shub-back'), s = document.querySelector('#shub-body');
+     return !!b && !!s && !s.contains(b);
+   }));
+
+// 📐 Ціль під палець міряється ВЛУЧАННЯМ, а не `getBoundingClientRect`: видимий
+// кружечок 36px, а ціль розширена невидимим `::after` до 44 — рамка вузла цього
+// не показує, і перевірка по ній збрехала б у наш бік.
+const ціль = await p.evaluate(() => {
+  const b = document.querySelector('.shub-back'); if (!b) return 0;
+  const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const влучає = (dx, dy) => { const e = document.elementFromPoint(cx + dx, cy + dy);
+    return !!(e && (e === b || b.contains(e) || e.closest?.('.shub-back') === b)); };
+  let s = 0; for (let i = 12; i <= 26; i++) if (влучає(i - 0.6, 0) && влучає(0, i - 0.6)) s = i;
+  return s * 2;
+});
+ok('📐 ціль «назад» під палець ≥ 44px', ціль >= 44, `${ціль}px`);
+
+ok('«назад» повертає до списку категорій', await (async () => {
+  await p.evaluate(() => document.querySelector('[data-shub-back]')?.click());
+  await p.waitForTimeout(400);
+  return p.evaluate(() => document.querySelectorAll('.shub-cat-row').length === 4);
+})());
+
+// ── 4. Аркуш не їде вбік ───────────────────────────────────────────────────
+// Скролер із `overflow-y: auto` за правилом CSS дістає й горизонтальну
+// прокрутку — саме тому рядки НЕ виносяться за поля відʼємним `margin`.
+ok('🛑 тіло аркуша не прокручується вбік',
+   await p.evaluate(() => { const s = document.querySelector('#shub-body');
+     return s.scrollWidth <= s.clientWidth; }));
+
+// ── 5. 🔴 КОНТРОЛЬ НА СПРАВЖНЬОМУ СТАРОМУ CSS ──────────────────────────────
+// Перевірка теплоти вище зеленіє над чистим кодом і сама по собі не доводить
+// нічого. Тому підкидаємо в ту саму сторінку `style/account.css` із
+// `origin/main` — тобто рівно той беж, який Вова бачив на екрані. Прилад
+// зобовʼязаний його побачити; не побачив — він не прилад.
+let старийCss = null;
+try { старийCss = projectFile('style/account.css', 'origin/main'); } catch { /* без git пропускаємо */ }
+if (старийCss) {
+  await p.addStyleTag({ content: старийCss });
+  await p.waitForTimeout(200);
+  const t2 = await теплота();
+  const сталоТепло = Object.entries(t2).filter(([, w]) => w !== null && w > 3);
+  const вжеЗлито = сталоТепло.length === 0 && !/--bg-page/.test(старийCss.slice(старийCss.indexOf('.shub-cat-row')));
+  ok('КОНТРОЛЬ: зі старим CSS той самий вимір бачить беж',
+     сталоТепло.length > 0 || вжеЗлито,
+     сталоТепло.map(([s, w]) => `${s} +${w}`).join(', ') || 'у origin/main беж уже прибрано — редизайн злито');
+}
+
+await b.close();
+await stop();
+done();

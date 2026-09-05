@@ -120,7 +120,7 @@ function categoriesScreenHtml() {
         <span class="shub-cat-ic">${c.icon}</span>
         <span class="shub-cat-label">${c.label}</span>
         ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
-        <span class="shub-cat-chev">›</span>
+        <span class="shub-cat-chev">${ICONS.chevronRight}</span>
       </button>`;
   }).filter(Boolean).join('');
 
@@ -132,38 +132,48 @@ function categoriesScreenHtml() {
 }
 
 // ── Екран 2: список конкретної категорії ─────────────────────────────────
-function detailHead(cat) {
-  return `
-    <div class="shub-detail-head">
-      <button class="shub-back" type="button" data-shub-back aria-label="Назад">←</button>
-      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
-    </div>`;
-}
+//
+// 🔴 05.09 — ШАПКА ЗВЕДЕНА В ОДНУ, І ЦЕ НЕ ЛИШЕ ПРО ВИГЛЯД. Було дві: постійний
+// заголовок «Збережені» над аркушем і власна шапка «‹ Статті» ВСЕРЕДИНІ списку.
+// Дві вади одразу:
+//   • назва звучала двічі поспіль, зʼїдаючи ~44px у аркуші висотою 72vh;
+//   • кнопка «назад» лежала в СКРОЛЕРІ — прокрутивши список, людина її гу��ила.
+// Тепер шапка одна, живе поза `#shub-body`, і `render()` міняє в ній назву та
+// показує «назад» лише в деталях. Тобто вихід із категорії доступний завжди.
 const EMPTY_DETAIL = `<div class="shub-empty">Тут поки порожньо.</div>`;
+
+// Що написано в шапці зараз: корінь чи категорія.
+function headHtml() {
+  const cat = _view === 'categories' ? null : CATS.find(c => c.key === _view);
+  if (!cat) return `<span class="shub-head-title">${ICONS.bookmark}Збережені</span>`;
+  return `
+    <button class="shub-back" type="button" data-shub-back aria-label="Назад">${ICONS.back}</button>
+    <span class="shub-head-title">${cat.icon}${cat.label}</span>
+    <span class="shub-head-count">${_data[cat.key].length}</span>`;
+}
 
 function categoryScreenHtml(key) {
   const cat = CATS.find(c => c.key === key);
   if (!cat) { _view = 'categories'; return categoriesScreenHtml(); }
 
   if (cat.needsAuth && !_data.loggedIn) {
-    return detailHead(cat) + `<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
+    return `<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
       <button class="shub-login" type="button" id="shub-login">Увійти</button></div>`;
   }
 
-  if (key === 'buses') {
-    return detailHead(cat) + (_data.buses.map(busCardHtml).join('') || EMPTY_DETAIL);
-  }
-  if (key === 'articles') {
-    return detailHead(cat) + (_data.articles.map(p => cardHtml(p, 'article')).join('') || EMPTY_DETAIL);
-  }
+  if (key === 'buses')    return _data.buses.map(busCardHtml).join('') || EMPTY_DETAIL;
+  if (key === 'articles') return _data.articles.map(p => cardHtml(p, 'article')).join('') || EMPTY_DETAIL;
   const type = key === 'chats' ? 'chat' : 'board';
-  return detailHead(cat) + (_data[key].map(p => cardHtml(p, type)).join('') || EMPTY_DETAIL);
+  return _data[key].map(p => cardHtml(p, type)).join('') || EMPTY_DETAIL;
 }
 
 function render() {
   const bodyEl = _sheet?.querySelector('#shub-body');
   if (!bodyEl) return;
+  const headEl = _sheet.querySelector('#shub-head');
+  if (headEl) headEl.innerHTML = headHtml();
   bodyEl.innerHTML = _view === 'categories' ? categoriesScreenHtml() : categoryScreenHtml(_view);
+  bodyEl.scrollTop = 0;   // перехід між екранами починається згори, а не там, де стояв попередній
 }
 
 // 🔴 ГЕЙТ ВХОДУ (24.08). Єдина точка: аркуш відкривають і шапка, і бічне меню,
@@ -187,7 +197,7 @@ function openSavedSheet() {
   _sheet.className = 'shub-sheet';
   _sheet.innerHTML = `
     <div class="shub-handle"></div>
-    <div class="shub-title">${ICONS.bookmark} Збережені</div>
+    <div class="shub-head" id="shub-head"><span class="shub-head-title">${ICONS.bookmark}Збережені</span></div>
     <div class="shub-body" id="shub-body"><div class="shub-empty">Завантаження…</div></div>`;
 
   document.body.appendChild(_backdrop);
@@ -215,13 +225,17 @@ function openSavedSheet() {
   // скролер, а тут прокручується ВНУТРІШНІЙ блок. Помилишся тут — перевірка «чи
   // контент на самому верху» дивитиметься не на той елемент, і свайп або не
   // працюватиме, або хапатиме жест посеред прокрутки.
-  // 📐 `headerZone: 56` — смуга рисочки й заголовка (8 padding + 4+12 рисочка +
-  // ~32 титул). За неї тягнути можна завжди, навіть коли список прогорнуто.
+  // 📐 `headerZone: 70` — смуга рисочки й шапки, за яку тягнути можна ЗАВЖДИ,
+  // навіть коли список прогорнуто. Число не на око, а сума полів зверху:
+  //   8 (padding аркуша) + 2+4+12 (рисочка з полями) + 40+4 (шапка з полем) = 70.
+  // ⚠️ 05.09 було 56 і рахувалось із заголовка ~32px. Після зведення шапки в одну
+  // (40px) стара сума перестала збігатись із розміткою — тобто нижні ~14px шапки
+  // вже не хапали жест. Міняєш висоту `.shub-head` або рисочки — перерахуй ТУТ.
   attachSheetDismiss({
     panel: _sheet,
     scroller: _sheet.querySelector('#shub-body'),
     backdrop: createBackdropFade(_backdrop),
-    headerZone: 56,
+    headerZone: 70,
     // Аркуш УЖЕ їде донизу (`finishSwipe` поставив transform), затемнення гасить
     // `createBackdropFade`. Тому власну анімацію закриття НЕ запускаємо — інакше
     // два зустрічні рухи; прибираємо лише стан і вузли після доїзду.
