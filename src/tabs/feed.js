@@ -293,17 +293,6 @@ function clampMetrics(el) {
 // Викликається в тих самих трьох точках, що й wireGalleries — після кожного
 // рендера списку. Ідемпотентна: спершу знімає сліди попереднього проходу, тому
 // повторний виклик (перемальовка, поворот екрана) не плодить других кнопок.
-// Обидва виміри розкладки картки — разом. Вони незалежні (згортання тексту і
-// ярус шапки нічого одне про одного не знають), але потрібні в тих самих місцях
-// і за тих самих умов: лише коли картки СПРАВДІ на екрані.
-// ⚠️ Саме обгортка, а не виклик зсередини `wireClamps`: стенд `clamp` виконує
-// `wireClamps` окремо, вирізаною з цього файлу, і схований усередині виклик
-// робив би його ReferenceError — тобто прилад ламався б від чужої правки.
-function relayoutCards(root) {
-  wireClamps(root);
-  fitCardHeads(root);
-}
-
 function wireClamps(root) {
   root.querySelectorAll('.fd-text').forEach(el => {
     const card = el.closest('[data-post]');
@@ -796,53 +785,6 @@ function eventRemindHtml(post) {
     </button>`;
 }
 
-// Позначки шапки — «Закріплено» і дзвіночок нагадування. Вузол зʼявляється лише
-// тоді, коли є що показати: порожній контейнер займав би колонку сітки і зсував
-// назву без жодної причини.
-// 🔑 Саме ГРУПА, а не два окремі вузли: у ярусному стані вони мусять поїхати
-// праворуч РАЗОМ і лишитись поруч. Двом сусіднім елементам довелось би роздавати
-// `margin-left: auto` кожному, і між ними виникла б дірка.
-// ⚠️ Назва латиницею: `scripts/check-imports.js` розбирає ідентифікатори
-// ASCII-регулярками, і кириличну назву ФУНКЦІЇ він читає обрізаною (виклик
-// `позначкиHtml(...)` бачить як `Html(...)` і звітує «не імпортовано»). Той
-// самий урок, що з `afishaHtml` 04.09 — конвенція проєкту: функції латиницею.
-function headTagsHtml(post, onPage) {
-  const закріплено = onPage && post.pinned_at
-    ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : '';
-  const нагадати = eventRemindHtml(post);
-  if (!закріплено && !нагадати) return '';
-  return `<span class="fd-head-tags">${закріплено}${нагадати}</span>`;
-}
-
-// 🔴 05.09 — ЯРУС ТІЛЬКИ ТОДІ, КОЛИ НАЗВА НЕ ВМІСТИЛАСЬ.
-//
-// 🗣️ Вова: «переносити потрібно тільки якщо назва довга, в другому скріні все
-// добре, там як раніше має бути».
-//
-// 📐 ЧОМУ ВИМІР, А НЕ CSS. Перенос залежить від того, скільки місця забрали
-// сусіди в тому ж рядку, а назві ми навмисно дали `min-width: 0` — інакше довга
-// назва розпирала б картку. Але з нульовою мінімальною шириною флекс НІКОЛИ не
-// переносить сусіда на новий рядок: він просто стискає назву. Тобто «чи
-// вмістилось» знає лише розкладка після малювання.
-// 🛑 МІРЯЄМО ЗАВЖДИ ВІД КОМПАКТНОГО СТАНУ (клас спершу знімаємо). Інакше вийшов
-// би маятник: у ярусному назва отримує більше місця, вміщується в рядок, ми
-// повертаємо компактний — і вона знову не вміщується.
-function fitCardHeads(root) {
-  root.querySelectorAll('.fd-card-head').forEach(head => {
-    const name = head.querySelector('.fd-page-name');
-    // Нема позначок — нема чого переносити: картка й так у компактному стані.
-    if (!name || !head.querySelector('.fd-head-tags')) return;
-    // Прихована вкладка не має розкладки: `getClientRects()` порожній, і будь-який
-    // вимір тут відповідав би про ніщо. Перемір прийде на `cstl-tab-changed`.
-    if (!head.getClientRects().length) return;
-    head.classList.remove('fd-card-head--stacked');
-    const r = document.createRange();
-    r.selectNodeContents(name);
-    const рядків = [...r.getClientRects()].filter(x => x.width > 1 && x.height > 1).length;
-    if (рядків > 1) head.classList.add('fd-card-head--stacked');
-  });
-}
-
 // onPage — картка малюється на екрані КОНКРЕТНОЇ спільноти (а не в головній стрічці).
 // Лише там має сенс позначка «Закріплено»: у головній стрічці закріплення нічого не
 // означає, бо порядок там завжди за датою (пряма вимога Вови).
@@ -879,35 +821,35 @@ function postCardHtml(post, onPage = false) {
   const чернетка = post.status === 'draft';
   return `
     <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
-      <!-- 🔴 05.09 — НАЗВА СПІЛЬНОТИ НА ВСЮ ШИРИНУ, РЕШТА — ПІД НЕЮ.
-           🗣️ Вова (знімок КЦ «Центр культури, спорту та туризму Олицької міської
-           ради»): «назва спільноти в пості має бути максимально горизонтально
-           розтягнута… під ним вже закріплено, там дзвіночок нагадування якщо він
-           є і так далі. Три крапки… повинні залишатися там де є».
-           🔴 БУЛО: позначка «Закріплено», дзвіночок і «⋯» стояли В ОДНОМУ РЯДКУ
-           з назвою і забирали в неї ширину — довга офіційна назва стискалась у
-           вузьку колонку і розсипалась на ЧОТИРИ рядки.
-           🔑 Шапка це СІТКА, і в неї ДВА стани:
-             • компактний (за замовчуванням) — усе в один ряд, як було завжди:
-               аватарка · назва (а під нею час) · позначки · «⋯»;
-             • ярусний (клас --stacked) — назва на всю ширину, а час і позначки
-               спускаються під неї, позначки праворуч під «⋯».
-           🗣️ 05.09, третя правка: «переносити потрібно тільки якщо назва довга,
-           в другому скріні все добре, там як раніше має бути». Тобто ярус це не
-           нова форма картки, а РЕАКЦІЯ на те, що назва не вмістилась.
-           📐 Вирішує це вимір, а не CSS: fitCardHeads() міряє, скільки рядків
-           зайняла назва в КОМПАКТНОМУ стані, і лише якщо більше одного —
-           вмикає ярусний. Чистим CSS цього не зробити: перенос залежить від
-           ширини сусідів, і flex-wrap тут ламається на нульовій min-width.
-           ⚠️ Зворотних лапок у цьому коментарі НЕМАЄ навмисно: він лежить
-           усередині шаблонного рядка, і backtick обірвав би його посеред HTML
-           (на цьому вже спіткнувся 04.09 і знову сьогодні). -->
+      <!-- 🔴 05.09 — ШАПКА КАРТКИ: ДВА ЯРУСИ, БЕЗ ЖОДНИХ УМОВ.
+           🗣️ Три скарги Вови поспіль привели саме сюди:
+             1. «назва спільноти має бути максимально горизонтально розтягнута,
+                під ним вже закріплено» — довга назва розсипалась на чотири
+                рядки, бо «Закріплено» стояло з нею в одному рядку;
+             2. «переносити потрібно тільки якщо назва довга» — я зробив ярус
+                безумовним, і коротка назва теж розʼїжджалась;
+             3. «тут є місце, можливо дзвоник вміститься сюди без особливого
+                переносу?» — і це виявилось ключем до всієї розкладки.
+           🔑 РІШЕННЯ, ЯКЕ ЗНЯЛО САМУ ПОТРЕБУ У ВИМІРІ. Різниця не між «довгою» і
+           «короткою» назвою, а між ІКОНКОЮ і ТЕКСТОМ поруч із нею:
+             • дзвіночок — іконка 34px, як «⋯». Він стоїть у ВЕРХНЬОМУ ряду
+               поруч із «⋯» і майже нічого в назви не забирає;
+             • «Закріплено» — текстова пігулка ~110px. Саме вона й розчавлювала
+               назву, тож живе у службовому ряду поруч із часом.
+           ➡️ Тобто вимір, який рахував рядки і вмикав «ярусний стан», більше не
+           потрібен: розкладка правильна ЗАВЖДИ, і в коді її на дві функції менше
+           (fitCardHeads і клас --stacked прибрано).
+           ⚠️ Зворотних лапок тут немає навмисно — коментар лежить усередині
+           шаблонного рядка (третій раз за дві доби наступаю на це саме). -->
       <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
+        ${eventRemindHtml(post)}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
-        <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
-        ${headTagsHtml(post, onPage)}
+        <span class="fd-head-meta">
+          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
+          ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
+        </span>
       </header>
       ${photo}
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
@@ -1119,7 +1061,7 @@ function renderFeed() {
   // при 'patch' — вистачає всього списку теж (вузлів мало, а пропустити свіжу
   // картку означало б мертву карусель саме на ній).
   wireGalleries(listEl);
-  relayoutCards(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
+  wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
 
 // ── ТОЧКОВЕ ОНОВЛЕННЯ ОДНІЄЇ КАРТКИ (без перемальовки всієї стрічки) ──────────
@@ -1170,7 +1112,7 @@ function patchPostCard(postId) {
     keepScroll(scrollerOf(old), () => {
       old.replaceWith(node);
       wireGalleries(node);   // карусель і пропорції кадру — інакше померли б саме на цій картці
-      relayoutCards(node);      // «… Показати більше» (стан розгорнутих живе в expandedPosts, не в DOM)
+      wireClamps(node);      // «… Показати більше» (стан розгорнутих живе в expandedPosts, не в DOM)
       if (shot) {
         // Один кадр очікування — саме тому, що `wireGalleries` СВОЇМ rAF ставить трек на
         // перший слайд (обхід iOS scroll-snap). Наш обробник зареєстрований пізніше, тож
@@ -1212,7 +1154,7 @@ function insertPostCard(post) {
     if (tab === 'events') {
       keepScroll(scrollerOf(el), () => {
         el.innerHTML = screenListHtml('events', ordered);
-        wireGalleries(el); relayoutCards(el);
+        wireGalleries(el); wireClamps(el);
       });
       return;
     }
@@ -1232,7 +1174,7 @@ function insertPostCard(post) {
         next = el.querySelector(`[data-post="${ordered[k].id}"]`);
       }
       if (next) el.insertBefore(node, next); else el.appendChild(node);
-      wireGalleries(node); relayoutCards(node);
+      wireGalleries(node); wireClamps(node);
     };
     if (atTop) put(); else keepScroll(scroller, put);
   });
@@ -2858,7 +2800,7 @@ export async function openEventsScreen() {
       Найближчих подій немає.<br>
       Події планують спільноти — щойно зʼявиться нова, вона буде тут.
     </div>`;
-  wireCards(screen); wireGalleries(screen); relayoutCards(screen);
+  wireCards(screen); wireGalleries(screen); wireClamps(screen);
 }
 
 // Розкладка афіші: групи за близькістю, картки — звичайні картки подій.
@@ -3012,7 +2954,7 @@ async function openPageScreen(pageId, reopen = false, focusPostId = null) {
       screen.querySelectorAll('.fd-sctab').forEach(t => t.classList.toggle('is-on', t === tab));
       const list = screen.querySelector('.fd-screen-list');
       list.innerHTML = screenListHtml(tab.dataset.sctab, pagePostsOf(pageId));
-      wireCards(screen); wireGalleries(screen); relayoutCards(screen);
+      wireCards(screen); wireGalleries(screen); wireClamps(screen);
     }));
 
   // Перегляд фото банера/аватара на весь екран (для всіх; реюз openViewer).
@@ -3162,7 +3104,7 @@ async function openPageScreen(pageId, reopen = false, focusPostId = null) {
   }
 
   document.body.appendChild(screen);
-  relayoutCards(screen);          // згортання довгих текстів — ЛИШЕ коли екран у документі
+  wireClamps(screen);          // згортання довгих текстів — ЛИШЕ коли екран у документі
   requestAnimationFrame(() => screen.classList.add('open'));
 
   // 🆕 25.08 — НАВЕСТИ НА КОНКРЕТНИЙ ДОПИС УСЕРЕДИНІ ЕКРАНА СПІЛЬНОТИ.
@@ -4197,9 +4139,9 @@ export async function initFeed() {
     // міняє розмірів вікна, тож старий слухач цієї миті не бачив зовсім.
     window.addEventListener('cstl-tab-changed', () => {
       const list = document.getElementById('feed-list');
-      if (list && list.getClientRects().length) relayoutCards(list);
+      if (list && list.getClientRects().length) wireClamps(list);
       document.querySelectorAll('.fd-screen').forEach(scr => {
-        if (scr.getClientRects().length) relayoutCards(scr);
+        if (scr.getClientRects().length) wireClamps(scr);
       });
     });
 
@@ -4213,7 +4155,7 @@ export async function initFeed() {
       if (window.innerWidth === lastW) return;
       lastW = window.innerWidth;
       const list = document.getElementById('feed-list');
-      if (list) relayoutCards(list);
+      if (list) wireClamps(list);
       document.querySelectorAll('.fd-screen').forEach(relayoutCards);
     });
 
