@@ -62,7 +62,8 @@ import { renderContactsBlock } from './home-contacts.js';
 import {
   renderWeatherBlock,
   renderBoardBlock,
-  renderEventBlock,   // 🗓 події громади (04.09)
+  renderEventBlock,        // 🗓 події громади (04.09)
+  wireEventBlockRefresh,   // …і її оновлення на вході на вкладку (04.09, друга правка)
   renderCommunityNews,
 } from './community-blocks.js';
 
@@ -224,14 +225,19 @@ function renderSkeleton() {
          🔑 Джерело теж інше: раніше блок читав data/events.json (файл у git,
          який протух — 0 майбутніх записів), тепер ті самі події спільнот, що й
          у Стрічці (рішення Вови 04.09: «зводь»).
-         ⚠️ Зворотних лапок у цьому коментарі НЕМАЄ навмисно: він лежить
-         усередині шаблонного рядка, і backtick закрив би його посеред HTML. -->
          🛑 Подій немає → секції немає ЗОВСІМ (рішення Вови: «ховається») —
          те саме правило, що у зборів і дайджесту Стрічки.
+         ⚠️ Зворотних лапок у цьому коментарі НЕМАЄ навмисно: він лежить
+         усередині шаблонного рядка, і backtick закрив би його посеред HTML.
+         🔴 04.09 (друга правка) — ЗАКРИВАЛЬНИЙ ЗНАК СТОЯВ НА ТРИ РЯДКИ ВИЩЕ, і
+         два останні рядки цього коментаря ВИЙШЛИ НА ЕКРАН як звичайний текст:
+         Вова побачив на Громаді «Подій немає → секції немає ЗОВСІМ (рішення
+         Вови…)». Коментар усередині шаблонного рядка нічим не захищений — він
+         частина HTML, і помилка в його межах друкується людині. -->
     <section id="hm-events" class="hm-sec" hidden>
       <div class="hm-sec-head">
         <h2 class="hm-kicker">Події громади</h2>
-        <button class="hm-more" type="button" data-switch-tab="shotam">Стрічка →</button>
+        <button class="hm-more" id="hm-events-all" type="button">Усі →</button>
       </div>
       <div id="cm-event-content" class="hm-list"></div>
     </section>
@@ -330,7 +336,11 @@ export function initCommunity() {
   renderHomeFeed();         // → дайджест Стрічки (порожньо = секція hidden)
   renderCommunityNews();
   renderBoardBlock();
-  renderEventBlock();
+  renderEventBlock({ force: true });   // перший малюнок — завжди в базу
+  // 🔴 04.09 (друга правка) — БЕЗ ЦЬОГО РЯДКА ВІДЖЕТ ЖИВ ЗІ СТАРТУ ЗАСТОСУНКУ.
+  // Подія, опублікована після відкриття застосунку, не потрапляла в нього до
+  // перезавантаження — саме це Вова й побачив: подія в базі є, віджета немає.
+  wireEventBlockRefresh();
   renderContactsBlock();
 }
 

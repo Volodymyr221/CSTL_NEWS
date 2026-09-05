@@ -116,6 +116,7 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               рядки = рядки.filter(r => r.post_id == null || живі.has(String(r.post_id)));
             }
             for (const c of умови) {
+              if (c.порожнє) { рядки = рядки.filter(r => r[c.поле] == null); continue; }
               if (c.набір) { рядки = рядки.filter(r => c.значення.includes(r[c.поле])); continue; }
               if (c.межа) {
                 рядки = рядки.filter(r => {
@@ -144,7 +145,7 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         // ⚠️ 07.08: доданий 'not' — без нього fetchUnreadByThread падав із
         // «.not is not a function», ланцюг рвався і розмови не приїжджали ЗОВСІМ.
         // Тобто заглушка мовчки відрізала половину сцени; список тримати повним.
-        for (const m of ['select','is','not','order','limit','range',
+        for (const m of ['select','not','order','limit','range',
                          'filter','or','gte','lte','like','ilike','contains',
                          'upsert','update','delete','match','abortSignal','returns'])
           self[m] = () => self;
@@ -163,6 +164,20 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
         };
         self.single = self.maybeSingle = () => { один = true; return self; };
         // Ці два справді звужують набір (див. пояснення вище).
+        // 🔴 04.09 — .is(поле, null) ТЕПЕР СПРАВДІ ФІЛЬТРУЄ.
+        // Було: 'is' стояв у списку мовчазних заглушок, тобто будь-який
+        // .is('event_date', null) чи .is('deleted_at', null) заглушка
+        // ІГНОРУВАЛА і віддавала все. Знайдено рівно так, як велить правило
+        // проєкту «спершу перевір прилад»: нова перевірка «подія не потрапляє у
+        // віджет стрічки» червоніла над ПРАВИЛЬНИМ застосунком — фільтр стояв на
+        // сервері, а заглушка була добрішою за прод.
+        // (зворотні лапки тут заборонені: увесь блок лежить у шаблонному рядку)
+        // ⚠️ Порожнє поле у фікстурі — це undefined, а в базі null; для
+        // is null це та сама відповідь, тому порівнюємо через == null.
+        self.is  = (поле, значення) => {
+          if (значення === null) умови.push({ порожнє: true, поле });
+          return self;
+        };
         self.eq  = (поле, значення) => { умови.push({ поле, значення, не: false }); return self; };
         self.neq = (поле, значення) => { умови.push({ поле, значення, не: true  }); return self; };
         // 🔴 22.08 — .in() ТЕЖ СПРАВДІ ЗВУЖУЄ. Було порожньою заглушкою, тобто

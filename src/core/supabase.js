@@ -2406,9 +2406,14 @@ export async function fetchUpcomingEvents(limit = 3) {
   const iso = [today.getFullYear(),
                String(today.getMonth() + 1).padStart(2, '0'),
                String(today.getDate()).padStart(2, '0')].join('-');
+  // 🛑 ТІЛЬКИ ОПУБЛІКОВАНЕ. Без цього фільтра редактор спільноти бачив би у
+  // віджеті ГРОМАДИ власну ЧЕРНЕТКУ події поруч зі справжніми — база йому її
+  // законно віддає (він її автор), а віджет каже «події громади», тобто те, що
+  // вже оголошено. Той самий фільтр стоїть у стрічці (`fetchPagePosts`).
   const { data, error } = await supa.from('page_posts')
     .select('id, page_id, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
+    .eq('status', 'published')
     .not('event_date', 'is', null)
     .gte('event_date', iso)
     .order('event_date', { ascending: true })
@@ -2491,10 +2496,20 @@ export async function fetchLatestPostPerPage(maxPages = 6, scan = 300) {
 
   // 1. Зонд. Фільтри ті самі, що у `fetchPagePosts`: невидалені й опубліковані —
   // інакше в порядок спільнот пролізла б чужа чернетка ШІ-агента.
+  // 🔴 04.09 (третя правка) — ПОДІЇ СЮДИ НЕ ЙДУТЬ.
+  // 🗣️ Вова зі знімка: «події не мають дублюватися в віджет стрічки громади,
+  // це події — навіщо їх дублювати?». І він має рацію: на Громаді подія вже має
+  // ВЛАСНУ секцію нижче, з датою, відліком і тапом у саму подію. Той самий запис
+  // двічі на одному екрані — не «більше видно», а сумнів «це те саме чи інше?».
+  // 🔑 Тому віджет показує останній ДОПИС спільноти, а не останній запис узагалі.
+  // ⚠️ Наслідок названо чесно: спільнота, яка за весь зонд писала САМІ події,
+  // у ряду кружечків не зʼявиться — але вона й не зникає з застосунку, вона
+  // стоїть у секції подій, де їй і місце.
   const probe = await supa.from('page_posts')
     .select('id, page_id, created_at')
     .is('deleted_at', null)
     .eq('status', 'published')
+    .is('event_date', null)
     .order('created_at', { ascending: false })
     .limit(scan);
   if (probe.error) { console.warn('[supabase] fetchLatestPostPerPage:', probe.error.message); return []; }

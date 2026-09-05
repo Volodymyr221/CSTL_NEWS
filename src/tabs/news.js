@@ -763,7 +763,7 @@ export function openArticle(id) {
     title: article.title,
     url:   deepLink('news', article.id),
   });
-  if (remindBtn) remindBtn.hidden = true;   // нагадування лише для подій/свят (events.js)
+  if (remindBtn) remindBtn.hidden = true;   // нагадування — лише для подій (картка події у Стрічці)
   if (saveBtn) {
     saveBtn.hidden = false;
     saveBtn.classList.toggle('modal-icon-btn--active', getSavedArticleIds().includes(article.id));

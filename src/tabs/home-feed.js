@@ -311,16 +311,25 @@ let _measureCtx = null;
 const РЯДКІВ_МІН = 4;    // стільки було завжди — нижче не опускаємось
 const РЯДКІВ_МАКС = 12;  // запобіжник: підпис не має права стати «простинею»
 
-function fitPhotoCard(card) {
+// Рідна пропорція знімка — окремим кроком, бо вона МІНЯЄ ВИСОТУ картки, а отже й
+// висоту всього ряду. Спершу пропорції всім, і лише потім міряти запас.
+function applyPhotoAspect(card) {
   const box = card.querySelector('.hm-fd-p-img');
   const img = box && box.querySelector('img');
   if (!img || !img.naturalWidth || !img.naturalHeight) return;
-
   box.style.setProperty('--hm-fd-ar', (img.naturalWidth / img.naturalHeight).toFixed(4));
+}
 
+// Скільки рядків підпису влазить у ЗАПАС цієї картки.
+// 🔴 04.09 — ВИСОТУ БЕРЕМО В РЯДА, А НЕ В КАРТКИ, і це не дрібниця.
+// Доріжка більше не має жорстких 400px (їх зняли, бо на коротких дописах вони
+// давали ~290px порожнечі — скарга Вови). Тепер висоту ряду задає найвища картка,
+// а решта РОЗТЯГУЄТЬСЯ до неї. У момент `load` окремої картки ряд ще міг не мати
+// остаточної висоти, тож `card.clientHeight` відповідав би про проміжний стан —
+// і підпис лишався б із базовими 4 рядками, хоча місце під ним є.
+function fitPhotoLines(card, висотаРяда) {
   const txt = card.querySelector('.hm-fd-p-txt');
   if (!txt) return;
-  txt.style.removeProperty('--hm-fd-lines');            // міряємо від базових 4 рядків
 
   const cs = getComputedStyle(card);
   let зайнято = 0;
@@ -329,7 +338,8 @@ function fitPhotoCard(card) {
     зайнято += діт.getBoundingClientRect().height
              + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
   }
-  const вільно = card.clientHeight - (parseFloat(cs.paddingTop) || 0)
+  const висота = висотаРяда || card.clientHeight;
+  const вільно = висота - (parseFloat(cs.paddingTop) || 0)
                - (parseFloat(cs.paddingBottom) || 0) - зайнято;
   if (вільно <= 0) return;                              // кадр високий — місця немає, 4 рядки
 
@@ -338,13 +348,39 @@ function fitPhotoCard(card) {
   if (рядків > РЯДКІВ_МІН) txt.style.setProperty('--hm-fd-lines', String(рядків));
 }
 
+// 🔑 ОДИН ПРОХІД НА ВСІ КАРТКИ, І САМЕ В ЦЬОМУ ПОРЯДКУ:
+//   1. зняти надбавки рядків — інакше міряли б висоту, яку самі ж і надули;
+//   2. дати всім знімкам рідні пропорції — вони визначають висоту ряду;
+//   3. прочитати висоту ряду ОДИН раз;
+//   4. роздати рядки кожній картці з її власного запасу.
+// 🛑 Саме цей порядок і рятує від зациклення «текст виріс → ряд виріс → текст ще
+// виріс»: надбавка обмежена запасом КАРТКИ в межах уже виміряного ряду, тож
+// картка не може перерости ряд, який її ж і породив.
+// ⚠️ Перерахунок робимо на кожен `load`: знімки приходять із мережі різночасно, і
+// той, хто приїхав першим, мусить дізнатись про ряд, який виріс через пізнішого.
 function fitPhotoCards(root) {
-  root.querySelectorAll('.hm-fd-post--photo').forEach(card => {
+  const cards = [...root.querySelectorAll('.hm-fd-post--photo')];
+  if (!cards.length) return;
+
+  let заплановано = false;
+  const перерахувати = () => {
+    if (заплановано) return;                 // кілька знімків в одному кадрі — один прохід
+    заплановано = true;
+    requestAnimationFrame(() => {
+      заплановано = false;
+      cards.forEach(c => c.querySelector('.hm-fd-p-txt')?.style.removeProperty('--hm-fd-lines'));
+      cards.forEach(applyPhotoAspect);
+      const ряд = root.querySelector('.hm-fd-track')?.clientHeight || 0;
+      cards.forEach(c => fitPhotoLines(c, ряд));
+    });
+  };
+
+  cards.forEach(card => {
     const img = card.querySelector('.hm-fd-p-img img');
     if (!img) return;
     // Знімок приходить із мережі пізніше за розмітку — до `load` розміру ще немає.
-    if (img.complete) fitPhotoCard(card);
-    else img.addEventListener('load', () => fitPhotoCard(card), { once: true });
+    if (img.complete) перерахувати();
+    else img.addEventListener('load', перерахувати, { once: true });
   });
 }
 
