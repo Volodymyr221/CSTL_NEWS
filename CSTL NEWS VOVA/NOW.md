@@ -10,16 +10,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-05 20:05 UTC
+**Зріз на:** 2026-09-05 22:59 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-i9wyz6` |
-| останній коміт людини | `9b610d5d` 05.09 19:44 — 🔗 «Збережене» зведено: тап веде в сам запис, дубль-екран прибрано, зняття в хабі |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260905-1942` |
-| останній PR у `main` | #1166 |
-| стендів на диску | 145 |
-| незакомічених файлів | 1 ⚠️ |
+| останній коміт людини | `a9e51316` 05.09 22:29 — merge: злиття origin/main — конфлікт розкладу знято перегенерацією |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260905-2152` |
+| останній PR у `main` | #1167 |
+| стендів на диску | 146 |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-05 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -29,29 +29,27 @@
 - `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md`
 - `_session-log/vova-2026-09-05b.md`
 - `bundle.js`
-- `editor/core/facts.py`
-- `editor/sources/plan.py`
-- `scripts/ai_news_agent.py`
-- `scripts/test_history_routing.py`
-- `src/core/saved-hub.js`
-- `src/tabs/board-chat.js`
+- `scripts/parse_vopas.py`
+- `scripts/test_reverse_routes.py`
+- `src/core/supabase.js`
 - `src/tabs/board.js`
-- `src/tabs/buses.js`
-- `style/account.css`
+- `style/board.css`
 - `sw.js`
+- `tests/board-saved-tab.mjs`
+- `tests/community-events.mjs`
 - `tests/modal-surface.mjs`
 - `tests/saved-hub.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9b610d5d` 05.09 19:44 — 🔗 «Збережене» зведено: тап веде в сам запис, дубль-екран прибрано, зняття в хабі
-- `856242f0` 05.09 19:28 — docs: оновлено авто-блок пульсу після комітів редизайну
-- `d39ed786` 05.09 17:45 — Три червоні стенди після редизайну — усі мої, усі закриті
-- `7dc6fe65` 05.09 17:42 — 🎨 Редизайн хабу «Збережені»: беж прибрано, шапка зведена в одну
-- `a7da4fbd` 05.09 17:16 — docs: аудит хабу «Збережені» перед редизайном
+- `a9e51316` 05.09 22:29 — merge: злиття origin/main — конфлікт розкладу знято перегенерацією
+- `6cd99ba9` 05.09 22:27 — 🛑 Два контролі зламались від власного успіху — переписані
+- `aeaa2bbf` 05.09 21:53 — docs: поправка — правильний CACHE_NAME cstl-20260905-2152
+- `e1b14936` 05.09 21:52 — 🗓 Майбутні події більше не висять угорі стрічки
+- `a33cb7aa` 05.09 21:47 — docs: design-system 18/19 — чужа червона, і знахідка про сам прилад
 
 <!-- AUTO:END -->
 
