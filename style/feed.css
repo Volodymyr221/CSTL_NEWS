@@ -165,20 +165,42 @@
    з'їдали ширину, і назва «КЦ Центр культури, спорту та туризму Олицької
    міської ради» розсипалась на чотири рядки у вузькій колонці.
    🔑 `flex-start` тримає «⋯» навпроти ПЕРШОГО рядка назви — там, де він і був. */
-.fd-card-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px 8px; cursor: pointer; }
-.fd-ava-wrap { width: 40px; height: 40px; flex: none; }
+/* 📐 СІТКА 3×2, а не флекс-ряд: аватарка · назва · «⋯» у першому ярусі, а
+   службовий ряд другим — і він тягнеться ЧЕРЕЗ ОБИДВІ праві колонки, аж до краю
+   картки. У флексі він обривався б на межі текстової колонки, тобто на 42px
+   лівіше за «⋯», і «праворуч» виглядало б як «майже праворуч». */
+.fd-card-head {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto;
+  column-gap: 10px; align-items: start; padding: 12px 14px 8px; cursor: pointer;
+}
+/* Аватарка тримає обидва яруси — так її низ стає на одну лінію зі службовим
+   рядом, а не висить над ним. */
+.fd-ava-wrap { width: 40px; height: 40px; flex: none; grid-row: 1 / span 2; }
 .fd-ava--ph { font-size: 17px; }
 /* `flex: 1` — та сама «максимальна горизонтальна розтяжка»: колонка забирає все,
    що лишилось від аватарки й «⋯», а не ділиться ще й з позначками. */
 .fd-head-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1 1 auto; }
-.fd-page-name { font-weight: 700; font-size: 14px; color: var(--fd-ink); }
+.fd-page-name { grid-column: 2; grid-row: 1; font-weight: 700; font-size: 14px; color: var(--fd-ink); min-width: 0; }
 /* Службовий рядок: час · «Закріплено» · дзвіночок нагадування.
    ⚠️ `flex-wrap` обовʼязковий: на вузькому екрані три елементи можуть не влізти
    в рядок, і без переносу вони б стиснули один одного до нечитабельного. */
-.fd-head-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.fd-head-meta {
+  grid-column: 2 / span 2; grid-row: 2;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;
+}
+/* 🔴 05.09 — ПОЗНАЧКИ ЙДУТЬ ПРАВОРУЧ, ЧАС ЛИШАЄТЬСЯ ЛІВОРУЧ.
+   🗣️ Вова: «позначку "закріплено" і позначку дзвіночка, нагадування, треба з
+   правої частини розташувати, якщо вона переноситься на другий рядок».
+   🔑 Відступ ставимо ЧАСУ, а не позначкам: тоді правило одне на всі випадки —
+   позначка є, немає, є лише дзвіночок, є обидві. Якби `margin-left: auto`
+   вішали на саму позначку, при двох сусідніх кожна тягнула б простір на себе і
+   між ними зʼявилась би дірка.
+   📐 Так правий край службового ряду стає на одну вертикаль із «⋯» вище —
+   картка читається двома охайними колонками, а не сходами. */
+.fd-head-meta > .fd-time { margin-right: auto; }
 .fd-time { font-size: 12px; color: var(--fd-muted); }
 /* «⋯» поста (лише власник/адмін сторінки) — справа у шапці картки. */
-.fd-card-menu { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; border: 0;
+.fd-card-menu { grid-column: 3; grid-row: 1; flex: none; width: 32px; height: 32px; padding: 0; border: 0;
   background: none; cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-card-menu svg { width: 20px; height: 20px; }
 /* Позначка «Закріплено» — лише на екрані спільноти (у головній стрічці закріплення
