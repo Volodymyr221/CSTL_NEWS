@@ -18,7 +18,7 @@ import { openBoardModal } from './community-modal.js';
 // він жив у кнопці-меню категорій, втратив користувача 01.08 разом із нею, і
 // повернувся, коли фільтр став кружечком у шапці (рішення Вови).
 import { catColor, catIcon, catShort, catLabel, ALL_ICON, BOARD_CATEGORIES as CATS } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge, hasThreadsCached, unreadChatsCount } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, paintUnreadBadge, hasThreadsCached, unreadChatsCount } from './board-chat.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange, authReady } from '../core/auth.js';
 import {
@@ -2165,24 +2165,20 @@ function renderAll() {
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
       // 05.08 — вхід у листування (повернувся з шапки, див. renderFab).
       if (act === 'messages') { requireAuth('переглянути повідомлення', openThreadsList); return; }
+      // 🔴 05.09 — ПУНКТ ЛИШИВСЯ, ОКРЕМИЙ ЕКРАН ПРИБРАНО (рішення Вови).
+      //
+      // Було ТРИ місця на одні й ті самі збережені оголошення: хаб у шапці,
+      // ЦЕЙ екран (`openSavedAds`, Д-27) і режим «Збережені» самої Дошки. Третій
+      // і другий показували те саме, у тому самому місці, різним виглядом —
+      // і потрапити в третій можна було, лише знаючи, що він тут є.
+      // 📐 Звірено перед видаленням: режим Дошки вміє ВСЕ, що вмів екран, —
+      // повні картки з фото, пошук («Пошук у збережених…») і зняття закладки
+      // просто зі списку (`activeType === 'saved' && !nowSaved` → картка зникає).
+      // Тобто екран не давав нічого свого, лише другу правду про той самий стан.
+      // 🔑 Пункт меню НЕ прибрано навмисно: хто ходив сюди — приходить у режим
+      // Дошки, а не в порожнечу. Прибрати вхід і прибрати дубль — різні речі.
       if (act === 'saved') { requireAuth('переглянути збережені', () => {
-        // Д-27: «Збережені» — окремий екран (pm-screen), як «Мої оголошення».
-        // Список = published-оголошення з закладок (обговорення мають свою кімнату).
-        const saved = getSavedIds();
-        const list = allPosts.filter(p => saved.has(p.id) && p.type !== 'chat');
-        openSavedAds(list, {
-          // Прибрали зі збережених на екрані → синхронізуємо стан дошки:
-          // оновлюємо savedIds і, якщо картка видима на дошці, іконку закладки.
-          onRemove: (id) => {
-            getSavedIds().delete(id);
-            const btn = document.querySelector(`[data-save-id="${id}"]`);
-            if (btn) {
-              btn.innerHTML = BOOKMARK_OUTLINE_SVG;
-              btn.classList.remove('bd-bookmark--active');
-              btn.setAttribute('aria-label', 'Зберегти у Мої');
-            }
-          },
-        });
+        setBoardActiveType('saved');
       }); return; }
       // ⚠️ 07.08 (A-2) — ТУТ БУВ ДРУГИЙ `if (act === 'messages')`, недосяжний:
       // гілку вже обробив рядок вище і зробив `return`. Прибрано не «щоб було чисто»,

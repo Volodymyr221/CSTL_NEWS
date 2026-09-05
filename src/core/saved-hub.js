@@ -20,12 +20,23 @@
 // 🔑 Слово Вови: гість «може тільки переглядати публічну інформацію, а не
 // взаємодіяти в рамках додатку». Збережене — не публічна інформація.
 
-import { escapeHtml } from './utils.js';
+import { escapeHtml, showToast } from './utils.js';
 import { isLoggedIn, currentUserId, requireAuth } from './auth.js';
-import { getSupabase, fetchSavedPostIds } from './supabase.js';
-import { setBoardActiveType, openChatById } from '../tabs/board.js';
-import { getSavedArticleIds, getArticlesByIds, openArticle } from '../tabs/news.js';
-import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
+import { getSupabase, fetchSavedPostIds, removeSavedPost, removeSavedArticle } from './supabase.js';
+// 🔴 05.09 — `openBoardItemById` ЗАМІСТЬ пари `setBoardActiveType` + `openChatById`.
+// Було: тап по збереженому ОГОЛОШЕННЮ перемикав Дошку в режим «Збережені», тобто
+// відкривав СПИСОК замість того запису, який людина щойно торкнулась. Стаття
+// відкривала свою статтю, питання — своє питання, а оголошення — перелік усіх.
+// 🔑 Це рівно те, що `HOT_RULES` №12 називає «тап мусить вести туди, що обіцяє
+// мітка»: інакше він бреше про другу подію так само, як брехало б число.
+// ⚠️ Функція НЕ нова — вона з 23.08 живить deep-link зі сповіщень: сама
+// визначає тип запису (`chat` → Обговорення, інше → модалка оголошення),
+// сама перемикає вкладку і сама каже правду, якщо запису вже немає
+// («це оголошення більше недоступне»). Тобто обидві гілки хабу сходяться в
+// один виклик, а не в два свої.
+import { openBoardItemById } from '../tabs/board.js';
+import { getSavedArticleIds, getArticlesByIds, openArticle, refreshSavedArticles } from '../tabs/news.js';
+import { getSavedRoutesForUI, openSavedRouteOnBuses, unsaveRoute } from '../tabs/buses.js';
 import { ICONS } from './icons.js';
 import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
 
@@ -51,25 +62,47 @@ function closeHub() {
   setTimeout(() => { s.remove(); b?.remove(); }, 240);
 }
 
+// 🔴 05.09 — ЗНЯТТЯ ЗБЕРЕЖЕННЯ ПРЯМО ТУТ (замовлення Вови).
+// Було: щоб прибрати закладку, треба піти в сам матеріал і відтиснути прапорець.
+// А хаб — саме те місце, де людина розбирає накопичене; вимагати заради цього
+// відкрити кожен запис означало вести її туди, куди вона не збиралась.
+//
+// ⚠️ РЯДОК — НЕ КНОПКА В КНОПЦІ. Обгортка `div`, а не `button`: вкладена кнопка
+// у HTML заборонена, і браузери «лікують» це по-різному — від зламаної розмітки
+// до тапу, який спрацьовує двічі. Тому відкриття висить на `[data-shub-open]`,
+// зняття — на сусідньому `[data-shub-unsave]`, і обидва ловить одна делегація.
+const bookmarkOffSvg = ICONS.bookmark;
+
+function unsaveBtnHtml(type, attrs) {
+  return `<button class="shub-unsave" type="button" data-shub-unsave="${type}" ${attrs}
+                  aria-label="Прибрати зі збережених">${bookmarkOffSvg}</button>`;
+}
+
 function cardHtml(p, type) {
   const when = new Date(p.created_at || p.ts || Date.now())
     .toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
   return `
-    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
-      <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без тексту)')}</span>
-      <span class="shub-card-meta">${escapeHtml(when)}</span>
-    </button>`;
+    <div class="shub-row">
+      <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
+        <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без тексту)')}</span>
+        <span class="shub-card-meta">${escapeHtml(when)}</span>
+      </button>
+      ${unsaveBtnHtml(type, `data-shub-id="${p.id}"`)}
+    </div>`;
 }
 
 // Б7.2: автобуси — власна ідентичність (routeId+дата+зупинки, не один числовий id).
 function busCardHtml(r) {
+  const адреса = `data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+                  data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}"`;
   return `
-    <button class="shub-card" type="button" data-shub-type="bus"
-            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
-            data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}">
-      <span class="shub-card-text">${escapeHtml(r.title)}</span>
-      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
-    </button>`;
+    <div class="shub-row">
+      <button class="shub-card" type="button" data-shub-type="bus" ${адреса}>
+        <span class="shub-card-text">${escapeHtml(r.title)}</span>
+        <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
+      </button>
+      ${unsaveBtnHtml('bus', адреса)}
+    </div>`;
 }
 
 async function loadData() {
@@ -120,7 +153,7 @@ function categoriesScreenHtml() {
         <span class="shub-cat-ic">${c.icon}</span>
         <span class="shub-cat-label">${c.label}</span>
         ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
-        <span class="shub-cat-chev">›</span>
+        <span class="shub-cat-chev">${ICONS.chevronRight}</span>
       </button>`;
   }).filter(Boolean).join('');
 
@@ -132,38 +165,48 @@ function categoriesScreenHtml() {
 }
 
 // ── Екран 2: список конкретної категорії ─────────────────────────────────
-function detailHead(cat) {
-  return `
-    <div class="shub-detail-head">
-      <button class="shub-back" type="button" data-shub-back aria-label="Назад">←</button>
-      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
-    </div>`;
-}
+//
+// 🔴 05.09 — ШАПКА ЗВЕДЕНА В ОДНУ, І ЦЕ НЕ ЛИШЕ ПРО ВИГЛЯД. Було дві: постійний
+// заголовок «Збережені» над аркушем і власна шапка «‹ Статті» ВСЕРЕДИНІ списку.
+// Дві вади одразу:
+//   • назва звучала двічі поспіль, зʼїдаючи ~44px у аркуші висотою 72vh;
+//   • кнопка «назад» лежала в СКРОЛЕРІ — прокрутивши список, людина її гу��ила.
+// Тепер шапка одна, живе поза `#shub-body`, і `render()` міняє в ній назву та
+// показує «назад» лише в деталях. Тобто вихід із категорії доступний завжди.
 const EMPTY_DETAIL = `<div class="shub-empty">Тут поки порожньо.</div>`;
+
+// Що написано в шапці зараз: корінь чи категорія.
+function headHtml() {
+  const cat = _view === 'categories' ? null : CATS.find(c => c.key === _view);
+  if (!cat) return `<span class="shub-head-title">${ICONS.bookmark}Збережені</span>`;
+  return `
+    <button class="shub-back" type="button" data-shub-back aria-label="Назад">${ICONS.back}</button>
+    <span class="shub-head-title">${cat.icon}${cat.label}</span>
+    <span class="shub-head-count">${_data[cat.key].length}</span>`;
+}
 
 function categoryScreenHtml(key) {
   const cat = CATS.find(c => c.key === key);
   if (!cat) { _view = 'categories'; return categoriesScreenHtml(); }
 
   if (cat.needsAuth && !_data.loggedIn) {
-    return detailHead(cat) + `<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
+    return `<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
       <button class="shub-login" type="button" id="shub-login">Увійти</button></div>`;
   }
 
-  if (key === 'buses') {
-    return detailHead(cat) + (_data.buses.map(busCardHtml).join('') || EMPTY_DETAIL);
-  }
-  if (key === 'articles') {
-    return detailHead(cat) + (_data.articles.map(p => cardHtml(p, 'article')).join('') || EMPTY_DETAIL);
-  }
+  if (key === 'buses')    return _data.buses.map(busCardHtml).join('') || EMPTY_DETAIL;
+  if (key === 'articles') return _data.articles.map(p => cardHtml(p, 'article')).join('') || EMPTY_DETAIL;
   const type = key === 'chats' ? 'chat' : 'board';
-  return detailHead(cat) + (_data[key].map(p => cardHtml(p, type)).join('') || EMPTY_DETAIL);
+  return _data[key].map(p => cardHtml(p, type)).join('') || EMPTY_DETAIL;
 }
 
 function render() {
   const bodyEl = _sheet?.querySelector('#shub-body');
   if (!bodyEl) return;
+  const headEl = _sheet.querySelector('#shub-head');
+  if (headEl) headEl.innerHTML = headHtml();
   bodyEl.innerHTML = _view === 'categories' ? categoriesScreenHtml() : categoryScreenHtml(_view);
+  bodyEl.scrollTop = 0;   // перехід між екранами починається згори, а не там, де стояв попередній
 }
 
 // 🔴 ГЕЙТ ВХОДУ (24.08). Єдина точка: аркуш відкривають і шапка, і бічне меню,
@@ -187,7 +230,7 @@ function openSavedSheet() {
   _sheet.className = 'shub-sheet';
   _sheet.innerHTML = `
     <div class="shub-handle"></div>
-    <div class="shub-title">${ICONS.bookmark} Збережені</div>
+    <div class="shub-head" id="shub-head"><span class="shub-head-title">${ICONS.bookmark}Збережені</span></div>
     <div class="shub-body" id="shub-body"><div class="shub-empty">Завантаження…</div></div>`;
 
   document.body.appendChild(_backdrop);
@@ -215,13 +258,17 @@ function openSavedSheet() {
   // скролер, а тут прокручується ВНУТРІШНІЙ блок. Помилишся тут — перевірка «чи
   // контент на самому верху» дивитиметься не на той елемент, і свайп або не
   // працюватиме, або хапатиме жест посеред прокрутки.
-  // 📐 `headerZone: 56` — смуга рисочки й заголовка (8 padding + 4+12 рисочка +
-  // ~32 титул). За неї тягнути можна завжди, навіть коли список прогорнуто.
+  // 📐 `headerZone: 70` — смуга рисочки й шапки, за яку тягнути можна ЗАВЖДИ,
+  // навіть коли список прогорнуто. Число не на око, а сума полів зверху:
+  //   8 (padding аркуша) + 2+4+12 (рисочка з полями) + 40+4 (шапка з полем) = 70.
+  // ⚠️ 05.09 було 56 і рахувалось із заголовка ~32px. Після зведення шапки в одну
+  // (40px) стара сума перестала збігатись із розміткою — тобто нижні ~14px шапки
+  // вже не хапали жест. Міняєш висоту `.shub-head` або рисочки — перерахуй ТУТ.
   attachSheetDismiss({
     panel: _sheet,
     scroller: _sheet.querySelector('#shub-body'),
     backdrop: createBackdropFade(_backdrop),
-    headerZone: 56,
+    headerZone: 70,
     // Аркуш УЖЕ їде донизу (`finishSwipe` поставив transform), затемнення гасить
     // `createBackdropFade`. Тому власну анімацію закриття НЕ запускаємо — інакше
     // два зустрічні рухи; прибираємо лише стан і вузли після доїзду.
@@ -233,8 +280,65 @@ function openSavedSheet() {
       setTimeout(() => { sh.remove(); bd?.remove(); }, ms + 20);
     },
   });
+  // 🔴 ЗНЯТТЯ ЗБЕРЕЖЕННЯ — ОПТИМІСТИЧНО, АЛЕ З ЧЕСНИМ ВІДКОТОМ.
+  //
+  // Прибираємо запис зі списку ОДРАЗУ і перемальовуємо: чекати мережу тут нічого
+  // не дає, а затримка читалась би як «не спрацювало». Але якщо база відмовила —
+  // повертаємо рядок на місце і кажемо про це вголос.
+  // 🛑 Саме тут головна пастка класу: інтерфейс, який підтверджує дію, що НЕ
+  // сталась. Так уже було з вимикачами сповіщень (B-33, 25.08) — два з чотирьох
+  // «підтверджували» те, чого ніхто не робив, і зловив це лише палець на живому
+  // пристрої. Тому мовчазного успіху тут немає: або запис зник насправді, або
+  // він повернувся і людина бачить чому.
+  // ⚠️ Успіх НЕ супроводжується тостом навмисно: зникнення рядка і є відповідь.
+  async function знятиЗбереження(btn) {
+    const type = btn.dataset.shubUnsave;
+    const uid  = currentUserId();
+
+    // Автобус адресується не числом, а трійкою (рейс + дата + зупинки) — Б7.2.
+    if (type === 'bus') {
+      const { shubRid, shubDate, shubFrom, shubTo } = btn.dataset;
+      const було = _data.buses;
+      _data.buses = було.filter(r => !(r.routeId === shubRid && r.trackDate === shubDate));
+      render();
+      try {
+        // ⚠️ Саме `unsaveRoute`, а не локальне видалення: за збереженим рейсом
+        // стоїть СЕРВЕРНА push-підписка, і без неї сповіщення приходили б далі.
+        unsaveRoute(shubRid, shubDate, shubFrom || null, shubTo || null);
+      } catch (err) {
+        console.warn('[saved-hub] unsave bus', err);
+        _data.buses = було; render();
+        showToast('Не вдалося прибрати рейс — спробуйте ще раз', 3500);
+      }
+      return;
+    }
+
+    const id = Number(btn.dataset.shubId);
+    const ключ = type === 'article' ? 'articles' : type === 'chat' ? 'chats' : 'boards';
+    const було = _data[ключ];
+    _data[ключ] = було.filter(p => p.id !== id);
+    render();
+
+    const r = type === 'article'
+      ? await removeSavedArticle(uid, id)
+      : await removeSavedPost(uid, id);
+
+    if (!r || r.ok === false) {
+      _data[ключ] = було; render();
+      showToast('Не вдалося прибрати зі збережених — спробуйте ще раз', 3500);
+      return;
+    }
+    // Статті тримають свій перелік у `news.js` — без цього рядка зірочка на самій
+    // статті лишилась би «збереженою», хоч у базі запису вже немає.
+    if (type === 'article') { try { await refreshSavedArticles(); } catch (_) { /* fail-soft */ } }
+  }
+
   // Делегація (не addEventListener одразу — #shub-login вставляється пізніше через render)
   _sheet.addEventListener('click', e => {
+    // 🔑 Зняття перевіряємо ПЕРШИМ: кнопка лежить поруч із карткою, і якби
+    // порядок був зворотний, тап по ній міг би дорогою відкрити сам запис.
+    const unsave = e.target.closest('[data-shub-unsave]');
+    if (unsave) { e.stopPropagation(); знятиЗбереження(unsave); return; }
     if (e.target.closest('#shub-login')) {
       closeHub();
       requireAuth('бачити збережені', () => {});
@@ -265,13 +369,9 @@ function openSavedSheet() {
     const type = card.dataset.shubType;
     closeHub();
     if (type === 'article') {
-      openArticle(id);                     // модалка статті — глобальна, без перемикання вкладки
-    } else if (type === 'chat') {
-      window.switchTab && window.switchTab('discussions');
-      openChatById(id);                    // модалка конкретного обговорення
+      openArticle(id);          // модалка статті — глобальна, без перемикання вкладки
     } else {
-      window.switchTab && window.switchTab('board');
-      setBoardActiveType('saved');         // Дошка → таб «Збережені»
+      openBoardItemById(id);    // питання і оголошення: вкладку й тип вибирає сама
     }
   });
 

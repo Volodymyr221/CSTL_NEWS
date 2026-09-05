@@ -516,12 +516,38 @@
 
 /* =============================================================
    ХАБ «ЗБЕРЕЖЕНІ» (іконка 🔖 в шапці) — bottom-sheet з категоріями
+
+   🔴 РЕДИЗАЙН 05.09 на замовлення Вови: «там є старіші колюрації, бежеві такі,
+   плюс вона виглядає несучасно».
+
+   📐 ЗАМІРЯНО ПЕРЕД РОБОТОЮ (теплота = R−B обчисленого кольору, нейтрально ≤3 —
+   той самий критерій, що у `tests/modal-surface.mjs`):
+     `.shub-cat-row` `.shub-card` `.shub-back`  = `#F4F1E6`  **+14** 🟠
+     `.shub-handle`                             = `#d9d2c7`  **+18** 🟠 хардкод
+   Джерело бежу — `--bg-page`, тобто `var(--paper)`. А в `base.css:270-275` про цей
+   токен написано дослівно: «годують лише приховані й легасі-екрани… 🛑 Береш фон
+   для НОВОГО екрана — це `--app-bg`, а не ці два».
+
+   🛑 ЧОМУ БЕЖ ВИЖИВ САМЕ ТУТ — І ЧОМУ ПЕРЕФАРБУВАТИ БУЛО МАЛО. 05.08 модалки
+   перевели на `--modal-bg` за скаргою Вови «бежевий колір у кожній модалці
+   по-різному» і завели сторожа. Але сторож шукав селектори за взірцем
+   `/(\.app-modal|\.wxp\b|-modal\b)/`, а класи хабу звуться `shub-*` — **жоден не
+   підпадав**. Тобто це була не помилка дизайну, а СЛІПА ПЛЯМА ПРИЛАДУ.
+   ➡️ Тому разом із перефарбуванням у сторожа додано `\.shub` — інакше беж
+   повернувся б сюди втретє тим самим шляхом.
+
+   🎨 ЩО ЗМІНИЛОСЬ ПО СУТІ, А НЕ ЛИШЕ В КОЛЬОРІ. Було: кожен рядок — залита
+   коробка з рамкою (чотири коробки в стовпчик = чотири рамки, чотири тіні межі).
+   Стало: **список із волосяними лініями** — та сама мова, що в решті застосунку.
+   Коробка навколо кожного пункту меню сьогодні і є те, що читається як «старе».
    ============================================================= */
 .shub-sheet {
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  background: var(--white, #fff);
-  border-radius: 18px 18px 0 0;
+  /* 🔑 Той самий токен, що в `.app-modal-sheet` і `.app-modal-card`. Саме через
+     нього хаб тепер живе за спільним правилом поверхні, а не власним. */
+  background: var(--modal-bg, #fff);
+  border-radius: 22px 22px 0 0;
   box-shadow: 0 -8px 30px rgba(0,0,0,0.18);
   z-index: 2401;
   transform: translateY(100%);
@@ -535,75 +561,151 @@
 .shub-backdrop { z-index: 2400; }
 .shub-handle {
   width: 38px; height: 4px; border-radius: 2px;
-  background: #d9d2c7; margin: 2px auto 10px;
+  /* було `#d9d2c7` хардкодом (теплота +18) — тепер нейтральний токен межі */
+  background: var(--board-line, #C4C4C1); margin: 2px auto 12px;
 }
-.shub-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+/* ОДНА шапка на обидва екрани — поза скролером, тому «назад» доступний завжди
+   (раніше він лежав усередині списку і зникав при прокрутці).
+   Кегль і трекінг як у `.app-modal-title` (20/700/-0.02em), щоб аркуш звучав
+   одним голосом із рештою модалок, а не власним 17px. */
+.shub-head {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 40px; margin-bottom: 4px; padding: 0 2px;
+}
+.shub-head-title {
+  display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0;
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--ink, #2b2b2b);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.shub-head-title .cat-ico { font-size: 19px; flex: none; }
+/* Лічильник у шапці категорії — той самий сірий, що в рядку списку. */
+.shub-head-count {
+  font-size: 15px; font-weight: 600; color: var(--ink-mute, #636872);
+  flex: none; font-variant-numeric: tabular-nums;
+}
 /* «Збережене» тримає ТЕКСТ ЛЮДЕЙ (пости, оголошення) — одне довге посилання
    розпирало б скролер убік (у нього через `overflow-y: auto` є й горизонтальна
-   прокрутка). `break-word` переносить лише те, що інакше не влізе (27.07). */
+   прокрутка). `break-word` переносить лише те, що інакше не влізе (27.07).
+   🛑 З цієї ж причини рядки НЕ виносяться за поля відʼємним `margin` заради
+   підсвітки на всю ширину: від-ємне поле в цьому скролері дало б рівно ту
+   горизонтальну прокрутку, від якої тут захищаються. */
 .shub-body { overflow-y: auto; -webkit-overflow-scrolling: touch; word-break: normal; overflow-wrap: break-word; }
-.shub-section { margin-bottom: 14px; }
-.shub-section-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.6px;
-  color: var(--gray, #666); margin-bottom: 6px;
-}
-/* Екран 1 — список категорій (12.07) */
-.shub-cats { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Екран 1 — категорії (список, не коробки) ───────────────────────────── */
+.shub-cats { display: flex; flex-direction: column; }
 .shub-cat-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 12px;
   width: 100%; text-align: left;
-  background: var(--bg-page, #faf6ef);
-  border: 1px solid var(--border, #e5ddd0);
-  border-radius: 12px; padding: 13px 14px;
+  background: transparent; border: 0;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  padding: 11px 2px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.14s ease;
 }
-.shub-cat-ic { font-size: 19px; flex: none; }
-.shub-cat-label { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--black, #222); }
-.shub-cat-lock { font-size: 13px; opacity: 0.55; flex: none; }
-.shub-cat-chev { font-size: 18px; color: var(--gray, #999); flex: none; }
-/* Екран 2 — деталі категорії: шапка з "Назад" (12.07) */
-.shub-detail-head {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 10px;
-}
-.shub-back {
-  width: 32px; height: 32px; flex: none;
+.shub-cat-row:last-child { border-bottom: 0; }
+.shub-cat-row:active { background: var(--board-press, #E4E4E1); }
+/* Іконка в мʼякому нейтральному квадраті: дає рядку опору, не малюючи рамки
+   навколо всього пункту. 38×38 — ціль пальця лишається рядком (44+ по висоті
+   разом із полями), квадрат лише візуальний. */
+.shub-cat-ic {
+  width: 38px; height: 38px; flex: none;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-page, #faf6ef); border: 1px solid var(--border, #e5ddd0);
-  border-radius: 50%; font-size: 16px; color: var(--black, #222);
+  background: var(--app-bg, #ECEEF1); border-radius: 11px;
+  font-size: 19px; color: var(--ink, #2b2b2b);
+}
+.shub-cat-label { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink, #222); }
+.shub-cat-lock { font-size: 15px; color: var(--ink-mute, #636872); flex: none; display: flex; }
+.shub-cat-chev { font-size: 17px; color: var(--board-line, #C4C4C1); flex: none; display: flex; }
+
+/* ── Екран 2 — деталі категорії ─────────────────────────────────────────── */
+/* ⚠️ `.shub-detail-head` і `.shub-detail-title` видалені 05.09 разом зі зведенням
+   шапки в одну: розмітка, яка їх малювала, більше не існує (`saved-hub.js`,
+   функція `headHtml`). Лишати мертві правила = лишати підказку, що така шапка
+   ще буває. */
+/* 📐 ВИДИМИЙ кружечок 36px, а ЦІЛЬ ПІД ПАЛЕЦЬ — 44×44 через `::after`.
+   Заміряно 05.09: до цього кнопка була 34×34 (а в редакції до редизайну — 32×32),
+   тобто менша за мінімальні 44. Робити сам кружечок 44px не стали: сірий круг
+   такого розміру поруч із заголовком 20px важчий за сам заголовок. Тому росте
+   лише невидима ціль — вигляд легкий, палець не мажеться. */
+.shub-back {
+  position: relative;
+  width: 36px; height: 36px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--app-bg, #ECEEF1); border: 0;
+  border-radius: 50%; font-size: 17px; color: var(--ink, #222);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.shub-detail-title { font-size: 15px; font-weight: 700; color: var(--black, #222); }
-.shub-count {
-  display: inline-block; min-width: 18px; text-align: center;
-  background: var(--red, #722F37); color: #fff;
-  border-radius: 8px; font-size: 11px; padding: 1px 5px; margin-left: 4px;
+.shub-back::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
 }
+.shub-back:active { background: var(--board-press, #E4E4E1); }
+/* Лічильник — сірим числом, а не бордовою пігулкою. Бордовий у проєкті означає
+   дію або тривогу; кількість збереженого не є ні тим, ні тим. */
+.shub-count {
+  font-size: 15px; font-weight: 600; color: var(--ink-mute, #636872);
+  flex: none; font-variant-numeric: tabular-nums;
+}
+/* Рядок = картка (відкрити) + кнопка зняття. Лінія живе на РЯДКУ, а не на
+   картці: інакше вона тяглася б лише під текстом і обривалась перед кнопкою. */
+.shub-row {
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+}
+.shub-row:last-child { border-bottom: 0; }
 .shub-card {
   display: flex; flex-direction: column; gap: 3px;
-  width: 100%; text-align: left;
-  background: var(--bg-page, #faf6ef);
-  border: 1px solid var(--border, #e5ddd0);
-  border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+  flex: 1; min-width: 0; text-align: left;
+  background: transparent; border: 0;
+  padding: 12px 2px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.14s ease;
+}
+.shub-card:active { background: var(--board-press, #E4E4E1); }
+/* 📐 САМА КНОПКА 44×44, БЕЗ ТРЮКУ З `::after` — і це не стиль, а вимір.
+   Спершу тут стояв той самий прийом, що в кнопці «назад»: видимий кружечок 34px
+   плюс невидимий `::after` 44px. У шапці він працює, а ТУТ — ні: заміряно
+   влучанням, ціль лишалась 34px. Причина — кнопка стоїть біля правого краю
+   всередині `.shub-body`, а в того `overflow-y: auto`, тобто СКРОЛЕР ОБРІЗАЄ
+   все, що виходить за його межі. Невидиме розширення обрізається так само тихо,
+   як видиме, — просто цього не видно оком, і на око я б цього не спіймав.
+   ➡️ Тому росте сам вузол. Вигляд від цього не важчає: фону в спокої немає,
+   видно лише значок; ширшає тільки підсвітка натиску, і це радше на краще.
+   🔑 Бордовий тут доречний і не суперечить рішенню про сірий лічильник: це ДІЯ
+   (прибрати), а не число. Заповнена закладка = «зараз збережено»; тап знімає. */
+.shub-unsave {
+  flex: none; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: 50%;
+  font-size: 20px; color: var(--red, #722F37);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
+.shub-unsave:active { background: var(--board-press, #E4E4E1); }
+.shub-unsave .cat-ico { fill: currentColor; }
 .shub-card-text {
-  font-size: 14px; font-weight: 600; color: var(--black, #222);
+  font-size: 15px; font-weight: 600; color: var(--ink, #222); line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.shub-card-meta { font-size: 12px; color: var(--gray, #888); }
-.shub-empty { text-align: center; color: var(--gray, #777); padding: 26px 8px; font-size: 14px; line-height: 1.5; }
-.shub-hint { font-size: 12px; }
+.shub-card-meta { font-size: 12px; color: var(--ink-mute, #888); }
+.shub-empty { text-align: center; color: var(--ink-mute, #777); padding: 30px 8px; font-size: 14px; line-height: 1.55; }
+.shub-hint { font-size: 12px; color: var(--ink-mute, #888); }
 .shub-login {
   margin-top: 12px; background: var(--brand-grad-sm); color: #fff;
   border: none; border-radius: 12px; padding: 10px 26px;
   font-size: 15px; font-weight: 700; cursor: pointer;
 }
-/* Б5.4: підказка увійти під секцією статей (гість бачить статті, але не оголошення/обговорення) */
+/* Б5.4: підказка увійти під секцією статей.
+   ⚠️ 05.09 — цей блок, замочок і кнопка «Увійти» ЗАРАЗ НЕДОСЯЖНІ: аркуш
+   відкривається через `requireAuth`, а той кличе тіло лише для того, хто вже
+   ввійшов (`auth.js:600`), тож `_data.loggedIn` усередині завжди `true`.
+   🛑 Не видаляю за правилом №9 (не чіпати те, про що не просили) — сказано Вові,
+   рішення за ним. Перефарбовано в нейтральне разом з усім аркушем, щоб бежу не
+   лишилось узагалі — навіть у гілці, яку не видно. */
 .shub-hint-block {
-  text-align: center; color: var(--gray, #777); padding: 18px 8px;
-  font-size: 13px; line-height: 1.5; border-top: 1px solid var(--border, #eee); margin-top: 8px;
+  text-align: center; color: var(--ink-mute, #777); padding: 18px 8px;
+  font-size: 13px; line-height: 1.5; border-top: 1px solid var(--border, #e5e5e5); margin-top: 8px;
 }
 
 /* =============================================================

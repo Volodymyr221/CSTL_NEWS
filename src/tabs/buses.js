@@ -2146,8 +2146,16 @@ export function getSavedRoutesForUI() {
     }));
 }
 
-// Зняти збереження рейсу (зникає зі списку, відстеження стоп)
-function unsaveRoute(rid, date, from, to) {
+// Зняти збереження рейсу (зникає зі списку, відстеження стоп).
+//
+// 🔴 05.09 — ЕКСПОРТОВАНО для хабу «Збережені» (замовлення Вови: знімати
+// збереження прямо в модалці). Саме ця функція, а не `removeTrackedEntry`:
+// для автобуса «збереження» = ВІДСТЕЖЕННЯ, і за ним стоїть СЕРВЕРНА push-
+// підписка. Прибрати лише локальний запис означало б лишити висячу підписку —
+// рейс зник би зі списку, а сповіщення про нього приходили б і далі.
+// ➡️ Тому хаб кличе рівно те, що клича вкладка Автобуси: спершу
+// `unsubscribeFromPush`, потім видалення запису.
+export function unsaveRoute(rid, date, from, to) {
   const entry = findTrackedEntry(rid, from || null, to || null, date);
   if (!entry) return;
   unsubscribeFromPush(entry.routeId, entry.trackDate);

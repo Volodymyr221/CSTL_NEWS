@@ -21,7 +21,7 @@
 
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { ROOT, reporter } from './_lib.mjs';
+import { ROOT, reporter, projectFile } from './_lib.mjs';
 
 const { ok, done } = reporter();
 const STYLE = join(ROOT, 'style');
@@ -54,7 +54,17 @@ const warmth = c => (c ? c.r - c.b : null);
 // Тільки СПІЛЬНИЙ примітив і те, що явно зветься модалкою. Ширший фільтр (як в
 // інструменті аудиту) тягне сюди Обговорення і картку новини — а це не модалки,
 // і сварити за них стенд не має права.
-const MODAL_SEL = /(\.app-modal|\.wxp\b|-modal\b)/;
+// 🔴 05.09 — ДОДАНО `\.shub`: ХАБ «ЗБЕРЕЖЕНІ» БУВ ПОЗА ПОЛЕМ ЗОРУ ЦЬОГО СТОРОЖА.
+// Скарга Вови 05.09: «модалка збережені… там є старіші колюрації, бежеві такі».
+// Він мав рацію, і причина не в дизайні, а в ЦЬОМУ РЯДКУ: класи хабу звуться
+// `shub-*`, тож жоден із трьох взірців вище їх не бачив. Модалку перевели на
+// нейтральну родину 05.08 разом з усіма — а сторож промовчав, бо дивився повз.
+// 📐 Заміряно тоді ж: `.shub-cat-row` `.shub-card` `.shub-back` = `#F4F1E6`
+// (теплота +14), `.shub-handle` = `#d9d2c7` (+18, хардкодом без токена).
+// 🔑 УРОК КЛАСУ: сторож тримає межу рівно там, куди дивиться. Заводиш нову
+// поверхню з власним префіксом класів — заведи її СЮДИ тим самим комітом,
+// інакше вона мовчки живе поза правилом, скільки б правило не існувало.
+const MODAL_SEL = /(\.app-modal|\.wxp\b|-modal\b|\.shub)/;
 
 // 🟡 ДОЗВОЛЕНІ ТЕПЛІ ПОВЕРХНІ — і кожна з причиною, а не «щоб стенд мовчав».
 const ALLOW = [
@@ -68,25 +78,54 @@ const ALLOW = [
 // схований у порозі. Скаже прибрати теплоту звідти — рядок іде геть.
 const CHAT_EXCEPT = /\.bd-chat-modal/;
 
-const warm = [];
-for (const { f, css } of all) {
-  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const sel = m[1].trim().replace(/\s+/g, ' ');
-    if (sel.startsWith('@') || !MODAL_SEL.test(sel)) continue;
-    if (CHAT_EXCEPT.test(sel)) continue;
-    for (const d of m[2].split(';')) {
-      const i = d.indexOf(':');
-      if (i < 0) continue;
-      const prop = d.slice(0, i).trim();
-      if (prop !== 'background' && prop !== 'background-color') continue;
-      const hex = firstHex(resolve(d.slice(i + 1).trim()));
-      if (!hex) continue;
-      const w = warmth(hex);
-      if (w > 3 && !ALLOW.some(re => re.test(hex.hex))) warm.push(`${f}: ${sel.slice(0, 40)} = ${hex.hex} (+${w})`);
+// 🔑 Скан винесено у ФУНКЦІЮ навмисно: нижче тим самим кодом міряється версія
+// з `origin/main` як контроль. Копія логіки для контролю розійшлась би з
+// оригіналом, і «контроль» перестав би міряти те саме (у проєкті таке вже було).
+function warmSurfaces(files) {
+  const out = [];
+  for (const { f, css } of files) {
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const sel = m[1].trim().replace(/\s+/g, ' ');
+      if (sel.startsWith('@') || !MODAL_SEL.test(sel)) continue;
+      if (CHAT_EXCEPT.test(sel)) continue;
+      for (const d of m[2].split(';')) {
+        const i = d.indexOf(':');
+        if (i < 0) continue;
+        const prop = d.slice(0, i).trim();
+        if (prop !== 'background' && prop !== 'background-color') continue;
+        const hex = firstHex(resolve(d.slice(i + 1).trim()));
+        if (!hex) continue;
+        const w = warmth(hex);
+        if (w > 3 && !ALLOW.some(re => re.test(hex.hex))) out.push(`${f}: ${sel.slice(0, 40)} = ${hex.hex} (+${w})`);
+      }
     }
   }
+  return out;
 }
+
+const warm = warmSurfaces(all);
 ok('🔴 жодна модалка не малює теплу поверхню повз токен', warm.length === 0, warm.join(' | ') || 'чисто');
+
+// ── ХАБ «ЗБЕРЕЖЕНІ» — ПІД НАГЛЯДОМ, І ЦЕ ДОВЕДЕНО, А НЕ ЗАЯВЛЕНО ────────────
+ok('🔴 хаб «Збережені» потрапляє в поле зору сторожа',
+   MODAL_SEL.test('.shub-cat-row') && MODAL_SEL.test('.shub-card') && MODAL_SEL.test('.shub-sheet'));
+
+// 🛑 КОНТРОЛЬ НА СПРАВЖНЬОМУ СТАРОМУ КОДІ. Перевірка вище зеленіє над чистим
+// файлом — сама по собі вона не доводить нічого. Тому той САМИЙ скан
+// проганяємо по `style/account.css` із `origin/main`, тобто по бежу, який Вова
+// бачив на екрані: там він мусить знайти теплі поверхні хабу.
+// ⚠️ Якщо гілка вже влилась у `main`, контролю нема на чому впасти — тоді
+// перевірка чесно каже про це, а не вдає зелену.
+let контрольнийCss = null;
+try { контрольнийCss = projectFile('style/account.css', 'origin/main'); } catch { /* немає git — пропускаємо */ }
+if (контрольнийCss) {
+  const бувБеж = warmSurfaces([{ f: 'account.css@origin/main', css: контрольнийCss }])
+    .filter(s => s.includes('.shub'));
+  const вжеЗлито = !/--bg-page[^;]*\)/.test(контрольнийCss.slice(контрольнийCss.indexOf('.shub-cat-row')));
+  ok('КОНТРОЛЬ: на `origin/main` той самий скан бачив беж хабу',
+     бувБеж.length > 0 || вжеЗлито,
+     бувБеж.length ? бувБеж.join(' | ') : 'у origin/main беж уже прибрано — редизайн злито');
+}
 
 // ── Спільний примітив: обидві половини одного кольору ────────────────────────
 // Саме тут і був корінь скарги: аркуш брав `--bg-card` (#FAF8EF, +11), а
