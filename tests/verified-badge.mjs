@@ -29,10 +29,18 @@ import { launch, reporter, projectFile } from './_lib.mjs';
 const { ok, done } = reporter();
 const LEGACY = !!process.env.LEGACY;
 
-const base = projectFile('style/base.css');
-const messages = projectFile('style/messages.css');
-const board = projectFile('style/board.css');
-const feed = projectFile('style/feed.css');
+// 🔴 КОНТРОЛЬ ДЛЯ ДРУГОЇ ПОЛОВИНИ СТЕНДА (05.09):
+//   BUNDLE_REV=origin/main node tests/verified-badge.mjs
+// Тоді і стилі, і сама `nameSlotStatic` беруться з тієї ревізії, і перевірки
+// «знак на останньому рядку / одразу за словом» МУСЯТЬ упасти. Без цього вони
+// нічого не доводять: обидві зеленіли б і над кодом, де знак стоїть збоку.
+// ⚠️ LEGACY=1 (нижче) — інший контроль, для першої половини: він міняє РОЗМІТКУ
+// семи однорядкових поверхонь, а не ревізію.
+const REV = process.env.BUNDLE_REV || '';
+const base = projectFile('style/base.css', REV);
+const messages = projectFile('style/messages.css', REV);
+const board = projectFile('style/board.css', REV);
+const feed = projectFile('style/feed.css', REV);
 
 // Знак — рівно той самий рядок, що віддає `officialMarkHtml()`.
 const ЗНАК = '<span class="cstl-verified" role="img" aria-label="Офіційний акаунт">'
@@ -210,6 +218,99 @@ ok('🔴 У найдрібніших місцях знак не менший з�
 function dрібнеОк(список) {
   return список.length > 0 && список.every(з => з.ширина >= 10.9);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 05.09 — ДОВГА НАЗВА, ЯКА ПЕРЕНОСИТЬСЯ: ЗНАК ІДЕ ЗА ОСТАННІМ СЛОВОМ.
+//
+// 🗣️ Вова (знімок сторінки КЦ «Центр культури, спорту та туризму Олицької
+// міської ради»): «ця синя галочка має бути не відцентрована навпроти справа,
+// а навпроти останнього слова чи символа справа».
+//
+// 🔴 ЧОМУ СІМ ПЕРЕВІРОК ВИЩЕ ЦЬОГО НЕ ЛОВИЛИ. Усі сім поверхонь — ОДНОРЯДКОВІ.
+// На одному рядку `align-items: center` дає рівно те, що треба, і стенд чесно
+// показував 37/37 над вадою. Вада живе лише там, де назва ПЕРЕНОСИТЬСЯ: текст
+// стає одним флекс-елементом у три рядки заввишки, і знак центрується відносно
+// всього блока — тобто опиняється збоку, навпроти середини.
+// ➡️ Сцену треба було міняти, а не перевірку.
+// 📐 РОЗМІТКУ БУДУЄ СПРАВЖНЯ `nameSlotStatic` З `core/supabase.js`, а не копія
+// в стенді. ⚠️ Перша редакція цієї сцени писала розмітку руками — і червоніла
+// над УЖЕ ВИПРАВЛЕНИМ кодом, бо відтворювала стару структуру. Той самий клас
+// брехливого приладу, що вже тричі за дві доби: спершу перевір прилад.
+const supaSrc = projectFile('src/core/supabase.js', REV);
+const вирізати = (імʼя) => {
+  const i = supaSrc.indexOf('export function ' + імʼя + '(');
+  if (i < 0) return '';
+  const кінець = supaSrc.indexOf('\n}', i);
+  return кінець > 0 ? supaSrc.slice(i, кінець + 2).replace(/^export /, '') : '';
+};
+
+const ДОВГА = 'КЦ «Центр культури, спорту та туризму Олицької міської ради»';
+const p2 = await ctx.newPage();
+await p2.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
+ *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+ body{background:#fff;font-family:-apple-system,system-ui,sans-serif}
+ .обгортка{width:330px;padding:10px}
+ ${base}
+ ${feed}
+</style></head><body>
+ <div class="обгортка"><div class="fd-screen-name" id="ціль"></div></div>
+ <script type="module">
+   ${вирізати('officialMarkHtml')}
+   ${вирізати('nameSlotStatic')}
+   document.getElementById('ціль').innerHTML =
+     nameSlotStatic(${JSON.stringify(ДОВГА)}, true);
+   window.__зібрано = typeof nameSlotStatic === 'function';
+ </script>
+</body></html>`, { waitUntil: 'load' });
+await p2.waitForTimeout(150);
+ok('🛑 КОНТРОЛЬ ПРИЛАДУ: сцену будує справжня `nameSlotStatic`, а не копія',
+   await p2.evaluate(() => window.__зібрано === true));
+
+const багаторядкова = await p2.evaluate(() => {
+  const txt  = document.querySelector('.cstl-name-txt');
+  const знак = document.querySelector('.cstl-verified');
+  if (!txt || !знак) return { знайдено: false };
+
+  // 📐 РЯДКИ МІРЯЄМО RANGE-ОМ ПО ТЕКСТУ, А НЕ ПРЯМОКУТНИКОМ ВУЗЛА.
+  // ⚠️ Це не педантизм: у СТАРІЙ структурі `.cstl-name-txt` — флекс-елемент, і
+  // `getClientRects()` віддає ОДИН прямокутник коробки, хоч текст усередині й
+  // переноситься. Мірка по вузлу відповідала б «рядків: 1» і робила б увесь
+  // контроль беззмістовним (саме це й показав перший прогін BUNDLE_REV).
+  // 🔑 Range бере кінець ПЕРЕД знаком, тому в новій структурі (знак усередині
+  // тексту) останній рядок міряється без нього — питання ж саме про те, де
+  // знак СТОЇТЬ ВІДНОСНО тексту.
+  const r = document.createRange();
+  r.setStart(txt, 0);
+  if (txt.contains(знак)) r.setEndBefore(знак); else r.selectNodeContents(txt);
+  const рядки = [...r.getClientRects()].filter(x => x.width > 1 && x.height > 1);
+  if (!рядки.length) return { знайдено: false };
+  const останній = рядки[рядки.length - 1];
+  const з = знак.getBoundingClientRect();
+
+  return {
+    знайдено: true,
+    рядків: рядки.length,
+    відступВід: Math.round(з.left - останній.right),
+    наОстанньому: з.top >= останній.top - 4 && з.bottom <= останній.bottom + 4,
+    // 🔑 Головна мірка вади: коли знак центрований на весь блок із трьох рядків,
+    // його центр розходиться з центром ОСТАННЬОГО рядка приблизно на висоту
+    // рядка — тобто добре видима відстань, а не похибка округлення.
+    зсувВідЦентруРядка: Math.round(((з.top + з.bottom) / 2)
+                                 - ((останній.top + останній.bottom) / 2)),
+  };
+});
+await p2.close();
+
+ok('сцена з довгою назвою зібралась і назва СПРАВДІ переноситься',
+   багаторядкова.знайдено && багаторядкова.рядків >= 2,
+   `рядків: ${багаторядкова.рядків}`);
+ok('🔴 знак стоїть на ОСТАННЬОМУ рядку назви, а не збоку блока',
+   багаторядкова.наОстанньому === true,
+   `зсув від центру останнього рядка: ${багаторядкова.зсувВідЦентруРядка}px`);
+ok('🔴 …і одразу за останнім символом (не притиснутий до правого краю)',
+   Number.isFinite(багаторядкова.відступВід)
+   && багаторядкова.відступВід >= 0 && багаторядкова.відступВід <= 12,
+   `${багаторядкова.відступВід}px після кінця тексту`);
 
 if (LEGACY) {
   console.log('\n⚠️  Це КОНТРОЛЬНИЙ прогін (LEGACY=1) — стара розмітка.');

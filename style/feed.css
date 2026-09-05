@@ -158,11 +158,24 @@
 /* Своє тло має лише шапка НАД ФОТО — їй і потрібні верхні кути (див. .fd-card-head--onphoto
    нижче). Без фото шапка прозора, і верхні кути малює сама картка. Низ завжди малює
    .fd-card-body — у нього тло є в обох випадках. */
-.fd-card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; cursor: pointer; }
+/* 🔴 05.09 — ДВА ЯРУСИ: НАЗВА, ПІД НЕЮ СЛУЖБОВИЙ РЯДОК.
+   🗣️ Вова: «назва спільноти в пості має бути максимально горизонтально
+   розтягнута… під ним вже закріплено, там дзвіночок нагадування».
+   🔴 Було `align-items: center` і всі позначки В ОДНОМУ рядку з назвою: вони
+   з'їдали ширину, і назва «КЦ Центр культури, спорту та туризму Олицької
+   міської ради» розсипалась на чотири рядки у вузькій колонці.
+   🔑 `flex-start` тримає «⋯» навпроти ПЕРШОГО рядка назви — там, де він і був. */
+.fd-card-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px 8px; cursor: pointer; }
 .fd-ava-wrap { width: 40px; height: 40px; flex: none; }
 .fd-ava--ph { font-size: 17px; }
-.fd-head-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+/* `flex: 1` — та сама «максимальна горизонтальна розтяжка»: колонка забирає все,
+   що лишилось від аватарки й «⋯», а не ділиться ще й з позначками. */
+.fd-head-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1 1 auto; }
 .fd-page-name { font-weight: 700; font-size: 14px; color: var(--fd-ink); }
+/* Службовий рядок: час · «Закріплено» · дзвіночок нагадування.
+   ⚠️ `flex-wrap` обовʼязковий: на вузькому екрані три елементи можуть не влізти
+   в рядок, і без переносу вони б стиснули один одного до нечитабельного. */
+.fd-head-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .fd-time { font-size: 12px; color: var(--fd-muted); }
 /* «⋯» поста (лише власник/адмін сторінки) — справа у шапці картки. */
 .fd-card-menu { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; border: 0;
@@ -172,7 +185,7 @@
    нічого не означає, там порядок завжди за датою). Кольори взяті з наявної плашки
    події `.fd-evb` — нових значень не вводимо. */
 .fd-pin-badge {
-  margin-left: auto; flex: none;
+  flex: none;
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 999px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.2px;
@@ -181,9 +194,9 @@
   border: 1px solid color-mix(in srgb, var(--fd-accent) 22%, transparent);
 }
 .fd-pin-badge svg { width: 13px; height: 13px; }
-/* Коли позначка є, вона вже забрала вільне місце — інакше `margin-left:auto` у «⋯»
-   поділив би простір навпіл і кнопка відʼїхала б від краю. */
-.fd-pin-badge + .fd-card-menu { margin-left: 4px; }
+/* ⚠️ 05.09: `margin-left: auto` у позначки ПРИБРАНО разом із переїздом у
+   службовий рядок — там штовхати вже нема чого, а сам відступ віддавав їй усе
+   вільне місце рядка. Те саме правило нижче для дзвіночка. */
 /* ⚠️ ТУТ БУВ ОКРЕМИЙ «ТЕМНИЙ» ВАРІАНТ для `.fd-card-head--onphoto` — і це була помилка
    (Вова, скрін IMG_3681: «чому одна іконка закріплене бордова, а інша сіра»).
    Я прочитав назву класу як «шапка лежить ПОВЕРХ фото» і додав контрастний фон.
@@ -1186,8 +1199,8 @@
    📐 Ціль дотику 40×40 при іконці 20px: рівно як у сусіднього «⋯», інакше два
    сусідні кружечки мали б різну зону натиску при однаковому вигляді. */
 .fd-remind-btn {
-  margin-left: auto; flex: none;
-  width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
+  flex: none;
+  width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
   background: none; color: var(--fd-muted); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   /* Відгук на НАТИСК, а не на відпускання (Apple HIG: реакція має бути миттєвою) */
@@ -1201,9 +1214,14 @@
   color: var(--fd-accent);
   background: color-mix(in srgb, var(--fd-accent) 10%, transparent);
 }
-/* Сусідство з «⋯»: авто-відступ уже забрав дзвіночок, меню просто стає поруч. */
-.fd-remind-btn + .fd-card-menu { margin-left: 2px; }
-.fd-pin-badge ~ .fd-remind-btn { margin-left: 4px; }
+/* 🔴 05.09 — ДЗВІНОЧОК ПЕРЕЇХАВ У СЛУЖБОВИЙ РЯДОК ПІД НАЗВОЮ (слово Вови:
+   «під ним вже закріплено, там дзвіночок нагадування якщо він є»). У шапці він
+   стояв поруч із «⋯» і разом із позначкою «Закріплено» звужував назву.
+   📐 34px замість 40: у рядку з текстом 12px кнопка на 40px задирала б висоту
+   рядка вдвічі. Іконка лишилась 20px — зона дотику ще з запасом більша за неї. */
+/* ⚠️ Відʼємних полів тут НЕМАЄ навмисно: вони підтягували б кнопку вгору, під
+   назву, і службовий рядок переставав би бути окремим ярусом — рівно те, від
+   чого ми пішли. Рядок просто стає заввишки з кнопку. */
 @media (prefers-reduced-motion: reduce) {
   .fd-remind-btn { transition: none; }
   .fd-remind-btn:active { transform: none; }

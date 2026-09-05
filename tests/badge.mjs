@@ -14,12 +14,30 @@ const R = ROOT;
 
 const css = projectFile('style/feed.css');
 const badge = '<span class="fd-pin-badge"><svg viewBox="0 0 24 24"><path d="M15 4.5l-4 4"/></svg>Закріплено</span>';
+// 🔴 05.09 — НАЗВА НАВМИСНО ДОВГА, І ЦЕ НЕ ПРИКРАСА СЦЕНИ.
+// 🗣️ Вова саме на такій назві й показав ваду: «КЦ «Центр культури, спорту та
+// туризму Олицької міської ради»» розсипалась на чотири рядки у вузькій колонці,
+// бо позначка «Закріплено», дзвіночок і «⋯» стояли з нею В ОДНОМУ рядку.
+// ⚠️ На короткій назві («ТУРИСТИЧНА ОЛИКА», як було до 05.09) вада НЕ
+// відтворюється взагалі: місця вистачає, і стенд світився б зеленим.
+const ДОВГА_НАЗВА = 'КЦ «Центр культури, спорту та туризму Олицької міської ради»';
+const дзвінок = '<button class="fd-remind-btn" data-remind="1"><svg viewBox="0 0 24 24"><path d="M12 2v2"/></svg></button>';
+// 📐 Розмітка дзеркалить `postCardHtml` із `src/tabs/feed.js` — два яруси:
+// назва на всю ширину, під нею службовий рядок. Нижче стоїть перевірка, яка
+// звіряє це дзеркало з кодом: копія, що тихо розійшлась із оригіналом, — це
+// саме те, через що цей стенд і не побачив вади (він мав стару розмітку).
 const card = (photo) => `
   <article class="fd-card">
     <header class="fd-card-head${photo ? ' fd-card-head--onphoto' : ''}">
-      <span class="fd-head-txt"><span class="fd-page-name">ТУРИСТИЧНА ОЛИКА</span>
-        <span class="fd-time">23 липня</span></span>
-      ${badge}
+      <span class="fd-ava-wrap" style="background:#ddd;border-radius:50%"></span>
+      <span class="fd-head-txt">
+        <span class="fd-page-name">${ДОВГА_НАЗВА}</span>
+        <span class="fd-head-meta">
+          <span class="fd-time">23 липня</span>
+          ${badge}
+          ${дзвінок}
+        </span>
+      </span>
       <button class="fd-card-menu">···</button>
     </header>
     ${photo ? '<div style="height:120px;background:#888"></div>' : ''}
@@ -58,11 +76,31 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
    const r = e.getBoundingClientRect();
    const menu = document.querySelector('#' + root + ' .fd-card-menu').getBoundingClientRect();
    const head = document.querySelector('#' + root + ' .fd-card-head').getBoundingClientRect();
+   const name = document.querySelector('#' + root + ' .fd-page-name').getBoundingClientRect();
+   const ava  = document.querySelector('#' + root + ' .fd-ava-wrap').getBoundingClientRect();
+   const bell = document.querySelector('#' + root + ' .fd-remind-btn').getBoundingClientRect();
+   // 📐 Рядки — Range-ом по тексту: .fd-page-name це флекс-елемент, і його
+   // власний getClientRects() віддає ОДИН прямокутник коробки незалежно від
+   // того, на скільки рядків розсипався текст усередині.
+   // (зворотні лапки тут заборонені: увесь блок лежить у шаблонному рядку)
+   const nameEl = document.querySelector('#' + root + ' .fd-page-name');
+   const rng = document.createRange();
+   rng.selectNodeContents(nameEl);
+   const rows = [...rng.getClientRects()].filter(x => x.width > 1 && x.height > 1).length;
    return { color: cs.color, bg: cs.backgroundColor, border: cs.borderTopColor,
             headBg: window.__effBg(document.querySelector('#' + root + ' .fd-card-head')),
             w: Math.round(r.width), h: Math.round(r.height),
             zazor: Math.round(menu.left - r.right),
-            doKrayu: Math.round(head.right - menu.right) };
+            doKrayu: Math.round(head.right - menu.right),
+            // Скільки місця назві лишилось від того, що є між аватаркою і «⋯».
+            nameW: Math.round(name.width),
+            dostupno: Math.round(menu.left - ava.right - 10),
+            rowsNazvy: rows,
+            // Службові позначки мусять стояти НИЖЧЕ назви, а не поруч.
+            znachkyNyzhche: r.top >= name.bottom - 1 && bell.top >= name.bottom - 1,
+            // «⋯» лишається навпроти ПЕРШОГО рядка назви (слово Вови: «повинні
+            // залишатися там де є»).
+            menuNaPershomu: menu.top < name.top + 26 };
  };
 </script></body></html>`;
 
@@ -98,6 +136,36 @@ console.log('   «⋯» від правого краю шапки:', bez.doKrayu
 ok('«⋯» лишається біля правого краю', bez.doKrayu <= 16 && foto.doKrayu <= 16,
    `${bez.doKrayu} / ${foto.doKrayu}`);
 ok('позначка не налазить на «⋯»', bez.zazor >= 0 && foto.zazor >= 0, `зазор ${bez.zazor} / ${foto.zazor}`);
+
+// ── 🔴 05.09: НАЗВА СПІЛЬНОТИ НА ВСЮ ШИРИНУ ─────────────────────────────────
+// 🗣️ Вова: «сама назва спільноти в пості має бути максимально горизонтально
+// розтягнута… під ним вже закріплено, там дзвіночок нагадування якщо він є».
+// 📐 Міряємо НАСЛІДОК: скільки ширини дісталось назві з того, що є між
+// аватаркою і «⋯». Правило в CSS («flex: 1») можна написати і мати вузьку
+// колонку — якщо поруч у рядку стоїть щось, що забирає місце.
+ok('🔴 назва займає майже всю ширину між аватаркою і «⋯»',
+   bez.nameW >= bez.dostupno * 0.92,
+   `${bez.nameW}px із доступних ${bez.dostupno}px`);
+// 🛑 Зустрічна межа: службові позначки мусять бути НИЖЧЕ назви. Без неї
+// перевірка вище проходила б і в розкладці, де назва широка, а «Закріплено»
+// налізло на неї збоку і тисне текст.
+ok('🛑 «Закріплено» і дзвіночок стоять ПІД назвою, а не поруч із нею',
+   bez.znachkyNyzhche && foto.znachkyNyzhche);
+ok('«⋯» лишився навпроти першого рядка назви', bez.menuNaPershomu && foto.menuNaPershomu);
+// 📐 Довга офіційна назва мусить перестати розсипатись: у 390px їй тепер
+// вистачає двох рядків замість чотирьох у вузькій колонці.
+ok('🔴 довга назва більше не розсипається на чотири рядки',
+   bez.rowsNazvy <= 2, `${bez.rowsNazvy} рядки`);
+
+// ── 🛑 ДЗЕРКАЛО ЗВІРЕНЕ З КОДОМ ─────────────────────────────────────────────
+// ⚠️ Саме через розхід копії з оригіналом цей стенд і не побачив вади: він
+// тримав РОЗМІТКУ, якої в застосунку вже не було. Тепер розхід ловиться.
+const feedSrc = projectFile('src/tabs/feed.js');
+const шапка = (feedSrc.match(/<header class="fd-card-head[\s\S]*?<\/header>/) || [''])[0];
+ok('🛑 сцена дзеркалить справжню шапку: службовий рядок існує в коді',
+   /<span class="fd-head-meta">/.test(шапка));
+ok('🛑 …і «Закріплено» з дзвіночком лежать САМЕ в ньому',
+   /fd-head-meta[\s\S]*?fd-pin-badge[\s\S]*?eventRemindHtml[\s\S]*?<\/span>/.test(шапка));
 
 await b.close();
 const bad = res.filter(r => !r).length;
