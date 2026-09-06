@@ -46,6 +46,7 @@ import {
 import { ensurePushSubscription } from '../core/push.js';
 import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
 import { ICONS } from '../core/icons.js';   // спільні векторні іконки (заміна емодзі в меню картки)
+import { search as smartSearch } from '../core/search.js';   // єдиний пошук CSTL (30.08), сюди підключено 06.09
 
 const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
@@ -753,18 +754,41 @@ export function openThreadsList() {
     const convArchived = (c) => c.threads.length > 0 && c.threads.every(t => stOf(t.id).archived);
     const conversationsAll = () => groupConversations(threads.filter(threadVisible), me, unread);
 
+    // 🔎 ПОЛЯ РОЗМОВИ ДЛЯ ПОШУКУ. Імʼя співрозмовника — `title` (вага 50): у списку
+    // розмов людину шукають передусім по людині. Оголошення й останнє повідомлення —
+    // `text` (вага 15).
+    // ⚠️ Беремо ВСІ оголошення розмови, а не лише останнє: людина шукає «велосипед»,
+    // а він може бути другим контекстом. Це правило було й до 06.09, воно збережене.
+    const полеРозмови = (c) => ({
+      title: c.otherName,
+      text: `${c.threads.map(threadPostTitle).join(' ')} ${c.last?.last_message_text || ''}`,
+    });
+
     const renderThreads = () => {
-      const q = query.trim().toLowerCase();
-      const list = conversationsAll().filter(c => {
+      const q = query.trim();
+      // 🔴 ПОШУК ІДЕ ПІСЛЯ ФІЛЬТРІВ, А НЕ ВСЕРЕДИНІ НИХ (06.09) — той самий порядок,
+      // що на Дошці: «Архів» і «Непрочитані» це вибір людини, і пошук не має права
+      // його перебивати; ранжувати треба вже звужений набір.
+      const base = conversationsAll().filter(c => {
         if (filter === 'archive') { if (!convArchived(c)) return false; }
         else if (convArchived(c)) return false;                 // архівні не в «Усі»/«Непрочитані»
         if (filter === 'unread' && !(c.unread > 0)) return false;
-        if (!q) return true;
-        // Пошук по імені + по ВСІХ оголошеннях розмови: людина шукає «велосипед»,
-        // а він може бути другим контекстом, не останнім.
-        const hay = `${c.otherName} ${c.threads.map(threadPostTitle).join(' ')} ${c.last?.last_message_text || ''}`.toLowerCase();
-        return hay.includes(q);
+        return true;
       });
+      // 🔴 06.09 — БУЛО `hay.includes(q)`: точний ПІДРЯДОК по злитому тексту.
+      // Через це «велосипеда» не знаходило розмову про «велосипед», а «Коваль Петро»
+      // не знаходило «Петро Коваль» — слова мусили стояти поряд, у тому ж порядку і
+      // в тому ж відмінку. Тепер цим займається `core/search.js` (морфологія,
+      // синоніми, друкарські помилки, ранжування) — той самий двигун, що на Дошці.
+      // 🔑 `prefix: true` обовʼязковий саме тут: видача перемальовується на КОЖНЕ
+      // натискання клавіші, а двигун без цього прапорця префіксів не знає зовсім
+      // (заміряно: «вело» → нічого). Без нього перехід на нього був би регресом
+      // проти підрядка, який префікси ловив.
+      // ⚠️ Порядок при пошуку — за релевантністю, а не за свіжістю. Однакові за
+      // вагою лишаються у своєму порядку: `Array.sort` стабільний.
+      const list = q
+        ? smartSearch(base, q, { fields: полеРозмови, prefix: true }).map(h => h.item)
+        : base;
       if (!list.length) {
         threadsEl.innerHTML = (filter === 'archive')
           ? `<div class="pm-empty pm-empty--mini">Архів порожній</div>`

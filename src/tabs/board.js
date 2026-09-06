@@ -46,7 +46,7 @@ import {
   cardTitleText, markBoardSeen, markChatSeen, markFeedSeen,
 } from '../core/board-shared.js';
 import {
-  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, answersCount,
+  initDiscussionsEngine, setDiscussionsData, renderQuestionCard, openChatModal, answersCount, answersText,
   openDiscussionCompose, openMyDiscussions, openSavedDiscussions,
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange, markQaFloorOnce, markQuestionsSeenOnLeave,
@@ -353,6 +353,38 @@ function renderCardDesc(p) {
 //
 // ⚠️ Показуємо ЛИШЕ коли є що сказати: без запиту або при прямому збігу однією
 // формою підпис нічого не додає, лише шумить.
+// 🔎 ЯКІ ПОЛЯ ЗАПИСУ ЧИТАЄ ПОШУК — залежить від вкладки (06.09).
+//
+// Оголошення і збережене лишаються на полях за замовчуванням (`title` / `location`
+// / `text` / `tags`) — там форма запису саме така.
+//
+// 🔴 ПИТАННЯ ЗБУДОВАНІ ІНАКШЕ, і на полях за замовчуванням пошук по них працював
+// гірше, ніж виглядало. Заміряно в коді: у запису `type:'chat'` НЕМАЄ ні `title`,
+// ні `tags` — сам текст питання лежить у `text`. Тобто питання шукалось вагою 15
+// (найтихіше поле, призначене для опису), тоді як воно тут ГОЛОВНЕ. А відповіді
+// не шукались взагалі — їх у записі немає, вони окремі рядки `comments`.
+//
+// ➡️ Тому для вкладки «Питання» поля перевизначаються:
+//     title → сам текст питання   (вага 50 — те, заради чого людина сюди прийшла)
+//     text  → усі живі відповіді  (вага 15 — слабший, але законний сигнал)
+// 🔑 Розподіл ваг тут і є відповіддю на «а раптом знайдеться зайве»: питання, у
+// якому слово стоїть у самому питанні, СТАВАТИМЕ ВИЩЕ за те, де слово лише
+// в чиїйсь відповіді. Порядок видачі робить цю різницю видимою без жодних заслінок.
+// 🔑 `prefix: true` стоїть на ОБОХ гілках — див. блок «ПОШУК ПІД ЧАС НАБОРУ» в
+// `core/search.js`. Це те саме поле вводу, і різна поведінка на різних вкладках
+// читалась би як вада, а не як задум.
+function пошуковіПоля() {
+  if (activeType !== 'chat') return { prefix: true };
+  return {
+    prefix: true,
+    fields: p => ({
+      title: p.text,
+      location: p.location,
+      text: answersText(p.id),
+    }),
+  };
+}
+
 function renderWhyFound(p) {
   const hits = searchHits.get(p.id);
   if (!hits || !hits.length) return '';
@@ -1137,7 +1169,10 @@ function renderOfficialCard(a) {
 }
 
 function renderCard(post) {
-  if (post.type === 'chat') return renderQuestionCard(post);
+  // 🔎 Підпис «знайдено за…» потрібен ПИТАННЯМ навіть більше, ніж оголошенням:
+  // питання може потрапити у видачу за словом, якого в ньому НЕМАЄ — воно стоїть
+  // у чиїйсь відповіді. Без підпису це читалось би як випадковий результат.
+  if (post.type === 'chat') return renderQuestionCard(post, { why: renderWhyFound(post) });
   return renderBoardCard(post);
 }
 
@@ -1425,7 +1460,7 @@ function getFilteredPosts(opts = {}) {
   const q = searchQuery.trim();
   if (!q) { searchHits = new Map(); return base; }
 
-  const hits = smartSearch(base, q);
+  const hits = smartSearch(base, q, пошуковіПоля());
   searchHits = new Map(hits.map(h => [h.item.id, h.matched]));
   return hits.map(h => h.item);
 }
