@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788693373876,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 540,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0085,
+      "note": ""
+    },
+    {
       "ts": 1788605496146,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.011,
       "note": ""
-    },
-    {
-      "ts": 1787288730960,
-      "mission": "olyka:story:олицький-замок-одна-з",
-      "model": "claude-opus-5",
-      "input_tokens": 4741,
-      "output_tokens": 352,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0325,
-      "note": "Олицький замок — одна з найдавніших бастіонних фортець України"
     }
   ],
   "totals": {
-    "cost_usd": 10.8877,
-    "runs": 143,
+    "cost_usd": 10.8962,
+    "runs": 144,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.4194,
-      "runs": 18,
+      "cost_usd": 2.4279,
+      "runs": 19,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788605496146
+  "updated_ts": 1788693373876
 }
