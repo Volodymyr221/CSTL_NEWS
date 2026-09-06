@@ -32,7 +32,7 @@ import { isTeamMember } from './supabase.js';
 import { onAuthChange, isLoggedIn, currentUserName, currentAvatarUrl } from './auth.js';
 import { LEGAL_DOC_HTML, BOARD_RULES_HTML, CONTACT } from './legal.js';
 import { openModal } from './modal.js';
-import { ICONS } from './icons.js';
+import { ICONS, tabIcon } from './icons.js';
 import { avatarCircle, escapeHtml } from './utils.js';
 // ⚠️ Меню — єдиний модуль `core/`, який імпортує екрани із `tabs/`, і це не
 // недогляд: навігаційний хаб за визначенням мусить дотягнутись до кожного
@@ -430,10 +430,11 @@ function closeSidebarInstant() {
 // вкладки міняють в `index.html`, і меню підхоплює саму зміну.
 // ⚠️ Розмір нормалізує CSS (`.sidebar-item-icon svg`): у таб-барі значок 22px, у
 // значків `ICONS` — 1em. Без цього рядки стрибали б по висоті залежно від джерела.
-function tabIcon(tab, fallback) {
-  const svg = document.querySelector(`.tab-bar .tab-item[data-tab="${tab}"] .tab-icon`);
-  return svg ? svg.outerHTML : fallback;   // немає таб-бару (тест/збій) — свій значок
-}
+//
+// 🔀 06.09 — САМА ФУНКЦІЯ ПЕРЕЇХАЛА в `core/icons.js`: споживачів стало двоє,
+// другий — хаб «Збережені», який до того тримав ВЛАСНИЙ набір значків і через це
+// показував «Питання» бульбашкою з рядками — тобто іконкою ЧАТУ, яку з таб-бару
+// прибрали ще 11.08. Копія в другому файлі повторила б рівно ту саму хворобу.
 
 // 🔴 КРАПКА В ЦЬОМУ ЗАСТОСУНКУ ОЗНАЧАЄ «Є НОВЕ» — І НІЧОГО ІНШОГО.
 // Перша редакція меню ставила крапку на АКТИВНУ вкладку («ти зараз тут»), і Вова

@@ -578,7 +578,12 @@
   color: var(--ink, #2b2b2b);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.shub-head-title .cat-ico { font-size: 19px; flex: none; }
+/* ⚠️ Селектор по ТЕГУ, а не по класу `.cat-ico`: значок із таб-бару носить клас
+   `.tab-icon` і під `.cat-ico` не підпадає — рівно той промах, через який беж
+   дожив у цьому ж хабі до вересня (сторож шукав `-modal`, а класи звались `shub-*`).
+   🛑 Кнопка «назад» від цього правила НЕ страждає: вона сусід `.shub-head-title`,
+   а не її дитина. */
+.shub-head-title svg { width: 19px; height: 19px; flex: none; }
 /* Лічильник у шапці категорії — той самий сірий, що в рядку списку. */
 .shub-head-count {
   font-size: 15px; font-weight: 600; color: var(--ink-mute, #636872);
@@ -614,6 +619,13 @@
   background: var(--app-bg, #ECEEF1); border-radius: 11px;
   font-size: 19px; color: var(--ink, #2b2b2b);
 }
+/* 🔑 НОРМАЛІЗАЦІЯ РОЗМІРУ (06.09) — значки приходять із ДВОХ джерел.
+   Розділи-вкладки віддають свій значок із таб-бару, а там `.tab-icon` це ЖОРСТКІ
+   22px; решта йде з `ICONS` і масштабується від `font-size` (1em = 19px). Без
+   цього рядка «Питання» і «Оголошення» стали б на 3px більшими за сусідів, і
+   список поїхав би по висоті — тобто стандартизація значків спричинила б новий
+   розлад. Те саме правило і з тієї ж причини стоїть у `.sidebar-item-icon svg`. */
+.shub-cat-ic svg { width: 19px; height: 19px; }
 .shub-cat-label { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink, #222); }
 .shub-cat-lock { font-size: 15px; color: var(--ink-mute, #636872); flex: none; display: flex; }
 .shub-cat-chev { font-size: 17px; color: var(--board-line, #C4C4C1); flex: none; display: flex; }

@@ -51,6 +51,19 @@ const b = await launch(chromium);
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
                                  hasTouch: true, serviceWorkers: 'block' });
 const p = await ctx.newPage();
+
+// 🔴 КОНТРОЛЬ (додано 06.09 разом зі стандартизацією значків):
+//     BUNDLE_REV=origin/main node tests/saved-hub.mjs
+// На коді до 06.09 мусять почервоніти перевірки блоку 2-БІС: хаб тоді тримав
+// ВЛАСНИЙ набір значків, тож «Питання» і «Оголошення» не збігались із таб-баром.
+// ⚠️ Решта перевірок під контролем теж може падати — це не шум: старий код і
+// малював інакше. Контроль тут доводить саме те, що блок 2-БІС уміє впасти.
+const BUNDLE_REV = process.env.BUNDLE_REV || '';
+if (BUNDLE_REV) {
+  const old = projectFile('bundle.js', BUNDLE_REV);
+  await p.route('**/bundle.js', r => r.fulfill({ contentType: 'application/javascript', body: old }));
+}
+
 await mockSupabase(p, {
   posts: POSTS,
   saved_posts: [{ uid: 'uid-a', post_id: 7001 }, { uid: 'uid-a', post_id: 7002 },
@@ -132,6 +145,54 @@ ok('категорії показані з лічильниками', катег
 ok('🛑 заголовок НЕ дублюється (одна шапка, не дві)',
    await p.evaluate(() => document.querySelectorAll('.shub-head').length === 1
                        && !document.querySelector('.shub-detail-head')));
+
+// ── 2-БІС. ЗНАЧКИ РОЗДІЛІВ — ТІ САМІ, ЩО В ТАБ-БАРІ (06.09) ────────────────
+//
+// 🗣️ Скарга Вови зі знімка: «деякі іконки не такого вигляду… наприклад, на
+// питання. Це треба стандартизувати».
+//
+// 🔑 МІРЯЄМО ЗБІГ МАЛЮНКІВ, А НЕ НАЯВНІСТЬ ВИКЛИКУ. Перевірка «у `saved-hub.js`
+// є слово tabIcon» була б зеленою і тоді, коли функція повертає запасний значок
+// (таб-бару не знайшла, селектор промазав) — тобто рівно у зламаному випадку.
+// Тому порівнюємо самі шляхи `d` намальованих `<svg>`: у хабі й у таб-барі вони
+// мусять збігтися рядок у рядок.
+const шляхи = (sel) => p.evaluate((s) => {
+  const el = document.querySelector(s);
+  if (!el) return null;
+  const svg = el.tagName === 'svg' ? el : el.querySelector('svg');
+  return svg ? [...svg.querySelectorAll('path')].map(x => x.getAttribute('d')).join('|') : null;
+}, sel);
+
+for (const [кат, вкладка, назва] of [['chats', 'discussions', 'Питання'],
+                                     ['boards', 'board', 'Оголошення'],
+                                     ['buses', 'buses', 'Автобуси']]) {
+  const уХабі    = await шляхи(`[data-shub-cat="${кат}"] .shub-cat-ic`);
+  const уТаббарі = await шляхи(`.tab-bar .tab-item[data-tab="${вкладка}"] .tab-icon`);
+  ok(`значок «${назва}» у хабі = значок вкладки в таб-барі`,
+     !!уХабі && уХабі === уТаббарі,
+     уХабі === уТаббарі ? 'збіг' : `хаб: ${String(уХабі).slice(0, 40)} ≠ таббар: ${String(уТаббарі).slice(0, 40)}`);
+}
+
+// 🛑 КОНТРОЛЬ НА САМ ПРИЛАД. Порівняння рядків було б зеленим і тоді, коли обидва
+// боки віддають `null` (селектор промазав, значків немає зовсім). Тому окремо
+// вимагаємо, щоб порівнювані значки взагалі існували і були РІЗНІ між собою —
+// інакше «усі збіглись» доводило б лише те, що ми міряємо порожнечу.
+const шляхПитань    = await шляхи('[data-shub-cat="chats"] .shub-cat-ic');
+const шляхОголошень = await шляхи('[data-shub-cat="boards"] .shub-cat-ic');
+ok('🔴 КОНТРОЛЬ: значки справді прочитані і не порожні',
+   !!шляхПитань && !!шляхОголошень && шляхПитань !== шляхОголошень,
+   `питання ${String(шляхПитань).slice(0, 24)} · оголошення ${String(шляхОголошень).slice(0, 24)}`);
+
+// 📐 РОЗМІР. Значки приходять із двох джерел (таб-бар — жорсткі 22px, `ICONS` —
+// 1em), тож без нормалізації в CSS стандартизація малюнків спричинила б НОВИЙ
+// розлад: два рядки з чотирьох стали б більшими за сусідні.
+const розміри = await p.evaluate(() =>
+  [...document.querySelectorAll('.shub-cat-ic svg')].map(s => {
+    const r = s.getBoundingClientRect();
+    return `${Math.round(r.width)}x${Math.round(r.height)}`;
+  }));
+ok('📐 усі значки списку одного розміру', розміри.length === 4 && new Set(розміри).size === 1,
+   розміри.join(' '));
 
 // ── 3. ЛОГІКА ПЕРЕХОДУ І «НАЗАД» ───────────────────────────────────────────
 await p.evaluate(() => document.querySelector('[data-shub-cat="articles"]')?.click());
