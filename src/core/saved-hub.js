@@ -37,7 +37,7 @@ import { getSupabase, fetchSavedPostIds, removeSavedPost, removeSavedArticle } f
 import { openBoardItemById } from '../tabs/board.js';
 import { getSavedArticleIds, getArticlesByIds, openArticle, refreshSavedArticles } from '../tabs/news.js';
 import { getSavedRoutesForUI, openSavedRouteOnBuses, unsaveRoute } from '../tabs/buses.js';
-import { ICONS } from './icons.js';
+import { ICONS, tabIcon } from './icons.js';
 import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
 
 let _sheet = null;
@@ -45,12 +45,43 @@ let _backdrop = null;
 let _view = 'categories';   // 'categories' | 'articles' | 'buses' | 'chats' | 'boards'
 let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
 
+// 🔴 06.09 — ЗНАЧКИ БЕРУТЬСЯ З ТАБ-БАРУ, А НЕ З ВЛАСНОГО НАБОРУ.
+//
+// 🗣️ Скарга Вови зі знімка: «деякі іконки не такого вигляду, як зовсім інша
+// іконка, наприклад, на питання. Це треба стандартизувати».
+//
+// 📐 ЗАМІРЯНО, ЧОМУ ВІН МАВ РАЦІЮ. Хаб тримав ВЛАСНИЙ набір із `ICONS`, і два
+// значки з чотирьох суперечили самому застосунку:
+//   • «Питання» — `ICONS.message`, бульбашка з рядками тексту. Це РІВНО той
+//     малюнок, який 11.08 прибрали з таб-бару як «іконку ЧАТУ» зі старих
+//     «Обговорень»; після цього іконку перемальовували ще шість разів до
+//     концепції «питання → відповідь» (дві бульбашки зі знаком «?»). У хабі
+//     дожила версія, від якої відмовились.
+//   • «Оголошення» — `ICONS.pin`, мітка на карті. А `pin` у цьому застосунку
+//     вже означає МІСЦЕ: він стоїть на самій картці оголошення біля назви села.
+//     На знімку Вови обидва знаки видно ОДНОЧАСНО — один знак, два значення.
+//
+// ✅ Лікування не «підмінити на кращі значки», а прибрати ДРУГЕ ДЖЕРЕЛО: розділ,
+// у який рядок веде, сам і дає свій значок (`tabIcon`) — так уже працює бургер-меню
+// з 10.08. Копію малюнка не заводимо: іконку «Питання» перемальовували сім разів,
+// і копія розійшлася б із оригіналом на першій же редакції, причому МОВЧКИ.
+//
+// ⚠️ `tab: null` у «Статей» — це не пропуск. Новини НЕ вкладка (їх відкриває
+// повноекранний хаб `openNewsHub`), брати значок нізвідки; `ICONS.newspaper` тут
+// збігається з пунктом «Новини» в бургер-меню, тобто джерело правди все одно одне.
+// 🔑 `icon` лишається в КОЖНОГО рядка як запасний: таб-бару може не бути (стенд,
+// що будує лише аркуш), і тоді рядок мусить показати значок, а не порожнє місце.
 const CATS = [
-  { key: 'articles', icon: ICONS.newspaper, label: 'Статті',       needsAuth: true },
-  { key: 'buses',    icon: ICONS.bus,       label: 'Автобуси',     needsAuth: false },
-  { key: 'chats',    icon: ICONS.message,   label: 'Питання',      needsAuth: true },
-  { key: 'boards',   icon: ICONS.pin,       label: 'Оголошення',   needsAuth: true },
+  { key: 'articles', tab: null,          icon: ICONS.newspaper, label: 'Статті',     needsAuth: true },
+  { key: 'buses',    tab: 'buses',       icon: ICONS.bus,       label: 'Автобуси',   needsAuth: false },
+  { key: 'chats',    tab: 'discussions', icon: ICONS.message,   label: 'Питання',    needsAuth: true },
+  { key: 'boards',   tab: 'board',       icon: ICONS.pin,       label: 'Оголошення', needsAuth: true },
 ];
+
+// Значок рядка: з таб-бару, якщо розділ є вкладкою, інакше власний.
+// 🛑 Береться В МОМЕНТ МАЛЮВАННЯ, а не при завантаженні модуля: `CATS` — константа
+// рівня файлу, і на той час таб-бару в документі може ще не бути.
+const catIcon = (c) => (c.tab ? tabIcon(c.tab, c.icon) : c.icon);
 
 function closeHub() {
   if (!_sheet) return;
@@ -150,7 +181,7 @@ function categoriesScreenHtml() {
     if (!count && !locked) return '';   // порожня й доступна категорія — не показуємо
     return `
       <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
-        <span class="shub-cat-ic">${c.icon}</span>
+        <span class="shub-cat-ic">${catIcon(c)}</span>
         <span class="shub-cat-label">${c.label}</span>
         ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
         <span class="shub-cat-chev">${ICONS.chevronRight}</span>
@@ -181,7 +212,7 @@ function headHtml() {
   if (!cat) return `<span class="shub-head-title">${ICONS.bookmark}Збережені</span>`;
   return `
     <button class="shub-back" type="button" data-shub-back aria-label="Назад">${ICONS.back}</button>
-    <span class="shub-head-title">${cat.icon}${cat.label}</span>
+    <span class="shub-head-title">${catIcon(cat)}${cat.label}</span>
     <span class="shub-head-count">${_data[cat.key].length}</span>`;
 }
 
