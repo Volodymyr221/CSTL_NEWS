@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788694668030,
+      "mission": "olyka:news:в-олицькій-громаді-обговорили",
+      "model": "claude-opus-5",
+      "input_tokens": 5886,
+      "output_tokens": 330,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0377,
+      "note": "В Олицькій громаді обговорили гранти на переробку для аграріїв та підприємців"
+    },
+    {
       "ts": 1788693373876,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0116,
       "note": ""
-    },
-    {
-      "ts": 1787297093760,
-      "mission": "holiday:🇺🇦 День Незалежності України",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 437,
-      "cache_read": 0,
-      "cache_write": 1194,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.011,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 10.8962,
-    "runs": 144,
+    "cost_usd": 10.9339,
+    "runs": 145,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.4279,
-      "runs": 19,
+      "cost_usd": 2.4656,
+      "runs": 20,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788693373876
+  "updated_ts": 1788694668030
 }
