@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1788787706781,
+      "mission": "olyka:news:в-олиці-запустили-навчальну",
+      "model": "claude-opus-5",
+      "input_tokens": 5844,
+      "output_tokens": 335,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0376,
+      "note": "В Олиці запустили навчальну онлайн-гру для дітей «Магічна подорож»"
+    },
+    {
       "ts": 1788785822463,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0302,
       "note": "Підземелля Олицького замку: 15 ходів по колу"
-    },
-    {
-      "ts": 1787298812830,
-      "mission": "olyka:story:сім-днів-коли-олика",
-      "model": "claude-opus-5",
-      "input_tokens": 4687,
-      "output_tokens": 288,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0306,
-      "note": "Сім днів, коли Олика була «столицею» Польщі"
     }
   ],
   "totals": {
-    "cost_usd": 10.9417,
-    "runs": 146,
+    "cost_usd": 10.9793,
+    "runs": 147,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.4734,
-      "runs": 21,
+      "cost_usd": 2.511,
+      "runs": 22,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788785822463
+  "updated_ts": 1788787706781
 }
