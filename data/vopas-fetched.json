@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-09-10T06:53:19.542033+03:00",
+  "fetched_at": "2026-09-10T11:49:03.057957+03:00",
   "date": "10.09.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -72,8 +72,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -87,8 +87,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -102,8 +102,8 @@
       "carrier": "Черняк П.К.-43018 Волинська об",
       "bus": "БОГДАН А0902",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -117,8 +117,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -132,8 +132,8 @@
       "carrier": "під.Коровицький Рожище",
       "bus": "БОГДАН А0902",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -147,8 +147,8 @@
       "carrier": "Черняк П.К.-43018 Волинська об",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -162,8 +162,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -177,8 +177,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "Баз  А  079.17",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -192,8 +192,8 @@
       "carrier": "Мірчук А.І.",
       "bus": "Фольсваген Крафтер",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -207,8 +207,8 @@
       "carrier": "Львів АТП 14631",
       "bus": "БАЗ  А 079.21",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
