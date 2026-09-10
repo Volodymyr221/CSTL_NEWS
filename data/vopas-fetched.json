@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-09-10T16:26:12.452507+03:00",
+  "fetched_at": "2026-09-10T20:06:27.344617+03:00",
   "date": "10.09.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -417,8 +417,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -432,8 +432,8 @@
       "carrier": "Львів АТП 14631",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -447,8 +447,8 @@
       "carrier": "Мірчук А.І.",
       "bus": "Фольсваген Крафтер",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -462,8 +462,8 @@
       "carrier": "Черняк П.К.-43018 Волинська об",
       "bus": "БОГДАН А0902",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -477,8 +477,8 @@
       "carrier": "НОВОВОЛИНСЬК АТП 10708",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -492,8 +492,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -507,8 +507,8 @@
       "carrier": "Черняк П.К.-43018 Волинська об",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
