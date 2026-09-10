@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1789040582479,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 557,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0087,
+      "note": ""
+    },
+    {
       "ts": 1788956316039,
       "mission": "olyka:news:в-олиці-проведуть-урочистості",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.011,
       "note": ""
-    },
-    {
-      "ts": 1787469092183,
-      "mission": "holiday:🇺🇦 День Незалежності України",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 427,
-      "cache_read": 0,
-      "cache_write": 1194,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0109,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 11.0373,
-    "runs": 150,
+    "cost_usd": 11.046,
+    "runs": 151,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.569,
-      "runs": 25,
+      "cost_usd": 2.5777,
+      "runs": 26,
       "web_searches": 42
     }
   },
-  "updated_ts": 1788956316039
+  "updated_ts": 1789040582479
 }
