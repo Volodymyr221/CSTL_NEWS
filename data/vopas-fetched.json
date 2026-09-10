@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-09-10T02:55:19.145330+03:00",
+  "fetched_at": "2026-09-10T06:53:19.542033+03:00",
   "date": "10.09.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -27,8 +27,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -42,8 +42,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
