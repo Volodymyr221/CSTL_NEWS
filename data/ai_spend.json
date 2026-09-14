@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1789391666843,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 501,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0081,
+      "note": ""
+    },
+    {
       "ts": 1789303317761,
       "mission": "olyka:news:в-олицькій-громаді-запустили",
       "model": "claude-opus-5",
@@ -766,24 +779,11 @@
       "found": 1,
       "cost_usd": 0.0329,
       "note": "Подія в громаді: 🇺🇦 День Незалежності України"
-    },
-    {
-      "ts": 1787558569019,
-      "mission": "olyka:story:скарби-радзивіллів-і-привид",
-      "model": "claude-opus-5",
-      "input_tokens": 4753,
-      "output_tokens": 243,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0298,
-      "note": "Скарби Радзивіллів і привид пані: легенди Олики"
     }
   ],
   "totals": {
-    "cost_usd": 11.1112,
-    "runs": 155,
+    "cost_usd": 11.1193,
+    "runs": 156,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.6429,
-      "runs": 30,
+      "cost_usd": 2.651,
+      "runs": 31,
       "web_searches": 42
     }
   },
-  "updated_ts": 1789303317761
+  "updated_ts": 1789391666843
 }
