@@ -115,6 +115,28 @@ export async function isTeamMember() {
 
 // ── ПОСТИ ────────────────────────────────────────────────────────────────
 
+// 🔴 17.09 — `.is('deleted_at', null)` У КОЖНОМУ ЧИТАННІ `posts`. ПРИЧИНА НИЖЧЕ.
+//
+// 🗣️ Скарга Вови 17.09: «з одного акаунту я надіслав два тестових питання. Одне я
+// з них видалив, і на тому акаунті, з якого я писав, воно видалилось. А з іншого
+// акаунту воно показується… Це ж соцмережа. Якщо я видаляю те, що написав, воно не
+// тільки в мене видаляється, воно у всіх зникає».
+//
+// 🔬 ЩО НАСПРАВДІ ВІДБУВАЛОСЬ (звірено в базі 17.09). Питання #96 «ЮПідскажіть…»
+// має `deleted_at = 2026-09-09 20:48`, тобто видалення СПРАЦЮВАЛО і дані чесні.
+// Політика читання теж правильна:
+//     (deleted_at is null and post_visible_row(status, owner_uid)) OR is_admin()
+// 🛑 Уся річ у хвості `OR is_admin()`: Вова дивиться зі свого основного акаунта, а
+// він ЄДИНИЙ рядок у таблиці `admins`. Для нього база законно віддає геть усе —
+// включно з видаленим. А клієнт власного фільтра не мав ЖОДНОГО: він покладався
+// на RLS як на єдиний захист.
+//
+// 🔑 УРОК, ШИРШИЙ ЗА ЦЕЙ БАГ: **клієнт не сміє покладатись на RLS як на єдиний
+// фільтр видимості.** RLS відповідає на питання «кому МОЖНА це прочитати», а не
+// «що тут ДОРЕЧНО показати». Щойно чиїсь права ширші за звичайні — фільтра не
+// лишається взагалі, і людина бачить те, чого показувати ніхто не збирався.
+// ⚠️ Для адміна видалене лишається доступним там, де воно й потрібне — в адмінці
+// (`admin.html` має власні запити й цих функцій не кличе, звірено).
 // Усі опубліковані пости (для Дошки громади 2.0)
 // Сортування за bumped_at DESC (підняті/свіжі зверху; bumped_at заповнено для всіх).
 // Якщо БД недоступна або порожня — повертаємо null (caller fall back на JSON).
@@ -124,6 +146,7 @@ export async function fetchPublishedPosts() {
     .from('posts')
     .select('*')
     .eq('status', 'published')
+    .is('deleted_at', null)          // 🔴 17.09 — див. шапку: RLS для адміна пропускає видалене
     .order('bumped_at', { ascending: false, nullsLast: true })
     .limit(200);
   if (error) {
@@ -140,6 +163,7 @@ export async function fetchPostById(id) {
     .from('posts')
     .select('*')
     .eq('id', id)
+    .is('deleted_at', null)          // deep-link на видалене питання теж не має відкриватись
     .single();
   if (error) return null;
   return data;
@@ -1102,6 +1126,7 @@ export async function fetchAuthorAds(uid, limit = 12) {
     .select('*')
     .eq('owner_uid', uid)
     .eq('status', 'published')
+    .is('deleted_at', null)
     .eq('type', 'board')
     .order('bumped_at', { ascending: false, nullsLast: true })
     .limit(limit);
@@ -1116,7 +1141,7 @@ export async function fetchMyPosts(uid) {
   // на вкладці Обговорення. Без фільтра обговорення просочувались у «Мої оголошення»
   // (баг, знайдений Ромою 08.07). neq — щоб старі пости без type не зникли.
   const { data, error } = await supa.from('posts')
-    .select('*').eq('owner_uid', uid).neq('type', 'chat')
+    .select('*').eq('owner_uid', uid).neq('type', 'chat').is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyPosts:', error.message); return []; }
   return data || [];
@@ -1719,7 +1744,7 @@ export async function fetchThreadPairs(uid) {
 export async function fetchPostBrief(postId) {
   if (!supa || postId == null) return null;
   const { data, error } = await supa.from('posts')
-    .select('id, title, text, status').eq('id', postId).maybeSingle();
+    .select('id, title, text, status').eq('id', postId).is('deleted_at', null).maybeSingle();
   if (error) { console.warn('[supabase] fetchPostBrief:', error.message); return null; }
   return data || null;
 }
