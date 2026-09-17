@@ -2085,9 +2085,58 @@ export async function savePushSubscription(payload, { resetNotified = false } = 
     row.notified_canc    = false;
     row.notified_start   = false;
   }
-  const r = await netCall(() => supa.from('push_subscriptions')
+  // 🔴 17.09 — ЗАБРАТИ ENDPOINT СОБІ ПЕРЕД ЗАПИСОМ (див. коментар нижче).
+  await забратиАдресуПристрою(row.endpoint);
+  const запис = () => netCall(() => supa.from('push_subscriptions')
     .upsert(row, { onConflict: 'endpoint,route_id,track_date' }));
+  let r = await запис();
+  // Другий рубіж: якщо захоплення не вийшло (обрив мережі) або чужий рядок
+  // з’явився між двома запитами — чесно пробуємо ще раз, а не віддаємо людині тост
+  // «не вдалось увімкнути сповіщення», який вона ніяк не може виправити.
+  if (!r.ok && r.rawError?.code === '42501') {
+    _busEndpointClaimed.delete(row.endpoint);
+    await забратиАдресуПристрою(row.endpoint);
+    r = await запис();
+  }
   return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+// ── ENDPOINT НАЛЕЖИТЬ ТОМУ, ХТО НА ПРИСТРОЇ ЗАРАЗ (17.09) ───────────
+//
+// 🔴 Жива помилка з журналу збоїв (Катерина, 09.09, два випадки):
+//     42501 new row violates row-level security policy (USING expression)
+//           for table "push_subscriptions"
+// Це НЕ та сама вада, що 16.08. Тоді бракувало SELECT-політики і текст був
+// без дужок. Дужки `(USING expression)` Postgres додає рівно в одному випадку:
+// `ON CONFLICT DO UPDATE` знайшов конфліктний рядок, але той не пройшов USING
+// політики UPDATE — тобто рядок ЧУЖИЙ.
+//
+// 🔑 Як чужий рядок туди потрапляє. Унікальний індекс `push_subs_unique` — це
+// `(endpoint, route_id, track_date)`, БЕЗ власника. `endpoint` — адреса
+// ПРИСТРОЮ, а не людини: на одному телефоні може побувати кілька акаунтів
+// (сімейний пристрій, наші ж тести з двох акаунтів). Підписка попереднього
+// лишалась — і наступна людина не могла відстежити той самий рейс узагалі.
+//
+// 🛑 І це не лише помилка. Edge Function `send-bus-push` шле на `endpoint`, тобто
+// на ПРИСТРІЙ. Стара підписка чужого акаунта прилетіла б на екран тому,
+// хто користується телефоном зараз.
+//
+// ✅ Ліки ті самі, що 24.08 для `user_push_devices` (`claim_push_device`): пристрій
+// належить тому, хто на ньому зараз. Чужі рядки по цьому endpoint прибирає
+// SECURITY DEFINER-функція `claim_bus_push_endpoint` — клієнтові RLS чуже не віддасть,
+// і правильно зробить.
+//
+// ⚠️ Пам’ять на сеанс — не економія заради економії: `savePushSubscription` кличе
+//    `selfHealPushSubscriptions()` при КОЖНОМУ відкритті вкладки Автобуси і на
+//    КОЖНИЙ відстежуваний рейс. Endpoint у сеансі один — забирати його варто раз.
+const _busEndpointClaimed = new Set();
+
+async function забратиАдресуПристрою(endpoint) {
+  if (!supa || !endpoint || _busEndpointClaimed.has(endpoint)) return;
+  const r = await netCall(() => supa.rpc('claim_bus_push_endpoint', { p_endpoint: endpoint }));
+  // Не вийшло — НЕ запам’ятовуємо: наступна спроба має повторити захоплення.
+  if (r.ok) _busEndpointClaimed.add(endpoint);
+  else console.warn('[supabase] claim_bus_push_endpoint:', r.error);
 }
 
 // 🔴 16.08 — ПЕРЕНОС ПІДПИСОК НА НОВУ АДРЕСУ (ротація push-підписки браузером).
