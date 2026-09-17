@@ -2359,6 +2359,39 @@ export async function fetchPages() {
 
 // Пости стрічки: усіх сторінок (pageId=null) або однієї. Невидалені, найсвіжіші.
 // pages(name, avatar_url) — вкладений join за FK page_posts.page_id → pages.id.
+// 🔴 17.09 — ДОПИСИ З ГАЛОЧКОЮ «І В НОВИНАХ» — ПРЯМО З БАЗИ, БЕЗ ЧЕКАННЯ СИНКУ.
+//
+// 🗣️ Замовлення Вови: «якщо я публікую пост і вибираю цю галочку, то щоб відразу
+// оновлювався блок новин з цією новиною… потрібно це реалізувати правильно, щоб
+// воно не падало і працювало технічно правильно».
+//
+// 🔬 ЧОМУ ОДНОГО СИНКУ МАЛО. Шлях «допис → `data/articles.json`» надійний, але
+// довгий: синк ходить раз на 15 хвилин, далі деплой. Заміряно 17.09 на живому
+// дописі Вови: опублікований о 15:35, у стрічці — о 15:56. Двадцять хвилин
+// очікування там, де людина щойно натиснула «Опублікувати».
+//
+// 🔑 ТОМУ ДВА ШЛЯХИ, І ЦЕ НЕ ДУБЛЮВАННЯ, А СТРАХОВКА В ОБИДВА БОКИ:
+//   • база (цей запит) — МИТТЄВО, але потребує мережі й живого Supabase;
+//   • `articles.json` (синк) — із затримкою, зате працює офлайн і без бази.
+// Хто з них перший — той і показує; другий не дублює, бо збіг ловиться за
+// `post_id` (див. `ensureNewsLoaded` у `tabs/news.js`).
+//
+// 🛑 Fail-soft обовʼязковий: немає бази — повертаємо порожньо і мовчимо. Новини з
+// файлу мусять показатись у будь-якому разі; це додача, а не умова.
+export async function fetchCommunityToNews(limit = 20) {
+  if (!supa) return [];
+  const { data, error } = await supa
+    .from('page_posts')
+    .select('id, page_id, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .eq('to_news', true)
+    .eq('status', 'published')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) { console.warn('[supabase] fetchCommunityToNews:', error.message); return []; }
+  return data || [];
+}
+
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   // 🔴 20.08 — `status = 'published'`. З появою ШІ-агента спільноти пости мають

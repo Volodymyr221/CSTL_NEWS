@@ -2,7 +2,8 @@ import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/
 import { ICONS } from '../core/icons.js';
 import { registerScope, readSeen, writeSeen, readSeenIds, writeSeenIds } from '../core/board-shared.js';
 import { openPhotoViewer } from '../core/photo-viewer.js';
-import { onReturn } from '../core/refresh-on-return.js';   // «повернувся / мережа з'явилась → дозавантаж» (17.09)   // перегляд фото на весь екран (спільний зі «Стрічкою»)
+import { onReturn } from '../core/refresh-on-return.js';
+import { fetchCommunityToNews } from '../core/supabase.js';   // допис спільноти з галочкою «і в Новинах» (17.09)   // «повернувся / мережа з'явилась → дозавантаж» (17.09)   // перегляд фото на весь екран (спільний зі «Стрічкою»)
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
@@ -385,10 +386,101 @@ export async function ensureNewsLoaded({ force = false } = {}) {
       _newsLoadFailed = true;
     }
   }
+  // 🔴 17.09 — ДОЛИВ ДОПИСІВ СПІЛЬНОТ ІДЕ У ФОНІ, А НЕ ТРИМАЄ НОВИНИ.
+  //
+  // 🛑 ДВІ ПОПЕРЕДНІ ВЕРСІЇ БУЛИ ГІРШІ, І ОБИДВІ СПІЙМАЛИ СТЕНДИ:
+  //   1. `await доливДописівСпільнот()` — при недосяжній базі новини зникали З
+  //      ЕКРАНА ЗОВСІМ: запит не падав, а ВИС, і `await` тримав усю функцію
+  //      (`instant-community-news`);
+  //   2. `Promise.race` з межею 2.5с — новини вже не зникали, але КОЖНЕ відкриття
+  //      могло чекати ті 2.5 секунди дарма. `news-widget` упав саме на цьому.
+  //
+  // 🔑 Правильно — не чекати ВЗАГАЛІ. Новини з файлу віддаємо негайно (вони вже
+  // прочитані), а дописи доливаються окремою гілкою і, щойно приходять, шлють
+  // `cstl-news-reloaded` — ту саму подію, на яку віджет Громади вже підписаний із
+  // ранкової роботи. Тобто людина бачить стрічку миттєво, а свій щойно
+  // опублікований допис — за частку секунди після неї.
+  // ⚠️ `.catch()` обовʼязковий: необроблена відмова у фоновій гілці — це помилка в
+  // консолі на рівному місці.
+  доливДописівСпільнот()
+    .then(додано => {
+      if (додано) window.dispatchEvent(new CustomEvent('cstl-news-reloaded',
+        { detail: { причина: 'community' } }));
+    })
+    .catch(() => {});
   return allArticles;
 }
 
 // Для хаба «Збережені» (Б5.4) — статті за списком id, у порядку id (найновіші збережені зверху).
+// 🔴 17.09 — ДОПИСИ СПІЛЬНОТ ІЗ ГАЛОЧКОЮ ДОЛИВАЮТЬСЯ ЖИВИМИ, З БАЗИ.
+//
+// 🗣️ Вова: «якщо я публікую пост і вибираю цю галочку, щоб ВІДРАЗУ оновлювався
+// блок новин». Синк робить те саме, але раз на 15 хвилин плюс деплой — заміряно на
+// його ж дописі: опублікований 15:35, у стрічці 15:56.
+//
+// 🔑 ДВА ДЖЕРЕЛА, ОДИН СПИСОК. Хто перший — той і показує:
+//   • є в `articles.json` (синк уже доїхав) — беремо файл, з бази НЕ додаємо;
+//   • ще немає — домальовуємо з бази, щоб людина побачила свій допис одразу.
+// Збіг ловиться за `post_id` — тим самим полем, яке пише синк.
+//
+// 🛑 ФАЙЛ ГОЛОВНІШИЙ ЗА БАЗУ, і це не дрібниця: у файлі текст уже пройшов
+// `polish_markup` (посилання, абзаци, чистка чужої навігації), а тут ми маємо
+// сирий текст допису. Якби база перемагала, акуратна стаття підмінялась би сирою
+// щоразу, коли обидва джерела мають запис.
+//
+// ⚠️ FAIL-SOFT: немає мережі чи бази — просто нічого не доливаємо. Новини з файлу
+// показуються в будь-якому разі; це додача, а не умова.
+async function доливДописівСпільнот() {
+  let рядки = [];
+  try { рядки = await fetchCommunityToNews(20); } catch (_) { return false; }
+  if (!рядки.length) return false;
+  const вже = new Set(allArticles.map(a => a.post_id).filter(Boolean));
+  const нові = [];
+  for (const r of рядки) {
+    if (вже.has(r.id)) continue;                     // синк уже доставив — файл головніший
+    const текст = (r.text || '').trim();
+    if (!текст) continue;                            // допис лише з фото — заголовка не буде
+    const фото = (r.image_urls || [])[0] || r.image_url || null;
+    нові.push({
+      // 🔑 Номер із ТОГО САМОГО простору, що й у синку (від мільйона), плюс зсув:
+      // так тимчасовий запис не зіткнеться ні з парсером, ні з кабінетом.
+      id: 9_000_000 + r.id,
+      title: заголовокДопису(текст),
+      excerpt: текст.replace(/\s+/g, ' ').slice(0, 400),
+      content: текст,
+      category: 'Суспільство',
+      geo: 'Громада',
+      image: фото,
+      image_type: фото ? 'source' : 'none',
+      source: (r.pages && r.pages.name) || 'Спільнота',
+      sourceUrl: `#/post/feed/${r.id}`,
+      exclusive: true,
+      ts: Date.parse(r.created_at) || Date.now(),
+      kind: 'community',
+      post_id: r.id,
+    });
+  }
+  if (!нові.length) return false;
+  allArticles = нові.concat(allArticles);
+  return true;
+}
+
+// Заголовок картки з тексту допису: перше речення, з обрізкою по МЕЖІ СЛОВА.
+// 🛑 Те саме правило, що в синку (`заголовок_допису` у `scripts/sync_cms.py`).
+// Два місця — плата за миттєвість: синк на Python, клієнт на JS. Розходження не
+// страшне (обидва дають той самий перший рядок), але міняєш одне — глянь у сусіда.
+function заголовокДопису(текст) {
+  const чисто = (текст || '').replace(/\s+/g, ' ').trim();
+  if (!чисто) return '';
+  for (const межа of ['. ', '! ', '? ']) {
+    const i = чисто.indexOf(межа);
+    if (i > 0 && i <= 90) return чисто.slice(0, i + 1).trim();
+  }
+  if (чисто.length <= 90) return чисто;
+  const вкорочено = чисто.slice(0, 90).replace(/\s+\S*$/, '');
+  return (вкорочено || чисто.slice(0, 90)) + '…';
+}
+
 export async function getArticlesByIds(ids) {
   await ensureNewsLoaded();
   return ids.map(id => allArticles.find(a => a.id === id)).filter(Boolean);
