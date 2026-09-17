@@ -431,9 +431,26 @@ export async function ensureNewsLoaded({ force = false } = {}) {
 // ⚠️ FAIL-SOFT: немає мережі чи бази — просто нічого не доливаємо. Новини з файлу
 // показуються в будь-якому разі; це додача, а не умова.
 async function доливДописівСпільнот() {
-  let рядки = [];
+  let рядки = null;
   try { рядки = await fetchCommunityToNews(20); } catch (_) { return false; }
-  if (!рядки.length) return false;
+  // 🛑 `null` = «не змогли спитати». Нічого не додаємо і, головне, НІЧОГО НЕ
+  // ПРИБИРАЄМО: інакше кожен обрив мережі стирав би зі стрічки живі дописи.
+  if (рядки === null) return false;
+
+  // 🔴 17.09 — ПРИБИРАЄМО ТЕ, ЧОГО ВЖЕ НЕ МАЄ БУТИ.
+  // 🗣️ Скарга Вови: «я видалив цей допис у стрічці, чому він не пропав з новин?»
+  // 🔬 Так і було: синк умів ДОДАВАТИ, але не прибирати. Допис #56 отримав
+  // `deleted_at`, у Стрічці зник — а стаття в `articles.json` лишилась назавжди.
+  // 🔑 Те саме правило, що ми закріпили сьогодні вранці на питаннях: видалене
+  // зникає У ВСІХ і всюди, а не лише там, де його видалили.
+  // ⚠️ Прибираємо ЛИШЕ записи з `post_id` (наші дописи спільнот). Статті парсера
+  // й кабінету живуть за своїми правилами — чіпати їх звідси не можна.
+  const живі = new Set(рядки.map(r => r.id));
+  const було = allArticles.length;
+  allArticles = allArticles.filter(a => !a.post_id || живі.has(a.post_id));
+  const прибрано = було - allArticles.length;
+
+  if (!рядки.length) return прибрано > 0;
   const вже = new Set(allArticles.map(a => a.post_id).filter(Boolean));
   const нові = [];
   for (const r of рядки) {
@@ -460,7 +477,7 @@ async function доливДописівСпільнот() {
       post_id: r.id,
     });
   }
-  if (!нові.length) return false;
+  if (!нові.length) return прибрано > 0;
   allArticles = нові.concat(allArticles);
   return true;
 }
