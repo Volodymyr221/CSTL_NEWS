@@ -807,7 +807,10 @@ def item_to_article(item: dict) -> dict | None:
             "title": title,
             "excerpt": (summary or content)[:400],
             "content": content,
-            "category": item.get("category") or pr.detect_category(title + " " + content),
+            # 🔴 17.09 — ЧЕРЕЗ КАНОН. Було `item.get("category") or detect_category(...)`,
+            # тобто будь-яка вигадана моделлю назва йшла в дані як є — звідти 26
+            # категорій замість 10, усі «дикі» на наших власних статтях.
+            "category": pr.canon_category(item.get("category"), title, content),
             "geo": geo,
             "image": None,
             "image_type": "none",              # уточнимо в enqueue (Wikimedia → illustration)
@@ -835,7 +838,7 @@ def item_to_article(item: dict) -> dict | None:
         "title": title,
         "excerpt": summary[:400],
         "content": summary,           # крок 7 замінить на повний текст із url
-        "category": item.get("category") or pr.detect_category(title + " " + summary),
+        "category": pr.canon_category(item.get("category"), title, summary),  # 🔴 17.09 — через канон
         "geo": geo,
         "image": None,
         "image_type": "none",         # уточнимо в enqueue (og:image → source)
