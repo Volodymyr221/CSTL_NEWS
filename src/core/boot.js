@@ -35,18 +35,28 @@ function setupSW() {
     doReload();
   });
 
+  // 🔴 17.09 — СЮДИ ЗАГЛЯНУЛИ ЧЕРЕЗ ЖУРНАЛ ЗБОЇВ. У гостя записалось
+  // `promise: Failed to update a ServiceWorker… Operation has been aborted`.
+  // `registration.update()` повертає обіцянку, а жоден із трьох викликів її не ловив.
+  // Коли людина згортає застосунок рівно в цю мить, браузер обриває перевірку і
+  // обіцянка падає — це штатний хід подій, а не поломка. Але без `catch` вона
+  // летіла в `unhandledrejection` і сідала в журнал поряд із справжніми вадами.
+  // ⚙️ Перевірка оновлення — справа best-effort: не вдалось зараз, спробуємо на
+  //    наступне повернення на екран. Реагувати ні на що — звідси порожній catch.
+  const перевіритиОновлення = () => { try { _swReg?.update()?.catch(() => {}); } catch (_) {} };
+
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && _swReg) _swReg.update();
+    if (document.visibilityState === 'visible') перевіритиОновлення();
   });
 
   window.addEventListener('pageshow', e => {
-    if (e.persisted && _swReg) _swReg.update();
+    if (e.persisted) перевіритиОновлення();
   });
 
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
     .then(reg => {
       _swReg = reg;
-      reg.update();
+      перевіритиОновлення();
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
         if (!sw) return;
@@ -85,6 +95,18 @@ function reportJsError(kind, msg, src, line, col) {
     if (_errorsLogged >= 5) return;
     const текст = String(msg || '').slice(0, 160);
     if (!текст) return;
+    // 🟢 17.09 — `Script error.` БЕЗ ФАЙЛУ І БЕЗ РЯДКА — ЦЕ НЕ НАША ПОМИЛКА.
+    // Так браузер за стандартом позначає збій У ЧУЖОМУ скрипті (у нас це
+    // GoatCounter): ні тексту, ні файлу, ні рядка — рівно нуль відомостей.
+    // 5 таких записів за 30 днів стояли в журналі поряд із справжніми вадами і
+    // забирали місце в стелі «5 подій за сеанс» — тобто шум не просто заважав,
+    // а ВИТІСНЯВ те, що ми можемо полагодити.
+    // 🛑 Єдиний спосіб побачити текст — `crossorigin` на чужому скрипті, а це
+    //    ЗАБОРОНЕНО (`NOW.md` → НЕ ЧІПАТИ: аналітика мовчки помре). Отже запис
+    //    недієвий за будовою — його місце не в журналі вад.
+    // ⚠️ Фільтр ВУЗЬКИЙ: тільки цей точний текст і тільки без файлу/рядка.
+    //    Будь-яка помилка з адресою доходить у журнал, як і досі.
+    if (kind === 'error' && /^Script error\.?$/.test(текст) && !src && !line) return;
     // Файл лишаємо без домену — він в усіх однаковий і лише з'їдає місце.
     const файл = String(src || '').split('/').pop().slice(0, 40);
     const підпис = `${kind}|${текст}|${файл}:${line || 0}`;

@@ -4151,6 +4151,27 @@ function wireCards(root) {
   });
 }
 
+// Спільний перемір згортання для УСІХ видимих списків Стрічки.
+//
+// 🔴 17.09 — ЦЕ БУВ `ReferenceError` У ЖИВОГО ЧОЛОВІКА (Журнал збоїв, 3 випадки).
+// На зміні ШИРИНИ екрана (поворот телефона) слухач `resize` кликав
+// `relayoutCards` — функцію, якої В КОДІ НЕМАЄ жодної. Обробник падав
+// на останньому рядку — тобто `wireClamps(list)` перед ним устигав виконатись,
+// а екрани сторінок (`.fd-screen`) після повороту так і лишались зі старою
+// розкладкою: кнопка «Показати більше» там, де ховати вже нічого, або навпаки.
+// ⚙️ Чому стенди цього не бачили: помилка живе ЛИШЕ всередині обробника
+//    і ЛИШЕ при зміні ширини — без повороту екрана рядок не виконується ніколи.
+//    Тому сторож `tests/feed-relayout.mjs` міняє ширину наживо і читає помилки сторінки.
+// 🔑 Одне місце на два приводи (відкрили вкладку · повернули екран): розбіжність
+//    між двома копіями одного правила і була тим, що сховало цю ваду.
+function перемірятиЗгортання() {
+  const list = document.getElementById('feed-list');
+  if (list && list.getClientRects().length) wireClamps(list);
+  document.querySelectorAll('.fd-screen').forEach(scr => {
+    if (scr.getClientRects().length) wireClamps(scr);
+  });
+}
+
 // ── Точка входу ─────────────────────────────────────────────────────────────
 export async function initFeed() {
   const root = document.getElementById('page-shotam');
@@ -4166,13 +4187,7 @@ export async function initFeed() {
     // порахувати ЛИШЕ коли вкладка справді на екрані.
     // ⚠️ Слухаємо `cstl-tab-changed`, а не `resize`: перехід між вкладками не
     // міняє розмірів вікна, тож старий слухач цієї миті не бачив зовсім.
-    window.addEventListener('cstl-tab-changed', () => {
-      const list = document.getElementById('feed-list');
-      if (list && list.getClientRects().length) wireClamps(list);
-      document.querySelectorAll('.fd-screen').forEach(scr => {
-        if (scr.getClientRects().length) wireClamps(scr);
-      });
-    });
+    window.addEventListener('cstl-tab-changed', перемірятиЗгортання);
 
     // Поворот екрана міняє кількість рядків у тексті — переміряти згортання,
     // інакше кнопка «Показати більше» лишиться там, де ховати вже нічого.
@@ -4183,9 +4198,7 @@ export async function initFeed() {
     window.addEventListener('resize', () => {
       if (window.innerWidth === lastW) return;
       lastW = window.innerWidth;
-      const list = document.getElementById('feed-list');
-      if (list) wireClamps(list);
-      document.querySelectorAll('.fd-screen').forEach(relayoutCards);
+      перемірятиЗгортання();
     });
 
     // 🗑 08.08 — ЗГОРТАННЯ ТОПБАРУ ЗНЯТО. Тут висів слухач скролу, який щокадру
