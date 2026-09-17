@@ -296,6 +296,15 @@
       margin-bottom: 10px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
+    /* 🔴 17.09 — Банер стану агента. Причина мовчання має бути ТУТ, а не в лозі
+       GitHub Actions: саме через це Вова два тижні бачив порожню чергу чернеток
+       і не мав звідки дізнатись, що агент просто впирається в бюджет. */
+    .agent-state { border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid; }
+    .agent-state--pause { background: #FFF7E6; border-color: #F0C36D; }
+    .agent-state--ok    { background: #EFF8F0; border-color: #A8D5AD; }
+    .agent-state-h { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .agent-state-b { font-size: 13.5px; line-height: 1.45; }
+    .agent-state-s { font-size: 12px; color: #777; margin-top: 6px; }
     .spend-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 4px; }
     .spend-cards .card { margin-bottom: 0; }
     .spend-lbl { font-size: 12px; color: #888; }
@@ -1569,7 +1578,31 @@ async function renderSpend(el) {
   const month = (d.months && d.months[monthKey]) || {};
   const runs = d.runs || [];
   const last = runs[0];
+  // 🔴 17.09 — БАНЕР СТАНУ АГЕНТА. Замовлення Вови: «якщо є якісь проблеми з
+  // агентами, то потрібно це позначати». Два тижні кабінет показував чернетки від
+  // 01.09 і жодної нової; агент при цьому стартував щогодини і мовчки виходив на
+  // перевірці бюджету. Причина існувала в лозі GitHub Actions — там, куди Вова не
+  // дивиться і не мусить. Тепер вона тут.
+  // 🔑 Стан ПИШЕ САМ АГЕНТ (`write_agent_status` у ai_news_agent.py). Кабінет його
+  // лише показує: інакше правило жило б у двох місцях і перше ж уточнення стелі
+  // розвело б їх.
+  const st = d.agent_status;
+  let банер = '';
+  if (st && st.стан === 'пауза') {
+    банер = `<div class="agent-state agent-state--pause">
+      <div class="agent-state-h">⏸ Агент новин на паузі — нових чернеток не буде</div>
+      <div class="agent-state-b">${escapeHtml(st.причина || '')}${
+        st.відновиться ? ' · відновиться <b>' + escapeHtml(st.відновиться) + '</b>' : ''}</div>
+      <div class="agent-state-s">Витрачено ${usd(st.витрачено_міс)} зі стелі ${usd(st.стеля_міс)} · перевірено ${escapeHtml(formatDate(st.ts))}</div>
+    </div>`;
+  } else if (st && st.стан === 'працює') {
+    банер = `<div class="agent-state agent-state--ok">
+      <div class="agent-state-h">🟢 Агент новин працює</div>
+      <div class="agent-state-s">Витрачено ${usd(st.витрачено_міс)} зі стелі ${usd(st.стеля_міс)} · перевірено ${escapeHtml(formatDate(st.ts))}</div>
+    </div>`;
+  }
   el.innerHTML = `
+    ${банер}
     <div class="section-title">💸 Витрати AI-агента (новини)</div>
     <div class="spend-cards">
       <article class="card"><div class="spend-lbl">Цей місяць (${monthKey})</div><div class="spend-big">${usd(month.cost_usd)}</div><div class="spend-sub">${month.runs || 0} запусків · ${month.web_searches || 0} пошуків</div></article>
@@ -1584,7 +1617,7 @@ async function renderSpend(el) {
           <span class="spend-row-cost">${usd(r.cost_usd)}</span>
           <span class="spend-row-meta">${(r.found || 0)} статей · ${(r.web_searches || 0)} пош.${r.cache_read ? ' · кеш ' + Math.round(r.cache_read / 1000) + 'k' : ''}${r.note ? ' · ' + escapeHtml(r.note) : ''}</span>
         </div>`).join('') + '</div>'}
-    <p style="font-size:12px;color:#999;margin-top:12px">Ціни claude-sonnet-5: вхід $3 / вихід $15 за 1млн токенів · веб-пошук $10/1000. Оновлюється після кожного запуску агента (кожні 6 год).</p>
+    <p style="font-size:12px;color:#999;margin-top:12px">Ціни claude-sonnet-5: вхід $2 / вихід $10 за 1млн токенів · веб-пошук $10/1000. Оновлюється після кожного запуску агента (кожні 6 год).</p>
   `;
 }
 
