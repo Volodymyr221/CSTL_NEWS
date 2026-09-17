@@ -1863,7 +1863,23 @@ function pluralNew(n) {
   return 'нових';
 }
 
+// 🔴 17.09 — ВІДЖЕТ САМ ПЕРЕМАЛЬОВУЄТЬСЯ, КОЛИ НОВИНИ ДОЗАВАНТАЖИЛИСЬ.
+// `news.js` після вдалого повтору (повернення у застосунок або поява мережі)
+// шле `cstl-news-reloaded` — і тут ми показуємо те, що вже приїхало.
+// 🔑 Без цього рядка повтор був би невидимий: дані в памʼяті свіжі, а на екрані
+// висить «Не вдалось завантажити новини» доти, доки людина не тапне сама. Саме на
+// це і скаржився Вова — «не розумію, зависло воно чи ні».
+// ⚠️ Слухач вішається ОДИН раз на модуль, не з рендера: інакше кожна перемальовка
+// додавала б ще один, і один сигнал давав би десять походів у мережу.
+let _newsReloadWired = false;
+function wireNewsReloadRepaint() {
+  if (_newsReloadWired) return;
+  _newsReloadWired = true;
+  window.addEventListener('cstl-news-reloaded', () => { renderCommunityNews(); });
+}
+
 export async function renderCommunityNews() {
+  wireNewsReloadRepaint();
   const el = document.getElementById('cm-news-content');
   if (!el) return;
   const arts = await ensureNewsLoaded();

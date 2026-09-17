@@ -1,7 +1,8 @@
 import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 import { registerScope, readSeen, writeSeen, readSeenIds, writeSeenIds } from '../core/board-shared.js';
-import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний зі «Стрічкою»)
+import { openPhotoViewer } from '../core/photo-viewer.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся / мережа з'явилась → дозавантаж» (17.09)   // перегляд фото на весь екран (спільний зі «Стрічкою»)
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
@@ -246,6 +247,44 @@ export function countNewCommunity(arts) {
 export async function initNews() {
   await ensureNewsLoaded();
   attachNewsListeners();
+  wireNewsAutoRetry();
+}
+
+// 🔴 17.09 — САМО-ДОЗАВАНТАЖЕННЯ НОВИН. Замовлення Вови: «щоб воно в будь-якому
+// випадку обновляло чи дозавантажувало, коли користувач заходить в додаток, чи на
+// якусь вкладку… а то я не розумію, чи воно зависло, чи ні».
+//
+// 🔬 ЩО САМЕ ЛАМАЛОСЬ. `ensureNewsLoaded()` тягне `articles.json` РІВНО ОДИН раз за
+// сеанс (`if (!allArticles.length)`). Якщо той раз випав на мить без зв'язку,
+// `_newsLoadFailed` лишався піднятим, і вкладка показувала збій **до кінця сеансу**
+// — навіть коли інтернет повернувся через секунду. Полагодити це тапом було не
+// можна: повторного походу в мережу просто не існувало.
+//
+// 🔑 ЧОМУ ЛИШЕ ПІСЛЯ ЗБОЮ, А НЕ ЩОРАЗУ. Стрічка новин — статичний файл, що
+// оновлюється парсером раз на годину; перечитувати 1.9 МБ на кожен тик таб-бару
+// означало б платити трафіком за дані, які майже напевно ті самі. Тому умова
+// вузька: качаємо повторно ТІЛЬКИ якщо минулого разу не вийшло.
+// ⚠️ `force: true` тут обовʼязковий — без нього `ensureNewsLoaded` побачила б
+// порожній масив і... теж пішла б у мережу, але сенс умови був би прихований.
+let _retryWired = false;
+function wireNewsAutoRetry() {
+  if (_retryWired) return;
+  _retryWired = true;
+  onReturn('', async (причина) => {
+    if (!newsLoadFailed()) return;              // усе гаразд — не чіпаємо
+    await ensureNewsLoaded({ force: true });
+    if (!newsLoadFailed()) {
+      // 🔑 ЗВІДСИ НЕ МАЛЮЄМО. `news.js` — модуль ДАНИХ; хто показує новини
+      // (хаб, віджет Громади), той і перемальовує. Перша версія кликала тут
+      // `renderNews()` — функції, якої в цьому модулі НЕМАЄ, і виклик мовчки
+      // провалився б у `catch`: дані оновились, екран лишився старий, помилки
+      // ніде. Рівно той «мовчазний провал», проти якого все це й робиться.
+      window.dispatchEvent(new CustomEvent('cstl-news-reloaded', { detail: { причина } }));
+    }
+  // 🔑 ТЕРМІНОВО, ПОКИ НОВИНИ НЕ ЗАВАНТАЖИЛИСЬ. Поріг антифлуду (5с) існує проти
+  // смикання таб-бару; але поки на екрані «не вдалось завантажити», кожне
+  // повернення — шанс це виправити, і чекати 5 секунд немає за що.
+  }, () => newsLoadFailed());
 }
 
 // Слухач модалки статті (плейсхолдер битих фото; share тепер через header-іконку в openArticle).
@@ -332,8 +371,8 @@ let _newsLoadFailed = false;
 export function newsLoadFailed() { return _newsLoadFailed; }
 
 // Завантажує статті раз і віддає масив (для блоку Громади, щоб openArticle їх бачив).
-export async function ensureNewsLoaded() {
-  if (!allArticles.length) {
+export async function ensureNewsLoaded({ force = false } = {}) {
+  if (force || !allArticles.length) {
     try {
       const res = await fetch('./data/articles.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
