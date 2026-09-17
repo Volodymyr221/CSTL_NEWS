@@ -78,9 +78,17 @@ await p.route('**/data/articles.json*', r => r.fulfill({ status: 200,
   body: JSON.stringify(ARTICLES) }));
 // Автобус досівається у сховище: це лише СЦЕНА (щоб категорій було чотири), а не
 // доказ чогось — урок 31.08 про посів, який «доводив» ваду, створену самим посівом.
-await p.addInitScript(() => localStorage.setItem('bus_track_v2:uid-a', JSON.stringify({
-  routes: [{ routeId: 'r1', trackDate: '2026-09-06', from: 'Олика', to: 'Луцьк',
-             title: 'Олика → Луцьк', dayLabel: 'Завтра', timeStr: '07:20' }] })));
+// 🔴 17.09 — ДАТА РАХУЄТЬСЯ, А НЕ ЗАШИТА. Тут стояло `trackDate: '2026-09-06'`, і
+// сторож зогнив разом із календарем: `buses.js` відкидає рейси з `trackDate < today`
+// (рядки 295 і 514), тож 17.09 посів просто не доїжджав — категорій ставало три
+// замість чотирьох, і ЧОТИРИ перевірки червоніли на здоровому коді.
+// 🛑 Червоне над правильним кодом гірше за відсутність перевірки: наступного разу
+// на нього не подивляться. Беремо завтрашній день — сцена лишається тією самою в
+// будь-який день року.
+const завтра = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+await p.addInitScript((дата) => localStorage.setItem('bus_track_v2:uid-a', JSON.stringify({
+  routes: [{ routeId: 'r1', trackDate: дата, from: 'Олика', to: 'Луцьк',
+             title: 'Олика → Луцьк', dayLabel: 'Завтра', timeStr: '07:20' }] })), завтра);
 await p.goto(url, { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(2500);
 await p.evaluate(() => document.querySelector('.consent-accept')?.click());
