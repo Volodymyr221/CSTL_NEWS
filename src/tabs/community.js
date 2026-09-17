@@ -55,6 +55,7 @@
 import { escapeHtml, firstNameOf } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange, authReady } from '../core/auth.js';
 import { refreshAccountButtons } from '../core/account-ui.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся → свіже» (17.09)
 import { renderHomeCaps } from './home-caps.js';
 import { renderHomeFund } from './home-fund.js';
 import { renderHomeFeed } from './home-feed.js';
@@ -310,7 +311,29 @@ export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   refreshAccountButtons();
-  if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
+  if (!_greetingWired) {
+    onAuthChange(updateGreetingName);
+    // 🔴 17.09 — ІМʼЯ І ФОТО ОНОВЛЮЮТЬСЯ БЕЗ ПЕРЕЗАПУСКУ ЗАСТОСУНКУ.
+    // 🗣️ Скарга Вови: «оновлюю імʼя чи фотографію в кабінеті, виходжу на Громаду —
+    // у привітанні старе. Мені треба закрити застосунок і зайти знову».
+    // 🔑 Два приводи, і кожен закриває свій випадок:
+    //   1. `cstl-profile-updated` (шле `saveProfile`) — людина натиснула «Зберегти»
+    //      і ще НЕ виходила з кабінету. Спрацьовує миттєво, тобто коли вона
+    //      повернеться на Громаду, ім'я там уже нове.
+    //   2. `onReturn('community')` — страховка на все інше: профіль міг змінитись
+    //      із ДРУГОГО пристрою або другого акаунта, і тоді жодної події тут не буде.
+    // ⚠️ Обидва кличуть ті самі дві функції, тож подвійне спрацювання нешкідливе:
+    // вони не малюють заново, а лише підставляють поточне значення.
+    window.addEventListener('cstl-profile-updated', () => {
+      updateGreetingName();
+      refreshAccountButtons();
+    });
+    onReturn('community', () => {
+      updateGreetingName();
+      refreshAccountButtons();
+    });
+    _greetingWired = true;
+  }
   updateGreetingName();
   // 🔴 25.08 — ПРИВІТАННЯ Й АВАТАР ПЕРЕПИТУЮТЬСЯ, ЩОЙНО «ХТО Я» СТАЄ ФАКТОМ
   // (беклог, пункт 0).
