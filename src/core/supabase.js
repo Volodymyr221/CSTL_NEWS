@@ -3049,18 +3049,26 @@ export async function fetchMyEditablePageIds() {
 // false = суто від імені спільноти (вибір у композері, крок 6).
 // ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
 //    у будь-якому разі — людський текст. Поля `select` не міняв.
-const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
+const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
 // Те саме плюс синя галочка спільноти. Окремим рядком, а не аргументом: у місцях,
 // де колонки `official` може ще не бути, потрібен запасний запит БЕЗ неї, і два
 // готові рядки читаються краще за складання select-а на льоту.
-const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url, official)';
+const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url, official)';
 
-export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
+// toNews — 🔴 17.09: «показати цей допис і в Новинах, під іменем спільноти».
+// 🗣️ Замовлення Вови: «щоб ми запостили, що щось відбулося, в спільноту, і це
+// відобразилося в блоці новин, типу, як від імені спільноти».
+// 🔑 Матеріал лишається ОДИН: синк кладе його у стрічку з посиланням на цей допис,
+// а не копією-статтею. Копія була б дублем, лише зробленим нами власноруч.
+// 🛑 За замовчуванням ВИМКНЕНО — правило розділення жанрів: подія-факт іде в Новини
+// і пишеться як новина; у спільноту — культура, історії, анонси своїми словами.
+export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true, toNews = false) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
   const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
   const row = {
     page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
     show_author: showAuthor !== false,
+    to_news: toNews === true,
     event_date:     event.event_date     || null,
     event_time:     event.event_time     || null,
     event_location: event.event_location || null,

@@ -1337,6 +1337,21 @@
   border-bottom: 1px solid var(--fd-divider);
 }
 .fd-comp-as-label { font-size: 12px; color: var(--fd-muted); margin-right: 2px; }
+
+/* 🔴 17.09 — «Показати і в Новинах». Галочка, а не другий перемикач «як»: поруч
+   уже стоїть вибір автора, і два однакові на вигляд елементи читались би як одна
+   пара з чотирьох станів. Галочка каже інше — «додатково, крім звичайного». */
+.fd-comp-tonews {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 2px 2px; cursor: pointer;
+  /* 📐 Ціль під палець рахується від КРОКУ між центрами, тож тут важлива не
+     висота напису, а те, що вся смуга клікабельна (label обгортає обидва). */
+  min-height: 44px;
+}
+.fd-comp-tonews-cb { width: 20px; height: 20px; margin-top: 1px; flex: 0 0 auto; accent-color: var(--brand, #6B1B2B); }
+.fd-comp-tonews-tx { font-size: 13px; line-height: 1.3; color: var(--fd-text, #1c1c1e); }
+.fd-comp-tonews-sub { display: block; font-size: 12px; color: var(--fd-muted); margin-top: 1px; }
+
 .fd-comp-as-btn {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
   padding: 7px 12px; border: 1px solid var(--fd-divider); border-radius: 999px;
