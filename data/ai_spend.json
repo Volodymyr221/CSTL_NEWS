@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1789646366903,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 561,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0087,
+      "note": ""
+    },
+    {
       "ts": 1789559839543,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -766,24 +779,11 @@
       "found": 4,
       "cost_usd": 0.3272,
       "note": ""
-    },
-    {
-      "ts": 1787642786931,
-      "mission": "holiday:🇺🇦 День знань",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 615,
-      "cache_read": 0,
-      "cache_write": 1143,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0135,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 11.1744,
-    "runs": 159,
+    "cost_usd": 11.1831,
+    "runs": 160,
     "web_searches": 151
   },
   "months": {
@@ -798,10 +798,10 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 2.7061,
-      "runs": 34,
+      "cost_usd": 2.7148,
+      "runs": 35,
       "web_searches": 42
     }
   },
-  "updated_ts": 1789559839543
+  "updated_ts": 1789646366903
 }
