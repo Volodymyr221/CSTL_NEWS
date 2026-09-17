@@ -1,0 +1,93 @@
+// Стенд: ДОПИС ІЗ ГАЛОЧКОЮ ВИДНО В НОВИНАХ ОДРАЗУ — І БЕЗ ДУБЛЯ.
+//
+// 🔴 ЗАРАДИ ЧОГО (замовлення Вови 17.09): «якщо я публікую пост і вибираю цю
+// галочку, то щоб відразу оновлювався блок новин з цією новиною… потрібно це
+// реалізувати правильно, щоб воно не падало і працювало технічно правильно».
+//
+// 🔬 Заміряно на його живому дописі: опублікований 15:35, у стрічці — 15:56.
+// Двадцять хвилин там, де людина щойно натиснула «Опублікувати»: синк ходить раз
+// на 15 хвилин, далі деплой.
+//
+// 🔑 ТОМУ ДВА ДЖЕРЕЛА: база (миттєво) і `articles.json` (надійно, офлайн). Цей
+// стенд стереже саме СТИК між ними — три стани, і кожен має свою перевірку:
+//   1. у файлі ще немає → показуємо з бази;
+//   2. у файлі вже є → з бази НЕ додаємо (інакше дубль, і то зроблений нами);
+//   3. бази немає → новини з файлу все одно на місці (fail-soft).
+import { chromium } from 'playwright';
+import { launch, serve, reporter } from './_lib.mjs';
+
+const { ok, done } = reporter('instant-community-news');
+const { url, stop } = await serve();
+const b = await launch(chromium);
+
+const СТАТТЯ_ФАЙЛУ = {
+  id: 12345, title: 'Звичайна новина з файлу', excerpt: 'текст', content: 'текст',
+  category: 'Суспільство', geo: 'Громада', image: null, image_type: 'none',
+  source: 'Конкурент', ts: Date.now() - 86400e3,
+};
+const ДОПИС = {
+  id: 56, page_id: 3, text: '🏰 Олика готується до осіннього сезону. Осінь приходить в Олику.',
+  image_urls: [], image_url: null, created_at: new Date().toISOString(),
+  pages: { name: 'OLYKA CASTLE' },
+};
+
+async function сцена({ файл, база }) {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
+                                   hasTouch: true, serviceWorkers: 'block' });
+  const p = await ctx.newPage();
+  await p.route('**://api.open-meteo.com/**', r => r.abort());
+  await p.route('**/data/articles.json*', r => r.fulfill({ status: 200,
+    contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify(файл) }));
+  await p.route('**/rest/v1/page_posts*', route => {
+    if (база === null) return route.abort();          // бази немає
+    route.fulfill({ status: 200, contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(база) });
+  });
+  await p.goto(url, { waitUntil: 'domcontentloaded' });
+  await p.waitForTimeout(2400);
+  await p.evaluate(() => document.querySelector('.consent-accept')?.click());
+  await p.waitForTimeout(1600);
+  // 🔑 Рахуємо КАРТКИ, а не входження тексту: перша версія лічила слова в
+  // `innerText` і бачила «2 згадки» там, де картка була одна — фраза стоїть і в
+  // заголовку, і в описі. Перевірка на дубль мусить рахувати саме записи.
+  const дані = await p.evaluate(() => {
+    const карток = [...document.querySelectorAll('[data-article-id]')];
+    // 🛑 Шукаємо по ВСЬОМУ тексту картки, а не в першому рядку: перший рядок — це
+    // ініціал аватара спільноти («O»), і перевірка по ньому давала нуль на
+    // працюючому коді. Саме так вона й провалилась уперше.
+    return {
+      усього: карток.length,
+      проОсінь: карток.filter(c => /осінн/i.test(c.innerText || '')).length,
+      єФайлова: /Звичайна новина з файлу/.test(document.body.innerText),
+      довжина: document.body.innerText.length,
+    };
+  });
+  await ctx.close();
+  return дані;
+}
+
+// ── 1. У ФАЙЛІ ЩЕ НЕМАЄ → показуємо з бази ───────────────────────────────────
+const т1 = await сцена({ файл: [СТАТТЯ_ФАЙЛУ], база: [ДОПИС] });
+ok('🔴 ГОЛОВНЕ: допис із галочкою видно ОДРАЗУ, ще до синку',
+   т1.проОсінь >= 1, `карток про осінь: ${т1.проОсінь} (усього ${т1.усього})`);
+ok('КОНТРОЛЬ: звичайна новина з файлу теж на місці', т1.єФайлова);
+
+// ── 2. СИНК УЖЕ ДОСТАВИВ → з бази НЕ додаємо (жодного дубля) ─────────────────
+const зСинком = [{ ...СТАТТЯ_ФАЙЛУ }, {
+  id: 1000022, title: '🏰 Олика готується до осіннього сезону', excerpt: 'е', content: 'е',
+  category: 'Культура', geo: 'Громада', image: null, image_type: 'none',
+  source: 'OLYKA CASTLE', ts: Date.now(), kind: 'community', post_id: 56,
+}];
+const т2 = await сцена({ файл: зСинком, база: [ДОПИС] });
+ok('🔴 коли синк уже доставив — допис показано РІВНО ОДИН раз (без дубля)',
+   т2.проОсінь === 1, `карток про осінь: ${т2.проОсінь} (усього ${т2.усього})`);
+
+// ── 3. БАЗИ НЕМАЄ → новини з файлу все одно є (fail-soft) ────────────────────
+const т3 = await сцена({ файл: [СТАТТЯ_ФАЙЛУ], база: null });
+ok('🛑 FAIL-SOFT: база недосяжна — новини з файлу однаково показані',
+   т3.єФайлова || т3.усього > 0, `карток: ${т3.усього}, файлова видима: ${т3.єФайлова}`);
+ok('…і застосунок не завис на порожньому екрані', т3.довжина > 50, `${т3.довжина} символів`);
+
+await b.close(); await stop();
+done();
