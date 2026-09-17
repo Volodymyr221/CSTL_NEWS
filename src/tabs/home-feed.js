@@ -30,6 +30,7 @@ import { escapeHtml, formatTime } from '../core/utils.js';
 import { fetchPages, fetchLatestPostPerPage, isSupabaseReady } from '../core/supabase.js';
 import { startAutoCarousel } from '../core/auto-carousel.js';
 import { openFeedPage } from './feed.js';
+import { onReturn } from '../core/refresh-on-return.js';   // «повернувся → свіже» (17.09)
 
 const MAX_CIRCLES = 6;
 // Зупинка чинної каруселі. Тримається в модулі, бо блок перемальовується не один раз
@@ -229,6 +230,28 @@ function startFeedCarousel(body) {
       body.querySelector('.hm-fd-circles')?.classList.add('hm-fd-circles--live');
     },
   });
+}
+
+// 🔴 17.09 — ВІДЖЕТ САМ ОНОВЛЮЄТЬСЯ, КОЛИ СТРІЧКА ЗМІНИЛАСЬ.
+// 🗣️ Вова: «віджет стрічки в громаді не оновлюється» після публікації допису.
+// 🔑 Два приводи, як і в привітання на Громаді:
+//   1. `cstl-feed-changed` — людина щойно опублікувала допис у цьому ж застосунку;
+//   2. `onReturn('community')` — усе інше: допис зʼявився з другого пристрою, від
+//      іншої людини або поки застосунок був згорнутий. Події тут не буде ніколи.
+// ⚠️ Слухач вішається ОДИН раз на модуль, не з рендера: інакше кожна перемальовка
+// додавала б ще один, і один допис давав би десять походів у базу.
+// 🛑 НАВІШУЄМО НА РІВНІ МОДУЛЯ, А НЕ З `renderHomeFeed()`. Перша версія кликала
+// це першим рядком рендера — і слухача не було доти, доки віджет хоч раз не
+// намалювався. Стенд `live-profile-community` спіймав саме це: подія приходила в
+// порожнечу. 🔑 У житті вада була б рідшою, але гіршою за формою: слухач зʼявлявся
+// б лише після вдалого першого рендера, тобто РІВНО тоді, коли все й так добре, і
+// не зʼявлявся б, коли перший рендер не вдався — коли він найпотрібніший.
+let _feedWidgetWired = false;
+function wireFeedWidgetRefresh() {
+  if (_feedWidgetWired) return;
+  _feedWidgetWired = true;
+  window.addEventListener('cstl-feed-changed', () => { renderHomeFeed(); });
+  onReturn('community', () => { renderHomeFeed(); });
 }
 
 export async function renderHomeFeed() {
@@ -460,3 +483,5 @@ function fitCircleNames(root) {
     });
   }
 }
+
+wireFeedWidgetRefresh();   // слухачі живуть незалежно від того, чи рендерився віджет
