@@ -288,6 +288,13 @@ def record_spend(mission: str, usage: dict, found: int, note: str = "", extra_us
     tot["web_searches"] = tot.get("web_searches", 0) + usage["web_search_requests"]
     m = data.setdefault("months", {}).setdefault(month, {"cost_usd": 0, "runs": 0, "web_searches": 0})
     m["cost_usd"] = round(m["cost_usd"] + cost, 4)
+    # 🔴 17.09 — чесне число місяця поруч із записаним (див. `editor/core/spend.py`).
+    # Кабінет бере саме його, тож картка «Цей місяць» і банер стану більше не
+    # розходяться: 17.09 вони показували $2.71 і $2.08 одночасно.
+    try:
+        m["fair_usd"] = month_spend_recalc(month)
+    except Exception:
+        pass
     m["runs"] += 1
     m["web_searches"] += usage["web_search_requests"]
     data["updated_ts"] = ts
