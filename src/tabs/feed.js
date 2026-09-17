@@ -3461,6 +3461,11 @@ function openComposer(pageId, editPost = null) {
   // сторінки, як у Facebook). «Від себе» лишає під текстом підпис автора-людини.
   // При редагуванні беремо те, що вже стоїть у поста.
   let showAuthor = edit ? (editPost.show_author !== false) : false;
+  // 🔴 17.09 — «І В НОВИНАХ». Замовлення Вови: допис спільноти може з'явитись у
+  // стрічці Новин під іменем спільноти, щоб той самий матеріал не переписувався
+  // двічі. За замовчуванням ВИМКНЕНО: правило розділення жанрів — подія-факт іде
+  // в Новини і пишеться як новина, а в спільноту йдуть культура, історії, анонси.
+  let toNews = edit ? (editPost.to_news === true) : false;
 
   // 🔴 01.09 «c» — «ВІД СЕБЕ» СТАЛО ІМЕНЕМ. Замовлення Вови: «замість "від себе"
   // потрібно зазначити імʼя, тобто там Володимир Шевчук».
@@ -3521,6 +3526,11 @@ function openComposer(pageId, editPost = null) {
             <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
               <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(myName)}</span></button>
           </div>
+          <label class="fd-comp-tonews">
+            <input type="checkbox" class="fd-comp-tonews-cb"${toNews ? ' checked' : ''}>
+            <span class="fd-comp-tonews-tx">Показати і в Новинах
+              <span class="fd-comp-tonews-sub">під іменем спільноти</span></span>
+          </label>
           <div class="fd-comp-actions">
             <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
             <button class="fd-comp-send" type="button">${CTA}</button>
@@ -3572,6 +3582,13 @@ function openComposer(pageId, editPost = null) {
       showAuthor = btn.dataset.as === 'me';
       back.querySelectorAll('.fd-comp-as-btn').forEach(b => b.classList.toggle('is-on', b === btn));
     }));
+
+  // 🔴 17.09 — галочка «і в Новинах». Слухач обовʼязковий: без нього прапорець
+  // намалювався б, людина б його тиснула, а в базу пішло б старе значення —
+  // тобто вимикач, який підтверджує дію, якої не сталося (клас вади B-33).
+  back.querySelector('.fd-comp-tonews-cb')?.addEventListener('change', e => {
+    toNews = e.target.checked === true;
+  });
 
   const thumbs = back.querySelector('.fd-comp-thumbs');
   const renderThumbs = () => {
@@ -3658,8 +3675,8 @@ function openComposer(pageId, editPost = null) {
       }
       const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
       const res = edit
-        ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
-        : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
+        ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, to_news: toNews, ...eventFields })
+        : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor, toNews);
       if (res.ok) {
         // 🔴 26.08 — ПОДІЯ ДІЇ, А НЕ ПЕРЕГЛЯДУ. Логуємо в точці ПІДТВЕРДЖЕНОГО успіху,
         // а не при натисканні «Надіслати»: інакше в статистику потрапляли б спроби,
