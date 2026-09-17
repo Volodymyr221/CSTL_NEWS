@@ -61,13 +61,18 @@ SOURCES = [
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
-        "name": "Олицька громада",
+        # 🔴 17.09 — ПІДПИС ЗМІНЕНО НА ЗАМОВЛЕННЯ ВОВИ: «позначати їх як автор, як
+        # сайт Олицької громади, чи офіційний сайт Олицької громади». Слово
+        # «офіційно» тут не прикраса: воно відрізняє першоджерело (міськрада сама
+        # про себе) від переказу у Волинь Post чи Район.Ківерці, а для місцевих
+        # новин саме це й вирішує, кому вірити.
+        "name": "Олицька громада (офіційно)",
         "geo": "Громада",
         "type": "gromada",
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennya-11-12-45-18-02-2021/",
-        "name": "Олицька громада",
+        "name": "Олицька громада (офіційно)",
         "geo": "Громада",
         "type": "gromada",
     },
@@ -3108,10 +3113,19 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
                 href = GROMADA_BASE + href
             candidates.append((href, h.get_text(strip=True), art))
 
+    рівень = "article" if candidates else ""
+
     # Joomla: списки .items-row, .items-leading або подібні
+    # 🔴 17.09 — ДОДАНО СЕЛЕКТОРИ СУЧАСНИХ ДЕРЖСАЙТІВ. Три рівні нижче писались під
+    # Joomla, а сайти громад масово переїхали на нові платформи з іншою розміткою
+    # (картки `.news-item`, `.card`, `.post`). Якщо розмітка не збігається, розбір
+    # мовчки давав нуль кандидатів — і в лозі це виглядало як «нічого нового»,
+    # тобто НЕВІДРІЗНЯЛОСЬ від «усі статті вже є». Саме тому вада жила непоміченою.
     if not candidates:
         for item in soup.select(
-            ".items-row, .items-leading, .blog-item, .news-list-item, .catItemView"
+            ".items-row, .items-leading, .blog-item, .news-list-item, .catItemView, "
+            ".news-item, .news__item, .item-news, .article-card, .post-item, "
+            ".card, .news-card, li.news, .list-item"
         )[:25]:
             h = item.find(["h1", "h2", "h3"])
             a = (h.find("a", href=True) if h else None) or item.find("a", href=True)
@@ -3120,6 +3134,8 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
                 if not href.startswith("http"):
                     href = GROMADA_BASE + href
                 candidates.append((href, h.get_text(strip=True), item))
+    if candidates and not рівень:
+        рівень = "картки"
 
     # Загальний fallback — будь-які посилання що ведуть на статті
     if not candidates:
@@ -3132,6 +3148,19 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
                 if not href.startswith("http"):
                     href = GROMADA_BASE + href
                 candidates.append((href, text, a.parent))
+    if candidates and not рівень:
+        рівень = "посилання"
+
+    # 🔑 ГОЛОСНА ДІАГНОСТИКА. Без неї «нічого нового» означало і «сайт відповів, усе
+    # вже маємо», і «розмітку не впізнано, знайдено нуль» — а це протилежні стани:
+    # перший нормальний, другий поломка. Заміряно 17.09: від джерела «Олицька
+    # громада» у стрічці було 0 статей за весь час, і лог про це мовчав.
+    if not candidates:
+        print(f"  ⚠ {source.get('name')}: розмітку НЕ ВПІЗНАНО — 0 кандидатів "
+              f"({len(raw)} байт, {len(soup.find_all('article'))} <article>, "
+              f"{len(soup.select('a[href]'))} посилань). Сайт змінив верстку?")
+    else:
+        print(f"  · {source.get('name')}: {len(candidates)} кандидатів (рівень: {рівень})")
 
     articles = []
     for href, raw_title, container in candidates[:MAX_PER_SOURCE]:
