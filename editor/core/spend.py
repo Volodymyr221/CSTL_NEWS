@@ -84,10 +84,24 @@ def record(label: str, usage: dict, found: int, note: str = "", model: str = "cl
     t["web_searches"] = t.get("web_searches", 0) + usage.get("web_search_requests", 0)
     m = d.setdefault("months", {}).setdefault(month, {"cost_usd": 0, "runs": 0, "web_searches": 0})
     m["cost_usd"] = round(m["cost_usd"] + cost, 4)
+    # 🔴 17.09 — ЧЕСНЕ ЧИСЛО ПОРУЧ ІЗ ЗАПИСАНИМ. `cost_usd` — сума того, що ми
+    # рахували В ДЕНЬ КОЖНОГО ПРОГОНУ, і в ній назавжди лишились ціни, чинні тоді
+    # (до 02.09 Sonnet 5 рахувався за тарифом Sonnet 4.6 — завищення на 30.5%).
+    # 🛑 Переписувати `cost_usd` не можна: це журнал ФАКТІВ. Але показувати людині
+    # завищене теж не можна — саме через нього агент і стояв.
+    # ➡️ Тому поруч лягає `fair_usd` — той самий місяць за ЧИННИМИ цінами. Кабінет
+    # бере його, коли він є. Заразом зникає розбіжність, яку Вова побачив на екрані
+    # 17.09: банер стану казав $2.08, а картка поруч — $2.71, бо читали різне.
     m["runs"] += 1
     m["web_searches"] += usage.get("web_search_requests", 0)
     d["updated_ts"] = ts
     SPEND_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:                                  # fail-soft: чесне число це зручність, не робота
+        d2 = _load()
+        d2.setdefault("months", {}).setdefault(month, {})["fair_usd"] = month_spend_recalc(month)
+        SPEND_PATH.write_text(json.dumps(d2, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"  ⚠ fair_usd не оновився ({e})")
     print(f"  💸 ${cost} ({label})")
 
 

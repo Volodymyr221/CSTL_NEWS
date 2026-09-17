@@ -299,6 +299,17 @@
     /* 🔴 17.09 — Банер стану агента. Причина мовчання має бути ТУТ, а не в лозі
        GitHub Actions: саме через це Вова два тижні бачив порожню чергу чернеток
        і не мав звідки дізнатись, що агент просто впирається в бюджет. */
+    /* 🔴 17.09 — розклад по агентах. 🗣️ Вова: «В нас 4 агенти, і не зрозуміло,
+       який запускався — немає статистики по агентам». */
+    .agents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .agent-card { background: #fff; border: 1px solid #e8e4dd; border-radius: 12px; padding: 12px 13px; }
+    .agent-card--idle { opacity: .58; }
+    .agent-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .agent-sum  { font-size: 22px; font-weight: 700; color: #6B1B2B; line-height: 1.1; }
+    .agent-meta { font-size: 12px; color: #666; margin-top: 3px; }
+    .agent-last { font-size: 11px; color: #999; margin-top: 5px; }
+    .agent-note { font-size: 12px; color: #8a6d3b; background: #FFF7E6; border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+    .spend-row-agent { font-size: 12px; color: #6B1B2B; }
     .agent-state { border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid; }
     .agent-state--pause { background: #FFF7E6; border-color: #F0C36D; }
     .agent-state--ok    { background: #EFF8F0; border-color: #A8D5AD; }
@@ -1586,6 +1597,56 @@ async function renderSpend(el) {
   // 🔑 Стан ПИШЕ САМ АГЕНТ (`write_agent_status` у ai_news_agent.py). Кабінет його
   // лише показує: інакше правило жило б у двох місцях і перше ж уточнення стелі
   // розвело б їх.
+  // 🔴 17.09 — РОЗБИВКА ПО АГЕНТАХ. 🗣️ Вова: «В нас 4 агенти. І не зрозуміло, який
+  // запускався — немає статистики по агентам».
+  // 🔬 Доти вкладка звалювала все в одну купу: «$2.71 · 35 запусків» — без жодної
+  // підказки, хто саме їх зробив. А витрачають вони дуже по-різному: агент новин
+  // ходить у веб-пошук (найдорожчий), свята пишуть коротко, спільноти — по одному
+  // допису. Бачити суму без розкладу — все одно що бачити рахунок без позицій.
+  // 🔑 Розрізняємо за МІТКОЮ прогону (`mission`), бо саме її пише кожен агент:
+  //   `olyka:*` · `istoriya:*` · `holiday:*` · решта («Громада №N», «Історія №1»,
+  //   «Громада:dedup») — агент новин.
+  const АГЕНТИ = [
+    { id: 'news',     назва: '📰 Новини (Громада)', файл: 'ai-news-agent',
+      тест: m => !/^(olyka|istoriya|holiday):/.test(m) },
+    { id: 'olyka',    назва: '🏰 OLYKA CASTLE',     файл: 'olyka-agent',
+      тест: m => m.startsWith('olyka:') },
+    { id: 'istoriya', назва: '📜 Історія Громади',  файл: 'istoriya-agent',
+      тест: m => m.startsWith('istoriya:') },
+    { id: 'holiday',  назва: '🎉 Свята',            файл: 'editor-holidays',
+      тест: m => m.startsWith('holiday:') },
+  ];
+  const цьогоМісяця = runs.filter(r => (new Date(r.ts)).toISOString().slice(0, 7) === monthKey);
+  const зведення = АГЕНТИ.map(a => {
+    const свої = цьогоМісяця.filter(r => a.тест(String(r.mission || '')));
+    return {
+      ...a,
+      прогонів: свої.length,
+      сума: свої.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0),
+      пошуків: свої.reduce((s, r) => s + (Number(r.web_searches) || 0), 0),
+      статей: свої.reduce((s, r) => s + (Number(r.found) || 0), 0),
+      останній: свої.length ? Math.max(...свої.map(r => r.ts)) : null,
+    };
+  });
+  // ⚠️ ЧЕСНА ПОЗНАЧКА ПРО МЕЖУ. Журнал прогонів підрізається (`KEEP_RUNS`), тож
+  // розклад рахується з того, що в ньому ЛИШИЛОСЬ. Коли місяць не вкладається —
+  // кажемо про це прямо, а не мовчки показуємо меншу суму, ніж у картці згори.
+  const сумаРозкладу = зведення.reduce((s, a) => s + a.сума, 0);
+  const місяцьУсього = Number(month.fair_usd ?? month.cost_usd) || 0;
+  const неповний = місяцьУсього - сумаРозкладу > 0.02;
+  const агентиHtml = `
+    <div class="agents-grid">
+      ${зведення.map(a => `
+        <article class="agent-card${a.прогонів ? '' : ' agent-card--idle'}">
+          <div class="agent-name">${a.назва}</div>
+          <div class="agent-sum">${usd(a.сума)}</div>
+          <div class="agent-meta">${a.прогонів} ${a.прогонів === 1 ? 'запуск' : 'запусків'}${
+            a.статей ? ' · ' + a.статей + ' матер.' : ''}${a.пошуків ? ' · ' + a.пошуків + ' пош.' : ''}</div>
+          <div class="agent-last">${a.останній ? escapeHtml(formatDate(a.останній)) : 'цього місяця не запускався'}</div>
+        </article>`).join('')}
+    </div>
+    ${неповний ? `<p class="agent-note">⚠️ Розклад рахується з останніх ${runs.length} прогонів у журналі — старіші підрізані, тож сума нижче за «${usd(місяцьУсього)}» згори на ${usd(місяцьУсього - сумаРозкладу)}.</p>` : ''}`;
+
   const st = d.agent_status;
   let банер = '';
   if (st && st.стан === 'пауза') {
@@ -1605,16 +1666,21 @@ async function renderSpend(el) {
     ${банер}
     <div class="section-title">💸 Витрати AI-агента (новини)</div>
     <div class="spend-cards">
-      <article class="card"><div class="spend-lbl">Цей місяць (${monthKey})</div><div class="spend-big">${usd(month.cost_usd)}</div><div class="spend-sub">${month.runs || 0} запусків · ${month.web_searches || 0} пошуків</div></article>
+      <article class="card"><div class="spend-lbl">Цей місяць (${monthKey})</div><div class="spend-big">${usd(month.fair_usd ?? month.cost_usd)}</div><div class="spend-sub">${month.runs || 0} запусків · ${month.web_searches || 0} пошуків${
+        month.fair_usd != null && Math.abs(month.fair_usd - (month.cost_usd || 0)) > 0.005
+          ? `<br><span title="Записано в день кожного прогону, за тодішніми цінами">було записано ${usd(month.cost_usd)}</span>` : ''}</div></article>
       <article class="card"><div class="spend-lbl">Усього</div><div class="spend-big">${usd(totals.cost_usd)}</div><div class="spend-sub">${totals.runs || 0} запусків · ${totals.web_searches || 0} пошуків</div></article>
       <article class="card"><div class="spend-lbl">Останній запуск</div><div class="spend-big">${last ? usd(last.cost_usd) : '—'}</div><div class="spend-sub">${last ? escapeHtml(formatDate(last.ts)) + ' · ' + (last.found || 0) + ' статей' : 'ще не було'}</div></article>
     </div>
+    <div class="section-title" style="margin-top:24px">🤖 По агентах (цей місяць)</div>
+    ${агентиHtml}
     <div class="section-title" style="margin-top:24px">Останні запуски</div>
     ${!runs.length ? '<div class="empty">Ще не було запусків із лічильником.</div>' :
       '<div class="spend-log">' + runs.slice(0, 25).map(r => `
         <div class="spend-row">
           <span class="spend-row-date">${escapeHtml(formatDate(r.ts))}</span>
           <span class="spend-row-cost">${usd(r.cost_usd)}</span>
+          <span class="spend-row-agent">${escapeHtml((АГЕНТИ.find(a => a.тест(String(r.mission || ''))) || {}).назва || '—')}</span>
           <span class="spend-row-meta">${(r.found || 0)} статей · ${(r.web_searches || 0)} пош.${r.cache_read ? ' · кеш ' + Math.round(r.cache_read / 1000) + 'k' : ''}${r.note ? ' · ' + escapeHtml(r.note) : ''}</span>
         </div>`).join('') + '</div>'}
     <p style="font-size:12px;color:#999;margin-top:12px">Ціни claude-sonnet-5: вхід $2 / вихід $10 за 1млн токенів · веб-пошук $10/1000. Оновлюється після кожного запуску агента (кожні 6 год).</p>
