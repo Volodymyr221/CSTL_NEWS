@@ -2388,7 +2388,12 @@ export async function fetchCommunityToNews(limit = 20) {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
-  if (error) { console.warn('[supabase] fetchCommunityToNews:', error.message); return []; }
+  // 🔴 17.09 — ПРИ ЗБОЇ ПОВЕРТАЄМО `null`, А НЕ `[]`. Різниця тут критична:
+  // порожній масив означає «галочку не поставив НІХТО», і за ним споживач має
+  // право прибрати зі стрічки всі дописи спільнот. `null` означає «ми не знаємо»
+  // — і тоді чіпати нічого не можна. Сплутати ці два стани = стерти зі стрічки
+  // живі дописи щоразу, коли впала мережа.
+  if (error) { console.warn('[supabase] fetchCommunityToNews:', error.message); return null; }
   return data || [];
 }
 
