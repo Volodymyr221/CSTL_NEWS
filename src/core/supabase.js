@@ -2384,7 +2384,7 @@ export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
 
 // Усі сторінки-канали (для кружечків + шапок карток).
 export async function fetchPages() {
-  if (!supa) return [];
+  if (!supa) return null;   // 18.09 — «бази немає» це теж збій, а не «нуль спільнот»
   const { data, error } = await supa.from('pages')
     // ⚠️ `official` (09.08) — синя галочка спільноти. Якщо колонки ще немає,
     // PostgREST відповість помилкою на ВЕСЬ запит і Стрічка лишиться порожньою,
@@ -2400,7 +2400,13 @@ export async function fetchPages() {
       .select('id, name, theme, avatar_url, banner_url, is_system, sort_order')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
-    if (legacy.error) { console.warn('[supabase] fetchPages:', legacy.error.message); return []; }
+    // 🔴 18.09 — ЗБІЙ ПОВЕРТАЄ `null`, А НЕ `[]`. Порожній масив тут означав
+    // «спільнот у громаді немає», і Стрічка чесно малювала «Поки що тут порожньо»
+    // навіть тоді, коли база просто не відповіла. Порожньо і «не змогли» плутати
+    // не можна — розбір у шапці `core/screen-state.js`.
+    // ⚠️ Другий і останній виклик цієї функції (`home-feed.js`) страхується
+    // `|| []` на місці, тож нова відповідь його не ламає.
+    if (legacy.error) { console.warn('[supabase] fetchPages:', legacy.error.message); return null; }
     return legacy.data || [];
   }
   return data || [];
