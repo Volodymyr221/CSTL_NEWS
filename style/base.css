@@ -780,19 +780,31 @@ body:has(.fd-sheet-back) .app-main { overflow: hidden; }
    (лого зліва, кнопки справа).
    padding — невидима зона влучання: сам напис 9px заввишки, пальцем у нього не потрапити. */
 .deploy-stamp {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  padding: 10px 14px;
-  font-size: 9px;
-  color: rgba(102, 102, 102, 0.55);
+  /* 🔴 18.09 — ПЕРЕЇХАВ ІЗ ШАПКИ В БУРГЕР-МЕНЮ (замовлення Вови).
+     Було: `position: absolute` по центру шапки застосунку. Причина переїзду
+     не естетична, а практична: лічильник ліз у КОЖЕН знімок екрана,
+     а знімки йдуть у презентацію на грант і в рекламу.
+     🛑 Роль лічильника НЕ ЗМІНИЛАСЬ: це єдиний спосіб побачити на телефоні,
+     чи доїхав деплой. Він не зник, а переїхав за один тап — у бургер.
+     ⚠️ Прихованого жесту на ньому більше немає (5 тапів → адмінка знято 03.09),
+     тому зона влучання йому вже не потрібна — це просто підпис. */
+  font-size: 10px;
+  color: rgba(102, 102, 102, 0.62);
   letter-spacing: 0.3px;
   font-family: monospace;
-  z-index: 99;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Назва і лічильник однією колонкою, щоб хрестик лишився справа
+   (`.sidebar-head` — це `justify-content: space-between` із двох дітей). */
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 /* ===== SHARE BUTTON (📤 Web Share API, віральність 17.05.2026) =====
