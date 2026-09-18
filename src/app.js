@@ -426,8 +426,13 @@ function handlePostHash() {
   // відкидався — тобто посилання доводило людину до питання й лишало шукати
   // репліку очима. `all` (зведене «N нових відповідей») якоря не має навмисно:
   // одного винуватця там немає, і підсвітити довелось би навмання.
+  // 🔴 18.09 — ТИП ІДЕ ТРЕТІМ АРГУМЕНТОМ, і він тут БУВ відомий увесь час:
+  // `disc` у самій адресі і означає «питання». Без нього сповіщення про
+  // ВИДАЛЕНЕ питання відкривало Дошку зі словами «це оголошення більше
+  // недоступне» — та сама вада, що в хабі «Збережені», просто з іншого входу.
   else if (source === 'board' || source === 'disc') {
-    openBoardItemById(n, (commentId && commentId !== 'all') ? Number(commentId) : null);
+    openBoardItemById(n, (commentId && commentId !== 'all') ? Number(commentId) : null,
+                      source === 'disc' ? 'chat' : 'board');
   }
   else if (source === 'news')              openArticleById(n);
 }

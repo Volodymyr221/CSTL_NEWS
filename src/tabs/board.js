@@ -2938,7 +2938,18 @@ export async function openChatById(postId) {
 // Приходить із `?c=<id>` у deep-link сповіщення (той самий хвіст, що вже
 // живить «Стрічку»). Для оголошень Дошки він не потрібен: там лист коментарів
 // відкривається окремою дією, а не разом із карткою.
-export async function openBoardItemById(postId, focusCommentId = null) {
+// 🔴 18.09 — ТРЕТІЙ ПАРАМЕТР `knownKind` (`'chat'` / `'board'`), і він лікує
+// конкретну скаргу Вови: тап по збереженому ПИТАННЮ кидав на ДОШКУ зі словами
+// «Це оголошення більше недоступне».
+//
+// 🔑 Причина була не в тексті, а в тому, що ТИП на цей момент уже втрачено:
+// запис у `allPosts` не знайшовся, а іншого джерела типу функція не мала — тож
+// обидві гілки нижче за визначенням вели на Дошку й казали «оголошення», хоч би
+// що було збережене. Хаб тип ЗНАЄ (він малює картку в категорії «Питання») і
+// тепер його передає.
+// ⚠️ Знімок типу живе і в базі (`saved_posts.snap_kind`), тож правильна вкладка
+// відкриється навіть на холодному старті, коли хаб ще нічого не малював.
+export async function openBoardItemById(postId, focusCommentId = null, knownKind = null) {
   if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
   const post = allPosts.find(p => p.id === postId);
   // 🔴 16.08 — БУЛО МОВЧАЗНЕ `return`. Тап по сповіщенню про оголошення, якого вже
@@ -2947,8 +2958,11 @@ export async function openBoardItemById(postId, focusCommentId = null) {
   // сповіщення «не спрацювало». Тепер кажемо правду і ведемо у відповідну вкладку —
   // там видно, що життя триває, просто цього запису більше немає.
   if (!post) {
-    window.switchTab?.('board');
-    showToast('Це оголошення більше недоступне — можливо, його вже зняли', 3500);
+    const питання = knownKind === 'chat';
+    window.switchTab?.(питання ? 'discussions' : 'board');
+    showToast(питання
+      ? 'Це питання більше недоступне — можливо, його видалили'
+      : 'Це оголошення більше недоступне — можливо, його вже зняли', 3500);
     return;
   }
   if (post.type === 'chat') { window.switchTab?.('discussions'); openChatModal(post, focusCommentId); }

@@ -2126,24 +2126,62 @@ export function openSavedRouteOnBuses(rid, date, from, to) {
   });
 }
 
+// Рейс у розкладі на конкретну дату. 🔑 Дата обовʼязкова: `id` рейсу унікальний
+// у межах ДНЯ, і той самий номер завтра може бути скасований, а сьогодні ні.
+// ⚠️ Два старі місця (`checkSingleTracked`) рахують те саме виразом на місці —
+// свідомо НЕ чіпаю: вони працюють, за ними стоять полагоджені банери, і
+// переписувати робоче заради спільного рядка — рівно те, від чого застерігає
+// `HOT_RULES` №9.
+function routeOnDate(rid, iso) {
+  const day = busData?.days ? (busData.days[iso] || {}) : (busData || {});
+  return (day.routes || []).find(r => r.id === rid) || null;
+}
+
+// 🔴 18.09 — ЗБЕРЕЖЕНИЙ РЕЙС НЕСЕ СВІЙ СТАН (замовлення Вови).
+//
+// 🗣️ «якщо користувач відстежує рейс якийсь автобусний, і він скасований, то він
+// має бути там, але так само з позначкою скасований».
+//
+// 📐 Заміряно перед роботою: ця функція не читала `status` рейсу ВЗАГАЛІ, хоча
+// `status === 'cancelled'` у `data/schedule.json` є (9 записів), і його знають і
+// сама вкладка Автобуси (`renderRouteList`), і капсула `BUS_CANCELLED` на
+// Громаді. Тобто хаб «Збережені» був ЄДИНИМ місцем, де скасування невидиме:
+// людина бачила свій рейс звичайним рядком і збиралась на нього.
+//
+// 🔑 Стан — саме `state`, тим самим словом, що й у збережених постів: хаб малює
+// позначку одним правилом на всі типи, а не чотирма схожими.
+// ⚠️ `unknown` ≠ `cancelled`: розкладу на цю дату може ще не бути (тиждень
+// наперед), і мовчання про рейс не робить його скасованим. Той самий принцип,
+// що не дає чистити збережене за відсутністю відповіді.
 export function getSavedRoutesForUI() {
+  const today = getTodayISO();
   return [...trackedRoutes]
+    // «Все що пройшло, прибрати» (Вова 18.09). Рейси вчора і раніше вже
+    // прибирає `checkTrackNotifications`, але вона кличеться не на кожен показ
+    // хабу — тож список не має права показати вчорашнє навіть до її наступного
+    // проходу. 🛑 Це ФІЛЬТР ПОКАЗУ, не друге джерело правди: сам запис знімає
+    // одна функція, інакше ми б завели два місця, які видаляють рейси.
+    .filter(t => t.trackDate >= today)
     .sort((a, b) => (a.trackDate + (a.depTime || '')).localeCompare(b.trackDate + (b.depTime || '')))
-    .map(t => ({
-      routeId:   t.routeId,
-      trackDate: t.trackDate,
-      from:      t.boardingStop  || null,
-      to:        t.alightingStop || null,
-      title:     t.title || `${t.boardingStop || '?'} → ${t.alightingStop || '?'}`,
-      timeStr:   (t.depTime && t.arrTime) ? `${t.depTime} → ${t.arrTime}` : (t.depTime || ''),
-      dayLabel:  savedRouteDayLabel(t.trackDate),
-      notify:    t.notify !== false,
-      // Проміжний рейс: показуємо тільки коли є денормалізований повний маршрут
-      // (старі записи без fullTitle малюються як звичайні — без падіння).
-      isSegment:   t.isSeg === true && !!t.fullTitle,
-      fullTitle:   t.fullTitle || '',
-      fullTimeStr: t.fullTimeStr || '',
-    }));
+    .map(t => {
+      const route = routeOnDate(t.routeId, t.trackDate);
+      return {
+        routeId:   t.routeId,
+        trackDate: t.trackDate,
+        from:      t.boardingStop  || null,
+        to:        t.alightingStop || null,
+        title:     t.title || `${t.boardingStop || '?'} → ${t.alightingStop || '?'}`,
+        timeStr:   (t.depTime && t.arrTime) ? `${t.depTime} → ${t.arrTime}` : (t.depTime || ''),
+        dayLabel:  savedRouteDayLabel(t.trackDate),
+        notify:    t.notify !== false,
+        state:     !route ? 'unknown' : (route.status === 'cancelled' ? 'cancelled' : 'alive'),
+        // Проміжний рейс: показуємо тільки коли є денормалізований повний маршрут
+        // (старі записи без fullTitle малюються як звичайні — без падіння).
+        isSegment:   t.isSeg === true && !!t.fullTitle,
+        fullTitle:   t.fullTitle || '',
+        fullTimeStr: t.fullTimeStr || '',
+      };
+    });
 }
 
 // Зняти збереження рейсу (зникає зі списку, відстеження стоп).

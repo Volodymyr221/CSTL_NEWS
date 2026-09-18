@@ -20,9 +20,28 @@
 // 🔑 Слово Вови: гість «може тільки переглядати публічну інформацію, а не
 // взаємодіяти в рамках додатку». Збережене — не публічна інформація.
 
+// 🔴 18.09 — ЖИТТЄВИЙ ЦИКЛ ЗБЕРЕЖЕНОГО (замовлення Вови, повний розбір у
+// `scripts/supabase_saved_lifecycle.sql`).
+//
+// 🗣️ «якщо… воно видалилось з додатку, то воно має пропасти із збереження… А
+// якщо рейс скасований, то він має бути там, але так само з позначкою
+// скасований… не то, що користувач зберіг якесь питання, і воно видалилось, і
+// воно досі там, і користувач його не може не відкрити, не видалити збережене,
+// нічого».
+//
+// 🔑 ПРАВИЛО ОДНЕ НА ВСІ ЧОТИРИ ТИПИ:
+//   Збережене зникає, лише коли зник САМ ПРЕДМЕТ.
+//   Живий предмет зі зміненим СТАНОМ лишається, і стан написаний на картці.
+//
+// 🛑 І ГОЛОВНЕ, ЧОГО ТУТ НЕМАЄ: цей файл НЕ вирішує, що предмет зник. Для постів
+// це каже база (`sync_saved_posts`), для статей — прочитаний файл новин
+// (`newsLoadFailed()` відрізняє «немає» від «не прочиталось»). Клієнт не вміє
+// відрізнити видалене від невдалого запиту, і чистка за відсутністю даних
+// стерла б людині живі закладки на поганому інтернеті.
 import { escapeHtml, showToast } from './utils.js';
 import { isLoggedIn, currentUserId, requireAuth } from './auth.js';
-import { getSupabase, fetchSavedPostIds, removeSavedPost, removeSavedArticle } from './supabase.js';
+import { syncSavedPosts, fetchSavedArticleSnaps,
+         removeSavedPost, removeSavedArticle } from './supabase.js';
 // 🔴 05.09 — `openBoardItemById` ЗАМІСТЬ пари `setBoardActiveType` + `openChatById`.
 // Було: тап по збереженому ОГОЛОШЕННЮ перемикав Дошку в режим «Збережені», тобто
 // відкривав СПИСОК замість того запису, який людина щойно торкнулась. Стаття
@@ -35,7 +54,7 @@ import { getSupabase, fetchSavedPostIds, removeSavedPost, removeSavedArticle } f
 // («це оголошення більше недоступне»). Тобто обидві гілки хабу сходяться в
 // один виклик, а не в два свої.
 import { openBoardItemById } from '../tabs/board.js';
-import { getSavedArticleIds, getArticlesByIds, openArticle, refreshSavedArticles } from '../tabs/news.js';
+import { getSavedArticleIds, collectSavedArticles, openArticle, refreshSavedArticles } from '../tabs/news.js';
 import { getSavedRoutesForUI, openSavedRouteOnBuses, unsaveRoute } from '../tabs/buses.js';
 import { ICONS, tabIcon } from './icons.js';
 import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
@@ -43,7 +62,80 @@ import { createBackdropFade, attachSheetDismiss } from './sheet-motion.js';
 let _sheet = null;
 let _backdrop = null;
 let _view = 'categories';   // 'categories' | 'articles' | 'buses' | 'chats' | 'boards'
-let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
+let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false, removed: [] };
+
+// ── ПОЗНАЧКИ СТАНУ НА КАРТЦІ ────────────────────────────────────────────────
+//
+// 🔑 Одна таблиця на всі типи — саме тому стан із бази, з розкладу автобусів і з
+// файлу новин називається тим самим словом `state`. Заведеш ще один збережуваний
+// тип — допишеш сюди рядок, а не новий спосіб малювати позначку.
+// 🛑 `alive` і `unknown` позначки НЕ мають, і це різні причини:
+//   • `alive` — усе гаразд, підпис нічого не додав би;
+//   • `unknown` — розкладу на цю дату ще немає (тиждень наперед). Мовчання про
+//     рейс не робить його скасованим, а написати «Скасовано» від незнання
+//     означало б вигадати людині скасований автобус.
+const STATE_BADGES = {
+  closed:    { text: 'Знято',           tone: 'off'  },   // автор завершив оголошення
+  pending:   { text: 'На перевірці',    tone: 'wait' },   // повторна модерація після правки
+  cancelled: { text: 'Скасовано',       tone: 'bad'  },   // рейс скасував перевізник
+  gone:      { text: 'Немає у стрічці', tone: 'off'  },   // статтю змило ротацією за віком
+};
+
+function badgeHtml(state) {
+  const b = STATE_BADGES[state];
+  return b ? `<span class="shub-badge shub-badge--${b.tone}">${escapeHtml(b.text)}</span>` : '';
+}
+
+// ── ПОВІДОМЛЕННЯ ПРО ПРИБРАНЕ ───────────────────────────────────────────────
+//
+// 🗣️ Пряма вимога Вови 18.09: «не просто "запис прибрано", а щось типу
+// "Оголошення «назва оголошення», яке ви зберегли, знято", чи видалено і тд».
+//
+// ⚠️ Рід узгоджується РАЗОМ із назвою типу, а не доклеюванням закінчення:
+// «оголошення/питання — яке», «новина — яку». Складати це з частин («як-» + «-е»)
+// означало б завести таблицю відмін заради трьох рядків; та сама помилка вже
+// коштувала правки 25.08 («разом із 2 відповіді»), і лікували її теж БУДОВОЮ
+// речення.
+// 🔑 Без назви речення лишається граматично цілим — знімка може не бути в
+// закладок, поставлених до 18.09, і фраза не сміє розсипатись через це.
+const REMOVED_WORDING = {
+  board:   { noun: 'Оголошення', rel: 'яке', verb: 'знято' },
+  chat:    { noun: 'Питання',    rel: 'яке', verb: 'видалено' },
+  article: { noun: 'Новина',     rel: 'яку', verb: 'більше не в стрічці' },
+};
+
+function removedLine(item) {
+  const w = REMOVED_WORDING[item.kind] || REMOVED_WORDING.board;
+  const назва = (item.title || '').trim();
+  return назва
+    ? `${w.noun} «${назва}», ${w.rel} ви зберегли, ${w.verb}.`
+    : `${w.noun}, ${w.rel} ви зберегли, ${w.verb}.`;
+}
+
+// Форма слова «запис» при числі. ⚠️ Три гілки, а не дві: «21 запис», «22 записи»,
+// «25 записів» — і винятки 11-14, які беруть форму множини попри останню цифру.
+function словоЗапис(n) {
+  const о = n % 10, с = n % 100;
+  if (о === 1 && с !== 11) return 'запис';
+  if (о >= 2 && о <= 4 && (с < 12 || с > 14)) return 'записи';
+  return 'записів';
+}
+
+// 🛑 СТЕЛЯ ТРИ РЯДКИ. Прибрати могло багато (людина не заходила місяць), а хаб —
+// це екран для розбору збереженого, не журнал подій: десять рядків угорі
+// відсунули б сам список за межу екрана. Понад три — число, бо назвати всіх
+// однаково не вийде, а «і ще N» принаймні не бреше про масштаб.
+function removedNoticeHtml() {
+  const list = _data.removed || [];
+  if (!list.length) return '';
+  const рядки = list.slice(0, 3).map(i => `<li>${escapeHtml(removedLine(i))}</li>`).join('');
+  const n = list.length - 3;
+  const решта = n > 0 ? `<li>і ще ${n} ${словоЗапис(n)}.</li>` : '';
+  return `<div class="shub-notice" role="status">
+    <span class="shub-notice-ic">${ICONS.bookmark}</span>
+    <ul class="shub-notice-list">${рядки}${решта}</ul>
+  </div>`;
+}
 
 // 🔴 06.09 — ЗНАЧКИ БЕРУТЬСЯ З ТАБ-БАРУ, А НЕ З ВЛАСНОГО НАБОРУ.
 //
@@ -109,14 +201,25 @@ function unsaveBtnHtml(type, attrs) {
                   aria-label="Прибрати зі збережених">${bookmarkOffSvg}</button>`;
 }
 
+// 🔴 18.09 — КАРТКА НЕСЕ СТАН. `data-shub-state` потрібен не для вигляду (його
+// задає клас позначки), а для СТЕНДА і для тапу: без нього «Знято» і «Скасовано»
+// довелось би вичитувати з тексту, тобто перевіряти переклад, а не поведінку.
+// ⚠️ Стаття, змита ротацією (`gone`), веде НЕ в модалку (її нічим наповнити), а
+// на джерело — тому окремий атрибут `data-shub-url`, і саме він вирішує гілку
+// тапу. Порожній він бути не може: без адреси картка сюди не потрапляє, її
+// прибирає `loadData`.
 function cardHtml(p, type) {
-  const when = new Date(p.created_at || p.ts || Date.now())
-    .toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+  const when = p.created_at || p.ts
+    ? new Date(p.created_at || p.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
+    : '';
+  const state = p.state || 'alive';
+  const url = state === 'gone' && p.url ? ` data-shub-url="${escapeHtml(p.url)}"` : '';
   return `
     <div class="shub-row">
-      <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
-        <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без тексту)')}</span>
-        <span class="shub-card-meta">${escapeHtml(when)}</span>
+      <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}"
+              data-shub-state="${state}"${url}>
+        <span class="shub-card-text">${escapeHtml(p.title || p.text || '(без назви)')}</span>
+        <span class="shub-card-meta">${when ? escapeHtml(when) : ''}${badgeHtml(state)}</span>
       </button>
       ${unsaveBtnHtml(type, `data-shub-id="${p.id}"`)}
     </div>`;
@@ -126,48 +229,90 @@ function cardHtml(p, type) {
 function busCardHtml(r) {
   const адреса = `data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
                   data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}"`;
+  // 🗣️ «якщо користувач відстежує рейс… і він скасований, то він має бути там,
+  // але так само з позначкою скасований» — Вова 18.09. Позначка малюється тим
+  // самим `badgeHtml`, що й у постів: одне правило на всі типи.
+  const state = r.state || 'alive';
   return `
     <div class="shub-row">
-      <button class="shub-card" type="button" data-shub-type="bus" ${адреса}>
+      <button class="shub-card" type="button" data-shub-type="bus" data-shub-state="${state}" ${адреса}>
         <span class="shub-card-text">${escapeHtml(r.title)}</span>
-        <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
+        <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}${badgeHtml(state)}</span>
       </button>
       ${unsaveBtnHtml('bus', адреса)}
     </div>`;
 }
 
 async function loadData() {
-  const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
+  const data = {
+    articles: [], buses: [], chats: [], boards: [],
+    loggedIn: isLoggedIn(), postsError: false, removed: [],
+  };
 
-  // Статті — БД `saved_articles` за `uid` (24.08). Гість сюди не доходить: аркуш
-  // за гейтом входу. ⚠️ `.reverse()` більше НЕ треба — база вже віддає
-  // найновіші зверху (`order created_at desc`), а другий переворот показував би
-  // найстаріші першими.
+  // ── СТАТТІ ────────────────────────────────────────────────────────────────
+  // 🔴 Єдиний тип, чиє джерело правди не в базі: `data/articles.json` + ротація
+  // за віком. Тому «зникла» тут не аварія, а нормальний хід часу — і саме тому
+  // до 18.09 список мовчки коротшав.
+  // 🛑 `ok:false` означає «файл не прочитався», і тоді ми не чіпаємо НІЧОГО:
+  // інакше поганий інтернет стер би людині закладки. Порожній результат і
+  // невдале читання — різні стани, і зливати їх не можна (той самий урок, що
+  // `newsLoadFailed()` у самій вкладці Новин).
   try {
     if (data.loggedIn) {
       const artIds = getSavedArticleIds();
-      if (artIds.length) data.articles = await getArticlesByIds(artIds);
+      if (artIds.length) {
+        const snaps = await fetchSavedArticleSnaps(currentUserId());
+        const res = await collectSavedArticles(artIds, snaps);
+        if (res.ok) {
+          for (const a of res.items) {
+            if (a.state !== 'removed') { data.articles.push(a); continue; }
+            // 🔑 Рішення Вови: стаття зі знімком ЛИШАЄТЬСЯ і веде на оригінал —
+            // людина зберігала, щоб прочитати, і посилання це ще дає. А без
+            // адреси вести нікуди, отже предмет справді зник → прибираємо і
+            // називаємо, як усе інше.
+            if (a.url) data.articles.push({ ...a, state: 'gone' });
+            else {
+              data.removed.push({ kind: 'article', title: a.title });
+              removeSavedArticle(currentUserId(), a.id);
+            }
+          }
+          // Памʼять `news.js` мусить збігтися зі списком, інакше зірочка на
+          // самій статті лишиться «збереженою» над уже прибраним рядком.
+          if (data.removed.some(r => r.kind === 'article')) {
+            try { await refreshSavedArticles(); } catch (_) { /* fail-soft */ }
+          }
+        } else {
+          data.articles = [];   // не знаємо — і не вдаємо, що знаємо
+        }
+      }
     }
   } catch (e) { console.warn('[saved-hub] articles', e); }
 
-  // Автобуси — trackedRoutes (buses.js), вже порожні для гостя на джерелі (loadTrackedRoute).
+  // ── АВТОБУСИ ──────────────────────────────────────────────────────────────
+  // Джерело те саме (`trackedRoutes`), але тепер кожен рейс несе `state`:
+  // `cancelled` лишається з позначкою, минулі відсіяні на джерелі.
   try { data.buses = getSavedRoutesForUI(); } catch (e) { console.warn('[saved-hub] buses', e); }
 
-  // Обговорення/Оголошення — Supabase saved_posts, лише залогінені.
+  // ── ПИТАННЯ Й ОГОЛОШЕННЯ ──────────────────────────────────────────────────
+  // 🔴 Один виклик замість двох (`fetchSavedPostIds` + `select … in(ids)`), і
+  // це не косметика: старий шлях бачив рівно те, що пускає RLS, тобто видалене
+  // просто НЕ ПРИХОДИЛО — рядок у `saved_posts` лишався навічно, а список
+  // мовчки коротшав. `sync_saved_posts` дивиться на дані з боку сервера, отже
+  // може і назвати мертве, і прибрати його.
+  // ⚠️ `null` = збій. Тоді нічого не прибрано і нічого не показано — стан
+  // помилки, а не порожній список.
   if (data.loggedIn) {
-    try {
-      const ids = [...(await fetchSavedPostIds(currentUserId()))];
-      if (ids.length) {
-        const supa = getSupabase();
-        const { data: posts, error } = await supa.from('posts').select('*').in('id', ids)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        data.chats  = (posts || []).filter(p => p.type === 'chat');
-        data.boards = (posts || []).filter(p => p.type !== 'chat');
-      }
-    } catch (e) {
-      console.warn('[saved-hub] posts', e);
+    const res = await syncSavedPosts(currentUserId());
+    if (!res) {
       data.postsError = true;
+    } else {
+      for (const it of res.items) {
+        const row = {
+          id: it.post_id, title: it.title, state: it.state, created_at: it.created_at,
+        };
+        (it.kind === 'chat' ? data.chats : data.boards).push(row);
+      }
+      for (const r of res.removed) data.removed.push({ kind: r.kind, title: r.title });
     }
   }
   return data;
@@ -188,11 +333,21 @@ function categoriesScreenHtml() {
       </button>`;
   }).filter(Boolean).join('');
 
+  // 🔑 Повідомлення про прибране стоїть НАД списком і на КОРЕНЕВОМУ екрані:
+  // прибрати могло з різних категорій, а сама категорія після цього могла зовсім
+  // зникнути з переліку (порожні не малюються). Покажи ми це всередині
+  // категорії — людина не побачила б повідомлення саме тоді, коли воно
+  // найпотрібніше: коли прибрано ОСТАННІЙ запис розділу.
+  // 🛑 І тому ж воно НЕ тост: тост зникає за секунди, а хаб — те місце, куди
+  // людина прийшла розбирати збережене. Зникле пояснення нічим не краще за
+  // мовчання, яке ми тут лікуємо.
+  const notice = removedNoticeHtml();
+
   if (!rows) {
-    return `<div class="shub-empty">Поки нічого не збережено.<br>
+    return `${notice}<div class="shub-empty">Поки нічого не збережено.<br>
       <span class="shub-hint">Тримайте прапорець ${ICONS.bookmark} на картці оголошення, обговорення чи статті — і воно зʼявиться тут.</span></div>`;
   }
-  return `<div class="shub-cats">${rows}</div>`;
+  return `${notice}<div class="shub-cats">${rows}</div>`;
 }
 
 // ── Екран 2: список конкретної категорії ─────────────────────────────────
@@ -398,11 +553,19 @@ function openSavedSheet() {
     if (!card) return;
     const id = Number(card.dataset.shubOpen);
     const type = card.dataset.shubType;
+    const url = card.dataset.shubUrl || '';
     closeHub();
     if (type === 'article') {
-      openArticle(id);          // модалка статті — глобальна, без перемикання вкладки
+      // 🔴 18.09 — стаття, змита ротацією, веде НА ДЖЕРЕЛО. Відкрити модалку
+      // нічим: тіла статті в застосунку вже немає, і `openArticle` зробив би
+      // рівно те мовчазне «нічого не сталось», від якого ми тут ідемо.
+      if (url) window.open(url, '_blank', 'noopener');
+      else openArticle(id);     // модалка статті — глобальна, без перемикання вкладки
     } else {
-      openBoardItemById(id);    // питання і оголошення: вкладку й тип вибирає сама
+      // 🔑 ТРЕТІМ АРГУМЕНТОМ ІДЕ ТИП — саме його бракувало, і саме через це тап по
+      // збереженому ПИТАННЮ кидав на Дошку зі словами «це оголошення більше
+      // недоступне». Тип тут відомий завжди: картка лежить у своїй категорії.
+      openBoardItemById(id, null, type === 'chat' ? 'chat' : 'board');
     }
   });
 

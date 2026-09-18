@@ -1831,11 +1831,47 @@ export async function fetchSavedPostIds(uid) {
 
 // Закладки — тихі й ідемпотентні: повтор дає той самий стан, а тост через закладку
 // людині не потрібен (викликач сам відкочує іконку, якщо не вийшло).
+//
+// 🔴 18.09 — ПИШЕМО ЧЕРЕЗ RPC `save_post`, А НЕ `upsert` НАПРЯМУ.
+// Причина не в правах, а в ЗНІМКУ назви: щоб колись сказати «Оголошення «Куплю
+// будинок», яке ви зберегли, знято», назву треба зняти ТОДІ, коли запис ще
+// живий. Після видалення брати її вже нізвідки.
+// 🛑 Знімок робить база, а не клієнт: інакше сюди можна було б надіслати будь-яку
+// назву і будь-який тип, і повідомлення називало б те, чого не існувало.
+// ⚠️ RPC відмовляє на вже видаленому записі (`Запису вже немає`) — тобто мертву
+// закладку неможливо створити навіть навмисно. Рівно ту, яку ми тут лікуємо.
 export async function addSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
-  const r = await netCall(() => supa.from('saved_posts')
-    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' }));
-  return r.ok ? { ok: true } : { ok: false };
+  const r = await netCall(() => supa.rpc('save_post', { p_id: postId }));
+  if (!r.ok) return { ok: false };
+  const d = r.data;
+  return d?.ok ? { ok: true, title: d.title, kind: d.kind } : { ok: false, error: d?.error };
+}
+
+// 🔴 18.09 — ЗВІРКА І ЧИСТКА ЗБЕРЕЖЕНОГО ОДНИМ ТАКТОМ (замовлення Вови).
+//
+// Повертає `{ items, removed }`: живі записи зі СТАНОМ (`alive` · `closed` ·
+// `pending`) і ті, що прибрано, — з назвою, знятою до видалення.
+//
+// 🛑 ЧОМУ РІШЕННЯ УХВАЛЮЄ БАЗА, А НЕ ЦЕЙ ФАЙЛ. Клієнт звичайної людини фізично
+// не відрізняє «видалено» від «не завантажилось»: політика читання ховає
+// видалене рівно так само, як обрив мережі ховає все. Почистити за відсутністю
+// даних означало б стерти ЖИВІ закладки на поганому інтернеті — той самий клас,
+// що вада 18.09, коли збій приходив винятком і його мовчки ковтали.
+// ➡️ Тому тут немає ЖОДНОЇ гілки, яка виводить видалення з тиші: збій повертає
+// `null`, і викликач зобовʼязаний трактувати його як «не знаю», а не як «немає».
+// ⚠️ `uid` іде параметром, як у всіх сусідніх функцій цього файлу, хоч сама RPC
+// бере людину з `auth.uid()`: тут він потрібен лише щоб не ходити в мережу за
+// гостя. Імпортувати `currentUserId` сюди не можна — `auth.js` сам залежить від
+// цього модуля, і вийшло б коло.
+export async function syncSavedPosts(uid) {
+  if (!supa || !uid) return null;
+  const r = await netCall(() => supa.rpc('sync_saved_posts'));
+  if (!r.ok || !r.data?.ok) {
+    console.warn('[supabase] syncSavedPosts:', r.data?.error || 'немає відповіді');
+    return null;
+  }
+  return { items: r.data.items || [], removed: r.data.removed || [] };
 }
 
 export async function removeSavedPost(uid, postId) {
@@ -1865,11 +1901,34 @@ export async function fetchSavedArticleIds(uid) {
   return set;
 }
 
-export async function addSavedArticle(uid, articleId) {
+// 🔴 18.09 — ЗБЕРІГАЄМО РАЗОМ ІЗ ЗАГОЛОВКОМ І АДРЕСОЮ ДЖЕРЕЛА.
+//
+// Стаття — ЄДИНИЙ збережуваний тип, чиє джерело правди не в базі: вона живе в
+// `data/articles.json` і має ротацію за віком. Тобто зникнення збереженої
+// новини — не рідкісний випадок, а РОЗКЛАД: рано чи пізно зникне кожна.
+// 🔑 Рішення Вови 18.09: тримаємо знімок, щоб картка не зникала мовчки, а
+// називала статтю і вела на оригінал у джерела.
+// ⚠️ Тут знімок надсилає КЛІЄНТ (на відміну від `save_post`), і це не
+// непослідовність: у статті немає ні автора в базі, ні модерації, яку можна
+// було б обійти підробленою назвою, а писати людина може лише у СВОЇ рядки.
+export async function addSavedArticle(uid, articleId, title = null, url = null) {
   if (!supa || !uid) return { ok: false };
-  const r = await netCall(() => supa.from('saved_articles')
-    .upsert({ uid, article_id: articleId }, { onConflict: 'uid,article_id' }));
-  return r.ok ? { ok: true } : { ok: false };
+  const r = await netCall(() => supa.rpc('save_article', {
+    p_id: articleId, p_title: title, p_url: url,
+  }));
+  return r.ok && r.data?.ok ? { ok: true } : { ok: false };
+}
+
+// Знімки збережених статей: `{ id → { title, url } }`. Потрібні рівно там, де
+// самої статті вже немає, — тобто в хабі «Збережені».
+export async function fetchSavedArticleSnaps(uid) {
+  const map = new Map();
+  if (!supa || !uid) return map;
+  const { data, error } = await supa.from('saved_articles')
+    .select('article_id, snap_title, snap_url').eq('uid', uid);
+  if (error) { console.warn('[supabase] fetchSavedArticleSnaps:', error.message); return map; }
+  for (const r of (data || [])) map.set(r.article_id, { title: r.snap_title, url: r.snap_url });
+  return map;
 }
 
 export async function removeSavedArticle(uid, articleId) {

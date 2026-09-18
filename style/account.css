@@ -700,7 +700,50 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.shub-card-meta { font-size: 12px; color: var(--ink-mute, #888); }
+.shub-card-meta {
+  font-size: 12px; color: var(--ink-mute, #888);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ── 18.09 — ПОЗНАЧКА СТАНУ НА КАРТЦІ ────────────────────────────────────────
+   🗣️ Вова: «якщо рейс скасований, то він має бути там, але так само з позначкою
+   скасований».
+   📐 Кегль 11px — межа аудиту для дрібних міток (`design-system.mjs` дозволяє
+   капс лише на ≤12.5px), тож позначка лишається підписом, а не другим
+   заголовком. Вага 700 при такому кеглі не порушує стелю жирного: це підпис на
+   кілька слів, а не абзац.
+   🛑 Кольори — ТОКЕНАМИ, не сирим hex: правило `style/base.css` («новий екран
+   бере токен»), і саме через сирі числа беж дожив у цьому файлі до вересня.  */
+.shub-badge {
+  flex: none;
+  font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 6px; line-height: 1.5;
+  border: 1px solid transparent;
+}
+/* нейтральне «його більше нема тут»: знято, немає у стрічці */
+.shub-badge--off  { color: var(--ink-mute, #777); background: var(--board-press, #E4E4E1); }
+/* очікування — не помилка і не втрата */
+.shub-badge--wait { color: #8A6A12; background: #FBF1D6; }
+/* скасовано — єдиний стан, що ламає плани людини, тож єдиний акцентний */
+.shub-badge--bad  { color: var(--red, #722F37); background: #F6E4E6; }
+
+/* ── 18.09 — РЯДОК ПРО ПРИБРАНЕ ──────────────────────────────────────────────
+   Стоїть НАД списком категорій. Не тост: тост зникає, а це відповідь на
+   питання «куди поділось моє збережене», і людина мусить її прочитати тоді,
+   коли сама відкриє хаб.                                                      */
+.shub-notice {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 0 0 12px; padding: 10px 12px;
+  background: var(--board-press, #E4E4E1); border-radius: 12px;
+}
+.shub-notice-ic { flex: none; width: 18px; height: 18px; color: var(--ink-mute, #777); opacity: .75; }
+.shub-notice-ic svg { width: 100%; height: 100%; }
+.shub-notice-list { margin: 0; padding-left: 16px; }
+.shub-notice-list li {
+  font-size: 13px; line-height: 1.45; color: var(--ink, #222);
+}
+.shub-notice-list li + li { margin-top: 4px; }
+
 .shub-empty { text-align: center; color: var(--ink-mute, #777); padding: 30px 8px; font-size: 14px; line-height: 1.55; }
 .shub-hint { font-size: 12px; color: var(--ink-mute, #888); }
 .shub-login {
