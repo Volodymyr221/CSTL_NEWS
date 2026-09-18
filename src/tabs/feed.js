@@ -34,7 +34,8 @@ import { openCropper } from '../core/cropper.js';         // рамка кадр
 import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS,
          paintIfChanged, forgetPaint, patchList }
   from '../core/list-patch.js';
-import { onReturn } from '../core/refresh-on-return.js';   // «повернувся на вкладку → свіже» (07.08)
+import { onReturn } from '../core/refresh-on-return.js';
+import { paintLoading, paintOffline } from '../core/screen-state.js';   // «повернувся на вкладку → свіже» (07.08)
 import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
@@ -172,6 +173,15 @@ async function loadData() {
     // тап вимикав би нагадування замість вмикати.
     isLoggedIn() ? loadMyEventReminders()    : Promise.resolve(),
   ]);
+  // 🔴 18.09 — «НЕ ЗМОГЛИ» ПРИХОДИТЬ І ЗНАЧЕННЯМ, НЕ ЛИШЕ ВИНЯТКОМ.
+  // `fetchPages()` віддає `null`, коли Supabase відповів помилкою (а не обірвав
+  // звʼязок). Без цієї перевірки `pages` ставав порожнім масивом, `renderFeed()`
+  // малював «Поки що тут порожньо» — і людина читала, що спільноти громади нічого
+  // не публікують, хоча насправді ми просто не доїхали до бази.
+  // 📐 Саме `pages`, а не `posts`: стрічка БЕЗ ЖОДНОЇ сторінки — це завжди збій,
+  // бо сторінки заводяться один раз і не зникають; а от порожній список постів
+  // при живих сторінках — законний стан «ще нічого не опублікували».
+  if (pg === null) throw new Error('fetchPages: база не відповіла');
   // Чернетки — ПЕРШИМИ: це те, що чекає на дію, а не те, що читають.
   pages = orderPages(pg); posts = [...dr, ...ps]; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
   // 🗓 Порядок стрічки з урахуванням републікації події в її день (feedSortKey).
@@ -4231,8 +4241,26 @@ export async function initFeed() {
 
     root.dataset.fdWired = '1';
   }
-  await loadData();
-  renderFeed();
+  // 🔴 18.09 — СКЕЛЕТ ДО ТОГО, ЯК ПІТИ В МЕРЕЖУ. До цього `#feed-list` лишався
+  // порожнім увесь час завантаження, і на повільному звʼязку людина шість секунд
+  // дивилась у голе полотно. Розбір — у шапці `core/screen-state.js`.
+  paintLoading(document.getElementById('feed-list'), 3);
+  // 🔴 …А ВІДМОВА МЕРЕЖІ ПРИХОДИТЬ ВИНЯТКОМ, не значенням: обрив звʼязку кидає
+  // `reject`, `Promise.all` усередині `loadData()` кидає далі, і без цього `try`
+  // `renderFeed()` НЕ ВИКЛИКАВСЯ ВЗАГАЛІ — екран лишався порожнім назавжди.
+  try {
+    await loadData();
+    renderFeed();
+  } catch (e) {
+    console.warn('[feed] не вдалось завантажити стрічку:', e && e.message);
+    paintOffline(document.getElementById('feed-list'), {
+      title: 'Стрічка тимчасово недоступна',
+      onRetry: () => { loadData().then(renderFeed).catch(() => {
+        paintOffline(document.getElementById('feed-list'),
+                     { title: 'Стрічка тимчасово недоступна', onRetry: () => initFeed() });
+      }); },
+    });
+  }
   healFeedPushDevice();     // тихо полагодити push-пристрій, якщо є підписки (див. нижче)
 
   // Перезавантаження при поверненні на вкладку (напр. після входу — з'явиться

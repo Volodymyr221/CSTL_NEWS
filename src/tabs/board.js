@@ -40,6 +40,7 @@ import { ICONS } from '../core/icons.js';
 import { MONTHS_GEN } from '../core/chat-core.js';   // укр. місяці в родовому (реюз, як у profile-card.js)
 // Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
 import { keepScroll, paintIfChanged } from '../core/list-patch.js';
+import { paintLoading } from '../core/screen-state.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
@@ -2073,13 +2074,24 @@ async function loadBoardData() {
   // тут не рідкісний випадок, а звичайний хід подій.
   await authReady();
   const uid = currentUserId();
-  const [posts, anns, comments, saved, reactions] = await Promise.all([
-    fetchPublishedPosts(),
-    fetchPublishedAnnouncements(),
-    fetchAllComments(),
-    uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
-    fetchAllReactions(uid || getAnonId()),
-  ]);
+  // 🔴 18.09 — ВИНЯТОК ТУТ ОЗНАЧАЄ ТЕ САМЕ, ЩО `posts === null`: даних немає.
+  // Було: обрив звʼязку кидав `reject`, `Promise.all` кидав далі, і виклик нагорі
+  // (`openDiscussions` з `.catch(() => {})`) мовчки його ковтав — екран Питань
+  // лишався ПОРОЖНІМ. Тепер відмова завжди приходить ЗНАЧЕННЯМ `false`, і обидва
+  // шляхи — і `{error}` від Supabase, і обрив мережі — ведуть в один стан збою.
+  let posts, anns, comments, saved, reactions;
+  try {
+    [posts, anns, comments, saved, reactions] = await Promise.all([
+      fetchPublishedPosts(),
+      fetchPublishedAnnouncements(),
+      fetchAllComments(),
+      uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
+      fetchAllReactions(uid || getAnonId()),
+    ]);
+  } catch (e) {
+    console.warn('[board] не вдалось завантажити дошку:', e && e.message);
+    return false;
+  }
   if (posts === null) return false;
   allPosts         = posts;
   allAnnouncements = anns || [];
@@ -2126,6 +2138,15 @@ export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
+  // 🔴 18.09 — СКЕЛЕТ ДО МЕРЕЖІ, І ЦЕ НЕ КОСМЕТИКА.
+  // Заміряно прогоном «перший житель із поганим інтернетом»: поки `loadBoardData()`
+  // ходить у базу, на екрані стоїть попередній рендер — а при першому відкритті
+  // це «Тут поки порожньо». Тобто застосунок ПЕРШИМ КАДРОМ каже, що оголошень у
+  // громаді немає, і лише через секунди виправляється (або показує стан збою).
+  // «Порожньо» — відповідь про громаду, і давати її, поки відповіді ще немає,
+  // не можна: людина повірить першому напису, а не третьому.
+  paintLoading(el, 3, true);   // `true` — замінити навіть застаріле «Тут поки порожньо»
+
   // 1. Supabase: пости + анонси + коментарі + закладки + реакції(лайки) паралельно.
   // Саме читання — у `loadBoardData()` (спільне з мʼяким оновленням, щоб не тримати
   // два однакові запити в різних місцях).
@@ -2152,7 +2173,7 @@ export async function renderBoard() {
   // тихіша.
   el.innerHTML = `
     <div class="bd-offline">
-      <p class="bd-offline-ttl">Дошка тимчасово недоступна</p>
+      <p class="bd-offline-ttl">${discOpen ? 'Питання тимчасово недоступні' : 'Дошка тимчасово недоступна'}</p>
       <p class="bd-offline-tx">Не вдалось звʼязатися з сервером. Перевір інтернет і спробуй ще раз.</p>
       <button class="bd-offline-btn" type="button">Спробувати ще</button>
     </div>`;
