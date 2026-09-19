@@ -473,3 +473,92 @@ comment on table public.user_roles is
   'Ролі людини. Їх може бути КІЛЬКА (Вова = owner + ceo). Підсумковий дозвіл — найвищий серед усіх ролей, потім особистий виняток із user_perms.';
 comment on table public.user_perms is
   'Особистий виняток поверх заготовки ролі — «в разі чого додати певний вид» (Вова 19.09). Перебиває в обидва боки.';
+
+-- ── 13. КОМАНДА І ПОШУК ЛЮДЕЙ (міграція `team_list_and_people_search`) ─────
+--
+-- 🔴 Заведено 19.09 після скарги Вови: «Як мені додати редактора, я не розумію».
+-- 📐 Перевірено ФАКТОМ: розділ «Доступи» мав лише «Відкликати» і «Повернути»,
+-- форми додавання не існувало взагалі; таблиця `editor_invites` у базі Є, а в
+-- коді (`admin.html`, `src/`) не згадується ЖОДНОГО разу. Механізм був
+-- збудований наполовину — сховище є, дверей немає.
+--
+-- 🔑 Чому RPC, а не запит із клієнта: пошта живе в `auth.users`, куди клієнту
+-- ходу немає в принципі, а збирати «хто в команді» з трьох таблиць на клієнті
+-- означало б тримати це правило в другому місці — і воно розійшлося б.
+
+create or replace function public.team_list()
+returns jsonb
+language plpgsql stable security definer set search_path = public
+as $fn$
+declare v_out jsonb;
+begin
+  if not public.has_perm('access', 'view') then
+    return jsonb_build_object('ok', false, 'error', 'Немає доступу');
+  end if;
+
+  select coalesce(jsonb_agg(t order by t->>'name'), '[]'::jsonb) into v_out
+  from (
+    select jsonb_build_object(
+      'uid',   u.id,
+      'email', u.email,
+      'name',  coalesce(nullif(btrim(p.name || ' ' || coalesce(p.surname, '')), ''), u.email),
+      'roles', (select coalesce(jsonb_agg(ur2.role order by ar.rank), '[]'::jsonb)
+                  from user_roles ur2 join app_roles ar on ar.role = ur2.role
+                 where ur2.uid = u.id),
+      'perms', (select coalesce(jsonb_object_agg(up.area, up.level), '{}'::jsonb)
+                  from user_perms up where up.uid = u.id),
+      -- Старий доступ по пошті показуємо ОКРЕМО: поки він живий, людина має
+      -- права навіть без жодної ролі, і ховати це від очей не можна.
+      'legacy_admin', exists (select 1 from admins a where lower(a.email) = lower(u.email))
+    ) as t
+    from auth.users u
+    left join profiles p on p.uid = u.id
+    where exists (select 1 from user_roles ur where ur.uid = u.id)
+       or exists (select 1 from admins a where lower(a.email) = lower(u.email))
+  ) s;
+
+  return jsonb_build_object('ok', true, 'team', v_out);
+end;
+$fn$;
+
+-- 🛑 Пошук лише для того, хто керує доступами: інакше це відкритий довідник
+-- пошт усіх жителів.
+-- ⚠️ Шукає серед ТИХ, ХТО ВЖЕ ЗАХОДИВ: роль ставиться на акаунт, а не на адресу.
+-- Запрошення того, кого ще немає в застосунку, — окрема задача (саме її й
+-- мала закривати мертва `editor_invites`).
+create or replace function public.people_search(p_q text)
+returns jsonb
+language plpgsql stable security definer set search_path = public
+as $fn$
+declare v_out jsonb; v_q text := '%' || btrim(coalesce(p_q, '')) || '%';
+begin
+  if not public.has_perm('access', 'manage') then
+    return jsonb_build_object('ok', false, 'error', 'Немає доступу');
+  end if;
+  if length(btrim(coalesce(p_q, ''))) < 2 then
+    return jsonb_build_object('ok', true, 'people', '[]'::jsonb);
+  end if;
+
+  select coalesce(jsonb_agg(t), '[]'::jsonb) into v_out
+  from (
+    select jsonb_build_object(
+      'uid', u.id, 'email', u.email,
+      'name', coalesce(nullif(btrim(p.name || ' ' || coalesce(p.surname, '')), ''), u.email)
+    ) as t
+    from auth.users u
+    left join profiles p on p.uid = u.id
+    where u.email ilike v_q
+       or coalesce(p.name, '') ilike v_q
+       or coalesce(p.surname, '') ilike v_q
+    order by u.created_at
+    limit 12
+  ) s;
+
+  return jsonb_build_object('ok', true, 'people', v_out);
+end;
+$fn$;
+
+revoke execute on function public.team_list()         from public, anon;
+revoke execute on function public.people_search(text) from public, anon;
+grant  execute on function public.team_list()         to authenticated;
+grant  execute on function public.people_search(text) to authenticated;
