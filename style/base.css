@@ -757,6 +757,115 @@ body:has(.fd-sheet-back) .app-main { overflow: hidden; }
    🔑 Мерехтіння скелета вже описане класами .hm-sk* (style/home.css) — другої
    анімації не заводимо, тут лише відступи контейнера. */
 .scr-loading { padding: 8px 0; }
+
+/* ══ КІСТЯКИ ПІД ФОРМУ КОЖНОГО ЕКРАНА (19.09.2026) ═══════════════════════════
+   🗣️ Замовлення Вови зі знімків: «зроби сторінку завантаження кожної сторінки
+   в такому вигляді як сторінка… стрічка зараз завантажується як список, а може
+   так як елементи на стрічці».
+   🔴 Він має рацію, і код сам себе видавав: коментар у `screen-state.js` писав
+   «скелет повторює ФОРМУ того, що приїде», а форма була ОДНА на всі екрани —
+   «фото 64px ліворуч + три смужки». На Стрічку ж приїжджає карусель спільнот і
+   картка з фото 4:5 на всю ширину. Тобто кістяк обіцяв не те, що приходило, і
+   розкладка сіпалась рівно в мить появи даних — те, від чого кістяк і рятує.
+
+   📐 РОЗМІРИ ТУТ НЕ З ГОЛОВИ. Зняті з живого DOM інструментом
+   `tests/tools/skeleton-shapes.mjs`: картка Дошки 366×125, рядок Питання
+   358×165, картка рейсу 390×110, банер автобусів 362×168, кільце Стрічки 62×62
+   при колонці 96px. Розбіжність тут = стрибок розкладки, тому правити ці числа
+   можна лише разом із новим виміром.
+   🔑 Мерехтіння — клас `.hm-sk` (style/home.css), другої анімації не заводимо. */
+
+/* Спільне: ряд кістяка не має власного тла — тло дає картка-обгортка. */
+.sk-wrap { display: flex; flex-direction: column; }
+
+/* ── СТРІЧКА: карусель спільнот + великі картки дописів ──────────────────── */
+.sk-circles { display: flex; gap: 18px; padding: 8px 16px 12px; overflow: hidden; }
+.sk-circle { flex: 0 0 auto; width: 96px; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; }
+/* ⚠️ `.hm-sk.` ПЕРЕД класом — не стиль, а необхідність: мерехтіння дає клас
+   `.hm-sk` (style/home.css), а home.css підключається ПІСЛЯ base.css, тож його
+   `border-radius: 6px` перебивав однакову за вагою крапку. 🔴 Заміряно оком на
+   знімку: кільця спільнот вийшли КВАДРАТНИМИ. Подвоєний клас додає ваги рівно
+   стільки, скільки треба, і не чіпає порядок імпортів (він у проєкті закріплений
+   коментарем у style.css). */
+.hm-sk.sk-circle-ring { width: 62px; height: 62px; border-radius: 50%; }
+.sk-circle-cap { width: 72px; height: 10px; border-radius: 5px; }
+.sk-feed { display: flex; flex-direction: column; gap: 8px; }
+.sk-feed-card { background: var(--bg-card, #fff); border: 1px solid var(--board-line, #e6e4e0);
+  border-radius: 14px; overflow: hidden; }
+.sk-feed-head { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px;
+  align-items: center; padding: 12px 14px 8px; }
+.hm-sk.sk-feed-ava { width: 40px; height: 40px; border-radius: 50%; }
+.sk-feed-head-tx { margin-left: 10px; display: flex; flex-direction: column; gap: 6px; }
+.sk-feed-name { height: 13px; width: 62%; }
+.sk-feed-meta { height: 10px; width: 34%; }
+/* 4:5 — та сама рамка, у якій стоїть одиночне фото допису (`galleryHtml`).
+   ⚠️ Стеля 520px — теж із оригіналу (`.fd-photo img { max-height: 520px }`):
+   без неї кістяк на вузькому екрані виростав вищим за справжнє фото. */
+.hm-sk.sk-feed-photo { width: 100%; aspect-ratio: 4 / 5; max-height: 520px; border-radius: 0; }
+.sk-feed-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.sk-feed-l1 { height: 14px; width: 84%; }
+.sk-feed-l2 { height: 14px; width: 96%; }
+.sk-feed-l3 { height: 14px; width: 58%; }
+
+/* Шапка списку (заголовок + пошук). Дошка і Питання малюють її РАЗОМ зі
+   списком, тож без неї кістяк був би нижчим за правду і список стрибав би. */
+.sk-head { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.hm-sk.sk-head-ttl { height: 26px; width: 58%; border-radius: 8px; }
+.hm-sk.sk-head-note { height: 30px; width: 88%; border-radius: 8px; }
+.hm-sk.sk-head-search { height: 40px; width: 100%; border-radius: 12px; }
+.hm-sk.sk-head-count { height: 14px; width: 40%; }
+
+/* ── ДОШКА: картка оголошення (фото ліворуч, мета, назва, ціна) ──────────── */
+.sk-board { display: flex; flex-direction: column; gap: 10px; padding: 0 12px; }
+.sk-board-card { display: flex; gap: 12px; padding: 12px;
+  background: var(--bg-card, #fff); border: 1px solid var(--board-line, #e6e4e0);
+  border-radius: 12px; min-height: 125px; }
+.sk-board-ph { width: 96px; height: 96px; border-radius: 10px; flex: 0 0 auto; }
+.sk-board-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px;
+  justify-content: center; }
+.sk-board-cat { height: 16px; width: 76px; border-radius: 8px; }
+.sk-board-title { height: 15px; width: 88%; }
+.sk-board-desc { height: 12px; width: 66%; }
+.sk-board-price { height: 16px; width: 54px; border-radius: 8px; margin-top: 2px; }
+
+/* ── ПИТАННЯ: рядок питання (аватар, текст у два рядки, відповіді) ───────── */
+.sk-qa { display: flex; flex-direction: column; gap: 10px; padding: 0 16px; }
+.sk-qa-row { display: flex; gap: 12px; padding: 14px;
+  background: var(--bg-card, #fff); border: 1px solid var(--board-line, #e6e4e0);
+  border-radius: 12px; min-height: 120px; }
+.hm-sk.sk-qa-ava { width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto; }
+.sk-qa-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 9px; }
+.sk-qa-who { height: 11px; width: 38%; }
+.sk-qa-q1 { height: 15px; width: 94%; }
+.sk-qa-q2 { height: 15px; width: 72%; }
+.sk-qa-foot { height: 12px; width: 46%; margin-top: 4px; }
+
+/* ── АВТОБУСИ: смужка тижня + пошук + банер + картки рейсів ──────────────── */
+/* 📐 Смужка 67px і пошук 60px — з виміру живого DOM. Вони приходять разом зі
+   списком (той самий `innerHTML`), тому без них розклад стрибав би на 127px. */
+.sk-bus-week { display: flex; gap: 6px; height: 67px; padding: 11px 16px; }
+.sk-bus-day { flex: 1 1 0; border-radius: 8px; background: var(--board-press, #ecebe8); }
+.sk-bus-search { display: flex; align-items: center; gap: 10px; height: 60px; padding: 8px 14px; }
+.hm-sk.sk-bus-field { flex: 1 1 0; height: 44px; border-radius: 10px; }
+.hm-sk.sk-bus-swap { width: 36px; height: 36px; border-radius: 50%; flex: 0 0 auto; }
+.sk-bus-hero { height: 168px; margin: 12px 14px; border-radius: 14px; }
+.sk-bus-list { display: flex; flex-direction: column; }
+.sk-bus-card { display: flex; align-items: center; gap: 14px; padding: 16px;
+  min-height: 110px; border-bottom: 1px solid var(--board-line, #e6e4e0); }
+.sk-bus-time { width: 58px; height: 34px; border-radius: 8px; flex: 0 0 auto; }
+.sk-bus-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 9px; }
+.sk-bus-route { height: 14px; width: 78%; }
+.sk-bus-note { height: 11px; width: 48%; }
+
+/* ── ГРОМАДА: віджети (заголовок + плитка) ───────────────────────────────── */
+.sk-hm { display: flex; flex-direction: column; gap: 14px; padding: 4px 14px; }
+.sk-hm-widget { background: var(--bg-card, #fff); border: 1px solid var(--board-line, #e6e4e0);
+  border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sk-hm-ttl { height: 14px; width: 44%; }
+.sk-hm-body { height: 76px; border-radius: 10px; }
+
+/* Вимкнений рух: мерехтіння знімає `.hm-sk` у home.css — тут нічого дублювати. */
 .scr-loading-tx {
   margin: 0 0 10px; text-align: center;
   font: 600 13px/1.3 system-ui, -apple-system, sans-serif; color: var(--gray);

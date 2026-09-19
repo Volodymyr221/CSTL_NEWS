@@ -4244,7 +4244,7 @@ export async function initFeed() {
   // 🔴 18.09 — СКЕЛЕТ ДО ТОГО, ЯК ПІТИ В МЕРЕЖУ. До цього `#feed-list` лишався
   // порожнім увесь час завантаження, і на повільному звʼязку людина шість секунд
   // дивилась у голе полотно. Розбір — у шапці `core/screen-state.js`.
-  paintLoading(document.getElementById('feed-list'), 3);
+  paintLoading(document.getElementById('feed-list'), 2, false, 'feed');
   // 🔴 …А ВІДМОВА МЕРЕЖІ ПРИХОДИТЬ ВИНЯТКОМ, не значенням: обрив звʼязку кидає
   // `reject`, `Promise.all` усередині `loadData()` кидає далі, і без цього `try`
   // `renderFeed()` НЕ ВИКЛИКАВСЯ ВЗАГАЛІ — екран лишався порожнім назавжди.
@@ -4254,10 +4254,10 @@ export async function initFeed() {
   } catch (e) {
     console.warn('[feed] не вдалось завантажити стрічку:', e && e.message);
     paintOffline(document.getElementById('feed-list'), {
-      title: 'Стрічка тимчасово недоступна',
+      title: 'Стрічка тимчасово недоступна', kind: 'feed',
       onRetry: () => { loadData().then(renderFeed).catch(() => {
         paintOffline(document.getElementById('feed-list'),
-                     { title: 'Стрічка тимчасово недоступна', onRetry: () => initFeed() });
+                     { title: 'Стрічка тимчасово недоступна', kind: 'feed', onRetry: () => initFeed() });
       }); },
     });
   }
