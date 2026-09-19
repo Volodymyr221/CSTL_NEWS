@@ -928,9 +928,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(M)}  top0=${Math.round(g)
     </div>`,t.querySelector(".bd-offline-btn")?.addEventListener("click",()=>mn())}}function tn(){let t=Za();if(!t)return;let e=pt==="board";t.innerHTML=`
     ${e?`
       <div class="board-bg" aria-hidden="true"></div>
-    `:`
-      <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
-    `}
+    `:""}
     ${$v()}
     <div class="bd-body" id="bd-body">${sh()}</div>
     ${Ev()}

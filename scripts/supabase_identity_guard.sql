@@ -39,6 +39,26 @@
 --   `trg_comments_antispam` < `trg_enforce_identity` — антиспам відпрацює
 --   першим. Це не заважає: він дивиться на текст, ми на підпис.
 --
+-- 🔴 19.09.2026 — ВИПРАВЛЕНО: ТРИГЕР ПИСАВ ЛИШЕ ІМʼЯ, БЕЗ ПРІЗВИЩА.
+--    🗣️ Скарга Вови: «спочатку вибиває тільки імʼя, тобто Сергій, і потім
+--    блимає і підтягує фамілію. Чому воно блимає… Воно має відразу всю
+--    карточку підтягувати. У нас стоїть імʼя і прізвище».
+--
+--    🔑 ПРИЧИНА — РОЗХОДЖЕННЯ ДВОХ ДЖЕРЕЛ ПРАВДИ, класичний B-27.
+--    Тригер писався 09.08, а прізвища завели 04.09 (PR #1155, `fullName()`).
+--    Відтоді в денормалізованій колонці лежав ЗНІМОК без прізвища, а
+--    `hydrateNames()` підтягувало з `profiles` ПОВНЕ імʼя — і людина бачила
+--    заміну тексту на вже намальованій картці.
+--    📐 Заміряно на живій базі 19.09: розходяться **14 постів із 14** і
+--    **11 коментарів з 11**, тобто 100% — блимало геть усе, де є підпис.
+--
+--    ✅ Тепер склейка тут ДЗЕРКАЛИТЬ `fullName()` із `src/core/utils.js`:
+--    імʼя + пробіл + прізвище, порожні частини відкидаються.
+--    🛑 Зберігаємо ПОВНЕ імʼя, а не скорочуємо на клієнті: коротка форма
+--    потрібна рівно у двох місцях (привітання на Громаді і цитата у картці
+--    Питання), і її рахує `firstNameOf()` уже з повного. Зворотний напрям —
+--    добути прізвище з «Сергій» — неможливий.
+--
 -- Ідемпотентно (`create or replace` + `drop trigger if exists`).
 -- ============================================================================
 
@@ -53,35 +73,38 @@ declare
 begin
   -- Ім'я людини за uid. Порожнє або відсутнє → «Житель» (див. блок вище).
   -- uid = null → повертаємо null і НЕ чіпаємо колонку (легасі).
+  -- ⚠️ Склейка ОДНА на всі чотири гілки і дзеркалить `fullName()` у клієнті:
+  -- `btrim(name || ' ' || coalesce(surname,''))`. Порожнє прізвище дає просто
+  -- імʼя, порожнє імʼя — просто прізвище, обидва порожні — «Житель».
   if tg_table_name = 'posts' then
     if new.owner_uid is not null then
-      select coalesce(nullif(trim(p.name), ''), 'Житель') into v_name
+      select coalesce(nullif(btrim(coalesce(p.name,'') || ' ' || coalesce(p.surname,'')), ''), 'Житель') into v_name
         from profiles p where p.uid = new.owner_uid;
       new.author := coalesce(v_name, 'Житель');
     end if;
 
   elsif tg_table_name = 'comments' then
     if new.sender_uid is not null then
-      select coalesce(nullif(trim(p.name), ''), 'Житель') into v_name
+      select coalesce(nullif(btrim(coalesce(p.name,'') || ' ' || coalesce(p.surname,'')), ''), 'Житель') into v_name
         from profiles p where p.uid = new.sender_uid;
       new.author := coalesce(v_name, 'Житель');
     end if;
 
   elsif tg_table_name = 'threads' then
     if new.author_uid is not null then
-      select coalesce(nullif(trim(p.name), ''), 'Житель') into v_name
+      select coalesce(nullif(btrim(coalesce(p.name,'') || ' ' || coalesce(p.surname,'')), ''), 'Житель') into v_name
         from profiles p where p.uid = new.author_uid;
       new.author_name := coalesce(v_name, 'Житель');
     end if;
     if new.buyer_uid is not null then
-      select coalesce(nullif(trim(p.name), ''), 'Житель') into v_name
+      select coalesce(nullif(btrim(coalesce(p.name,'') || ' ' || coalesce(p.surname,'')), ''), 'Житель') into v_name
         from profiles p where p.uid = new.buyer_uid;
       new.buyer_name := coalesce(v_name, 'Житель');
     end if;
 
   elsif tg_table_name = 'chat_group_members' then
     if new.uid is not null then
-      select coalesce(nullif(trim(p.name), ''), 'Житель') into v_name
+      select coalesce(nullif(btrim(coalesce(p.name,'') || ' ' || coalesce(p.surname,'')), ''), 'Житель') into v_name
         from profiles p where p.uid = new.uid;
       new.name := coalesce(v_name, 'Житель');
     end if;
@@ -91,7 +114,7 @@ begin
 end $$;
 
 comment on function public.enforce_denorm_identity() is
-  'Підпис автора бере сервер із profiles, а не клієнт. Привід: підробка імені через PostgREST повз застосунок (09.08.2026).';
+  'Підпис автора бере сервер із profiles, а не клієнт (09.08.2026). Склейка імʼя+прізвище дзеркалить fullName() у клієнті — до 19.09 писалось лише імʼя, і картка блимала при гідрації.';
 
 -- Вішаємо на INSERT і на UPDATE. UPDATE обов'язковий: інакше лишався б обхід
 -- «вставив чесно → одразу перейменував себе окремим запитом».

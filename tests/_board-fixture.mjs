@@ -111,6 +111,26 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             // сьогодні знайшов у САМІЙ БАЗІ (відповіді видаленого питання
             // читались далі). Заглушка не сміє бути добрішою за прод.
             if (table === 'posts') рядки = рядки.filter(r => !r.deleted_at);
+            // 🔴 19.09 — ПІДПИС АВТОРА ПІДСТАВЛЯЄ «СЕРВЕР», ЯК У ПРОДІ.
+            // У базі це робить тригер enforce_denorm_identity: він перезаписує
+            // author повним імʼям із profiles на кожній вставці й правці.
+            // Без дзеркала тут стенд бачив би той підпис, який САМ поклав у
+            // фікстуру, — тобто зеленів би над розходженням знімка з профілем,
+            // а це рівно та вада, через яку картка блимала (скарга Вови 19.09:
+            // спершу «Сергій», потім підтягується прізвище).
+            // ⚠️ Профілю немає → підпис лишається як є. Це не послаблення:
+            // тригер поводиться так само з легасі-рядками, де uid порожній.
+            if (table === 'posts' || table === 'comments') {
+              const ключ = table === 'posts' ? 'owner_uid' : 'sender_uid';
+              const проф = window.__cstlProfiles || [];
+              рядки = рядки.map(r => {
+                const pr = проф.find(x => x.uid === r[ключ]);
+                if (!pr) return r;
+                const повне = [pr.name, pr.surname].map(v => (v || '').trim())
+                  .filter(Boolean).join(' ');
+                return повне ? { ...r, author: повне } : r;
+              });
+            }
             if (table === 'comments' || table === 'reactions') {
               const живі = new Set((T.posts || []).filter(r => !r.deleted_at).map(r => String(r.id)));
               рядки = рядки.filter(r => r.post_id == null || живі.has(String(r.post_id)));
@@ -227,6 +247,8 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             // документів: там треба довести, що кнопка «Видалити акаунт»
             // справді доходить до бази, а не лише малює модалку.
             (window.__cstlRpcNames = window.__cstlRpcNames || []).push(fn);
+            const затримка = SLOW[fn] || 0;
+            if (затримка) await new Promise(r => setTimeout(r, затримка));
             const all = window.__cstlProfiles || [];
             if (fn === 'get_avatars') {
               // Лічильник походів у базу — стенд ним міряє антифлуд.
