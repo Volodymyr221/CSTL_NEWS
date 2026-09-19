@@ -9,45 +9,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-19 10:51 UTC
+**Зріз на:** 2026-09-19 10:52 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `4bc92faf` 19.09 10:51 — docs: журнал 19.09 окремим файлом; пульс і реєстр — система оновлень |
+| останній коміт людини | `26c60231` 19.09 10:52 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260919-1048` |
-| останній PR у `main` | #1186 |
+| останній PR у `main` | #1187 |
 | стендів на диску | 158 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-09-19 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-18b.md`
-- `_session-log/vova-2026-09-19.md`
-- `admin.html`
-- `bundle.js`
-- `scripts/supabase_features.sql`
-- `src/app.js`
-- `src/core/features.js`
-- `src/core/sidebar.js`
-- `sw.js`
-- `tests/_board-fixture.mjs`
-- `tests/updates-flags.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `26c60231` 19.09 10:52 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `a645608c` 19.09 10:52 — 🚀 Система оновлень: прапорці фіч, коло раннього доступу і режим «дивитись як житель» (#1187)
+- `28e8eb26` 19.09 10:51 — docs(пульс): авто-блок після мерджу
 - `4bc92faf` 19.09 10:51 — docs: журнал 19.09 окремим файлом; пульс і реєстр — система оновлень
 - `70ed3d97` 19.09 10:49 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
-- `7cf5a729` 19.09 10:48 — feat(оновлення): прапорці фіч, коло раннього доступу і режим «як житель»
-- `67497504` 19.09 10:18 — cms: статті кабінету у стрічку 19.09 10:18 UTC
-- `0598fb65` 19.09 10:17 — 🎚 Ролі й дозволи застосунку: набір ролей, рівні доступу, додавання людей у команду (#1186)
 
 <!-- AUTO:END -->
 
