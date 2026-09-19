@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-19 15:34 UTC
+**Зріз на:** 2026-09-19 15:36 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `197b1f21` 19.09 15:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `da36f6e8` 19.09 15:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260919-1048` |
-| останній PR у `main` | #1187 |
+| останній PR у `main` | #1188 |
 | стендів на диску | 159 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-19 | є ✅ |
@@ -24,21 +24,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-19.md`
-- `tests/surface-flags.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `da36f6e8` 19.09 15:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `da25b3b3` 19.09 15:35 — 🛡 Сторож: нова поверхня не їде громаді повз рішення про прапорець (#1188)
+- `c87a3c03` 19.09 15:34 — docs(пульс): авто-блок після мерджу
 - `197b1f21` 19.09 15:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `93019020` 19.09 15:34 — test(прапорці): сторож не пускає нову поверхню повз рішення про прапорець
-- `d69f3ecb` 19.09 14:26 — ai(news): памʼять+чернетки+витрати 19.09 14:26 UTC
-- `9d98b1c8` 19.09 11:23 — ai(editor): свята-чернетки 19.09 11:23 UTC
-- `a01288bf` 19.09 11:00 — ai(news): памʼять+чернетки+витрати 19.09 11:00 UTC
 
 <!-- AUTO:END -->
 
