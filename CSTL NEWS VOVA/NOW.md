@@ -9,47 +9,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-19 17:37 UTC
+**Зріз на:** 2026-09-19 18:32 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `46df7cef` 19.09 17:37 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `7ea67267` 19.09 18:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260919-1737` |
-| останній PR у `main` | #1188 |
+| останній PR у `main` | #1189 |
 | стендів на диску | 160 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-09-19 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-19.md`
-- `bundle.js`
-- `src/core/features.js`
-- `src/core/screen-state.js`
-- `src/core/skeletons.js`
-- `src/tabs/board.js`
-- `src/tabs/buses.js`
-- `src/tabs/feed.js`
-- `style/base.css`
-- `sw.js`
-- `tests/skeleton-shapes.mjs`
-- `tests/tools/skeleton-shapes.mjs`
-- `tests/tools/skeleton-shots.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `7ea67267` 19.09 18:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `9aa92106` 19.09 18:02 — ai(news): памʼять+чернетки+витрати 19.09 18:02 UTC
+- `41040030` 19.09 17:39 — 🦴 Кістяк завантаження повторює форму своєї вкладки (перша фіча за прапорцем) (#1189)
+- `7a362c25` 19.09 17:39 — docs(пульс): кістяки в пульсі, авто-блок після мерджу
 - `46df7cef` 19.09 17:37 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
-- `ed05d6d8` 19.09 17:37 — feat(кістяки): сторінка завантаження повторює форму своєї вкладки
-- `da56d375` 19.09 15:36 — chore: свіжий main у гілці після #1188
-- `da36f6e8` 19.09 15:36 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
-- `da25b3b3` 19.09 15:35 — 🛡 Сторож: нова поверхня не їде громаді повз рішення про прапорець (#1188)
 
 <!-- AUTO:END -->
 
