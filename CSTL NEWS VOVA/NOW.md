@@ -10,47 +10,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-19 08:36 UTC
+**Зріз на:** 2026-09-19 09:08 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `77ffa431` 19.09 08:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `9b067e82` 19.09 08:42 — docs(журнал): фініш — PR #1185, деплой #6037 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260919-0834` |
-| останній PR у `main` | #1184 |
+| останній PR у `main` | #1185 |
 | стендів на диску | 157 |
-| незакомічених файлів | 2 ⚠️ |
+| незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-09-19 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-09-18b.md`
-- `bundle.js`
-- `scripts/supabase_saved_lifecycle.sql`
-- `src/app.js`
-- `src/core/saved-hub.js`
-- `src/core/supabase.js`
-- `src/tabs/board.js`
-- `src/tabs/buses.js`
-- `src/tabs/news.js`
-- `style/account.css`
-- `sw.js`
-- `tests/_board-fixture.mjs`
-- `tests/saved-lifecycle.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `9b067e82` 19.09 08:42 — docs(журнал): фініш — PR #1185, деплой #6037
+- `2fddab12` 19.09 08:36 — chore(finish): свіжий main у гілці, CACHE_NAME cstl-20260919-0834, пульс у межах бюджету
 - `77ffa431` 19.09 08:34 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `107438f2` 19.09 05:55 — ai(news): памʼять+чернетки+витрати 19.09 05:55 UTC
 - `3aac5a6d` 19.09 01:14 — ai(news): памʼять+чернетки+витрати 19.09 01:14 UTC
-- `160f885a` 18.09 22:34 — ai(news): памʼять+чернетки+витрати 18.09 22:34 UTC
-- `8ed500fd` 18.09 22:32 — docs(журнал): розбір хвоста повного прогону
 
 <!-- AUTO:END -->
 
