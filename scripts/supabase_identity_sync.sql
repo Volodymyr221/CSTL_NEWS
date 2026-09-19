@@ -31,13 +31,27 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_full text;
 begin
-  -- Тільки коли реально змінилось ім'я або телефон (не на кожен save профілю).
-  if new.name is distinct from old.name then
-    update public.posts    set author = new.name where owner_uid  = new.uid and author is distinct from new.name;
-    update public.comments set author = new.name where sender_uid = new.uid and author is distinct from new.name;
-    update public.threads  set author_name = new.name where author_uid = new.uid and author_name is distinct from new.name;
-    update public.threads  set buyer_name  = new.name where buyer_uid  = new.uid and buyer_name  is distinct from new.name;
+  -- Тільки коли реально змінилось імʼя, ПРІЗВИЩЕ або телефон (не на кожен save).
+  --
+  -- 🔴 19.09.2026 — ДО ЦЬОГО УМОВА ДИВИЛАСЬ ЛИШЕ НА `name`, і наслідок був
+  -- тихий: людина міняла ПРІЗВИЩЕ у профілі, а в підписах лишалось старе —
+  -- назавжди, бо іншого шляху оновити денормалізовану копію немає.
+  -- 🔑 Друга половина тієї самої вади, що й у `enforce_denorm_identity`: обидві
+  -- функції писали лише імʼя, хоч прізвища завели 04.09. Склейка тут дзеркалить
+  -- `fullName()` у клієнті.
+  if new.name is distinct from old.name
+     or new.surname is distinct from old.surname then
+    v_full := coalesce(nullif(btrim(coalesce(new.name,'') || ' ' || coalesce(new.surname,'')), ''), 'Житель');
+    update public.posts    set author      = v_full where owner_uid  = new.uid and author      is distinct from v_full;
+    update public.comments set author      = v_full where sender_uid = new.uid and author      is distinct from v_full;
+    update public.threads  set author_name = v_full where author_uid = new.uid and author_name is distinct from v_full;
+    update public.threads  set buyer_name  = v_full where buyer_uid  = new.uid and buyer_name  is distinct from v_full;
+    -- ⚠️ `chat_group_members` тут НЕ було: тригер `enforce_denorm_identity`
+    -- підписує їх на вставці, а зміну профілю ніхто не доносив.
+    update public.chat_group_members set name = v_full where uid = new.uid and name is distinct from v_full;
   end if;
 
   if new.phone is distinct from old.phone then
