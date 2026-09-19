@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "19.09.2026",
-  "updatedTime": "11:41",
+  "updatedTime": "15:58",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -11332,7 +11332,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -11374,7 +11374,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -11608,7 +11608,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:30",
           "arrival_time": "14:42",
           "duration_min": 72,
@@ -11695,7 +11695,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:00",
           "arrival_time": "15:35",
           "duration_min": 95,
@@ -11779,7 +11779,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:55",
           "arrival_time": "16:35",
           "duration_min": 100,
@@ -11911,7 +11911,7 @@
           "bus": "",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "15:30",
           "arrival_time": "17:15",
           "duration_min": 105,
@@ -12183,7 +12183,7 @@
           "carrier": "під_яцишин_м_м",
           "bus": "Баз  А 091",
           "days": "щодня",
-          "status": "scheduled",
+          "status": "cancelled",
           "sale_active": false,
           "departure_time": "17:15",
           "arrival_time": "18:55",
@@ -12638,7 +12638,7 @@
         }
       ],
       "fetchedAt": "19.09.2026",
-      "fetchedTime": "11:41"
+      "fetchedTime": "15:58"
     },
     "2026-09-20": {
       "routes": [
@@ -14772,7 +14772,7 @@
         }
       ],
       "fetchedAt": "19.09.2026",
-      "fetchedTime": "11:41"
+      "fetchedTime": "15:58"
     },
     "2026-09-21": {
       "routes": [
