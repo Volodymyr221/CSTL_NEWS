@@ -33,6 +33,7 @@ import { onAuthChange, isLoggedIn, currentUserName, currentAvatarUrl } from './a
 import { LEGAL_DOC_HTML, BOARD_RULES_HTML, CONTACT } from './legal.js';
 import { openModal } from './modal.js';
 import { ICONS, tabIcon } from './icons.js';
+import { inTestCircle, asResident, setAsResident } from './features.js';   // режим перегляду «як житель» (19.09)
 import { avatarCircle, escapeHtml } from './utils.js';
 // ⚠️ Меню — єдиний модуль `core/`, який імпортує екрани із `tabs/`, і це не
 // недогляд: навігаційний хаб за визначенням мусить дотягнутись до кожного
@@ -126,6 +127,17 @@ const SECTIONS = [
     { id: 'saved',    label: 'Збережені',      icon: ICONS.bookmark, kind: 'screen', open: () => openSavedHub() },
   ] },
   { id: 'info', caption: 'Інформація', items: [
+    // 🔴 19.09 — «ДИВИТИСЬ ЯК ЖИТЕЛЬ» (рішення Вови: «Одразу»).
+    // 🔑 Видно ЛИШЕ тому, хто в колі раннього доступу: людині, яка й так бачить
+    // те саме, що громада, перемикач нічого не означає, а питання «а що це?»
+    // породив би в кожного. Ховається тим самим прийомом, що «Адмінка».
+    // ⚠️ Підпис міняється на «Вийти з режиму жителя», коли режим увімкнено:
+    // інакше людина не має ЖОДНОЇ підказки, що дивиться урізану картинку, і
+    // піде шукати свою фічу, якої сама ж себе й позбавила.
+    // 🛑 НЕ в секції карток (де «Адмінка»): картки малюються іншим шаблоном, без
+    // `.sidebar-item-label`, і підпис нікуди було б писати. Спіймано стендом —
+    // перша редакція стояла саме там і давала порожній рядок.
+    { id: 'as-resident', label: 'Дивитись як житель', icon: ICONS.user, kind: 'resident', team: true },
     // Телефони громади — довідка, тому тут. Це прокрутка до блоку на Громаді,
     // а не окремий екран; сусідство з рештою довідки робить обіцянку чеснішою,
     // ніж коли пункт стояв між справжніми вкладками.
@@ -609,6 +621,11 @@ function handleNav(id) {
     item.open?.();
   } else if (item.kind === 'cabinet') {
     window.location.href = './admin.html';
+  } else if (item.kind === 'resident') {
+    // 🔑 Перезавантаження робить сам `setAsResident`: половина екранів
+    // малюється один раз при старті, і «частково нова, частково стара»
+    // картинка збила б з пантелику саме тоді, коли людина перевіряє вигляд.
+    setAsResident(!asResident());
   } else if (item.kind === 'info') {
     openInfoModal(id);
   }
@@ -639,6 +656,26 @@ async function refreshCabinet() {
   try { team = await isTeamMember(); } catch { team = false; }
   _team = team;
   btn.hidden = !team;
+
+  // 🔴 19.09 — «Дивитись як житель». Умова ІНША, ніж у «Адмінки»: не «у команді»,
+  // а «в колі раннього доступу». Це різні множини навмисно — редактор має доступ
+  // до кабінету, але недороблене йому показувати нема потреби.
+  const rb = document.querySelector('[data-nav="as-resident"]');
+  if (rb) {
+    const уКолі = inTestCircle() || asResident();
+    // ⚠️ `asResident()` в умові ОБОВʼЯЗКОВИЙ, але НЕ з тієї причини, яку тут
+    // спершу було записано. Перший коментар твердив, що в режимі жителя
+    // `inTestCircle()` віддає false — мутація джерела показала, що це неправда:
+    // членство в колі каже СЕРВЕР, і від режиму перегляду воно не залежить.
+    // 🔑 Справжня пастка інша: людину ПРИБРАЛИ з кола, поки вона сидить у
+    // режимі жителя. Тоді `inTestCircle()` чесно віддає false, і без другої
+    // половини умови пункт зник би разом з ЄДИНИМ способом вимкнути режим —
+    // людина лишилась би в урізаній картинці без підказки, чому вона така.
+    // Стереже `tests/updates-flags.mjs`, блок 4.
+    rb.hidden = !уКолі;
+    const label = rb.querySelector('.sidebar-item-label');
+    if (label) label.textContent = asResident() ? 'Вийти з режиму жителя' : 'Дивитись як житель';
+  }
 }
 
 export function initSidebar() {
@@ -688,6 +725,11 @@ export function initSidebar() {
   // найближче відкриття, і зайвої роботи у фоні немає.
   onAuthChange(() => { if (_open) renderNav(); refreshCabinet(); });
   refreshCabinet();
+  // 🔑 Прапорці приїжджають мережею вже ПІСЛЯ першого кадру. Без цього рядка
+  // людина, яка встигла відкрити меню раніше за відповідь, не побачила б пункту
+  // «Дивитись як житель» до наступного відкриття — а подія `cstl-features-ready`
+  // не мала жодного слухача, тобто була мертвим кодом.
+  window.addEventListener('cstl-features-ready', () => refreshCabinet());
   // Банер згоди / інші місця можуть відкрити правовий документ подією.
   document.addEventListener('cstl-open-legal', () => openInfoModal('policy'));
 }

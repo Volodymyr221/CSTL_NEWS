@@ -269,6 +269,25 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               else T.user_seen_threads.push({ uid, post_id: args.p_post_id, seen_at: new Date(next).toISOString() });
               return { data: new Date(next).toISOString(), error: null };
             }
+            // 🆕 19.09 — ПРАПОРЦІ ОНОВЛЕНЬ. Дзеркало серверної my_features():
+            // 'all' бачать усі, 'circle' — лише ті, хто в колі, 'off' — ніхто.
+            // 🛑 Так само сувора, як прод: заглушка, яка віддає 'on' усім,
+            // зеленіла б над кодом, що показує недороблене всій громаді.
+            if (fn === 'my_features') {
+              const uid = U ? U.id : null;
+              const коло = (T.feature_testers || []).some(r => r.uid === uid);
+              const out = {};
+              for (const f of (T.app_features || [])) {
+                out[f.key] = {
+                  stage: f.stage,
+                  on: f.stage === 'all' || (f.stage === 'circle' && коло),
+                };
+              }
+              // 🔑 Членство в колі їде ОКРЕМИМ полем, а не виводиться з фіч.
+              // Так каже прод після виправлення 19.09: у базі нуль фіч, і без
+              // цього поля людина в колі виглядала б як стороння.
+              return { data: { in_circle: коло, features: out }, error: null };
+            }
             // 🆕 18.09 — ЖИТТЄВИЙ ЦИКЛ ЗБЕРЕЖЕНОГО.
             //
             // 🛑 ЦЕ ДЗЕРКАЛО saved_post_state З БАЗИ, і воно мусить бути так

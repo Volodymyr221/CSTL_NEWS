@@ -25,6 +25,7 @@ import { initJoinInvite } from './core/join-invite.js';   // запрошенн�
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
+import { loadFeatures } from './core/features.js';    // прапорці оновлень (19.09)
 import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
 import { attachSheetDismiss } from './core/sheet-motion.js';    // спільний свайп-закриття аркушів (15.08 — модалка статті теж на ньому)
 import { initRefreshOnReturn, onReturn, forceReturnRefresh } from './core/refresh-on-return.js';   // «повернувся на вкладку → бачиш свіже» (07.08)
@@ -545,6 +546,11 @@ async function init() {
   initBuses();
   initSavedRoutesHeader();   // дані відстеження + банер (Б7.3: без окремої іконки — тепер через хаб)
   initSavedHub();            // хаб «Збережені» (іконка 🔖 в шапці)
+  // 🔴 19.09 — ПРАПОРЦІ ОНОВЛЕНЬ. Без `await` навмисно: перший кадр не має
+  // чекати мережі. Поки відповіді немає, `featureOn()` віддає `false`, тобто
+  // застосунок малює те, що бачить громада, — і це правильний вибір за
+  // замовчуванням: збій мережі не сміє показати людям недороблене.
+  loadFeatures();
   initPower();
 
   // Вкладку при згортанні/поверненні застосунку НЕ скидаємо (Вова 22.07): раніше
