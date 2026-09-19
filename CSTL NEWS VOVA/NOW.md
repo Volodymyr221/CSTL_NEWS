@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-19 20:17 UTC
+**Зріз на:** 2026-09-19 20:18 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `e0d37d90` 19.09 20:17 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `3c7912ce` 19.09 20:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260919-2017` |
-| останній PR у `main` | #1189 |
+| останній PR у `main` | #1190 |
 | стендів на диску | 161 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-19 | є ✅ |
@@ -24,28 +24,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-19.md`
-- `bundle.js`
-- `scripts/supabase_identity_guard.sql`
-- `scripts/supabase_identity_sync.sql`
-- `src/tabs/board.js`
-- `style/board.css`
-- `sw.js`
-- `tests/_board-fixture.mjs`
-- `tests/name-flicker.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `3c7912ce` 19.09 20:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `abe28d10` 19.09 20:18 — 🪪 Підпис більше не блимає + тінь над Питаннями знято (#1190)
+- `14ef5ac7` 19.09 20:18 — docs: пульс, реєстр і літопис — підпис і тінь на Питаннях
 - `e0d37d90` 19.09 20:17 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `93570ee2` 19.09 20:17 — fix(підпис): картка одразу показує імʼя і прізвище; тінь над Питаннями знято
-- `45aaade5` 19.09 18:32 — docs(журнал): фініш кістяків — PR #1189, деплой #6055
-- `7ea67267` 19.09 18:32 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
-- `9aa92106` 19.09 18:02 — ai(news): памʼять+чернетки+витрати 19.09 18:02 UTC
 
 <!-- AUTO:END -->
 
