@@ -269,6 +269,71 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               else T.user_seen_threads.push({ uid, post_id: args.p_post_id, seen_at: new Date(next).toISOString() });
               return { data: new Date(next).toISOString(), error: null };
             }
+            // 🆕 18.09 — ЖИТТЄВИЙ ЦИКЛ ЗБЕРЕЖЕНОГО.
+            //
+            // 🛑 ЦЕ ДЗЕРКАЛО saved_post_state З БАЗИ, і воно мусить бути так
+            // само СУВОРИМ. Заглушка, добріша за прод, — третій випадок у цьому
+            // файлі (.eq 07.08, .single 17.08, .in 17.08): щоразу брехала не
+            // логіка застосунку, а підкладка під нею.
+            // ⚠️ Серверна половина доводиться НЕ тут, а транзакціями з відкотом
+            // на живій базі (журнал 18.09«b»): на обох акаунтах, що тримали
+            // мертву закладку, справжня RPC віддала
+            // removed:[{kind:"chat",title:"Тест"}] і порожні items.
+            if (fn === 'sync_saved_posts') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: { ok: false, error: 'Треба увійти' }, error: null };
+              const стан = (row) => {
+                if (!row) return 'removed';
+                if (row.deleted_at) return 'removed';
+                if (row.status === 'closed') return 'closed';
+                if (row.status === 'pending') return 'pending';
+                if (row.status === 'published') return 'alive';
+                return 'removed';
+              };
+              const мої = (T.saved_posts || []).filter(s => s.uid === uid);
+              const items = [], removed = [];
+              for (const s of мої) {
+                const row = (T.posts || []).find(r => String(r.id) === String(s.post_id));
+                const st = стан(row);
+                const kind = s.snap_kind || (row && row.type) || 'board';
+                if (st === 'removed') { removed.push({ post_id: s.post_id, kind, title: s.snap_title || null }); continue; }
+                const жива = (row.title || '').trim() || (row.text || '').trim() || null;
+                items.push({
+                  post_id: s.post_id, kind, state: st,
+                  title: st === 'pending' ? (s.snap_title || null) : (жива || s.snap_title || null),
+                  created_at: row.created_at || null,
+                });
+              }
+              // Чистка — саме тут, як у справжній функції: інакше стенд не зміг
+              // би перевірити, що повторне відкриття вже нічого не показує.
+              T.saved_posts = (T.saved_posts || []).filter(s =>
+                !(s.uid === uid && removed.some(r => String(r.post_id) === String(s.post_id))));
+              return { data: { ok: true, items, removed }, error: null };
+            }
+            if (fn === 'save_post') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: { ok: false, error: 'Треба увійти' }, error: null };
+              const row = (T.posts || []).find(r => String(r.id) === String(args.p_id) && !r.deleted_at);
+              if (!row) return { data: { ok: false, error: 'Запису вже немає' }, error: null };
+              const title = (row.title || '').trim() || (row.text || '').trim() || null;
+              T.saved_posts = T.saved_posts || [];
+              const є = T.saved_posts.find(s => s.uid === uid && String(s.post_id) === String(args.p_id));
+              if (є) { є.snap_title = title; є.snap_kind = row.type || 'board'; }
+              else T.saved_posts.push({ uid, post_id: row.id, snap_title: title, snap_kind: row.type || 'board' });
+              return { data: { ok: true, title, kind: row.type || 'board' }, error: null };
+            }
+            if (fn === 'save_article') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: { ok: false, error: 'Треба увійти' }, error: null };
+              T.saved_articles = T.saved_articles || [];
+              const є = T.saved_articles.find(s => s.uid === uid && String(s.article_id) === String(args.p_id));
+              const t = args.p_title == null ? null : String(args.p_title).trim() || null;
+              const u2 = args.p_url == null ? null : String(args.p_url).trim() || null;
+              if (є) { є.snap_title = t || є.snap_title; є.snap_url = u2 || є.snap_url; }
+              else T.saved_articles.push({ uid, article_id: args.p_id, snap_title: t, snap_url: u2,
+                                          created_at: new Date().toISOString() });
+              return { data: { ok: true }, error: null };
+            }
             // 🆕 25.08 — РЕДАГУВАННЯ Й ВИДАЛЕННЯ ВЛАСНОГО ПИТАННЯ.
             // 🛑 Емулюємо СЕРВЕРНІ ПЕРЕВІРКИ, а не лише щасливий шлях. Справжні
             // update_question / delete_question відмовляють чужому, не-питанню

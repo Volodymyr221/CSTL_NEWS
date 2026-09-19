@@ -700,7 +700,64 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.shub-card-meta { font-size: 12px; color: var(--ink-mute, #888); }
+.shub-card-meta {
+  font-size: 12px; color: var(--ink-mute, #888);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ── 18.09 — ПОЗНАЧКА СТАНУ НА КАРТЦІ ────────────────────────────────────────
+   🗣️ Вова: «якщо рейс скасований, то він має бути там, але так само з позначкою
+   скасований».
+   📐 Кегль 11px — межа аудиту для дрібних міток (`design-system.mjs` дозволяє
+   капс лише на ≤12.5px), тож позначка лишається підписом, а не другим
+   заголовком. Вага **600, а не 700**: `design-system.mjs` тримає стелю частки
+   жирного, і хоч хаб він не відкриває (модалка поза його вибіркою), сперечатися
+   з приладом заради одного підпису не варто — на 11px різниці не видно.
+   🛑 Кольори — ТОКЕНАМИ, не сирим hex: правило `style/base.css` («новий екран
+   бере токен»), і саме через сирі числа беж дожив у цьому файлі до вересня.
+
+   🔴 ПЕРША РЕДАКЦІЯ ПОРУШИЛА ЦЕ Ж ПРАВИЛО ЧЕРЕЗ ДВА РЯДКИ ПІСЛЯ ТОГО, ЯК ЙОГО
+   НАПИСАЛА. Я дав позначкам кольорові підкладки: `#FBF1D6` (теплота **+37**) для
+   «На перевірці» і `#F6E4E6` (**+16**) для «Скасовано» — і `modal-surface.mjs`
+   червонів рівно на них. Сторож має рацію: це теплі ПОВЕРХНІ, тобто те саме, від
+   чого проєкт відходив усе літо, тільки внесене свіжою рукою.
+   ✅ Тому фон в усіх трьох — той самий нейтральний `--board-press`, а розрізняє
+   їх КОЛІР ТЕКСТУ (теж токеном). Втрати немає: позначка це підпис на одне-два
+   слова, і читають її саме як слово, а не як світлофор.
+   ⚠️ Жовтий для «На перевірці» відкинуто СТОРОЖЕМ, а не смаком — заводитимеш
+   кольорову підкладку, спершу заведи для неї токен у `base.css`.               */
+.shub-badge {
+  flex: none;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 6px; line-height: 1.5;
+  background: var(--board-press, #E4E4E1);
+  border: 1px solid transparent;
+}
+/* нейтральне «його більше нема тут»: знято, немає у стрічці */
+.shub-badge--off  { color: var(--ink-mute, #777); }
+/* очікування — не помилка і не втрата, тож тон звичайного тексту */
+.shub-badge--wait { color: var(--ink, #222); }
+/* скасовано — єдиний стан, що ламає плани людини, тож єдиний акцентний:
+   бордовий текст + тонка рамка того ж кольору замість заливки */
+.shub-badge--bad  { color: var(--red, #722F37); border-color: var(--red, #722F37); }
+
+/* ── 18.09 — РЯДОК ПРО ПРИБРАНЕ ──────────────────────────────────────────────
+   Стоїть НАД списком категорій. Не тост: тост зникає, а це відповідь на
+   питання «куди поділось моє збережене», і людина мусить її прочитати тоді,
+   коли сама відкриє хаб.                                                      */
+.shub-notice {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 0 0 12px; padding: 10px 12px;
+  background: var(--board-press, #E4E4E1); border-radius: 12px;
+}
+.shub-notice-ic { flex: none; width: 18px; height: 18px; color: var(--ink-mute, #777); opacity: .75; }
+.shub-notice-ic svg { width: 100%; height: 100%; }
+.shub-notice-list { margin: 0; padding-left: 16px; }
+.shub-notice-list li {
+  font-size: 13px; line-height: 1.45; color: var(--ink, #222);
+}
+.shub-notice-list li + li { margin-top: 4px; }
+
 .shub-empty { text-align: center; color: var(--ink-mute, #777); padding: 30px 8px; font-size: 14px; line-height: 1.55; }
 .shub-hint { font-size: 12px; color: var(--ink-mute, #888); }
 .shub-login {

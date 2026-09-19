@@ -21,6 +21,13 @@ let allArticles = [];
 // не протікали, бо живуть у `saved_posts` з `uid`. Статті зведено до них.
 // ⚠️ Зберігаємо лише НОМЕР — контент завжди з `data/articles.json` (правило
 // `CLAUDE.md`); ця частина не змінилась.
+//
+// 🔴 18.09 — ПОРУЧ ІЗ НОМЕРОМ ЛЯГАЄ ЗНІМОК ЗАГОЛОВКА Й АДРЕСИ ДЖЕРЕЛА.
+// Це не порушення правила вище, а його межа: контент і далі береться з файлу,
+// знімок потрібен рівно тоді, коли статті у файлі ВЖЕ НЕМАЄ. Стрічка має
+// ротацію за віком, тож зникнення збереженої новини — розклад, а не випадок:
+// до 18.09 `getArticlesByIds` просто робив `.filter(Boolean)` і людина не
+// дізнавалась нічого. Рішення Вови 18.09 — картка лишається і веде на оригінал.
 const SAVED_KEY = 'cstl_saved_articles';   // лишається ЛИШЕ як джерело переносу
 
 // 🔑 ЧОМУ В ПАМʼЯТІ, А НЕ ЩОРАЗУ ЗАПИТОМ. `getSavedArticleIds()` кличеться при
@@ -64,8 +71,16 @@ function toggleSavedArticle(id) {
   const uid = currentUserId();
   if (!uid) return false;
   const idx = savedArticleIds.indexOf(id);
-  if (idx === -1) { savedArticleIds.unshift(id); addSavedArticle(uid, id); }
-  else            { savedArticleIds.splice(idx, 1); removeSavedArticle(uid, id); }
+  if (idx === -1) {
+    savedArticleIds.unshift(id);
+    // 🔑 Знімок знімаємо ТУТ, бо саме тут стаття ще напевно на руках. Через
+    // місяць ротація забере її з `articles.json`, і назвати картку буде нічим.
+    const a = allArticles.find(x => x.id === id);
+    addSavedArticle(uid, id, a?.title || null, a?.sourceUrl || null);
+  } else {
+    savedArticleIds.splice(idx, 1);
+    removeSavedArticle(uid, id);
+  }
   return idx === -1;   // true = щойно збережено
 }
 
@@ -498,9 +513,31 @@ function заголовокДопису(текст) {
   return (вкорочено || чисто.slice(0, 90)) + '…';
 }
 
-export async function getArticlesByIds(ids) {
+// 🔴 18.09 — ЗАМІСТЬ `getArticlesByIds` (він робив `.filter(Boolean)`).
+//
+// Стара функція мовчки викидала статті, яких у файлі вже немає, і хаб
+// «Збережені» показував коротший список, ні про що не повідомивши. Для новин це
+// не крайній випадок: стрічка має ротацію за віком, тож КОЖНА збережена стаття
+// колись зникне.
+//
+// Віддає `{ ok, items }`:
+//   • `ok:false` — файл не прочитався. 🛑 Це НЕ «статей немає»: викликач у цьому
+//     разі не сміє нічого прибирати, інакше поганий інтернет стер би людині живі
+//     закладки. Саме тут лежить пастка всієї задачі, і `newsLoadFailed()` — наш
+//     єдиний спосіб відрізнити тишу від порожнечі.
+//   • кожен `item` має `state`: `alive` (стаття на місці) або `removed` (змита
+//     ротацією). Для `removed` назва й адреса беруться зі ЗНІМКА, знятого в мить
+//     збереження.
+export async function collectSavedArticles(ids, snaps = new Map()) {
   await ensureNewsLoaded();
-  return ids.map(id => allArticles.find(a => a.id === id)).filter(Boolean);
+  if (newsLoadFailed()) return { ok: false, items: [] };
+  const items = ids.map((id) => {
+    const a = allArticles.find(x => x.id === id);
+    if (a) return { ...a, state: 'alive' };
+    const s = snaps.get(id) || {};
+    return { id, title: s.title || null, url: s.url || null, state: 'removed' };
+  });
+  return { ok: true, items };
 }
 
 // Deep-link (6b): відкрити статтю за id — перемкнути на «Новини» + дочекатись даних.
