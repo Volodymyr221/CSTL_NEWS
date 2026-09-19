@@ -735,6 +735,30 @@ const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let currentUser = null;       // user object з Supabase Auth
 let isAdmin = false;          // прапорець після перевірки у admins
 let editorPerms = { isEditor: false, canCreate: false, canPublish: false, canEvents: false };
+
+// 🔴 19.09 — МОЇ РОЛІ Й ДОЗВОЛИ (відповідь `my_access()`), або `null` при збої.
+// Формат: { roles:[…], perms:{ area: 'none'|'view'|'manage' },
+//           can_manage_owners, can_release_update, legacy_admin }
+let myAccess = null;
+
+// Рівень доступу до розділу. 🔑 Одна функція на всю адмінку — і саме тому меню,
+// заголовки й кнопки не можуть розійтись у тому, що вважають дозволеним.
+// ⚠️ `myAccess === null` означає «не знаю», а НЕ «заборонено»: повертаємось до
+// старої поведінки (адмін бачить усе, редактор — своє), інакше одна невдала
+// відповідь мережі зачинила б людині кабінет.
+function permOf(area) {
+  if (myAccess?.perms && area in myAccess.perms) return myAccess.perms[area];
+  if (myAccess) return 'none';
+  return isAdmin ? 'manage' : 'none';        // запасний шлях: база не відповіла
+}
+
+// `can('board')` — «бачить»; `can('board','manage')` — «може міняти».
+function can(area, min = 'view') {
+  const rank = { none: 0, view: 1, manage: 2 };
+  return (rank[permOf(area)] || 0) >= (rank[min] || 0);
+}
+
+const hasRole = (r) => !!myAccess?.roles?.includes(r);
 let activeTab = null;    // null = головний екран (сітка іконок) | pending | announcements | admins | articles | spend | analytics | settings
 let pendingPosts   = [];
 let publishedPosts = [];
@@ -744,6 +768,9 @@ let admins         = [];
 // Зводити їх на клієнті з двох запитів було б помилкою того ж роду, що дала
 // розбіжність двох лічильників одного й того самого (B-27).
 let accessRows     = [];
+// 🔴 19.09 — команда з ролями (`team_list`) і довідник ролей (`app_roles`).
+let teamRows       = [];
+let rolesCatalog   = [];
 // 🔴 ПОСТИ — ЦЕ ДВІ РІЗНІ СУТНОСТІ В ОДНІЙ ТАБЛИЦІ, і саме звідси взялась скарга
 // Вови «Опубліковані — це і оголошення Дошки, і питання позначені як розмова».
 // У базі `posts.type` розрізняє їх, а адмінка показувала рядки таблиці як є.
@@ -814,6 +841,27 @@ async function handleSession(session) {
   // Перевіряємо чи ця пошта є у whitelist admins
   const { data, error } = await supa.from('admins').select('email').eq('email', currentUser.email);
   isAdmin = !error && data && data.length > 0;
+
+  // 🔴 19.09 — РОЛІ Й ДОЗВОЛИ (замовлення Вови: «побудувати шкалу ролей… і
+  // відносно цього видавати переваги в адмін користуванні»).
+  //
+  // `my_access()` одним викликом віддає: мої ролі, підсумковий рівень по КОЖНОМУ
+  // розділу і особливі права. 🔑 Меню малюється САМЕ З ЦЬОГО, а не з власних
+  // уявлень адмінки про ролі: інакше зʼявиться друге джерело правди про доступ, і
+  // воно розійдеться з базою — а розходження тут означає, що людина бачить пункт,
+  // у який сервер її не пустить (або навпаки).
+  //
+  // 🛑 ЗБІЙ НЕ СМІЄ ЗАМИКАТИ АДМІНКУ. Якщо виклик не пройшов (мережа, стара база
+  // без міграції), `myAccess` лишається `null`, і `can()` падає на СТАРУ
+  // перевірку `isAdmin`. Тобто найгірший сценарій — поведінка, яка була до
+  // 19.09, а не зачинені двері. Той самий принцип, що в самій міграції, де
+  // `is_admin()` тримає стару гілку через `or`.
+  myAccess = null;
+  try {
+    const r = await supa.rpc('my_access');
+    if (!r.error && r.data) myAccess = r.data;
+  } catch (e) { console.warn('[admin] my_access', e); }
+
   // Редакторські дозволи (окремо від admins — грануляція прав редактора)
   editorPerms = await fetchMyEditorPerms();
 
@@ -1162,6 +1210,18 @@ async function loadAll() {
     // ⚠️ Ціна нульова: рядків тут одиниці (адміни + редактори), не сотні.
     const { data: acc } = await supa.rpc('admin_list_access');
     accessRows = acc || [];
+
+    // 🔴 19.09 — команда і довідник ролей. Вантажимо поруч із доступами, бо це
+    // той самий розділ і та сама відповідь на питання «хто має право».
+    // ⚠️ Помилка тут НЕ валить адмінку: списки лишаються порожніми, решта
+    // розділів працює. Роздавання ролей — не та функція, заради якої варто
+    // лишити людину без кабінету, якщо база на хвилину замовкла.
+    try {
+      const tl = await supa.rpc('team_list');
+      if (!tl.error && tl.data?.ok) teamRows = tl.data.team || [];
+      const rc = await supa.from('app_roles').select('role,label,descr,rank').order('rank');
+      if (!rc.error) rolesCatalog = rc.data || [];
+    } catch (e) { console.warn('[admin] team/roles', e); }
   }
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
@@ -1218,31 +1278,39 @@ const ICO_HEART_HAND = '<svg width="16" height="16" xmlns="http://www.w3.org/200
 // Пункти меню — один список для сітки (головний екран) і для назви в шапці
 // розділу. icon/label/count — count як функція (рахує наживо, дані вже
 // завантажені loadAll()); show — чи пункт видно за поточними дозволами.
+// 🔴 19.09 — ПУНКТИ МЕНЮ БЕРУТЬ ПРАВА З `can()`, А НЕ З ОДНОГО `isAdmin`.
+// 🗣️ Замовлення Вови: «відносно цього видавати переваги в адмін користуванні».
+// 📐 До 19.09 майже кожен рядок нижче стояв на `show: isAdmin` — доступ був
+// «все або нічого», і роль на кшталт розробника («бачить Дошку, але не видаляє»)
+// не мала де виразитись у принципі.
+// ⚠️ `canArticles` лишається окремим: у редактора своя грануляція
+// (`can_create` / `can_publish` / `can_events`), яка живе в `editor_users`, і
+// зводити її сюди означало б завести друге джерело правди про ті самі права.
 function menuItems() {
-  const canArticles = isAdmin || editorPerms.canCreate;
+  const canArticles = can('articles') || editorPerms.canCreate;
   return [
     { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, group: 'Контент',    count: () => articles.filter(a => a.status === 'draft').length },
     // 🔑 ОДНА СУТНІСТЬ — ОДИН РОЗДІЛ. Статус («на модерації / опубліковані /
     // відхилені») став фільтром усередині, бо це СТАН одного й того ж об'єкта, а
     // не різні речі. Лічильник рахує лише те, що чекає рішення.
-    { id: 'board',         icon: ICO_CLIPBOARD_LIST, label: 'Дошка',        show: isAdmin,     group: 'Модерація',  count: () => оголошення().filter(p => (p.status || 'pending') === 'pending').length },
+    { id: 'board',         icon: ICO_CLIPBOARD_LIST, label: 'Дошка',        show: can('board'),     group: 'Модерація',  count: () => оголошення().filter(p => (p.status || 'pending') === 'pending').length },
     // Питання разом зі своїми відповідями. Лічильник — питання БЕЗ відповіді:
     // саме вони чекають дії громади, і саме їх варто побачити першими.
-    { id: 'questions',     icon: ICO_MESSAGE_CIRCLE, label: 'Питання',      show: isAdmin,     group: 'Модерація',  count: () => питання().filter(q => !відповідіДо(q.id).length).length },
+    { id: 'questions',     icon: ICO_MESSAGE_CIRCLE, label: 'Питання',      show: can('questions'),     group: 'Модерація',  count: () => питання().filter(q => !відповідіДо(q.id).length).length },
     // Лічильник — лише НОВІ скарги: розглянуті не мусять світитись у сітці вічно.
-    { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: isAdmin,     group: 'Модерація',  count: () => adReports.filter(r => r.status === 'new').length },
-    { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Анонси',       show: isAdmin,     group: 'Контент',    count: () => 0 },
+    { id: 'reports',       icon: ICO_FLAG,           label: 'Скарги',       show: can('reports'),     group: 'Модерація',  count: () => adReports.filter(r => r.status === 'new').length },
+    { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Анонси',       show: can('announcements'),     group: 'Контент',    count: () => 0 },
     // 🔑 Лічильник рахує НОВІ ЗАЯВКИ, а не кількість зборів. Кількість зборів на
     // плитці нічого не підказує (вона просто є), а «скільки людей чекає на
     // відповідь» — це саме те, заради чого сюди заходять. Той самий підхід, що
     // у «Скаргах»: розглянуті не мусять світитись у сітці вічно.
-    { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: isAdmin,     group: 'Громада',    count: () => fundRequests.filter(r => r.status === 'new').length },
-    { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     group: 'Громада',    count: () => 0 },
+    { id: 'fundraisers',   icon: ICO_HEART_HAND,     label: 'Збори',        show: can('fundraisers'),     group: 'Громада',    count: () => fundRequests.filter(r => r.status === 'new').length },
+    { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: can('communities'),     group: 'Громада',    count: () => 0 },
     // 🆕 09.08 — «Люди». Лічильник рахує ОФІЦІЙНИХ, а не всіх жителів: загальна
     // кількість профілів у плитці нічого не підказує (вона просто росте), а
     // «скільки людей із галочкою» — це саме те, що адмін звідси і робить.
-    { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: isAdmin,     group: 'Громада',    count: () => 0 },
-    { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     group: 'Доступ',     count: () => 0 },
+    { id: 'people',        icon: ICO_USERS,          label: 'Люди',         show: can('people'),     group: 'Громада',    count: () => 0 },
+    { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: can('admins'),     group: 'Доступ',     count: () => 0 },
     // 🔴 20.08 — «ДОСТУПИ». Заведено після того, як людина, яка пішла з команди
     // півтора місяця тому, досі мала повні права публікувати від імені видання.
     // Прибрати вдалось лише SQL-запитом: списку тих, хто має доступ, не існувало
@@ -1250,9 +1318,9 @@ function menuItems() {
     // 🔑 Лічильник тримає той самий принцип, що й решта: не «скільки всього
     // редакторів» (це просто число), а СКІЛЬКИ ЗАБУТИХ — діючий доступ, яким не
     // користувались понад 30 днів. Саме він і був причиною діри.
-    { id: 'access',        icon: ICO_KEY,            label: 'Доступи',      show: isAdmin,     group: 'Доступ',     count: () => accessRows.filter(забутий).length },
-    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     group: 'Система',    count: () => 0 },
-    { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     group: 'Система',    count: () => 0 },
+    { id: 'access',        icon: ICO_KEY,            label: 'Доступи',      show: can('access'),     group: 'Доступ',     count: () => accessRows.filter(забутий).length },
+    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: can('spend'),     group: 'Система',    count: () => 0 },
+    { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: can('analytics'),     group: 'Система',    count: () => 0 },
     { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        group: 'Система',    count: () => 0 },
   ].filter(m => m.show);
 }
@@ -4022,6 +4090,37 @@ function renderAccess(el) {
       </article>`;
   };
 
+  // 🔴 19.09 — КАРТКА ЛЮДИНИ З РОЛЯМИ. До цього дня в розділі можна було лише
+  // ВІДКЛИКАТИ доступ: жодної кнопки «додати» не існувало, і Вова не міг завести
+  // навіть редактора. Таблиця `editor_invites` при цьому в базі була, а в коді не
+  // згадувалась жодного разу — механізм збудований наполовину.
+  // ⚠️ Кнопка ролі вимкнена, коли її не можна натиснути (не власник тисне
+  // «Власник»), а не схована: людина має бачити, що право існує, і розуміти, що
+  // воно не її. Схована кнопка читається як «такого не буває».
+  const рядокКоманди = (t) => {
+    const мої = t.roles || [];
+    const керуєРолями = myAccess?.perms?.access === 'manage';
+    const кнопки = (rolesCatalog || []).map(r => {
+      const є = мої.includes(r.role);
+      const можна = керуєРолями && (r.role !== 'owner' || myAccess?.can_manage_owners);
+      return `<button class="btn${є ? ' btn--primary' : ''}"
+        data-role-toggle="${escapeHtml(r.role)}" data-role-uid="${escapeHtml(t.uid)}"
+        ${можна ? '' : 'disabled'} title="${escapeHtml(r.descr || '')}"
+        style="${можна ? '' : 'opacity:.45;cursor:not-allowed'}">${є ? '✓ ' : ''}${escapeHtml(r.label)}</button>`;
+    }).join('');
+    const винятки = Object.entries(t.perms || {});
+    return `
+      <article class="card">
+        <div style="font-weight:600">${escapeHtml(t.name || '—')}</div>
+        <div style="font-size:13px;color:#666">${escapeHtml(t.email || '')}</div>
+        ${t.legacy_admin ? `<div style="font-size:11px;color:#8a6a12;margin-top:4px">
+          ⓘ має і старий доступ по пошті (запобіжник переходу — приберемо після перевірки)</div>` : ''}
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${кнопки}</div>
+        ${винятки.length ? `<div style="font-size:12px;color:#555;margin-top:8px">
+          Особисті винятки: ${винятки.map(([a, l]) => escapeHtml(a + ' — ' + l)).join(' · ')}</div>` : ''}
+      </article>`;
+  };
+
   el.innerHTML = `
     ${забутих ? `
       <div class="card" style="background:#fff6e6;border-left:4px solid #e0922a">
@@ -4031,6 +4130,24 @@ function renderAccess(el) {
           Якщо людина більше не в команді — відклич доступ.
         </div>
       </div>` : ''}
+
+    <div class="section-title">Команда і ролі (${teamRows.length})</div>
+    <div style="font-size:13px;color:#666;margin:-6px 0 10px">
+      Ролей у людини може бути кілька — права беруться найвищі з усіх.
+      Адміністратори СПІЛЬНОТ сюди не входять: вони ведуть свої сторінки.
+    </div>
+    ${teamRows.map(рядокКоманди).join('') ||
+      '<div class="card" style="color:#666">Порожньо. Дивно — тут має бути щонайменше власник.</div>'}
+
+    ${myAccess?.perms?.access === 'manage' ? `
+      <article class="card">
+        <div style="font-weight:600;margin-bottom:8px">Додати людину</div>
+        <div style="font-size:13px;color:#666;margin-bottom:8px">
+          Шукай серед тих, хто вже заходив у застосунок: роль ставиться на акаунт, а не на адресу.
+        </div>
+        <input id="team-search" class="input" type="search" placeholder="Імʼя або пошта…" autocomplete="off">
+        <div id="team-found" style="margin-top:8px"></div>
+      </article>` : ''}
 
     <div class="section-title">Адміністратори (${адміни.length})</div>
     <div style="font-size:13px;color:#666;margin:-6px 0 10px">
@@ -4050,6 +4167,80 @@ function renderAccess(el) {
       ? редактори.map(рядокРедактора).join('')
       : '<div class="card" style="color:#666">Зараз доступу до кабінету не має ніхто, крім адміністраторів.</div>'}
   `;
+
+  // 🔴 19.09 — ПЕРЕМИКАННЯ РОЛІ. Кнопка вже показує поточний стан (✓), тож тап
+  // означає «зняти», якщо роль є, і «дати», якщо немає.
+  // 🛑 Стан НЕ міняємо оптимістично: у розділі про ПРАВА намальоване «готово»
+  // над відмовою сервера — найгірше, що можна показати. Той самий урок, що
+  // B-33 (вимикачі, які підтверджували дію, якої ніхто не робив).
+  el.querySelectorAll('[data-role-toggle]').forEach(b => b.addEventListener('click', async () => {
+    const role = b.dataset.roleToggle, uid = b.dataset.roleUid;
+    const людина = teamRows.find(t => t.uid === uid);
+    const є = (людина?.roles || []).includes(role);
+    const назва = (rolesCatalog.find(r => r.role === role) || {}).label || role;
+
+    // Зняття права — дія незворотна для тієї людини, тож питаємо. Видача — ні:
+    // її видно одразу в списку і скасувати можна тим самим тапом.
+    if (є && !confirm(`Зняти роль «${назва}» у «${людина?.email || uid}»?`)) return;
+
+    b.disabled = true;
+    const r = await supa.rpc(є ? 'revoke_role' : 'grant_role', { p_uid: uid, p_role: role });
+    const дані = r.data;
+    if (r.error || !дані?.ok) {
+      b.disabled = false;
+      showToast(дані?.error || r.error?.message || 'Не вдалось', 4000);
+      return;
+    }
+    showToast(є ? `Роль «${назва}» знято ✓` : `Роль «${назва}» надано ✓`);
+    await loadAll(); renderApp();
+  }));
+
+  // Пошук людини. 🔑 Питаємо базу, а не фільтруємо завантажений список: у
+  // клієнта немає і не має бути довідника пошт усіх жителів.
+  const пошук = el.querySelector('#team-search');
+  const знайдені = el.querySelector('#team-found');
+  if (пошук && знайдені) {
+    let таймер = null;
+    пошук.addEventListener('input', () => {
+      clearTimeout(таймер);
+      // ⚠️ Пауза 300мс: без неї кожна літера — окремий похід у базу, а людина
+      // набирає імʼя цілком, а не по одному символу.
+      таймер = setTimeout(async () => {
+        const q = пошук.value.trim();
+        if (q.length < 2) { знайдені.innerHTML = ''; return; }
+        знайдені.innerHTML = '<div style="color:#666;font-size:13px">Шукаю…</div>';
+        const r = await supa.rpc('people_search', { p_q: q });
+        const люди = (r.data?.people) || [];
+        if (!люди.length) {
+          знайдені.innerHTML = '<div style="color:#666;font-size:13px">Нікого не знайшли. Людина мусить хоч раз зайти в застосунок.</div>';
+          return;
+        }
+        знайдені.innerHTML = люди.map(p => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #eee">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600">${escapeHtml(p.name || '—')}</div>
+              <div style="font-size:12px;color:#666">${escapeHtml(p.email || '')}</div>
+            </div>
+            <button class="btn" data-add-uid="${escapeHtml(p.uid)}">+ У команду</button>
+          </div>`).join('');
+
+        // «У команду» дає найнижчу роль — РЕДАКТОРА. 🔑 Навмисно: додавання
+        // людини і видача їй прав — два різні рішення, і зливати їх в один тап
+        // означало б, що хтось випадково стане адміном зі списку пошуку.
+        знайдені.querySelectorAll('[data-add-uid]').forEach(bb => bb.addEventListener('click', async () => {
+          bb.disabled = true;
+          const r2 = await supa.rpc('grant_role', { p_uid: bb.dataset.addUid, p_role: 'editor' });
+          if (r2.error || !r2.data?.ok) {
+            bb.disabled = false;
+            showToast(r2.data?.error || 'Не вдалось', 4000);
+            return;
+          }
+          showToast('Додано як редактора — далі признач ролі в списку ✓');
+          await loadAll(); renderApp();
+        }));
+      }, 300);
+    });
+  }
 
   // 🛑 Відкликання — з підтвердженням. Це рівно та межа, яку тримає проєкт:
   // підтверджуємо незворотне і публічне, не підтверджуємо перегляд і фільтр.
