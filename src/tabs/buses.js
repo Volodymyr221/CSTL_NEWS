@@ -10,6 +10,7 @@ import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/p
 import { ICONS } from '../core/icons.js';
 import { SHEET_EASE } from '../core/sheet-motion.js';
 import { canonicalPlace } from '../core/settlements.js';
+import { paintLoading } from '../core/screen-state.js';   // кістяк під форму екрана (19.09)
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -2404,6 +2405,13 @@ export async function initBuses() {
       closeDropdown();
     }
   }, true);
+
+  // 🔴 19.09 — КІСТЯК ДО ПОХОДУ ПО РОЗКЛАД.
+  // Файл локальний, але на селі й він їде секунди: до цього рядка вкладка
+  // лишалась порожньою весь цей час. Форма — банер найближчого рейсу + рядки з
+  // часом, тобто рівно те, що приїде (`tests/tools/skeleton-shapes.mjs`:
+  // банер 362×168, картка рейсу 390×110).
+  paintLoading(el, 4, true, 'buses');
 
   try {
     const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 60000)}`); // cache-bust кожну хвилину
