@@ -771,6 +771,9 @@ let accessRows     = [];
 // 🔴 19.09 — команда з ролями (`team_list`) і довідник ролей (`app_roles`).
 let teamRows       = [];
 let rolesCatalog   = [];
+// 🔴 19.09 — прапорці оновлень і коло раннього доступу.
+let features       = [];
+let testers        = [];
 // 🔴 ПОСТИ — ЦЕ ДВІ РІЗНІ СУТНОСТІ В ОДНІЙ ТАБЛИЦІ, і саме звідси взялась скарга
 // Вови «Опубліковані — це і оголошення Дошки, і питання позначені як розмова».
 // У базі `posts.type` розрізняє їх, а адмінка показувала рядки таблиці як є.
@@ -1221,6 +1224,10 @@ async function loadAll() {
       if (!tl.error && tl.data?.ok) teamRows = tl.data.team || [];
       const rc = await supa.from('app_roles').select('role,label,descr,rank').order('rank');
       if (!rc.error) rolesCatalog = rc.data || [];
+      const ff = await supa.from('app_features').select('*').order('created_at', { ascending: false });
+      if (!ff.error) features = ff.data || [];
+      const tl2 = await supa.rpc('feature_testers_list');
+      if (!tl2.error && tl2.data?.ok) testers = tl2.data.testers || [];
     } catch (e) { console.warn('[admin] team/roles', e); }
   }
   // Статті — адмінам і редакторам із дозволом створення.
@@ -1266,6 +1273,7 @@ const ICO_KEY = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" 
 
 const ICO_COIN = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1" /> <path d="M12 7v10" /> </svg>';
 const ICO_CHART_BAR = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6" /> <path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10" /> <path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14" /> <path d="M4 20h14" /> </svg>';
+const ICO_ROCKET = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3" /> <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3" /> <path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> </svg>';
 const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg>';
 // Спільноти-канали «Стрічки» (кружечки-сторінки) — іконка «broadcast/канал».
 const ICO_COMMUNITY = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48 -.01a6 6 0 0 1 0 -8.49m11.31 -2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0 -14.14" /> </svg>';
@@ -1319,6 +1327,10 @@ function menuItems() {
     // редакторів» (це просто число), а СКІЛЬКИ ЗАБУТИХ — діючий доступ, яким не
     // користувались понад 30 днів. Саме він і був причиною діри.
     { id: 'access',        icon: ICO_KEY,            label: 'Доступи',      show: can('access'),     group: 'Доступ',     count: () => accessRows.filter(забутий).length },
+    // 🔴 19.09 — «ОНОВЛЕННЯ» (замовлення Вови). Лічильник рахує НЕ всі фічі, а
+    // ті, що зараз у стані «лише колу», тобто ЧЕКАЮТЬ його рішення. Той самий
+    // принцип, що в решті розділів: не «скільки всього», а «скільки чекає дії».
+    { id: 'updates',       icon: ICO_ROCKET,         label: 'Оновлення',    show: can('updates'),     group: 'Система',    count: () => features.filter(f => f.stage === 'circle').length },
     { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: can('spend'),     group: 'Система',    count: () => 0 },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: can('analytics'),     group: 'Система',    count: () => 0 },
     { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        group: 'Система',    count: () => 0 },
@@ -1450,6 +1462,7 @@ function renderTabContent() {
   if (activeTab === 'fundraisers')    return renderFundraisers(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'access')         return renderAccess(el);
+  if (activeTab === 'updates')        return renderUpdates(el);
   if (activeTab === 'spend')          return renderSpend(el);
   if (activeTab === 'analytics')      return renderAnalytics(el);
   if (activeTab === 'settings')       return renderSettings(el);
@@ -4048,6 +4061,149 @@ async function renderCommunityEdit(el) {
 // (`admin_set_editor_perms`, `admin_set_editor_disabled`), бо саме вони пишуть
 // у журнал `admin_audit_log` тією ж транзакцією. Клієнт у журнал дописати не
 // може взагалі — журнал, у який пише той, чиї дії він фіксує, не журнал.
+// ── ОНОВЛЕННЯ ──────────────────────────────────────────────────────────────
+//
+// 🗣️ Замовлення Вови 19.09: «як робити покращення застосунку… щоб не бачили
+// користувачі. І тільки після того, як погодиться… випускати його в прод. Але…
+// щоб я міг протестити і побачити його В РАМКАХ ДОДАТКУ».
+//
+// 🔑 ТРИ СТАНИ, А НЕ ДВА — і це вся суть:
+//   Вимкнено — код у проді, але мертвий; навіть зламаний нікому не шкодить;
+//   Лише колу — бачить тільки коло; ТУТ Вова тапає і каже «криво»;
+//   Усім — його «годиться».
+// Перемикання БЕЗ деплою, відкат — той самий тап.
+//
+// 🛑 Прапорець керує ПОКАЗОМ, а не правами. Право живе в RLS і `has_perm()`.
+function renderUpdates(el) {
+  const можнаКерувати = can('updates', 'manage');
+  const можнаВипускати = !!myAccess?.can_release_update;
+
+  const СТАНИ = [
+    { key: 'off',    label: 'Вимкнено' },
+    { key: 'circle', label: 'Лише колу' },
+    { key: 'all',    label: 'Усім' },
+  ];
+
+  const картка = (f) => {
+    const днів = f.released_at
+      ? Math.floor((Date.now() - new Date(f.released_at).getTime()) / 86400000) : null;
+    // 🔑 Нагадування про ПРИБИРАННЯ. Фіча, що місяць працює у всіх, мусить
+    // втратити прапорець, інакше за півроку буде сорок мертвих перемикачів і код,
+    // де кожен екран має два шляхи. Система нагадує про це сама.
+    const пораПрибрати = f.stage === 'all' && днів !== null && днів >= 7;
+    const кнопки = СТАНИ.map(st => {
+      const обрано = f.stage === st.key;
+      const дозволено = можнаКерувати && (st.key !== 'all' || можнаВипускати);
+      return `<button class="btn${обрано ? ' btn--primary' : ''}"
+        data-feat-key="${escapeHtml(f.key)}" data-feat-stage="${st.key}"
+        ${дозволено ? '' : 'disabled'}
+        style="${дозволено ? '' : 'opacity:.45;cursor:not-allowed'}"
+        >${обрано ? '● ' : ''}${st.label}</button>`;
+    }).join('');
+    return `
+      <article class="card">
+        <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+          <div style="font-weight:600;flex:1;min-width:160px">${escapeHtml(f.label || f.key)}</div>
+          <div style="font-size:11px;color:#999">${escapeHtml(formatDate(f.created_at))}</div>
+        </div>
+        ${f.descr ? `<div style="font-size:13px;color:#666;margin-top:4px">${escapeHtml(f.descr)}</div>` : ''}
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${кнопки}</div>
+        ${пораПрибрати ? `<div style="font-size:12px;color:#8a6a12;margin-top:8px">
+          ⓘ працює у всіх ${днів} дн. — час прибрати прапорець із коду</div>` : ''}
+      </article>`;
+  };
+
+  el.innerHTML = `
+    <div class="section-title">Що зараз тестуємо (${features.length})</div>
+    <div style="font-size:13px;color:#666;margin:-6px 0 10px">
+      «Лише колу» — бачиш тільки ти і ті, хто в колі. Перемикання без деплою,
+      відкат таким самим тапом.
+    </div>
+    ${features.length ? features.map(картка).join('')
+      : '<div class="card" style="color:#666">Поки нічого не тестується. Прапорець зʼявиться тут, щойно нова фіча поїде в застосунок.</div>'}
+
+    <div class="section-title">Хто бачить раніше за всіх (${testers.length})</div>
+    <div style="font-size:13px;color:#666;margin:-6px 0 10px">
+      Сюди ставлять свідомо: доступ до адмінки і перегляд недоробленого — різні речі.
+    </div>
+    ${testers.map(t => `
+      <article class="card">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="font-weight:600">${escapeHtml(t.name || '—')}</div>
+            <div style="font-size:12px;color:#666">${escapeHtml(t.email || '')}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
+          </div>
+          ${можнаКерувати ? `<button class="btn btn--delete" data-tester-off="${escapeHtml(t.uid)}">Прибрати</button>` : ''}
+        </div>
+      </article>`).join('') || '<div class="card" style="color:#666">Коло порожнє.</div>'}
+
+    ${можнаКерувати ? `
+      <article class="card">
+        <div style="font-weight:600;margin-bottom:8px">Додати в коло</div>
+        <input id="tester-search" class="input" type="search" placeholder="Імʼя або пошта…" autocomplete="off">
+        <div id="tester-found" style="margin-top:8px"></div>
+      </article>` : ''}
+  `;
+
+  // 🛑 Стан НЕ міняємо оптимістично: у розділі, який вирішує, що побачить уся
+  // громада, намальоване «готово» над відмовою сервера — найгірше з можливого.
+  el.querySelectorAll('[data-feat-key]').forEach(b => b.addEventListener('click', async () => {
+    const key = b.dataset.featKey, stage = b.dataset.featStage;
+    const f = features.find(x => x.key === key);
+    if (f?.stage === stage) return;                       // уже в цьому стані
+    // Випуск НА ВСЮ ГРОМАДУ підтверджуємо: це єдина тут дія, яку побачать люди.
+    if (stage === 'all' && !confirm(`Показати «${f?.label || key}» УСІМ жителям?`)) return;
+    b.disabled = true;
+    const r = await supa.rpc('set_feature_stage', { p_key: key, p_stage: stage });
+    if (r.error || !r.data?.ok) {
+      b.disabled = false;
+      showToast(r.data?.error || r.error?.message || 'Не вдалось', 4000);
+      return;
+    }
+    showToast(stage === 'all' ? 'Видно всім ✓' : stage === 'circle' ? 'Видно колу ✓' : 'Вимкнено ✓');
+    await loadAll(); renderApp();
+  }));
+
+  el.querySelectorAll('[data-tester-off]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true;
+    const r = await supa.rpc('set_feature_tester', { p_uid: b.dataset.testerOff, p_on: false });
+    if (r.error || !r.data?.ok) { b.disabled = false; showToast(r.data?.error || 'Не вдалось', 4000); return; }
+    showToast('Прибрано з кола ✓');
+    await loadAll(); renderApp();
+  }));
+
+  const пошук = el.querySelector('#tester-search');
+  const знайдені = el.querySelector('#tester-found');
+  if (пошук && знайдені) {
+    let таймер = null;
+    пошук.addEventListener('input', () => {
+      clearTimeout(таймер);
+      таймер = setTimeout(async () => {
+        const q = пошук.value.trim();
+        if (q.length < 2) { знайдені.innerHTML = ''; return; }
+        const r = await supa.rpc('people_search', { p_q: q });
+        const люди = (r.data?.people) || [];
+        знайдені.innerHTML = люди.length ? люди.map(p => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #eee">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600">${escapeHtml(p.name || '—')}</div>
+              <div style="font-size:12px;color:#666">${escapeHtml(p.email || '')}</div>
+            </div>
+            <button class="btn" data-tester-on="${escapeHtml(p.uid)}">+ У коло</button>
+          </div>`).join('')
+          : '<div style="color:#666;font-size:13px">Нікого не знайшли.</div>';
+        знайдені.querySelectorAll('[data-tester-on]').forEach(bb => bb.addEventListener('click', async () => {
+          bb.disabled = true;
+          const r2 = await supa.rpc('set_feature_tester', { p_uid: bb.dataset.testerOn, p_on: true });
+          if (r2.error || !r2.data?.ok) { bb.disabled = false; showToast(r2.data?.error || 'Не вдалось', 4000); return; }
+          showToast('Додано в коло ✓');
+          await loadAll(); renderApp();
+        }));
+      }, 300);
+    });
+  }
+}
+
 function renderAccess(el) {
   const адміни    = accessRows.filter(r => r.вид === 'admin');
   const редактори = accessRows.filter(r => r.вид === 'editor');
