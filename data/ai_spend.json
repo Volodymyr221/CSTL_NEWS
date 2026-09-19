@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1789816995396,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 627,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0094,
+      "note": ""
+    },
+    {
       "ts": 1789780436781,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -769,24 +782,11 @@
       "found": 3,
       "cost_usd": 0.296,
       "note": ""
-    },
-    {
-      "ts": 1787730952541,
-      "mission": "olyka:story:костел-пресвятої-трійці-перлина",
-      "model": "claude-opus-5",
-      "input_tokens": 4707,
-      "output_tokens": 342,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0321,
-      "note": "Костел Пресвятої Трійці — перлина барокової Олики"
     }
   ],
   "totals": {
-    "cost_usd": 11.6698,
-    "runs": 165,
+    "cost_usd": 11.6792,
+    "runs": 166,
     "web_searches": 162
   },
   "months": {
@@ -801,13 +801,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 3.2015,
-      "runs": 40,
+      "cost_usd": 3.2109,
+      "runs": 41,
       "web_searches": 53,
-      "fair_usd": 2.5699
+      "fair_usd": 2.5793
     }
   },
-  "updated_ts": 1789780436781,
+  "updated_ts": 1789816995396,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
