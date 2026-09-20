@@ -14,7 +14,7 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `1dbdc5af` 20.09 12:42 — feat(оновлення): групи за стадією + архів прапорця |
+| останній коміт людини | `d3bb3c01` 20.09 13:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260920-1242` |
 | останній PR у `main` | #1191 |
 | стендів на диску | 163 |
@@ -35,11 +35,11 @@
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `d3bb3c01` 20.09 13:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `1aa149ec` 20.09 13:21 — docs: свіжий авто-блок пульсу
 - `1dbdc5af` 20.09 12:42 — feat(оновлення): групи за стадією + архів прапорця
-- `5c8a0c4c` 20.09 07:21 — docs(журнал): фініш — PR #1191, деплой #6079
-- `6cd44a5e` 20.09 07:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
-- `1374d50c` 20.09 07:21 — Каруселі не зависають · кістяк по вікну · два боки маршруту в капсулі (#1191)
-- `bc85710b` 20.09 07:12 — chore: CACHE_NAME під фініш + свіжий main у гілці
+- `fa683b07` 20.09 12:22 — ai(news): памʼять+чернетки+витрати 20.09 12:22 UTC
+- `7cc67b45` 20.09 11:44 — ai(editor): свята-чернетки 20.09 11:44 UTC
 
 <!-- AUTO:END -->
 
