@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-20 07:12 UTC
+**Зріз на:** 2026-09-20 07:21 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `e66d8983` 20.09 07:11 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `6cd44a5e` 20.09 07:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260920-0711` |
-| останній PR у `main` | #1190 |
+| останній PR у `main` | #1191 |
 | стендів на диску | 162 |
 | незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-09-20 | є ✅ |
@@ -24,31 +24,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `_session-log/vova-2026-09-19.md`
-- `_session-log/vova-2026-09-20.md`
-- `bundle.js`
-- `src/core/auto-carousel.js`
-- `src/core/screen-state.js`
-- `src/tabs/home-caps.js`
-- `style/home.css`
-- `sw.js`
-- `tests/carousel-hang.mjs`
-- `tests/drift.mjs`
-- `tests/home-caps.mjs`
-- `tests/skeleton-shapes.mjs`
-- `tests/tools/carousel-hang-probe.mjs`
-- `tests/tools/skeleton-scroll-probe.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `6cd44a5e` 20.09 07:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `1374d50c` 20.09 07:21 — Каруселі не зависають · кістяк по вікну · два боки маршруту в капсулі (#1191)
+- `bc85710b` 20.09 07:12 — chore: CACHE_NAME під фініш + свіжий main у гілці
 - `e66d8983` 20.09 07:11 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `47b4b21b` 20.09 07:11 — docs: свіжий авто-блок пульсу
-- `10df1356` 20.09 06:52 — docs: журнал 20.09 окремим файлом + пульс стиснуто під стелю
-- `be92e14e` 20.09 06:31 — fix(caps): крапки капсули не підмінюють крапки новин + виняток у drift
-- `59bb8029` 20.09 06:19 — ai(news): памʼять+чернетки+витрати 20.09 06:19 UTC
 
 <!-- AUTO:END -->
 
