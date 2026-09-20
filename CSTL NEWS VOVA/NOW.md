@@ -9,37 +9,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-20 13:21 UTC
+**Зріз на:** 2026-09-20 13:22 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `d3bb3c01` 20.09 13:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `f8c7019c` 20.09 13:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260920-1242` |
-| останній PR у `main` | #1191 |
+| останній PR у `main` | #1192 |
 | стендів на диску | 163 |
-| незакомічених файлів | 0 ✅ |
+| незакомічених файлів | 1 ⚠️ |
 | журнал за 2026-09-20 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `_session-log/vova-2026-09-20.md`
-- `admin.html`
-- `scripts/supabase_features_archive.sql`
-- `sw.js`
-- `tests/updates-archive.mjs`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `f8c7019c` 20.09 13:22 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `0f0704d8` 20.09 13:21 — Оновлення: групи за стадією + архів прапорця (#1192)
+- `7a68c66b` 20.09 13:21 — chore: свіжий main у гілці перед фінішем
 - `d3bb3c01` 20.09 13:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `1aa149ec` 20.09 13:21 — docs: свіжий авто-блок пульсу
-- `1dbdc5af` 20.09 12:42 — feat(оновлення): групи за стадією + архів прапорця
-- `fa683b07` 20.09 12:22 — ai(news): памʼять+чернетки+витрати 20.09 12:22 UTC
-- `7cc67b45` 20.09 11:44 — ai(editor): свята-чернетки 20.09 11:44 UTC
 
 <!-- AUTO:END -->
 
