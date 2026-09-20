@@ -9,31 +9,37 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-20 12:42 UTC
+**Зріз на:** 2026-09-20 13:21 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `5c8a0c4c` 20.09 07:21 — docs(журнал): фініш — PR #1191, деплой #6079 |
+| останній коміт людини | `1dbdc5af` 20.09 12:42 — feat(оновлення): групи за стадією + архів прапорця |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260920-1242` |
 | останній PR у `main` | #1191 |
 | стендів на диску | 163 |
-| незакомічених файлів | 7 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-20 | є ✅ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `_session-log/vova-2026-09-20.md`
+- `admin.html`
+- `scripts/supabase_features_archive.sql`
+- `sw.js`
+- `tests/updates-archive.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `1dbdc5af` 20.09 12:42 — feat(оновлення): групи за стадією + архів прапорця
 - `5c8a0c4c` 20.09 07:21 — docs(журнал): фініш — PR #1191, деплой #6079
 - `6cd44a5e` 20.09 07:21 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `1374d50c` 20.09 07:21 — Каруселі не зависають · кістяк по вікну · два боки маршруту в капсулі (#1191)
 - `bc85710b` 20.09 07:12 — chore: CACHE_NAME під фініш + свіжий main у гілці
-- `e66d8983` 20.09 07:11 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 
 <!-- AUTO:END -->
 
