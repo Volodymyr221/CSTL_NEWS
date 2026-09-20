@@ -73,6 +73,7 @@ import { ICONS } from '../core/icons.js';
 import { fetchPublishedPosts, fetchMyPosts, fetchPostBrief, fetchAllComments, fetchMyFeedReplies, isSupabaseReady } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, getProfile, onAuthChange, authReady } from '../core/auth.js';
 import { onReturn } from '../core/refresh-on-return.js';
+import { startAutoCarousel } from '../core/auto-carousel.js';
 import { cardTitleText, boardSeenTs, markBoardSeen, chatSeenTs, markChatSeen, feedSeenTs, markFeedSeen } from '../core/board-shared.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { nearestSettlement, nearestServedStop, pickedPlace, lastPickedPlace, detectedPlace } from '../core/settlements-geo.js';
@@ -81,7 +82,7 @@ import {
   parseRouteEndpoints, openSavedRouteOnBuses,
   getSavedRoutesForUI, findStopOnRoute, routeCoversStops, normalizeStopName,
 } from './buses.js';
-import { canonicalPlace } from '../core/settlements.js';
+import { canonicalPlace, SETTLEMENTS } from '../core/settlements.js';
 import { openAdModalStandalone } from './board.js';
 import { openMyAds, openThreadsList, openThreadById, unreadTopCached } from './board-chat.js';
 import { answersCount, openChatModal, discussionsReady, unreadQuestions } from './board-discussions.js';
@@ -633,12 +634,54 @@ async function nowCapsule() {
   // взагалі їздить, і нічого про себе не заявляє. Капсула ж каже «моє» (§12), і
   // єдина явна заява тут — «відстежувати». Тож джерел лишається два: мої
   // відстежувані рейси і рейс через МОЮ зупинку (де я є або де живу).
+  // ── 🔴 20.09 — ДВА БОКИ ОДНІЄЇ ЗУПИНКИ ───────────────────────────────────
+  //
+  // 🗣️ Вова: «якщо по локації вибиває, що через цю локацію проходить рейс у дві
+  // сторони, він має відображатися в дві сторони, слайдом… має ідентично так
+  // само показувати в капсулі не тільки в напрямку громади, а і з громади.
+  // Тільки відстежуваний/збережений рейс має пріоритет».
+  //
+  // 🔑 ЧОМУ ЦЕ БУЛА ВАДА, А НЕ БРАК ФІЧІ. `pickFor` брав НАЙБЛИЖЧИЙ рейс з усіх,
+  // тобто мовчки вибирав за людину один бік. 📐 Заміряно на живому розкладі:
+  // з Олики можна сісти на **14 рейсів** — 6 «з громади» (усі до Луцька) і 8
+  // «по громаді» (Носовичі, Личани, Жорнище). Обидва боки мають рейс у межах
+  // стелі 120 хв протягом **44% доби** (один бік — 43%, жодного — 14%). Тобто
+  // майже пів дня капсула ховала половину відповіді.
+  //
+  // 🔑 ЯК ВИЗНАЧАЄМО БІК — БЕЗ ЖОДНОГО ВПИСАНОГО «ЛУЦЬКА». Кінцева зупинка є в
+  // списку сіл громади (`SETTLEMENTS`, єдине джерело правди) → їдемо ПО ГРОМАДІ;
+  // немає → З ГРОМАДИ. Правило працює для будь-якого села і не зламається, коли
+  // зʼявиться рейс на Ківерці чи Рівне.
+  // 🛑 Групувати за КІНЦЕВОЮ не можна: з Олики їх чотири (Луцьк, Личани,
+  // Жорнище, Носовичі) — вийшло б чотири слайди замість двох боків.
+  const ГРОМАДА = new Set(SETTLEMENTS.map(normalizeStopName));
+  const бікРейсу = (r) => (ГРОМАДА.has(normalizeStopName(кудиЇде(r))) ? 'по громаді' : 'з громади');
+  const сторониВід = (from) => {
+    const найкращий = new Map();
+    for (const r of live) {
+      if (!boardable(r, from)) continue;
+      const left = minsToBoard(r, from);
+      if (left == null || left < 0) continue;
+      const б = бікРейсу(r);
+      const є = найкращий.get(б);
+      if (!є || left < є.left) найкращий.set(б, { r, left, from, to: '', бік: б });
+    }
+    return [...найкращий.values()].sort((a, b) => a.left - b.left);
+  };
+
   let далекийСьогодні = null;
+  let другийБік = null;
   if (!hit) {
-    const b = pickFor(myStop, '')
-      || (myStop !== HOME_STOP ? pickFor(HOME_STOP, '') : null);
-    if (b && b.left <= SOON_MAX_MIN) hit = b;
-    else if (b) далекийСьогодні = b;
+    let боки = сторониВід(myStop);
+    if (!боки.length && myStop !== HOME_STOP) боки = сторониВід(HOME_STOP);
+    const b = боки[0] || null;
+    if (b && b.left <= SOON_MAX_MIN) {
+      hit = b;
+      // ⚠️ Другий бік теж мусить бути В МЕЖАХ СТЕЛІ. Інакше поруч із рейсом
+      // «через 10 хв» стояв би слайд «через 6 годин» — і крапка під капсулою
+      // обіцяла б відповідь, якої там немає.
+      if (боки[1] && боки[1].left <= SOON_MAX_MIN) другийБік = боки[1];
+    } else if (b) далекийСьогодні = b;
   }
   // 🌙 ДОВІДКОВА ГІЛКА «А КОЛИ НАСТУПНИЙ?» (20.08 · переписана 24.08).
   //
@@ -770,6 +813,28 @@ async function nowCapsule() {
       },
     };
   }
+  const основна = капсулаПосадки(hit, { nowMin, todayISO });
+  if (!другийБік) return основна;
+
+  // 🔑 ДВА СЛАЙДИ — ЦЕ ОДНА КАПСУЛА, А НЕ ДВІ. Слотів усього три, і другий
+  // автобус зʼїв би місце «МОЄ» чи «НОВЕ». Бал беремо вищий із двох: смуга має
+  // стояти там, де стоїть найтерміновіший із показаних рейсів.
+  const друга = капсулаПосадки(другийБік, { nowMin, todayISO });
+  return {
+    key: 'now', icon: ICONS.bus,
+    rank: Math.max(основна.rank || 0, друга.rank || 0),
+    slides: [основна, друга],
+  };
+}
+
+// Капсула ОДНОГО рейсу на посадку. Винесена з `nowCapsule()` 20.09, коли боків
+// стало два: та сама розмітка мусить зібратись і для «з громади», і для «по
+// громаді». Друга копія тут була б класичним дублем — і розійшлась би на першій
+// же правці тексту.
+function капсулаПосадки(hit, довідка) {
+  const { nowMin, todayISO } = довідка;
+  const endName = кудиЇде(hit.r);
+  const dest = hit.to || endName || 'Найближчий';
   const when = hit.left === 0 ? 'зараз'
     : hit.left < 60 ? `через ${hit.left} хв`
     : `через ${Math.floor(hit.left / 60)} год ${hit.left % 60} хв`;
@@ -1355,9 +1420,31 @@ async function msgCapsule() {
 // ── Вигляд ───────────────────────────────────────────────────────────────────
 
 // 🛑 Крапок циклу тут більше немає — показувати нічого, бо рядок один.
+// 🔴 20.09 — КАПСУЛА З ДВОМА БОКАМИ МАРШРУТУ. Одна капсула, два слайди, крапки.
+//
+// 🛑 БЕЗ САМОЧИННОГО РУХУ, І ЦЕ НЕ НЕДОРОБКА. 17.08 із головної прибрали рівно
+// такий рух: капсули циклічно міняли повідомлення кожні 5.2с, і причина в шапці
+// цього файлу названа — «повідомлення можна просто пропустити, поки дивишся в
+// інший бік». Для автобуса ціна вища: людина відводить очі і бачить уже ІНШИЙ
+// напрямок, не помітивши підміни. Тому гортає тільки палець, а крапки кажуть,
+// що є другий бік.
+// ⚠️ Крапки беруть клас `.hm-ndots` від каруселі новин навмисно: як виглядає
+// крапка в цьому застосунку — має бути записано в одному місці.
+function capSlidesHtml(c) {
+  const слайди = c.slides.map((s, i) => capHtml({ ...s, key: c.key, slide: i })).join('');
+  const крапки = c.slides.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('');
+  return `
+    <div class="hm-capsl" data-cap="${escapeHtml(c.key)}">
+      <div class="hm-capsl-track">${слайди}</div>
+      <div class="hm-ndots hm-capsl-dots" aria-hidden="true">${крапки}</div>
+    </div>`;
+}
+
 function capHtml(c) {
+  if (Array.isArray(c.slides)) return capSlidesHtml(c);
   return `
     <button class="hm-cap2" type="button" data-cap="${escapeHtml(c.key)}"${
+      c.slide != null ? ` data-slide="${c.slide}"` : ''}${
       c.aria ? ` aria-label="${escapeHtml(c.aria)}"` : ''}>
       <span class="hm-cap2-ic" aria-hidden="true">${c.icon}</span>
       <span class="hm-cap2-tx">
@@ -1416,6 +1503,9 @@ function capMetrics(box) {
 // може не вміститись. Кожна роль сама вирішує, чим жертвувати першим — саме тому
 // це драбина готових рядків, а не частини зі спільним роздільником.
 function fitCap(c, m) {
+  // Слайди проходять ту саму драбину: ширина в них однакова, а тексти різні —
+  // і обрізати треба кожен свій.
+  if (Array.isArray(c.slides)) return { ...c, slides: c.slides.map(s => fitCap(s, m)) };
   return { ...c,
     label: fitLine(c.labelVariants, m && m.label),
     value: fitLine(c.valueVariants, m && m.value),
@@ -1451,6 +1541,31 @@ function wireCapsRefresh() {
   // намальовані зі старим значенням, і правда доїхала б лише при наступному
   // перемиканні вкладки — тобто виглядало б як «не працює».
   window.addEventListener('cstl-seen-synced', () => renderHomeCaps());
+}
+
+// ── СЛАЙДИ ВСЕРЕДИНІ КАПСУЛИ ─────────────────────────────────────────────────
+// Гортання руками, крапки — спільним `startAutoCarousel({ auto: false })`. Свого
+// лічильника слайда тут немає навмисно: два рахунки того самого стану це клас
+// B-27, і карусель уже вміє рахувати його за реальним положенням прокрутки.
+let _stopCapSlides = null;
+let _свайпнули = 0;
+
+function зупинитиСлайди() {
+  if (_stopCapSlides) { _stopCapSlides(); _stopCapSlides = null; }
+}
+
+function завестиСлайди(el) {
+  зупинитиСлайди();
+  const track = el.querySelector('.hm-capsl-track');
+  if (!track) return;
+  const крапки = [...el.querySelectorAll('.hm-capsl-dots i')];
+  // Мітка часу останнього руху доріжки — щоб відрізнити свайп від тапу.
+  track.addEventListener('scroll', () => { _свайпнули = Date.now(); }, { passive: true });
+  _stopCapSlides = startAutoCarousel(track, {
+    auto: false,
+    slideSel: ':scope > .hm-cap2',
+    onSlide: i => крапки.forEach((d, j) => d.classList.toggle('on', j === i)),
+  });
 }
 
 // Покоління рендера: три ролі ходять у мережу, і повільна відповідь старого
@@ -1494,7 +1609,10 @@ export async function renderHomeCaps() {
     .slice(0, MAX_CAPS);
 
   // Немає жодної ролі з даними — смуги немає зовсім (не порожня коробка).
-  if (!caps.length) { el.hidden = true; el.innerHTML = ''; _paint = ''; return; }
+  if (!caps.length) {
+    зупинитиСлайди();
+    el.hidden = true; el.innerHTML = ''; _paint = ''; return;
+  }
 
   el.hidden = false;
   // Складаємо рядки під ЖИВУ ширину — після зняття `hidden`, інакше зразок міряв
@@ -1509,14 +1627,27 @@ export async function renderHomeCaps() {
   // 🛑 І не звіряємось із `el.innerHTML` — браузер його нормалізує, рядки не
   // збіглися б ніколи, і запобіжник мовчки не працював би.
   const розмітка = готові.map(capHtml).join('');
-  if (розмітка !== _paint) { _paint = розмітка; el.innerHTML = розмітка; }
+  if (розмітка !== _paint) {
+    _paint = розмітка;
+    el.innerHTML = розмітка;
+    // Слайди чіпляємо САМЕ тут, а не після кожного рендера: розмітка не
+    // змінилась — значить доріжка та сама і жива, а другий запуск на ній дав би
+    // два слухачі прокрутки на один елемент.
+    завестиСлайди(el);
+  }
   el.classList.add('hm-appear');
 
   // Тап по капсулі → її обʼєкт. Слухач один на контейнер.
   el.onclick = e => {
     const btn = e.target.closest('[data-cap]');
     if (!btn) return;
+    // 🛑 Свайп по слайдах теж закінчується кліком. Без цього рядка гортання
+    // боків маршруту відкривало б вкладку Автобуси на кожному русі пальця.
+    if (_свайпнули && Date.now() - _свайпнули < 350) return;
     const c = caps.find(x => x.key === btn.dataset.cap);
-    if (c && c.tap) c.tap();
+    if (!c) return;
+    const ціль = (btn.dataset.slide != null && Array.isArray(c.slides))
+      ? c.slides[+btn.dataset.slide] : c;
+    if (ціль && ціль.tap) ціль.tap();
   };
 }

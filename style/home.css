@@ -1085,6 +1085,35 @@
 .hm-caps[hidden] + .hm-sec,
 .hm-caps[hidden] + .hm-sec[hidden] + .hm-sec { padding-top: var(--hm-s2); }
 
+/* ══ КАПСУЛА З ДВОМА БОКАМИ МАРШРУТУ (20.09) ═════════════════════════════════
+   🗣️ Вова: «якщо через цю локацію проходить рейс у дві сторони, він має
+   відображатися в дві сторони, слайдом».
+   📐 З Олики можна сісти на 14 рейсів: 6 «з громади» (Луцьк) і 8 «по громаді»
+   (Носовичі, Личани, Жорнище). Обидва боки мають рейс у межах стелі 120 хв
+   протягом 44% доби — тобто майже пів дня капсула показувала половину відповіді.
+
+   ⚠️ `overflow-y: hidden` обовʼязково — той самий рядок, що в каруселі новин:
+   без нього горизонтальний скролер перехоплює вертикальний жест, і сторінка
+   перестає гортатись пальцем по капсулі.
+   🔑 Крапки беруть вигляд від `.hm-ndots` (карусель новин) — тут лише знімаємо
+   її верхній відступ: капсула стоїть щільніше за секцію. */
+.hm-capsl { display: flex; flex-direction: column; gap: 6px; }
+.hm-capsl-track {
+  display: flex; align-items: stretch;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.hm-capsl-track::-webkit-scrollbar { display: none; }
+/* `flex: 0 0 100%` разом із `width: 100%` — без `flex-shrink: 0` контейнер
+   стиснув би обидва боки в одне вікно замість того, щоб дати їм стати в ряд. */
+.hm-capsl-track > .hm-cap2 { scroll-snap-align: start; flex: 0 0 100%; width: 100%; }
+.hm-capsl-dots { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .hm-capsl-track { scroll-behavior: auto; }
+}
+
 .hm-cap2 {
   appearance: none; -webkit-appearance: none; cursor: pointer;
   display: flex; align-items: center; gap: 12px;
