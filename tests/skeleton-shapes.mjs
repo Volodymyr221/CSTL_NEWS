@@ -31,10 +31,16 @@
 // одноманітності означало б ризикувати робочим кодом без виграшу.
 
 import { chromium } from 'playwright';
-import { launch, serve, reporter } from './_lib.mjs';
+import { launch, serve, reporter, projectFile } from './_lib.mjs';
 import { mockSupabase } from './_board-fixture.mjs';
 
 const { ok, done } = reporter();
+
+// Контроль «до/після» тією самою командою, що й решта стендів:
+//   BUNDLE_REV=origin/main node tests/skeleton-shapes.mjs
+// 🔴 20.09 — БЕЗ ЦЬОГО РЯДКА КОНТРОЛЬ БУВ ОБМАНОМ: стенд не підміняв збірку
+// взагалі, тобто «контрольний» прогін крутив НОВИЙ код і, звісно, зеленів.
+const REV = process.env.BUNDLE_REV || '';
 
 const ФІЧА = 'skeleton_shapes';
 const Я = { id: 'uid-me', email: 'me@example.com', user_metadata: { full_name: 'Вова' } };
@@ -49,6 +55,10 @@ async function сцена({ стан }) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
                                    hasTouch: true, serviceWorkers: 'block' });
   const p = await ctx.newPage();
+  if (REV) {
+    const old = projectFile('bundle.js', REV);
+    await p.route('**/bundle.js', r => r.fulfill({ contentType: 'application/javascript', body: old }));
+  }
   await mockSupabase(p, {
     posts: [], announcements: [], profiles: [],
     app_features: [{ key: ФІЧА, label: 'Кістяки', stage: стан }],
@@ -231,6 +241,55 @@ const наВкладку = async (p, tab) => {
   ok('🔴 висота кістяка Дошки близька до справжньої картки (розкладка не стрибне)',
      висотаКістяка > 0 && висотаКартки > 0 && розбіжність <= 0.4,
      `кістяк ${висотаКістяка}px · картка ${висотаКартки}px · розбіжність ${Math.round(розбіжність * 100)}%`);
+
+  await ctx.close();
+}
+
+// ── 5. 🔴 КІСТЯК НЕ ДОВШИЙ ЗА ЕКРАН ──────────────────────────────────────
+//
+// 🗣️ Вова 20.09: «в момент завантаження новий фон завантаження скролиться, він
+// має бути може статичним?». 📐 Заміряно до правки: Стрічка тримала 1407px при
+// вікні 844 — 707px сірої порожнечі під згином; Автобуси 214px.
+//
+// 🔑 МІРЯЄМО НАСЛІДОК, А НЕ ФОРМУ ЗАПИСУ: не «чи стоїть у коді max-height», а чи
+// ЛИШИЛОСЬ КУДИ ГОРТАТИ. Стеля може стояти і не діяти — саме так і сталось у
+// першій редакції правки: вкладку ще не відкрито, `offsetParent` порожній, мірка
+// дає нулі, і стеля лягала лише на ту вкладку, що була на екрані.
+{
+  const { ctx, p } = await сцена({ стан: 'circle' });
+  const запас = async (tab) => {
+    await наВкладку(p, tab);
+    // Гортаємо до упору і дивимось, чи зрушив екран: «теоретично більше» і
+    // «справді гортається» — різні речі (поля, overscroll).
+    await p.evaluate(() => { const m = document.querySelector('.app-main'); if (m) m.scrollTop = 9999; });
+    await p.waitForTimeout(250);
+    const r = await p.evaluate(() => {
+      const m = document.querySelector('.app-main');
+      const sk = [...document.querySelectorAll('.scr-loading')].find(e => e.offsetParent !== null);
+      return { прокрутилось: Math.round(m?.scrollTop || 0),
+               кістяк: sk ? Math.round(sk.getBoundingClientRect().height) : 0 };
+    });
+    await p.evaluate(() => { const m = document.querySelector('.app-main'); if (m) m.scrollTop = 0; });
+    return r;
+  };
+
+  const стрічка = await запас('shotam');
+  const автобуси = await запас('buses');
+
+  // 🔴 Зустрічна межа: якщо кістяка на екрані немає, «нічого не гортається» було б
+  // істинним над порожнечею.
+  ok('прилад бачить кістяки на обох вкладках',
+     стрічка.кістяк > 100 && автобуси.кістяк > 100,
+     `Стрічка ${стрічка.кістяк}px · Автобуси ${автобуси.кістяк}px`);
+  ok('🔴 екран очікування Стрічки НЕ гортається',
+     стрічка.прокрутилось === 0, `прокрутилось ${стрічка.прокрутилось}px при кістяку ${стрічка.кістяк}px`);
+  ok('🔴 екран очікування Автобусів НЕ гортається',
+     автобуси.прокрутилось === 0, `прокрутилось ${автобуси.прокрутилось}px при кістяку ${автобуси.кістяк}px`);
+  // 🛑 «Не гортається» легко здобути порожнім кістяком. Тому одразу межа знизу:
+  // кістяк мусить лишатись висотою з екран, а не зіщулитись у смужку.
+  ok('🛑 кістяк лишився на висоту екрана, а не зіщулився',
+     стрічка.кістяк >= 400 && автобуси.кістяк >= 400,
+     `Стрічка ${стрічка.кістяк}px · Автобуси ${автобуси.кістяк}px (вікно 844)`);
 
   await ctx.close();
 }
