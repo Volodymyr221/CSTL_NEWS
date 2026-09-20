@@ -1428,15 +1428,17 @@ async function msgCapsule() {
 // інший бік». Для автобуса ціна вища: людина відводить очі і бачить уже ІНШИЙ
 // напрямок, не помітивши підміни. Тому гортає тільки палець, а крапки кажуть,
 // що є другий бік.
-// ⚠️ Крапки беруть клас `.hm-ndots` від каруселі новин навмисно: як виглядає
-// крапка в цьому застосунку — має бути записано в одному місці.
+// ⚠️ Клас крапок — `.hm-dots` (спільний вигляд) плюс власний `.hm-capsl-dots`.
+// 🛑 Перша редакція взяла тут `.hm-ndots` — клас крапок НОВИН, — і одразу
+// звалила сторож `carousel-shared`: він шукав крапки новин по всьому документу,
+// а капсули стоять вище за новини. Ім'я класу має називати ВЛАСНИКА.
 function capSlidesHtml(c) {
   const слайди = c.slides.map((s, i) => capHtml({ ...s, key: c.key, slide: i })).join('');
   const крапки = c.slides.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('');
   return `
     <div class="hm-capsl" data-cap="${escapeHtml(c.key)}">
       <div class="hm-capsl-track">${слайди}</div>
-      <div class="hm-ndots hm-capsl-dots" aria-hidden="true">${крапки}</div>
+      <div class="hm-dots hm-capsl-dots" aria-hidden="true">${крапки}</div>
     </div>`;
 }
 

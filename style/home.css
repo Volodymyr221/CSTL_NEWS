@@ -1095,8 +1095,8 @@
    ⚠️ `overflow-y: hidden` обовʼязково — той самий рядок, що в каруселі новин:
    без нього горизонтальний скролер перехоплює вертикальний жест, і сторінка
    перестає гортатись пальцем по капсулі.
-   🔑 Крапки беруть вигляд від `.hm-ndots` (карусель новин) — тут лише знімаємо
-   її верхній відступ: капсула стоїть щільніше за секцію. */
+   🔑 Вигляд крапки живе у спільному `.hm-dots` (див. нижче, біля `.hm-ndots`):
+   як виглядає крапка в цьому застосунку — записано в одному місці. */
 .hm-capsl { display: flex; flex-direction: column; gap: 6px; }
 .hm-capsl-track {
   display: flex; align-items: stretch;
@@ -1109,7 +1109,6 @@
 /* `flex: 0 0 100%` разом із `width: 100%` — без `flex-shrink: 0` контейнер
    стиснув би обидва боки в одне вікно замість того, щоб дати їм стати в ряд. */
 .hm-capsl-track > .hm-cap2 { scroll-snap-align: start; flex: 0 0 100%; width: 100%; }
-.hm-capsl-dots { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   .hm-capsl-track { scroll-behavior: auto; }
 }
@@ -1931,16 +1930,25 @@
 .hm-nsk { display: flex; flex-direction: column; gap: var(--hm-s2); }
 .hm-nsk-hero { aspect-ratio: 2 / 1; border-radius: var(--hm-r-card); }
 .hm-nsk-line { height: 44px; border-radius: 12px; }
-.hm-ndots { display: flex; justify-content: center; gap: 5px; margin-top: var(--hm-s3); }
-.hm-ndots i {
+/* 🔴 20.09 — ВИГЛЯД КРАПКИ ОДИН НА ЗАСТОСУНОК, ВЛАСНИКИ РІЗНІ.
+   Крапки зʼявились під капсулою автобуса (два боки маршруту), і перша редакція
+   просто повісила на них клас `.hm-ndots`. 🛑 Це одразу звалило сторож
+   `carousel-shared`: він шукав крапки новин через `.hm-ndots i` по всьому
+   документу, а капсули стоять ВИЩЕ за новини — тобто він міряв уже не ті.
+   ✅ Тому вигляд стоїть у спільному селекторі, а ім'я лишається за власником:
+   `.hm-ndots` — новини, `.hm-capsl-dots` — капсула. Копіювати ці п'ять рядків
+   було б гірше: дві копії того самого в цьому проєкті вже двічі розходились. */
+.hm-dots, .hm-ndots { display: flex; justify-content: center; gap: 5px; }
+.hm-ndots { margin-top: var(--hm-s3); }
+.hm-dots i, .hm-ndots i {
   width: 5px; height: 5px; border-radius: 50%;
   background: rgba(255, 255, 255, .32);
   transition: width 200ms var(--hm-ease), background 200ms var(--hm-ease), border-radius 200ms var(--hm-ease);
 }
-.hm-ndots i.on { width: 16px; border-radius: 3px; background: rgba(255, 255, 255, .88); }
+.hm-dots i.on, .hm-ndots i.on { width: 16px; border-radius: 3px; background: rgba(255, 255, 255, .88); }
 @media (prefers-reduced-motion: reduce) {
   .hm-ntrack { scroll-behavior: auto; }
-  .hm-ndots i { transition: none; }
+  .hm-dots i, .hm-ndots i { transition: none; }
 }
 
 /* ══ ОГОЛОШЕННЯ — РЯДОК (04.08, замість каруселі на корку) ════════════════════
