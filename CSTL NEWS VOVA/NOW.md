@@ -14,9 +14,9 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-x0odbh` |
-| останній коміт людини | `27be3cae` 20.09 18:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
+| останній коміт людини | `86e777ab` 20.09 18:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260920-1242` |
-| останній PR у `main` | #1192 |
+| останній PR у `main` | #1193 |
 | стендів на диску | 163 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-20 | є ✅ |
@@ -24,17 +24,15 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-20.md`
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `86e777ab` 20.09 18:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
+- `b225e7c8` 20.09 18:04 — docs: передача в новий чат — 20.09.2026 (#1193)
+- `180d84d5` 20.09 18:04 — chore: свіжий main у гілці перед злиттям передачі
 - `27be3cae` 20.09 18:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-x0odbh
 - `df02270e` 20.09 18:03 — docs(пульс): авто-блок указує на коміт передачі
-- `07d8a394` 20.09 18:03 — docs: передача в новий чат — 20.09.2026
-- `118e355b` 20.09 16:48 — ai(news): памʼять+чернетки+витрати 20.09 16:48 UTC
-- `97831086` 20.09 13:22 — docs(журнал): фініш архіву — PR #1192, деплой #6087
 
 <!-- AUTO:END -->
 
