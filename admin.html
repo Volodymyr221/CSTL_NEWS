@@ -4074,6 +4074,26 @@ async function renderCommunityEdit(el) {
 // Перемикання БЕЗ деплою, відкат — той самий тап.
 //
 // 🛑 Прапорець керує ПОКАЗОМ, а не правами. Право живе в RLS і `has_perm()`.
+// ── 🔴 20.09 — ТРИ ГРУПИ ЗАМІСТЬ ОДНОГО СПИСКУ ───────────────────────────────
+//
+// 🗣️ Вова: «екран завантаження я вже побачив і натиснув усім. Але воно так і буде
+// висіти в загальному списку? Чи може окремий список / вкладку зробимо?»
+//
+// 📐 Він питав вчасно, бо вада вже була: у `app_features` рівно ОДИН рядок
+// (`skeleton_shapes`, стан `all`, випущено 19.09 19:59), і той сидів під
+// заголовком «Що зараз тестуємо». Тобто заголовок брехав на єдиному рядку, який
+// там є, а прибрати рядок було нічим — ні поля в таблиці, ні кнопки.
+//
+// 🔑 ГРУПИ, А НЕ ОКРЕМА ВКЛАДКА. Вкладка — це друге місце, куди треба ходити за
+// тим самим, а лічильник у меню вже відповідає на питання «чи є щось на
+// перевірці» (він рахує саме `circle`). Екран відповідає на інше питання — «на
+// якій стадії кожна фіча», і групи відповідають на нього на ОДНОМУ екрані.
+//
+// Порядок груп — за тим, що чекає рішення людини:
+//   1. `circle` — перевіряємо зараз, тут тапають і кажуть «криво»;
+//   2. `off`    — написане, ще нікому не показане;
+//   3. `all`    — уже в усіх, і саме тут стоїть кнопка «Прибрано з коду»;
+//   4. архів    — згорнутий, щоб не займав екран.
 function renderUpdates(el) {
   const можнаКерувати = can('updates', 'manage');
   const можнаВипускати = !!myAccess?.can_release_update;
@@ -4090,7 +4110,7 @@ function renderUpdates(el) {
     // 🔑 Нагадування про ПРИБИРАННЯ. Фіча, що місяць працює у всіх, мусить
     // втратити прапорець, інакше за півроку буде сорок мертвих перемикачів і код,
     // де кожен екран має два шляхи. Система нагадує про це сама.
-    const пораПрибрати = f.stage === 'all' && днів !== null && днів >= 7;
+    const пораПрибрати = f.stage === 'all' && !f.archived_at && днів !== null && днів >= 7;
     const кнопки = СТАНИ.map(st => {
       const обрано = f.stage === st.key;
       const дозволено = можнаКерувати && (st.key !== 'all' || можнаВипускати);
@@ -4100,6 +4120,15 @@ function renderUpdates(el) {
         style="${дозволено ? '' : 'opacity:.45;cursor:not-allowed'}"
         >${обрано ? '● ' : ''}${st.label}</button>`;
     }).join('');
+    // 🛑 КНОПКА НЕ ПРИБИРАЄ КОД, І ТЕКСТ МУСИТЬ ЦЕ КАЗАТИ. Спершу з коду
+    // знімається `featureOn('<ключ>')` і лишається ОДИН шлях — і лише тоді тиснуть
+    // сюди. Інакше за півроку буде архів із прапорців, які в коді живі, тобто
+    // рівно той самий безлад, від якого архів і заводиться.
+    const архівна = !!f.archived_at;
+    const кнопкаАрхіву = (можнаКерувати && f.stage === 'all')
+      ? `<button class="btn" data-feat-arch="${escapeHtml(f.key)}" data-feat-arch-on="${архівна ? '0' : '1'}"
+           style="margin-left:auto">${архівна ? 'Повернути в список' : 'Прибрано з коду'}</button>`
+      : '';
     return `
       <article class="card">
         <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
@@ -4107,20 +4136,44 @@ function renderUpdates(el) {
           <div style="font-size:11px;color:#999">${escapeHtml(formatDate(f.created_at))}</div>
         </div>
         ${f.descr ? `<div style="font-size:13px;color:#666;margin-top:4px">${escapeHtml(f.descr)}</div>` : ''}
-        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${кнопки}</div>
+        <div style="font-size:11px;color:#999;margin-top:4px">ключ: <code>${escapeHtml(f.key)}</code></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">${кнопки}${кнопкаАрхіву}</div>
         ${пораПрибрати ? `<div style="font-size:12px;color:#8a6a12;margin-top:8px">
-          ⓘ працює у всіх ${днів} дн. — час прибрати прапорець із коду</div>` : ''}
+          ⓘ працює у всіх ${днів} дн. — зніми <code>featureOn('${escapeHtml(f.key)}')</code> з коду і тисни «Прибрано з коду»</div>` : ''}
       </article>`;
   };
 
+  // Групи рахуються від СТАНУ, а не від порядку в масиві: один рядок правди про
+  // те, де фіча, і жодного другого лічильника.
+  const архів     = features.filter(f => f.archived_at);
+  const живі      = features.filter(f => !f.archived_at);
+  const наПеревірці = живі.filter(f => f.stage === 'circle');
+  const мовчазні    = живі.filter(f => f.stage === 'off');
+  const уВсіх       = живі.filter(f => f.stage === 'all');
+
+  const група = (назва, підпис, список, порожньо) => `
+    <div class="section-title">${назва} (${список.length})</div>
+    ${підпис ? `<div style="font-size:13px;color:#666;margin:-6px 0 10px">${підпис}</div>` : ''}
+    ${список.length ? список.map(картка).join('') : `<div class="card" style="color:#666">${порожньо}</div>`}`;
+
   el.innerHTML = `
-    <div class="section-title">Що зараз тестуємо (${features.length})</div>
-    <div style="font-size:13px;color:#666;margin:-6px 0 10px">
-      «Лише колу» — бачиш тільки ти і ті, хто в колі. Перемикання без деплою,
-      відкат таким самим тапом.
-    </div>
-    ${features.length ? features.map(картка).join('')
-      : '<div class="card" style="color:#666">Поки нічого не тестується. Прапорець зʼявиться тут, щойно нова фіча поїде в застосунок.</div>'}
+    ${група('Перевіряємо зараз', '«Лише колу» — бачиш тільки ти і ті, хто в колі. Перемикання без деплою, відкат таким самим тапом.',
+            наПеревірці, 'Зараз нічого не перевіряється.')}
+
+    ${група('Написане, ще нікому не показане', 'Код у застосунку є, але він мертвий — не бачить ніхто, навіть ти.',
+            мовчазні, 'Порожньо.')}
+
+    ${група('Уже в усіх', 'Працює у всієї громади. Коли прапорець знято з коду — тисни «Прибрано з коду», і фіча піде в архів.',
+            уВсіх, 'Порожньо.')}
+
+    ${архів.length ? `
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:600;padding:6px 0">Прибрані прапорці (${архів.length})</summary>
+        <div style="font-size:13px;color:#666;margin:6px 0 10px">
+          Фіча працює далі — архів лише прибирає перемикач із цього екрана.
+        </div>
+        ${архів.map(картка).join('')}
+      </details>` : ''}
 
     <div class="section-title">Хто бачить раніше за всіх (${testers.length})</div>
     <div style="font-size:13px;color:#666;margin:-6px 0 10px">
@@ -4161,6 +4214,28 @@ function renderUpdates(el) {
       return;
     }
     showToast(stage === 'all' ? 'Видно всім ✓' : stage === 'circle' ? 'Видно колу ✓' : 'Вимкнено ✓');
+    await loadAll(); renderApp();
+  }));
+
+  // 🛑 Підтвердження називає ПОРЯДОК дій, а не питає «ви впевнені?». Питання без
+  // змісту люди тиснуть не читаючи; питання, яке нагадує зняти прапорець із коду,
+  // ще має шанс спрацювати.
+  el.querySelectorAll('[data-feat-arch]').forEach(b => b.addEventListener('click', async () => {
+    const key = b.dataset.featArch;
+    const вмикаємо = b.dataset.featArchOn === '1';
+    const f = features.find(x => x.key === key);
+    if (вмикаємо && !confirm(
+      `Прапорець «${f?.label || key}» уже знято з коду?\n\n`
+      + `Спершу в коді має зникнути featureOn('${key}') і лишитись один шлях. `
+      + `Архів НЕ вимикає фічу — вона працює далі, просто перемикач зникає з цього екрана.`)) return;
+    b.disabled = true;
+    const r = await supa.rpc('archive_feature', { p_key: key, p_on: вмикаємо });
+    if (r.error || !r.data?.ok) {
+      b.disabled = false;
+      showToast(r.data?.error || r.error?.message || 'Не вдалось', 4000);
+      return;
+    }
+    showToast(вмикаємо ? 'Прибрано в архів ✓' : 'Повернуто в список ✓');
     await loadAll(); renderApp();
   }));
 
