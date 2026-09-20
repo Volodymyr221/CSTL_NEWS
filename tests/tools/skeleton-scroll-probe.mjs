@@ -51,6 +51,11 @@ for (const стан of ['off', 'circle']) {
         вікно: m ? m.clientHeight : 0,
         вміст: m ? m.scrollHeight : 0,
         гортається: m ? m.scrollHeight - m.clientHeight : 0,
+        верхКістяка: r ? Math.round(r.top) : 0,
+        низВікна: Math.round(window.innerHeight),
+        стеляCSS: getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h'),
+        доступно: r ? Math.round(window.innerHeight - r.top) : 0,
+        стеля: sk ? (sk.style.maxHeight || '—') : '—',
       };
     });
     // Чи справді доїжджає — не «чи теоретично більше», а чи зрушить `scrollTop`.
@@ -58,7 +63,7 @@ for (const стан of ['off', 'circle']) {
     await p.waitForTimeout(250);
     const зрушив = await p.evaluate(() => Math.round(document.querySelector('.app-main')?.scrollTop || 0));
     await p.evaluate(() => { const m = document.querySelector('.app-main'); if (m) m.scrollTop = 0; });
-    console.log(`${назва.padEnd(10)} кістяк=${м.кістяк ? 'є' : '—'} висота=${м.висотаКістяка} вікно=${м.вікно} вміст=${м.вміст} запас=${м.гортається} реально_прокрутилось=${зрушив}`);
+    console.log(`${назва.padEnd(10)} кістяк=${м.висотаКістяка} верх=${м.верхКістяка} доступно_до_низу=${м.доступно} запас_прокрутки=${м.гортається} прокрутилось=${зрушив} стеля=${м.стеля}`);
   }
   await ctx.close();
 }
