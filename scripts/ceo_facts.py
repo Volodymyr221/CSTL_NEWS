@@ -145,8 +145,21 @@ def гроші():
     міс = datetime.now(timezone.utc).strftime("%Y-%m")
     цей = (д.get("months") or {}).get(міс)
     стан = д.get("agent_status") or {}
+
+    # 🔑 Гаманець агента CEO ОКРЕМИЙ (рішення Вови 20.09), тож і в звіті він
+    # окремим рядком: спільне число приховало б, хто саме витрачає.
+    ceo = {}
+    сирі_ceo = _файл("data/ceo_spend.json")
+    if сирі_ceo:
+        try:
+            ceo = (json.loads(сирі_ceo).get("months") or {}).get(міс) or {}
+        except Exception:
+            ceo = {}
+
     return {
         "місяць": міс,
+        "CEO_витрачено_usd": ceo.get("cost_usd", 0.0) if сирі_ceo else НЕ_ЗАМІРЯНО,
+        "CEO_стеля_usd": float(os.environ.get("CEO_MAX_MONTH_USD", "5.0")),
         # `fair_usd` — перерахунок за чинними цінами (див. editor/core/spend.py).
         # Беремо саме його: `cost_usd` містить записи за старим тарифом і
         # завищував витрати на 30.5% — на цьому агент стояв два тижні.

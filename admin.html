@@ -1333,6 +1333,13 @@ function menuItems() {
     { id: 'updates',       icon: ICO_ROCKET,         label: 'Оновлення',    show: can('updates'),     group: 'Система',    count: () => features.filter(f => f.stage === 'circle').length },
     { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: can('spend'),     group: 'Система',    count: () => 0 },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: can('analytics'),     group: 'Система',    count: () => 0 },
+    // 🔴 21.09 — «ДИРЕКЦІЯ»: щотижневий звіт агента CEO проти курсу.
+    // 🔑 Видно ЛИШЕ власнику і CEO, і це не про секретність, а про адресата:
+    // звіт закінчується блоком «рішення на підпис», а підписує їх рівно одна
+    // людина. Показувати його редактору означало б просити рішення в того, хто
+    // їх не ухвалює. 🛑 Прапорець сюди не заводимо — це екран адмінки, громада
+    // його не бачить у принципі (запис у реєстрі `tests/surface-flags.mjs`).
+    { id: 'ceo',           icon: ICO_ROCKET,         label: 'Дирекція',     show: hasRole('owner') || hasRole('ceo'), group: 'Система', count: () => 0 },
     { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        group: 'Система',    count: () => 0 },
   ].filter(m => m.show);
 }
@@ -1465,6 +1472,7 @@ function renderTabContent() {
   if (activeTab === 'updates')        return renderUpdates(el);
   if (activeTab === 'spend')          return renderSpend(el);
   if (activeTab === 'analytics')      return renderAnalytics(el);
+  if (activeTab === 'ceo')            return renderCeo(el);
   if (activeTab === 'settings')       return renderSettings(el);
 }
 
@@ -2675,6 +2683,89 @@ async function renderAnalytics(el) {
       btn.textContent = prevText;
     }
   });
+}
+
+// ── TAB: Дирекція (щотижневий звіт агента CEO) ────────────────────────
+//
+// 🔴 ЗАРАДИ ЧОГО. Курс (`CSTL NEWS VOVA/KURS.md`) задає Вова, а стан проти курсу
+// доти не бачив ніхто: борги в одному файлі, гроші в другому, аналітика в
+// третьому, git у четвертому. Раз на тиждень агент зводить це в один звіт.
+//
+// 🛑 ЦЕЙ ЕКРАН НІЧОГО НЕ РАХУЄ І НІЧОГО НЕ КЛИЧЕ. Він лише показує те, що агент
+// уже записав у базу. Причина та сама, що з банером стану агента новин: хто
+// ухвалює рішення — той його й пише; рахунок у двох місцях розходиться з
+// першим же уточненням.
+//
+// 🔑 СТАН «ПАУЗА» І «ЗБІЙ» — ОКРЕМИЙ ЕКРАН, А НЕ ПОРОЖНЕЧА. Два тижні порожньої
+// черги чернеток сталися рівно тому, що причина мовчання жила лише в лозі
+// GitHub Actions. Тут вона на видноті.
+async function renderCeo(el) {
+  el.innerHTML = '<div class="empty">Завантаження…</div>';
+  const { data: звіти, error } = await supa
+    .from('ceo_reports')
+    .select('created_at, report_text, стан, причина, cost_usd, model')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    // ⚠️ Найімовірніша причина — не накатана міграція. Текст помилки має бути
+    // інструкцією, а не діагнозом (той самий урок, що з ключем Anthropic).
+    el.innerHTML = `<div class="card" style="border-left:3px solid var(--red)">
+      <b>Звіти дирекції недоступні.</b><br>
+      Найімовірніше не накатана міграція <code>scripts/supabase_ceo_reports.sql</code>
+      (Supabase → SQL Editor → Run). Текст помилки: ${escapeHtml(error.message || '—')}
+    </div>`;
+    return;
+  }
+
+  const свіжий = (звіти && звіти.length) ? звіти[0] : null;
+
+  if (!свіжий) {
+    el.innerHTML = `<div class="card">
+      <b>Звітів ще немає.</b><br>
+      Агент збирає звіт <b>раз на тиждень, у неділю ввечері</b>. Перший зʼявиться
+      після першого прогону — або одразу, якщо запустити вручну:
+      GitHub → Actions → <code>CEO agent</code> → Run workflow.
+      <p class="spend-sub" style="margin-top:8px">🛑 Звіт не рахує нічого сам про людей:
+      запуску ще не було, і це прямо записано в його завданні.</p>
+    </div>`;
+    return;
+  }
+
+  const датаUk = (t) => new Date(t).toLocaleString('uk-UA');
+  const проблема = свіжий.стан && свіжий.стан !== 'готово';
+
+  // 🔑 Три рівні тексту підсвічуємо, щоб ДУМКА не читалась як вимір. Це те саме
+  // правило, що стоїть у завданні агента, — але око швидше за читання: людина
+  // гортає звіт і має бачити межу без зусиль.
+  const підсвітити = (txt) => escapeHtml(txt)
+    .replace(/^ЗАМІРЯНО:/gm, '<b style="color:#2e9e5b">ЗАМІРЯНО:</b>')
+    .replace(/^ВИСНОВОК:/gm, '<b style="color:#7a5cc0">ВИСНОВОК:</b>')
+    .replace(/^ДУМКА CEO:/gm, '<b style="color:#e08a2b">💭 ДУМКА CEO:</b>');
+
+  const історія = (звіти.length > 1) ? `
+    <div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px">
+      <div class="section-title">Попередні звіти</div>
+      ${звіти.slice(1).map(r => `<div class="spend-sub" style="margin:4px 0">
+          ${датаUk(r.created_at)} — ${escapeHtml(r.стан || 'готово')}
+          ${r.cost_usd ? ` · $${Number(r.cost_usd).toFixed(4)}` : ''}
+        </div>`).join('')}
+    </div>` : '';
+
+  el.innerHTML = `
+    ${проблема ? `<div class="card" style="border-left:3px solid var(--red)">
+        <b>Агент не зібрав звіт: ${escapeHtml(свіжий.стан)}.</b><br>
+        ${escapeHtml(свіжий.причина || 'причину не вказано')}
+      </div>` : ''}
+    <div class="card">
+      <div class="spend-lbl">Звіт від ${датаUk(свіжий.created_at)}</div>
+      <pre style="white-space:pre-wrap;font:inherit;margin:10px 0 0">${підсвітити(свіжий.report_text || '')}</pre>
+      <p class="spend-sub" style="margin-top:10px">
+        🛑 <b>ЗАМІРЯНО</b> — факт із числом · <b>ВИСНОВОК</b> — що з нього випливає ·
+        <b>💭 ДУМКА CEO</b> — субʼєктивна позиція агента, а не вимір.
+      </p>
+    </div>
+    ${історія}`;
 }
 
 // ── TAB: Статті (кабінет редактора) ───────────────────────────────────
