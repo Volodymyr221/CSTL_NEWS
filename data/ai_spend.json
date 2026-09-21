@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1789999913480,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10703,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0215,
+      "note": ""
+    },
+    {
+      "ts": 1789999909006,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 4307,
+      "cache_read": 31603,
+      "cache_write": 33303,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1727,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1789996382391,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -756,38 +783,12 @@
       "found": 1,
       "cost_usd": 0.0114,
       "note": ""
-    },
-    {
-      "ts": 1787824312687,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10628,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0321,
-      "note": ""
-    },
-    {
-      "ts": 1787824310092,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 8,
-      "output_tokens": 3869,
-      "cache_read": 55976,
-      "cache_write": 37080,
-      "web_searches": 6,
-      "found": 2,
-      "cost_usd": 0.2739,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 11.6961,
-    "runs": 168,
-    "web_searches": 162
+    "cost_usd": 11.8903,
+    "runs": 170,
+    "web_searches": 166
   },
   "months": {
     "2026-07": {
@@ -801,13 +802,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 3.2278,
-      "runs": 43,
-      "web_searches": 53,
-      "fair_usd": 2.5962
+      "cost_usd": 3.422,
+      "runs": 45,
+      "web_searches": 57,
+      "fair_usd": 2.7904
     }
   },
-  "updated_ts": 1789996382391,
+  "updated_ts": 1789999913480,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
