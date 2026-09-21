@@ -2766,8 +2766,13 @@ async function renderCeo(el) {
 
   el.innerHTML = `
     ${проблема ? `<div class="card" style="border-left:3px solid var(--red)">
-        <b>Агент не зібрав звіт: ${escapeHtml(свіжий.стан)}.</b><br>
+        <b>${свіжий.стан === 'обірвано'
+             ? 'Звіт НЕПОВНИЙ — його обірвало на середині.'
+             : 'Агент не зібрав звіт: ' + escapeHtml(свіжий.стан) + '.'}</b><br>
         ${escapeHtml(свіжий.причина || 'причину не вказано')}
+        ${свіжий.стан === 'обірвано'
+          ? '<br><span style="color:#777">Текст нижче читати можна, але це не весь звіт: кінець і розділ завдань могли не дописатись.</span>'
+          : ''}
       </div>` : ''}
     <div class="card">
       <div class="spend-lbl">Звіт від ${датаUk(свіжий.created_at)}</div>
@@ -3471,6 +3476,23 @@ const FREQ_STATUS_LABEL = {
   rejected:  'Відхилено',
 };
 
+// 🔴 ЗАЯВКА-СИРОТА: схвалена, а збору за нею вже немає (знімок Вови 21.09 —
+// «пише що схвалений, але я його не бачу, і видалити не можу»).
+//
+// 📐 ЗАМІРЯНО В ЖИВІЙ БАЗІ ТОГО Ж ДНЯ: `fundraiser_requests` — 1 рядок,
+// `status = 'approved'`, `fundraiser_id = NULL`; `fundraisers` — 0 рядків, а
+// лічильник таблиці вже видав 5 номерів. Тобто збори СТВОРЮВАЛИСЬ і були
+// видалені кнопкою «🗑 Видалити» в нижньому списку.
+//
+// 🔑 ЗВІДКИ САМ СТАН. Звʼязок описано як `fundraiser_id … on delete set null`:
+// видалення збору навмисно не тягне за собою заявку (вона документ про людину,
+// а не про збір). База при цьому сказала правду — обнулила посилання. Збрехала
+// АДМІНКА: вона дивилась лише на `status` і малювала «✓ Схвалено — збір #—»,
+// де прочерк і був тим самим NULL. Дій на такій картці не лишалось жодної.
+//
+// ⚠️ Тому ознака — ПАРА полів, а не статус: `approved` + порожній `fundraiser_id`.
+const осиротіла = r => r.status === 'approved' && !r.fundraiser_id;
+
 // Сума словами для списку. `toLocaleString` дає нерозривні пробіли між тисячами.
 const fundMoney = n => (Number.isFinite(Number(n)) && Number(n) > 0)
   ? Number(n).toLocaleString('uk-UA') + ' ₴' : '—';
@@ -3579,7 +3601,7 @@ function renderFundraisers(el) {
       : (!заявки.length ? '<div class="empty">У цій категорії порожньо</div>' : заявки.map(r => `
       <article class="card">
         <div class="card-meta">
-          <span class="badge">${FREQ_STATUS_LABEL[r.status] || r.status}</span>
+          <span class="badge"${осиротіла(r) ? ' style="background:#FBE9E7;color:#8a3226"' : ''}>${осиротіла(r) ? 'Схвалено — збору немає' : (FREQ_STATUS_LABEL[r.status] || r.status)}</span>
           <span class="badge">${FUND_KIND_LABEL[r.kind] || r.kind}</span>
           <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(r.created_at))}</span>
         </div>
@@ -3598,11 +3620,22 @@ function renderFundraisers(el) {
         </div>
         ${r.admin_note ? `<p class="card-text" style="color:#777">Нотатка: ${escapeHtml(r.admin_note)}</p>` : ''}
         <div class="card-actions">
-          ${r.status === 'approved'
-            ? `<span style="font-size:13px;color:#2a7">✓ Схвалено — збір #${r.fundraiser_id ?? '—'}</span>`
-            : `<button class="btn btn--primary" data-freq-approve="${r.id}">✓ Схвалити і створити збір</button>
-               ${r.status === 'new' ? `<button class="btn" data-freq-contacted="${r.id}">📞 Звʼязались</button>` : ''}
-               <button class="btn btn--delete" data-freq-reject="${r.id}">Відхилити</button>`}
+          ${r.status === 'approved' && r.fundraiser_id
+            ? `<span style="font-size:13px;color:#2a7">✓ Схвалено — збір #${r.fundraiser_id}</span>`
+            : осиротіла(r)
+              ? `<span style="font-size:13px;color:#8a3226;flex:1 1 100%">Збір було створено, а потім видалено з головної. Заявка лишилась — дані й контакт на місці.</span>
+                 <button class="btn btn--primary" data-freq-approve="${r.id}">↻ Опублікувати збір знову</button>`
+              : `<button class="btn btn--primary" data-freq-approve="${r.id}">✓ Схвалити і створити збір</button>
+                 ${r.status === 'new' ? `<button class="btn" data-freq-contacted="${r.id}">📞 Звʼязались</button>` : ''}
+                 <button class="btn btn--delete" data-freq-reject="${r.id}">Відхилити</button>`}
+          <!-- 🔴 Видалити заявку можна В БУДЬ-ЯКОМУ статусі. Доти кнопки не було
+               взагалі, і схвалена заявка ставала вічною: жодна дія на неї не
+               діяла. Право на видалення в базі (політика freq_admin_delete)
+               було з самого початку — бракувало саме кнопки.
+               🛑 ЗВОРОТНІ ЛАПКИ ТУТ ЗАБОРОНЕНІ: коментар лежить УСЕРЕДИНІ
+               шаблонного рядка і пара лапок закрила б його (див. попередження
+               вище — я щойно наступив на це вдруге). -->
+          <button class="btn btn--delete" data-freq-delete="${r.id}">🗑 Видалити заявку</button>
         </div>
       </article>`).join(''))}
 
@@ -3647,7 +3680,14 @@ function renderFundraisers(el) {
   // ── Схвалення. 🔑 Через RPC, а не двома запитами: атомарно, і поля
   //    копіюються НА СЕРВЕРІ — підмінити посилання на банку по дорозі не можна.
   el.querySelectorAll('[data-freq-approve]').forEach(b => b.addEventListener('click', async () => {
-    if (!confirm('Схвалити заявку і створити збір?\n\nПозначку «перевірено» треба буде поставити окремо.')) return;
+    // 🔑 Та сама кнопка робить дві різні речі, тож і питає по-різному: перше
+    //    схвалення — рішення про людину, повторна публікація — про збір, який
+    //    уже раз був на головній. RPC обидва випадки тягне однаково: у сироти
+    //    `fundraiser_id` порожній, тож перевірка «вже схвалено» його пропускає.
+    const заявка = fundRequests.find(x => x.id === Number(b.dataset.freqApprove));
+    if (!confirm(заявка && осиротіла(заявка)
+      ? 'Опублікувати збір знову?\n\nБуде створено НОВИЙ збір на головній із даними цієї заявки.'
+      : 'Схвалити заявку і створити збір?\n\nПозначку «перевірено» треба буде поставити окремо.')) return;
     b.disabled = true;
     const { data, error } = await supa.rpc('approve_fundraiser_request', { p_request_id: Number(b.dataset.freqApprove) });
     if (error) { b.disabled = false; return showToast(fundErr(error), 4000); }
@@ -3659,6 +3699,25 @@ function renderFundraisers(el) {
     const { error } = await supa.from('fundraiser_requests')
       .update({ status: 'contacted' }).eq('id', Number(b.dataset.freqContacted));
     if (error) return showToast(fundErr(error), 4000);
+    await loadAll(); renderApp();
+  }));
+
+  // ── Видалення заявки. 🔴 Дію додано 21.09: до неї схвалена заявка була
+  //    незнищенна — кнопки не існувало в жодному статусі.
+  // ⚠️ Питаємо про НАСЛІДОК, а не «ви впевнені?»: разом із заявкою зникає
+  //    ЄДИНИЙ запис контакту людини, яка просила збір. Відновити його нізвідки.
+  el.querySelectorAll('[data-freq-delete]').forEach(b => b.addEventListener('click', async () => {
+    const r = fundRequests.find(x => x.id === Number(b.dataset.freqDelete));
+    if (!r) return;
+    const збір = r.fundraiser_id
+      ? `\n\nЗбір #${r.fundraiser_id} на головній ЗАЛИШИТЬСЯ — його видаляють окремо, у списку нижче.`
+      : '';
+    if (!confirm(`Видалити заявку «${r.title}» НАЗАВЖДИ?\n\nРазом із нею зникне контакт заявника: `
+                 + `${r.contact_name}, ${r.contact_phone}.${збір}`)) return;
+    b.disabled = true;
+    const { error } = await supa.from('fundraiser_requests').delete().eq('id', r.id);
+    if (error) { b.disabled = false; return showToast(fundErr(error), 4000); }
+    showToast('Заявку видалено');
     await loadAll(); renderApp();
   }));
 
@@ -3752,7 +3811,15 @@ function renderFundraisers(el) {
   el.querySelectorAll('[data-fund-delete]').forEach(b => b.addEventListener('click', async () => {
     // ⚠️ Питаємо саме про НАСЛІДОК, а не «ви впевнені?»: у зборів є «Сховати»,
     // і в дев'яти випадках із десяти людині потрібне саме воно.
-    if (!confirm('Видалити збір НАЗАВЖДИ?\n\nЩоб просто прибрати його з головної, є кнопка «Сховати».')) return;
+    // 🔴 І окремо — про заявку, якщо збір прийшов із неї. Саме цього
+    //    попередження бракувало 17.08: збір видалили, заявка лишилась «схваленою»
+    //    без збору, і зрозуміти це з екрана було неможливо.
+    const заявка = fundRequests.find(r => r.fundraiser_id === Number(b.dataset.fundDelete));
+    const слід = заявка
+      ? `\n\n⚠️ Цей збір створено із заявки «${заявка.title}». Заявка лишиться нагорі `
+        + 'з позначкою «збору немає» — опублікувати знову можна кнопкою «↻» на її картці.'
+      : '';
+    if (!confirm('Видалити збір НАЗАВЖДИ?\n\nЩоб просто прибрати його з головної, є кнопка «Сховати».' + слід)) return;
     const { error } = await supa.from('fundraisers').delete().eq('id', Number(b.dataset.fundDelete));
     if (error) return showToast(fundErr(error), 4000);
     showToast('Видалено');
