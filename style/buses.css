@@ -70,7 +70,13 @@
 }
 .bus-week-day-name {
   font-size: 11px;
-  font-weight: 700;
+  /* 🔴 21.09 — 700 → 600 (робота Д3 «40% жирного», рішення Вови).
+     🔑 У парі «ПН / 21» ієрархію тримає ЧИСЛО, а не назва дня: саме за числом
+     людина знаходить потрібну колонку. Назва при 700 сперечалась із ним за
+     увагу, а виділення активного дня однаково робить не вага, а тло і колір
+     (`.bus-week-day--today`). 🛑 Нижче 600 не опускаємо: на 11px у капсі
+     тонший накреслень уже губиться на світлому тлі. */
+  font-weight: 600;
   color: var(--ink-soft);
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -198,6 +204,29 @@
   text-transform: none;
   margin-top: 5px;
 }
+/* 🔴 21.09 — рядок «джерело показує мало рейсів».
+   🔑 Той самий кегль і колір, що в «Оновлено» поруч (12px/--ink-mute): це
+   ПРИМІТКА про дані, а не тривога. Виділення кольором зробило б із
+   невизначеності поломку — і за місяць його перестали б помічати.
+   ⚠️ `text-transform: none` обов'язковий: батьківський `.bus-list-title` стоїть
+   у капсі, і без цього рядок кричав би великими літерами. */
+.bus-list-thin {
+  display: block;
+  max-width: 300px;
+  margin: 8px auto 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-mute);
+}
+.bus-list-thin a {
+  color: var(--accent, var(--ink));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bus-list-title::after {
   content: '';
   position: absolute;
@@ -1747,7 +1776,9 @@
   background: var(--brand-grad-sm);
   color: #fff;
   font-size: 9px;
-  font-weight: 700;
+  /* 🔴 21.09 — 700 → 600. Це СИМВОЛ (✓) у кружечку 16px, а не текст: його
+     помітність дає контраст білого на градієнті, вага тут не додає нічого. */
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
