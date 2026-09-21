@@ -40,6 +40,7 @@ import { whenSplashGone } from '../core/splash.js';   // deep-link чекає з
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
+import { observeContentCards } from '../core/content-views.js';   // читання (21.09)
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -1072,6 +1073,15 @@ function renderFeed() {
   // картку означало б мертву карусель саме на ній).
   wireGalleries(listEl);
   wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
+  // 🔴 21.09 — «ПРОЧИТАЛИ N ЛЮДЕЙ» ДЛЯ АВТОРА ДОПИСУ.
+  // 🔑 У Стрічці текст видно ПРЯМО в списку — відкривати нема чого, тож
+  // читання тут це «картка побула на екрані», а не тап. Міряли б тапами —
+  // Стрічка показувала б нуль при живих читачах, і ми зробили б хибний
+  // висновок «дописи нікому не цікаві».
+  // ⚠️ Кличемо після `patchList`, тобто лише коли щось справді перемалювалось
+  // (вище стоїть вихід на `mode === 'none'`): уже побачені картки відсіює
+  // власний Set модуля, а нові — підхоплюються тут.
+  observeContentCards(listEl, 'feed_post', '.fd-card[data-post]', 'data-post');
 }
 
 // ── ТОЧКОВЕ ОНОВЛЕННЯ ОДНІЄЇ КАРТКИ (без перемальовки всієї стрічки) ──────────

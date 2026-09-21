@@ -7,6 +7,7 @@ import { fetchCommunityToNews } from '../core/supabase.js';   // допис сп
 import { currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { fetchSavedArticleIds, addSavedArticle, removeSavedArticle,
          seedSavedArticles } from '../core/supabase.js';
+import { trackContentOpen } from '../core/content-views.js';   // читання (21.09)
 
 let allArticles = [];
 
@@ -811,6 +812,17 @@ function showsShortNote(article, rawText) {
 export function openArticle(id) {
   const article = allArticles.find(a => a.id === id);
   if (!article) return;
+
+  // 🔴 21.09 — ЧИТАННЯ СТАЛО ВИМІРНИМ. До цього дня застосунок знав лише, що
+  // людина відкрила ВКЛАДКУ «Новини»; чи прочитала вона бодай одну статтю — не
+  // знав ніхто, і ціль №1 курсу («щоденна користь») підтвердити було нічим.
+  // 🔑 Саме ТУТ, а не в обробнику тапу: сюди ведуть усі шляхи відкриття —
+  // делегований тап по картці, повернення за посиланням (`openArticleById`),
+  // перехід із віджета Громади. Подія в обробнику рахувала б лише перший.
+  // 🛑 Стоїть ПІСЛЯ перевірки `!article`: стаття могла зникнути зі стрічки, і
+  // записувати «прочитав» про нічого не показаний матеріал означало б завищити
+  // число, яке потім покажемо людині.
+  trackContentOpen('news', id);
 
   const modal = document.getElementById('article-modal');
   const modalContent = document.getElementById('article-modal-content');

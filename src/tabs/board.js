@@ -52,6 +52,7 @@ import {
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange, markQaFloorOnce, markQuestionsSeenOnLeave,
 } from './board-discussions.js';
+import { observeContentCards } from '../core/content-views.js';   // читання (21.09)
 
 // Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
 // порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
@@ -2226,6 +2227,17 @@ function renderAll() {
   // на пів екрана. Лікуємо обидві половини: тут — щоб фото приходило вчасно і
   // передбачувано, у `style/board.css` — щоб воно лишалось у кружечку.
   hydrateAvatars(el);
+
+  // 🔴 21.09 — ЧИТАННЯ ОГОЛОШЕНЬ. Як і у Стрічці, текст оголошення видно прямо
+  // в картці, тож мірка тут — «картка побула на екрані», а не тап. Це дає
+  // відповідь на питання курсу «чим саме користуються» на тій вкладці, куди
+  // люди приходять по конкретну справу.
+  // 🛑 Питання (`disc`) НЕ міряємо цим: там картка це заголовок питання, а сам
+  // зміст відкривається окремим екраном — інша поверхня, інша подія, і мішати
+  // їх в одне число означало б порівнювати непорівнюване.
+  if (activeType === 'board') {
+    observeContentCards(el, 'board_ad', '.bd-card--board[data-post-id]', 'data-post-id');
+  }
 
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';
