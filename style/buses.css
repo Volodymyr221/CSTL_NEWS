@@ -198,6 +198,29 @@
   text-transform: none;
   margin-top: 5px;
 }
+/* 🔴 21.09 — рядок «джерело показує мало рейсів».
+   🔑 Той самий кегль і колір, що в «Оновлено» поруч (12px/--ink-mute): це
+   ПРИМІТКА про дані, а не тривога. Виділення кольором зробило б із
+   невизначеності поломку — і за місяць його перестали б помічати.
+   ⚠️ `text-transform: none` обов'язковий: батьківський `.bus-list-title` стоїть
+   у капсі, і без цього рядок кричав би великими літерами. */
+.bus-list-thin {
+  display: block;
+  max-width: 300px;
+  margin: 8px auto 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-mute);
+}
+.bus-list-thin a {
+  color: var(--accent, var(--ink));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bus-list-title::after {
   content: '';
   position: absolute;
