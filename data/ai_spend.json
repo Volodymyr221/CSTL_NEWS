@@ -1,6 +1,47 @@
 {
   "runs": [
     {
+      "ts": 1790032824637,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 11054,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0222,
+      "note": ""
+    },
+    {
+      "ts": 1790032822486,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 5991,
+      "cache_read": 30892,
+      "cache_write": 31721,
+      "web_searches": 4,
+      "found": 3,
+      "cost_usd": 0.1854,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1790032723643,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 2258,
+      "cache_read": 30596,
+      "cache_write": 32306,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1495,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1789999913480,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -744,51 +785,12 @@
       "found": 2,
       "cost_usd": 0.3271,
       "note": ""
-    },
-    {
-      "ts": 1787929137424,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10560,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0319,
-      "note": ""
-    },
-    {
-      "ts": 1787929134245,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 4,
-      "output_tokens": 3390,
-      "cache_read": 8970,
-      "cache_write": 29872,
-      "web_searches": 4,
-      "found": 1,
-      "cost_usd": 0.2056,
-      "note": ""
-    },
-    {
-      "ts": 1787853110464,
-      "mission": "holiday:🇺🇦 День знань",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 472,
-      "cache_read": 0,
-      "cache_write": 1143,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0114,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 11.8903,
-    "runs": 170,
-    "web_searches": 166
+    "cost_usd": 12.2474,
+    "runs": 173,
+    "web_searches": 174
   },
   "months": {
     "2026-07": {
@@ -802,13 +804,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 3.422,
-      "runs": 45,
-      "web_searches": 57,
-      "fair_usd": 2.7904
+      "cost_usd": 3.7791,
+      "runs": 48,
+      "web_searches": 65,
+      "fair_usd": 3.1475
     }
   },
-  "updated_ts": 1789999913480,
+  "updated_ts": 1790032824637,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
