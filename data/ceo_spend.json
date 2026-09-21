@@ -2,6 +2,27 @@
   "_коментар": "Витрати агента CEO. ОКРЕМИЙ гаманець від агента новин — рішення Вови 20.09 («ще окремо 5 $»): спільний лічильник означав би, що балакучий тиждень CEO зупиняє агента новин. Пише scripts/ceo_agent.py, стеля CEO_MAX_MONTH_USD.",
   "runs": [
     {
+      "ts": 1790019761393,
+      "model": "claude-opus-5",
+      "cost_usd": 0.1454,
+      "звіт": true,
+      "usage": {
+        "input_tokens": 9089,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 4000,
+        "output_tokens_details": {
+          "thinking_tokens": 1528
+        },
+        "service_tier": "standard",
+        "inference_geo": "global"
+      }
+    },
+    {
       "ts": 1789985119784,
       "model": "claude-opus-5",
       "cost_usd": 0.107,
@@ -25,8 +46,8 @@
   ],
   "months": {
     "2026-09": {
-      "cost_usd": 0.107,
-      "runs": 1
+      "cost_usd": 0.2524,
+      "runs": 2
     }
   }
 }
