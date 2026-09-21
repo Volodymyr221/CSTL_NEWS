@@ -9,50 +9,37 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-21 12:04 UTC
+**Зріз на:** 2026-09-21 20:12 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-80n8ak` |
-| останній коміт людини | `36254712` 21.09 12:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak |
+| останній коміт людини | `c9293d35` 21.09 20:12 — fix(B-34): схвалена заявка на збір більше не вічна |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260921-1204` |
-| останній PR у `main` | #1196 |
-| стендів на диску | 167 |
-| незакомічених файлів | 4 ⚠️ |
+| останній PR у `main` | #1197 |
+| стендів на диску | 168 |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-21 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/commands/startuem.md`
-- `.github/workflows/ceo-agent.yml`
-- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/CSTL_BUGS.md`
 - `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/SESSION_STATE_2026-08_13-31.md`
+- `CSTL NEWS VOVA/_ai-tools/_archive/NEVYKONANI_закрите_до_2026-09-17.md`
 - `_session-log/vova-2026-09-20b.md`
 - `admin.html`
-- `bundle.js`
-- `editor/core/spend.py`
-- `scripts/ai_news_agent.py`
-- `src/tabs/buses.js`
-- `style/buses.css`
-- `sw.js`
-- `tests/bus-thin-day.mjs`
-- `tests/ceo-report.mjs`
-- `tests/news-widget.mjs`
-- …ще 1
+- `tests/fund-orphan.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `36254712` 21.09 12:04 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
-- `6d22d183` 21.09 11:30 — docs: пульс і літопис під сесію рішень 21.09«c»
-- `e52159b6` 21.09 11:30 — docs(журнал): таб-бар лишено жирним — рішення з обґрунтуванням
-- `2a993d81` 21.09 11:29 — feat: рішення Вови — літопис розрізано, жирний 48→37%, прилад новин стабільний
-- `675fa13c` 21.09 11:23 — feat: позначка «джерело дало мало рейсів» · розмітка в Дирекції · стелі · прилад новин
+- `c9293d35` 21.09 20:12 — fix(B-34): схвалена заявка на збір більше не вічна
+- `802cd02a` 21.09 12:06 — docs(журнал): третій фініш — PR #1197, деплой #6127 success
+- `648761d9` 21.09 12:06 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
+- `264f4ede` 21.09 12:04 — Рішення Вови: позначка рейсів, стелі агентів, літопис, жирний текст (#1197)
+- `b46face2` 21.09 12:04 — docs(реєстр): лічильник новин не гасне — відкритий баг із доказами
 
 <!-- AUTO:END -->
 
