@@ -9,42 +9,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-21 06:38 UTC
+**Зріз на:** 2026-09-21 10:17 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-80n8ak` |
-| останній коміт людини | `131903d5` 21.09 06:38 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak |
+| останній коміт людини | `68edac67` 21.09 10:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260921-0638` |
-| останній PR у `main` | #1195 |
+| останній PR у `main` | #1196 |
 | стендів на диску | 166 |
-| незакомічених файлів | 1 ⚠️ |
+| незакомічених файлів | 3 ⚠️ |
 | журнал за 2026-09-21 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/ceo-agent.yml`
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-09-20b.md`
-- `admin.html`
-- `scripts/ceo_agent.py`
-- `scripts/ceo_facts.py`
-- `scripts/supabase_ceo_reports.sql`
-- `sw.js`
-- `tests/ceo-report.mjs`
-- `tests/surface-flags.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `131903d5` 21.09 06:38 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
-- `ca204668` 21.09 06:38 — docs(пульс): авто-блок після комітів агента CEO
-- `b5c51979` 21.09 06:22 — ai(news): памʼять+чернетки+витрати 21.09 06:22 UTC
-- `d9f1a9b8` 21.09 06:06 — docs: пульс і літопис — агент CEO зібраний, дві міграції чекають накату
-- `e884affb` 21.09 06:05 — feat(CEO): агент, розділ «Дирекція» і завдання через PR (кроки 3-5)
+- `68edac67` 21.09 10:16 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
+- `fe09c797` 21.09 10:05 — docs(реєстр): 2 пропозицій агента CEO
+- `f54f8e0a` 21.09 09:56 — fix(журнал): прибрано конфліктні маркери, які я закомітив попереднім комітом
+- `b1fe8d94` 21.09 09:55 — docs(журнал): дві міграції накатані на живу базу, доведено пʼятьма перевірками
+- `3ada0dfd` 21.09 06:39 — docs(журнал): деплой #6119 success
 
 <!-- AUTO:END -->
 
