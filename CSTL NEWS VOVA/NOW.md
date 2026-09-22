@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-22 03:18 UTC
+**Зріз на:** 2026-09-22 03:58 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-80n8ak` |
-| останній коміт людини | `9fec9d83` 22.09 03:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak |
+| останній коміт людини | `67ec7bd3` 22.09 03:58 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260922-0243` |
-| останній PR у `main` | #1198 |
+| останній PR у `main` | #1199 |
 | стендів на диску | 171 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-22 | **НЕМАЄ** ⚠️ |
@@ -24,30 +24,17 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/deploy.yml`
 - `.github/workflows/health-check.yml`
-- `.gitignore`
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/CSTL_BUGS.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-09-20b.md`
-- `bundle.js`
-- `scripts/split_articles.py`
-- `src/tabs/news.js`
-- `sw.js`
-- `tests/articles-split.mjs`
 - `tests/health-watch.mjs`
-- `tests/sw-slow-network.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `67ec7bd3` 22.09 03:58 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
+- `e9f6afd3` 22.09 03:57 — feat(вартовий): стереже й поділ статей на живому сайті
+- `8763d1cb` 22.09 03:52 — B-35: застосунок не чекає мовчазний сервер, тексти статей їдуть окремо, вартовий на шар даних (#1199)
+- `d439d48f` 22.09 03:18 — docs(пульс): звірка з git після зведення з main
 - `9fec9d83` 22.09 03:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-80n8ak
-- `31460e34` 22.09 03:17 — docs: пульс звірено з git і стиснуто під стелю
-- `c4fb31b0` 22.09 02:46 — fix(B-35): застосунок не чекає мовчазний сервер, а тексти статей їдуть окремо
-- `0d8b7f19` 21.09 23:20 — ai(news): памʼять+чернетки+витрати 21.09 23:20 UTC
-- `1b1d190e` 21.09 21:27 — docs(журнал): четвертий фініш — PR #1198, деплой #6143 success
 
 <!-- AUTO:END -->
 
