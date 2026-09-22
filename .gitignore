@@ -47,3 +47,7 @@ data/.cms_pending.json
 # коду і шляхи файлів. Скрипт маскує секрети, але правило простіше за виняток:
 # за замовчуванням він пише `vibe-audit-report.md` у поточну теку.
 vibe-audit-report.md
+
+# Похідний файл: створюється лише при складанні сайту (scripts/split_articles.py).
+# У git його бути не має — джерело правди одне, це data/articles.json.
+data/articles-text.json
