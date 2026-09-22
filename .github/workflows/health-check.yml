@@ -33,7 +33,22 @@ name: Health check
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # 🔴 ЯВНІ ХВИЛИНИ, А НЕ `*/15` — І ЦЕ ЗАМІРЯНО, НЕ СМАК (22.09).
+    # Перша редакція стояла на `*/15` і за **4.5 години не дала ЖОДНОГО
+    # прогону**, хоч воркфлов зареєстрований і `state: active`. Інші розклади
+    # репозиторію в цей самий час ішли справно (новини 03:47 · 04:47 · 05:47 ·
+    # 06:47 · 07:47).
+    # 📐 Різниця видно в сусідніх файлах, і проєкт це вже знав ДВІЧІ:
+    #   • `rss-parser.yml` — `0,30 * * * *` з коментарем «GitHub надійно виконує
+    #     такі cron-jobs» — іде справно;
+    #   • `vopas-parser.yml` — `*/30` — у журналі 21.09 записано: «обіцяє прогін
+    #     кожні 30 хвилин, фактично раз на ~2 години»;
+    #   • `cms-sync.yml` — `7,22,37,52` з припискою «кожні 15 хв, але не в чужі
+    #     хвилини» — саме через це.
+    # ➡️ Вартовий на кроковому синтаксисі — це вартовий, який спить. Хвилини
+    #    вибрані вільні: 15 зайняв агент новин, 7/22/37/52 — синк кабінету,
+    #    0/30 — парсери, 10 і 40 — агенти спільнот.
+    - cron: '5,20,35,50 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -45,6 +60,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 🛑 ЗМІННІ ОБОЛОНКИ — ЛИШЕ ЛАТИНИЦЕЮ. Перша редакція мала `КОД=`, `ЧАС=`,
+      # `САЙТ=` — і обидва перші прогони впали з `command not found` та
+      # `bad substitution`, не перевіривши НІЧОГО. Це гаряче правило проєкту
+      # («кирилиця в змінних bash»), на яке я наступив того ж дня вдруге.
+      # ⚠️ Усередині python-heredoc кирилиця законна і лишається — там це імена
+      #    змінних Python, а не оболонки.
       - name: Опитати шар даних і вхід
         shell: bash
         run: |
@@ -59,31 +80,31 @@ jobs:
             exit 1
           fi
 
-          спроба() {
+          probe() {
             # -m 20: чекати довше немає сенсу — житель стільки не чекає.
-            КОД=$(curl -s -o /tmp/тіло.txt -m 20 -w '%{http_code}' \
+            CODE=$(curl -s -o /tmp/body.txt -m 20 -w '%{http_code}' \
                     -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
                     "$URL/rest/v1/fundraisers?select=id&limit=1" || echo 000)
-            ЧАС=$(curl -s -o /dev/null -m 20 -w '%{time_total}' \
+            TIME_S=$(curl -s -o /dev/null -m 20 -w '%{time_total}' \
                     -H "apikey: $KEY" "$URL/auth/v1/health" || echo -1)
-            echo "  дані: HTTP $КОД · вхід: ${ЧАС}s"
-            [ "$КОД" = "200" ]
+            echo "  дані: HTTP $CODE · вхід: ${TIME_S}s"
+            [ "$CODE" = "200" ]
           }
 
           for i in 1 2 3; do
             echo "спроба $i:"
-            if спроба; then
+            if probe; then
               echo "✅ шар даних відповідає"
               exit 0
             fi
-            echo "  тіло відповіді: $(head -c 200 /tmp/тіло.txt)"
+            echo "  тіло відповіді: $(head -c 200 /tmp/body.txt)"
             [ $i -lt 3 ] && sleep 20
           done
 
           echo ""
           echo "❌ ШАР ДАНИХ НЕ ВІДПОВІДАЄ ТРИ РАЗИ ПОСПІЛЬ."
           echo ""
-          if grep -q 'PGRST002' /tmp/тіло.txt 2>/dev/null; then
+          if grep -q 'PGRST002' /tmp/body.txt 2>/dev/null; then
             echo "🔴 Це PGRST002 — той самий випадок, що в ніч на 22.09."
             echo "   PostgREST не може зібрати довідник схеми: запит"
             echo "   'SELECT name FROM pg_timezone_names' не встигає у 8 секунд"
@@ -111,9 +132,21 @@ jobs:
       - name: Перевірити, що поділ статей доїхав на сайт
         shell: bash
         run: |
-          САЙТ="https://castlelife.org"
-          curl -sS -m 30 -o /tmp/список.json -w "список: HTTP %{http_code} · %{size_download} байт\n" "$САЙТ/data/articles.json"
-          curl -sS -m 30 -o /tmp/тексти.json -w "тексти: HTTP %{http_code} · %{size_download} байт\n" "$САЙТ/data/articles-text.json"
+          SITE="https://castlelife.org"
+          # 🔑 ЗАМІР, ЯКИЙ НЕ ЗРОБИТИ З ПІСОЧНИЦІ РОЗРОБКИ (вихід на Pages звідти
+          # закритий): чи дає хостинг мітку версії файлу і чи розуміє умовний
+          # запит. Від цього залежить, чи коштує фонове оновлення сотні кілобайт,
+          # чи кількасот байт. Нічого не валить — це знання, а не вимога.
+          ETAG=$(curl -sS -m 30 -D- -o /dev/null "$SITE/data/articles.json" | grep -i '^etag:' | tr -d '\r' | cut -d' ' -f2- || true)
+          if [ -n "$ETAG" ]; then
+            CODE304=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' -H "If-None-Match: $ETAG" "$SITE/data/articles.json" || echo 000)
+            echo "мітка версії: є · повторний запит із нею → HTTP $CODE304 $([ "$CODE304" = 304 ] && echo '(фонове оновлення майже безкоштовне)' || echo '(304 не віддає — оновлення качає файл цілком)')"
+          else
+            echo "мітка версії: НЕМАЄ — фонове оновлення щоразу качає файл цілком"
+          fi
+
+          curl -sS -m 30 -o /tmp/list.json -w "список: HTTP %{http_code} · %{size_download} байт\n" "$SITE/data/articles.json"
+          curl -sS -m 30 -o /tmp/texts.json -w "тексти: HTTP %{http_code} · %{size_download} байт\n" "$SITE/data/articles-text.json"
 
           python3 - <<'PY'
           import json, sys
@@ -125,8 +158,8 @@ jobs:
                   print(f"❌ {назва} не розібрався: {e}")
                   sys.exit(1)
 
-          список = прочитати("/tmp/список.json", "data/articles.json")
-          тексти  = прочитати("/tmp/тексти.json",  "data/articles-text.json")
+          список = прочитати("/tmp/list.json", "data/articles.json")
+          тексти  = прочитати("/tmp/texts.json",  "data/articles-text.json")
 
           if not isinstance(список, list) or not список:
               print("❌ список статей порожній або не масив"); sys.exit(1)

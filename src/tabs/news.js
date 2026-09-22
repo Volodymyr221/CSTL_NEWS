@@ -283,10 +283,44 @@ export async function initNews() {
 // вузька: качаємо повторно ТІЛЬКИ якщо минулого разу не вийшло.
 // ⚠️ `force: true` тут обовʼязковий — без нього `ensureNewsLoaded` побачила б
 // порожній масив і... теж пішла б у мережу, але сенс умови був би прихований.
+// 🔴 22.09 — ЧЕТВЕРТИЙ ПРИВІД: SERVICE WORKER СКАЗАВ, ЩО ПРИЇХАЛО ІНШЕ.
+//
+// 🗣️ Питання Вови: «коли підтягнуло нормальний інтернет, то як застосунок
+// обновиться до свіжої версії?»
+//
+// 🔴 ВІДПОВІДЬ БУЛА «НІЯК», І ЗЛАМАЛА ЦЕ СТЕЛЯ ОЧІКУВАННЯ В `sw.js`. Умова
+// нижче — `if (!newsLoadFailed()) return` — вмикає перезапит САМЕ НА ЗБОЇ. Доти
+// станів було два: свіже або збій. Стеля додала третій — «віддали копію з кешу,
+// і це УСПІХ»: збою немає, отже перезапит не вмикається, отже новини лишались
+// учорашніми до перезапуску застосунку, хоч інтернет уже був.
+//
+// 🔑 Полагодити умовою «а раптом дані старі» не можна: сторінка не знає, стара
+// копія чи свіжа. Це знає ЛИШЕ Service Worker — він її й віддавав. Тому він
+// тепер каже про це сам, а ми на це слово перезапитуємо.
+// 🛑 Він каже ТІЛЬКИ коли мітка відповіді справді змінилась — інакше наш власний
+// `force: true` спричинив би нову звістку і закрутив петлю. Стереже `sw-slow-network`.
+let _swWired = false;
+function wireSwFreshData() {
+  if (_swWired || !('serviceWorker' in navigator)) return;
+  _swWired = true;
+  navigator.serviceWorker.addEventListener('message', async e => {
+    const d = e.data;
+    if (!d || d.__cstl !== 'sw-оновлено') return;
+    if (!String(d.url || '').includes('/data/articles.json')) return;
+    await ensureNewsLoaded({ force: true });
+    if (!newsLoadFailed()) {
+      // Та сама подія, що й після вдалого повтору: хто показує новини, той і
+      // вирішує, як їх подати (віджет — тихо, хаб — пігулкою).
+      window.dispatchEvent(new CustomEvent('cstl-news-reloaded', { detail: { причина: 'sw' } }));
+    }
+  });
+}
+
 let _retryWired = false;
 function wireNewsAutoRetry() {
   if (_retryWired) return;
   _retryWired = true;
+  wireSwFreshData();
   onReturn('', async (причина) => {
     if (!newsLoadFailed()) return;              // усе гаразд — не чіпаємо
     await ensureNewsLoaded({ force: true });

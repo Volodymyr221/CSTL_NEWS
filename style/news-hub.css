@@ -260,3 +260,38 @@ body.nh-open .article-modal {
   .nh-sk-photo, .nh-sk-thumb, .nh-sk-line { animation: nh-sk-pulse 1.4s ease-in-out infinite; }
 }
 @keyframes nh-sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ── Пігулка «є свіжі новини» ────────────────────────────────────────────
+   🔴 22.09 — зразок Instagram: свіже НЕ підміняємо під пальцями, а
+   пропонуємо. Людина прокрутила список — підміна забрала б місце, де вона
+   читала, і виглядала б як збій.
+   🔑 Плаває НАД списком, не в потоці: поява пігулки не має зсувати жодної
+   картки — інакше ми зробимо рівно те, чого уникаємо.
+   ⚠️ Низ рахуємо від безпечної зони: на iPhone там домашня смужка, і
+   кнопка над нею стає недосяжною для великого пальця. */
+.nh-fresh {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 1250;                 /* над списком хаба (1200), під модалкою статті */
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand, #7a1f2b);
+  color: #fff;
+  font: 600 14px/1 var(--font, inherit);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .28);
+  cursor: pointer;
+  animation: nh-fresh-in .22s ease-out;
+}
+
+@keyframes nh-fresh-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Людина просила менше руху — поважаємо (той самий принцип, що в a11y-prefers). */
+@media (prefers-reduced-motion: reduce) {
+  .nh-fresh { animation: none; }
+}

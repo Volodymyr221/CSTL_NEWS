@@ -151,7 +151,51 @@ export async function openNewsHub(group) {
     { edgeGuard: 28 },
   );
 
+  wireFreshPill();
   await paint(active);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 СВІЖЕ НЕ ПІДМІНЯЄМО ПІД ПАЛЬЦЯМИ — ПРОПОНУЄМО (22.09.2026)
+//
+// 🗣️ Вова спитав, як застосунок оновиться, коли зʼявився нормальний інтернет, і
+// чи це взагалі найкраще рішення — «як зробив би фейсбук/інстаграм».
+//
+// 🔑 ВІДПОВІДЬ, ЯКУ ВАРТО БУЛО ПІДГЛЯНУТИ: Instagram НЕ перемальовує стрічку,
+// яку ти читаєш. Він показує пігулку «New posts» угорі, і стрибок робиш ТИ.
+// Причина проста: підміна вмісту посеред читання забирає місце, де людина була,
+// і виглядає як збій, а не як турбота.
+// 🛑 Моя перша пропозиція була саме «перемалювати самі» — і вона гірша за те, що
+// є. Тут виправлено.
+//
+// ПРАВИЛО: список угорі — підставляємо тихо (втрачати нема чого);
+//          людина прокрутила — пігулка, і рішення за нею.
+let _pillWired = false;
+function wireFreshPill() {
+  if (_pillWired) return;
+  _pillWired = true;
+  window.addEventListener('cstl-news-reloaded', () => {
+    if (!_hub) return;                                  // хаб закритий — нічого не робимо
+    const list = _hub.screen.querySelector('.nh-list');
+    if (!list) return;
+    // ⚠️ Поріг, а не строгий нуль: пружна прокрутка iOS лишає одиниці пікселів.
+    if (list.scrollTop <= 8) { paint(_lastGroup); return; }
+    showFreshPill(list);
+  });
+}
+
+function showFreshPill(list) {
+  if (_hub.screen.querySelector('.nh-fresh')) return;   // одна пігулка, не черга
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.className = 'nh-fresh';
+  pill.textContent = '↑ Є свіжі новини';
+  pill.addEventListener('click', async () => {
+    pill.remove();
+    await paint(_lastGroup);
+    list.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  _hub.screen.appendChild(pill);
 }
 
 // Сусідня категорія. БЕЗ закільцьовування: на краю списку свайп нічого не робить.
