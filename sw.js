@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260921-2050';
+const CACHE_NAME = 'cstl-20260922-0243';
 
 // 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
 // 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш
@@ -93,6 +93,57 @@ self.addEventListener('activate', e => {
 });
 
 // Обробка запитів
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 СТЕЛЯ ОЧІКУВАННЯ МЕРЕЖІ (22.09.2026) — найдорожчий рядок цього файлу.
+//
+// 📐 ЗАМІРЯНО В НІЧ НА 22.09, коли Вова написав «чому додаток так довго став
+// завантажувати вкладки?». Шар даних Supabase лежав: `PGRST002` на кожному
+// запиті, продовження сесії висіло 10-29 секунд, вхід через Google — 38.6 с.
+// А застосунок УСЕ ЦЕ ЧЕКАВ, хоча поряд у кеші лежала готова копія.
+//
+// 🔑 КОРІНЬ БУВ У СТРАТЕГІЇ, А НЕ В СЕРВЕРІ. «Мережа-перша» знала рівно два
+// стани: мережа є (чекаємо скільки треба) і мережі НЕМА ЗОВСІМ (беремо кеш).
+// Стану «мережа є, але повзе» не існувало — саме в нього ми й потрапили.
+//
+// ➡️ Тепер третій стан описаний: не відповіла за `МЕРЕЖА_ЧЕКАЄ_МС` і копія в
+// кеші є — віддаємо копію ОДРАЗУ, а свіже дописуємо в кеш фоном. Людина бачить
+// трохи несвіже замість порожнього екрана; наступне відкриття вже свіже.
+//
+// ⚠️ ЧОГО ЦЕ НЕ ЛІКУЄ, і це чесно: `fetch` виконується, коли прийшли ЗАГОЛОВКИ,
+// а не коли докачалось тіло. Тож стеля рятує від «сервер думає» (наш випадок),
+// але не від «файл на 1.8 МБ повзе по 3G». Друге лікується вагою файлу, не тут.
+//
+// 🛑 Запас береться з `CACHE_NAME`, а він міняється щодеплою і старі кеші
+// чистяться при активації — тобто в запасі лежить код ЦЬОГО деплою, а не
+// давнина. Саме тому підміна кешем безпечна для `bundle.js`.
+const МЕРЕЖА_ЧЕКАЄ_МС = 2500;
+
+function мережаПершою(request, { перезавантажити = false, колиПорожньо = null } = {}) {
+  const зМережі = fetch(request, перезавантажити ? { cache: 'reload' } : undefined)
+    .then(r => {
+      // Кладемо в кеш НАВІТЬ якщо відповідь спізнилась і людина вже бачить копію:
+      // у цьому й суть фонового оновлення.
+      if (r.ok) {
+        const копія = r.clone();
+        caches.open(CACHE_NAME).then(c => c.put(request, копія));
+      }
+      return r;
+    });
+
+  return caches.match(request).then(зКешу => {
+    // Копії немає — чекати нема на що, віддаємо мережу як є.
+    if (!зКешу) {
+      return зМережі
+        .catch(() => (колиПорожньо ? caches.match(колиПорожньо) : undefined))
+        .then(r => r || new Response('', { status: 503 }));
+    }
+    return Promise.race([
+      зМережі.catch(() => зКешу),
+      new Promise(готово => setTimeout(() => готово(зКешу), МЕРЕЖА_ЧЕКАЄ_МС)),
+    ]);
+  });
+}
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
@@ -106,17 +157,7 @@ self.addEventListener('fetch', e => {
                  url.pathname.endsWith('/') ||
                  url.pathname.endsWith('/index.html');
   if (isHTML) {
-    e.respondWith(
-      fetch(e.request)
-        .then(r => {
-          if (r.ok) {
-            const clone = r.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
-          return r;
-        })
-        .catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
-    );
+    e.respondWith(мережаПершою(e.request, { колиПорожньо: './index.html' }));
     return;
   }
 
@@ -140,17 +181,7 @@ self.addEventListener('fetch', e => {
 
   // Файли даних (data/*.json) — network-first (завжди свіжі новини/розклад)
   if (url.pathname.includes('/data/')) {
-    e.respondWith(
-      fetch(e.request)
-        .then(r => {
-          if (r.ok) {
-            const clone = r.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
-          return r;
-        })
-        .catch(() => caches.match(e.request))
-    );
+    e.respondWith(мережаПершою(e.request));
     return;
   }
 
@@ -169,19 +200,9 @@ self.addEventListener('fetch', e => {
   // а кеш лишається запасним для офлайну. Прибирає «застряглий старий вигляд».
   const isAppCode = url.pathname.endsWith('.css') || url.pathname.endsWith('bundle.js');
   if (isAppCode) {
-    e.respondWith(
-      // { cache: 'reload' } — обходимо HTTP-кеш браузера (GitHub Pages віддає
-      // CSS/JS з max-age ~10хв), інакше fetch повертав би застарілий код.
-      fetch(e.request, { cache: 'reload' })
-        .then(r => {
-          if (r.ok) {
-            const clone = r.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
-          return r;
-        })
-        .catch(() => caches.match(e.request))
-    );
+    // { cache: 'reload' } — обходимо HTTP-кеш браузера (GitHub Pages віддає
+    // CSS/JS з max-age ~10хв), інакше fetch повертав би застарілий код.
+    e.respondWith(мережаПершою(e.request, { перезавантажити: true }));
     return;
   }
 
