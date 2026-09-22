@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1790078371033,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 632,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0094,
+      "note": ""
+    },
+    {
       "ts": 1790071175597,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -774,24 +787,11 @@
       "found": 1,
       "cost_usd": 0.032,
       "note": "Жорнище: село над Осинищем, яке колись звалося Силібер"
-    },
-    {
-      "ts": 1788007700560,
-      "mission": "holiday:🇺🇦 День знань",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 555,
-      "cache_read": 0,
-      "cache_write": 1143,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0126,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 12.6205,
-    "runs": 177,
+    "cost_usd": 12.6299,
+    "runs": 178,
     "web_searches": 182
   },
   "months": {
@@ -806,13 +806,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 4.1522,
-      "runs": 52,
+      "cost_usd": 4.1616,
+      "runs": 53,
       "web_searches": 73,
-      "fair_usd": 3.5206
+      "fair_usd": 3.53
     }
   },
-  "updated_ts": 1790071175597,
+  "updated_ts": 1790078371033,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
