@@ -112,6 +112,18 @@ jobs:
         shell: bash
         run: |
           САЙТ="https://castlelife.org"
+          # 🔑 ЗАМІР, ЯКИЙ НЕ ЗРОБИТИ З ПІСОЧНИЦІ РОЗРОБКИ (вихід на Pages звідти
+          # закритий): чи дає хостинг мітку версії файлу і чи розуміє умовний
+          # запит. Від цього залежить, чи коштує фонове оновлення сотні кілобайт,
+          # чи кількасот байт. Нічого не валить — це знання, а не вимога.
+          ETAG=$(curl -sS -m 30 -D- -o /dev/null "$САЙТ/data/articles.json" | grep -i '^etag:' | tr -d '\r' | cut -d' ' -f2- || true)
+          if [ -n "$ETAG" ]; then
+            КОД304=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' -H "If-None-Match: $ETAG" "$САЙТ/data/articles.json" || echo 000)
+            echo "мітка версії: є · повторний запит із нею → HTTP $КОД304 $([ "$КОД304" = 304 ] && echo '(фонове оновлення майже безкоштовне)' || echo '(304 не віддає — оновлення качає файл цілком)')"
+          else
+            echo "мітка версії: НЕМАЄ — фонове оновлення щоразу качає файл цілком"
+          fi
+
           curl -sS -m 30 -o /tmp/список.json -w "список: HTTP %{http_code} · %{size_download} байт\n" "$САЙТ/data/articles.json"
           curl -sS -m 30 -o /tmp/тексти.json -w "тексти: HTTP %{http_code} · %{size_download} байт\n" "$САЙТ/data/articles-text.json"
 
