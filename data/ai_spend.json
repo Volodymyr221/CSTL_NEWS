@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1790071175597,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10764,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0216,
+      "note": ""
+    },
+    {
+      "ts": 1790071173010,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 4,
+      "output_tokens": 2612,
+      "cache_read": 10240,
+      "cache_write": 30533,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1445,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1790053175022,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -760,38 +787,12 @@
       "found": 1,
       "cost_usd": 0.0126,
       "note": ""
-    },
-    {
-      "ts": 1787953891085,
-      "mission": "istoriya:hist:носовичі-личани-котів-путилівка",
-      "model": "claude-opus-5",
-      "input_tokens": 4211,
-      "output_tokens": 478,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.033,
-      "note": "Носовичі, Личани, Котів, Путилівка: чотири малі села і сліди давніх волостей"
-    },
-    {
-      "ts": 1787943430715,
-      "mission": "holiday:🇺🇦 День знань",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 495,
-      "cache_read": 0,
-      "cache_write": 1143,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0117,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 12.4544,
-    "runs": 175,
-    "web_searches": 178
+    "cost_usd": 12.6205,
+    "runs": 177,
+    "web_searches": 182
   },
   "months": {
     "2026-07": {
@@ -805,13 +806,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 3.9861,
-      "runs": 50,
-      "web_searches": 69,
-      "fair_usd": 3.3545
+      "cost_usd": 4.1522,
+      "runs": 52,
+      "web_searches": 73,
+      "fair_usd": 3.5206
     }
   },
-  "updated_ts": 1790053175022,
+  "updated_ts": 1790071175597,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
