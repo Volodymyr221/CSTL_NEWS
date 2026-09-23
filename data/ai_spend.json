@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1790123741226,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10918,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.022,
+      "note": ""
+    },
+    {
+      "ts": 1790123739057,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3450,
+      "cache_read": 31232,
+      "cache_write": 31856,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1604,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1790078371033,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -761,38 +788,12 @@
       "found": 1,
       "cost_usd": 0.0116,
       "note": ""
-    },
-    {
-      "ts": 1788018220986,
-      "mission": "istoriya:hist:олицька-ординація-як-маєток",
-      "model": "claude-opus-5",
-      "input_tokens": 4271,
-      "output_tokens": 529,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0346,
-      "note": "Олицька ординація: як маєток Радзивіллів отримав особливий правовий статус"
-    },
-    {
-      "ts": 1788009637968,
-      "mission": "istoriya:hist:жорнище-село-над-осинищем",
-      "model": "claude-opus-5",
-      "input_tokens": 4157,
-      "output_tokens": 447,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.032,
-      "note": "Жорнище: село над Осинищем, яке колись звалося Силібер"
     }
   ],
   "totals": {
-    "cost_usd": 12.6299,
-    "runs": 178,
-    "web_searches": 182
+    "cost_usd": 12.8123,
+    "runs": 180,
+    "web_searches": 186
   },
   "months": {
     "2026-07": {
@@ -806,13 +807,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 4.1616,
-      "runs": 53,
-      "web_searches": 73,
-      "fair_usd": 3.53
+      "cost_usd": 4.344,
+      "runs": 55,
+      "web_searches": 77,
+      "fair_usd": 3.7124
     }
   },
-  "updated_ts": 1790078371033,
+  "updated_ts": 1790123741226,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
