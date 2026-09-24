@@ -226,7 +226,42 @@ const _cardSig = new WeakMap();
  */
 export function patchList(container, items, keyOf, htmlOf, keyAttr) {
   if (!container) return { mode: 'none', changed: 0 };
-  const nodes = [...container.children].filter(n => n.hasAttribute?.(keyAttr));
+  let nodes = [...container.children].filter(n => n.hasAttribute?.(keyAttr));
+
+  // ── ДОПИСУВАННЯ В КІНЕЦЬ (пагінація «показати старіші») ─────────────────────
+  // 🔴 24.09 — БЕЗ ЦІЄЇ ГІЛКИ ПАГІНАЦІЯ ПОВЕРНУЛА Б БАГ, ЯКИЙ ТУТ УЖЕ ЛІКУВАЛИ.
+  // Дописати сторінку старіших постів означає «items побільшало», тобто
+  // `sameShape` хибний — і нижня гілка робить `innerHTML = …`, тобто
+  // перестворює УСІ картки разом з їхніми `<img>`. Заміряно ще 15.08: повна
+  // заміна дає 5 кадрів, у яких жодна з 12 фотографій не намальована. Людина
+  // тисне «показати старіші» і бачить, як блимає весь список, який вона вже
+  // читала.
+  // 🔑 Але випадок «перші N карток ті самі, далі дописано» розпізнається точно:
+  // ключі збігаються по порядку на всю довжину наявних вузлів. Тоді старі
+  // вузли не чіпаються ВЗАГАЛІ (їхні фотографії лишаються намальованими), а
+  // нові додаються одним `DocumentFragment`.
+  // ⚠️ Саме «додано в кінець», а не «будь-яка вставка»: вставка зверху зсунула б
+  // список під пальцем, і це окремий випадок, який лікує `keepScroll`.
+  const дописано = nodes.length > 0 && items.length > nodes.length &&
+    nodes.every((n, i) => items[i] !== undefined &&
+                          n.getAttribute(keyAttr) === String(keyOf(items[i])));
+  if (дописано) {
+    const tplA = document.createElement('template');
+    const хвіст = document.createDocumentFragment();
+    for (let i = nodes.length; i < items.length; i++) {
+      const html = htmlOf(items[i]);
+      tplA.innerHTML = html;
+      const fresh = tplA.content.firstElementChild;
+      if (!fresh) continue;
+      _cardSig.set(fresh, html);
+      хвіст.appendChild(fresh);
+    }
+    container.appendChild(хвіст);
+    nodes = [...container.children].filter(n => n.hasAttribute?.(keyAttr));
+    // Далі йде звичайне покарткове звіряння: воно пройде по ВСІХ картках,
+    // свіжодописані збіжаться зі своїм підписом і не перестворяться.
+  }
+
   const sameShape = nodes.length === items.length &&
     items.every((it, i) => nodes[i].getAttribute(keyAttr) === String(keyOf(it)));
 
@@ -256,5 +291,8 @@ export function patchList(container, items, keyOf, htmlOf, keyAttr) {
     _cardSig.set(fresh, html);
     changed++;
   });
+  // 'append' окремим станом, а не 'patch': споживач мусить розуміти, що вузли
+  // ДОДАНО, і додротувати обробники саме на них (галереї, згортання тексту).
+  if (дописано) return { mode: 'append', changed };
   return { mode: changed ? 'patch' : 'none', changed };
 }

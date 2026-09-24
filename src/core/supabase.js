@@ -140,20 +140,89 @@ export async function isTeamMember() {
 // Усі опубліковані пости (для Дошки громади 2.0)
 // Сортування за bumped_at DESC (підняті/свіжі зверху; bumped_at заповнено для всіх).
 // Якщо БД недоступна або порожня — повертаємо null (caller fall back на JSON).
-export async function fetchPublishedPosts() {
+// ── ПАГІНАЦІЯ ДОШКИ (крок 11, 24.09) ────────────────────────────────────────
+// Та сама конструкція, що у Стрічці (`fetchPagePostsPage`), і з тієї ж причини:
+// 200 було стелею, за якою оголошення зникали без сліду. Курсор іде по
+// `bumped_at`, бо саме за ним і впорядкований список: «підняте» оголошення
+// законно стрибає вгору, і курсор за `created_at` пропускав би такі рядки.
+//
+// ⚠️ РЯДОК БЕЗ `bumped_at` СТОРІНКУВАННЯ НЕ ПІДХОПИТЬ — `lt` відсіює NULL.
+// Заміряно 24.09: у `posts` 15 рядків, `bumped_at` заповнений у ВСІХ 15, тож
+// сьогодні це нічого не ламає. Але якщо колись зʼявиться рядок без нього, він
+// буде видимий лише на першій сторінці. Тому не знімай `default` з колонки.
+//
+// 🔑 Віддає `null` при помилці, як і раніше: `screen-state.js` відрізняє
+// «не змогли» від «порожньо», і плутати їх не можна — порожня Дошка малюється
+// як «оголошень немає», а це неправда при обриві звʼязку.
+export async function fetchPublishedPostsPage({ limit = 200, beforeBumped = null, inclusive = false } = {}) {
   if (!supa) return null;
-  const { data, error } = await supa
+  let q = supa
     .from('posts')
     .select('*')
     .eq('status', 'published')
     .is('deleted_at', null)          // 🔴 17.09 — див. шапку: RLS для адміна пропускає видалене
     .order('bumped_at', { ascending: false, nullsLast: true })
-    .limit(200);
+    .limit(limit + 1);
+  // `inclusive` бере і сам рядок курсора (`<=`): кілька оголошень можуть мати
+  // ОДНАКОВИЙ `bumped_at` (масова вставка, підняття в ту саму мить), і строге
+  // `<` мовчки викинуло б усіх сусідів межі. Дублі відсіює той, хто збирає.
+  if (beforeBumped) q = inclusive ? q.lte('bumped_at', beforeBumped) : q.lt('bumped_at', beforeBumped);
+  const { data, error } = await q;
   if (error) {
     console.warn('[supabase] fetchPublishedPosts error:', error.message);
     return null;
   }
-  return data;
+  const all = data || [];
+  const hasMore = all.length > limit;
+  return { posts: hasMore ? all.slice(0, limit) : all, hasMore };
+}
+
+// ── ДОШКА БЕРЕ ВСЕ, А НЕ ПЕРШУ СТОРІНКУ ─────────────────────────────────────
+// 🔴 ЧОМУ ТУТ НЕ КНОПКА «ПОКАЗАТИ СТАРІШІ», ЯК У СТРІЧЦІ. Дошка тримає результат
+// цього виклику в `allPosts` і поводиться з ним як із ПОВНИМ набором: за ним
+// рахуються лічильники чіпів («Продам 8»), «мої активні оголошення», пошук
+// картки за deep-link і сортування Питань за живістю. Частковий список зробив би
+// брехливим кожне з цих місць одразу — чіп обіцяв би 8, а показував 2.
+//
+// ✅ Тому стеля знімається інакше: ходимо курсором, доки база віддає повні
+// сторінки. Заміряно 24.09 — у `posts` 15 живих рядків, тобто СЬОГОДНІ це рівно
+// один запит, як і раніше; додаткові починаються лише тоді, коли даних справді
+// стане більше за сторінку.
+//
+// ⚠️ `MAX_PAGES` — запобіжник від нескінченного циклу, а не проєктна межа: якщо
+// курсор колись зациклиться (однакові `bumped_at` на межі сторінки), краще
+// віддати багато, ніж вішати застосунок. 12 × 200 = 2400 оголошень.
+const BOARD_PAGE = 200;
+const BOARD_MAX_PAGES = 12;
+
+export async function fetchPublishedPosts() {
+  const все = [];
+  const бачені = new Set();
+  let курсор = null;
+  for (let i = 0; i < BOARD_MAX_PAGES; i++) {
+    const r = await fetchPublishedPostsPage({ limit: BOARD_PAGE, beforeBumped: курсор, inclusive: true });
+    // 🔑 `null` означає «база не відповіла», і плутати це з «більше немає» не
+    // можна: `screen-state.js` на `null` малює збій, а не порожню Дошку. На
+    // ПЕРШІЙ сторінці віддаємо `null` далі; на наступних лишаємо те, що вже
+    // зібрали — показати частину краще, ніж стерти вже здобуте.
+    if (!r) return i === 0 ? null : все;
+    let додано = 0;
+    for (const post of r.posts) {
+      if (бачені.has(post.id)) continue;        // рядок курсора приходить удруге
+      бачені.add(post.id); все.push(post); додано++;
+    }
+    if (!r.hasMore) return все;
+    // ⚠️ Курсор беремо з ОСТАННЬОГО рядка сторінки: список упорядкований за
+    // `bumped_at` спаданням, тож саме він і є «найстарішим у руках».
+    const хвіст = r.posts[r.posts.length - 1];
+    const далі = хвіст && хвіст.bumped_at;
+    // Сторінка не дала жодного НОВОГО рядка — значить уся вона про той самий
+    // `bumped_at`, і курсор далі не зрушить. Виходимо, а не крутимось.
+    if (!далі || додано === 0) return все;
+    курсор = далі;
+  }
+  console.warn('[supabase] fetchPublishedPosts: досягнуто межу сторінок');
+  return все;
 }
 
 // Один пост за id (для модалки коментарів — потім, у Спринт 4)
@@ -2587,8 +2656,28 @@ export async function fetchCommunityToNews(limit = 20) {
   return data || [];
 }
 
-export async function fetchPagePosts(pageId = null, limit = 60) {
-  if (!supa) return [];
+// ── ПАГІНАЦІЯ СТРІЧКИ (крок 11, 24.09) ──────────────────────────────────────
+// 🔴 ЩО БУЛО НЕ ТАК. Стрічка брала рівно 60 останніх дописів і на цьому все:
+// шістдесят перший ставав недосяжним НАЗАВЖДИ — ні кнопки, ні прокрутки, ні
+// натяку, що там ще щось є. Заміряно 24.09: у базі 59 живих `page_posts`,
+// тобто до стелі лишався ОДИН допис. Це не «колись розростеться», це наступного
+// тижня.
+//
+// 🔑 КУРСОР, А НЕ НОМЕР СТОРІНКИ (`offset`). Стрічка весь час поповнюється
+// зверху: поки людина читає, агент спільноти публікує допис — і `offset=60`
+// віддав би той самий запис удруге, а якийсь інший пропустив би зовсім.
+// Курсор за `created_at` цього не вміє за побудовою: «старіше за цей час»
+// лишається правдою, скільки б нового не додалось.
+//
+// 🔑 `limit + 1` замість окремого `count`. Беремо на один більше, ніж покажемо:
+// приїхав — значить є ще, і кнопку «показати старіші» малюємо; не приїхав —
+// кнопки немає. Це той самий прийом, яким уже живуть коментарі
+// (`fetchPostComments`), тобто в проєкті він перевірений, а не новий.
+//
+// ⚠️ Стеля `limit` лишається: PostgREST має власну `db-max-rows=1000`, тож
+// «взяти все одним запитом» не варіант навіть теоретично.
+export async function fetchPagePostsPage(pageId = null, { limit = 60, beforeTs = null } = {}) {
+  if (!supa) return { posts: [], hasMore: false };
   // 🔴 20.08 — `status = 'published'`. З появою ШІ-агента спільноти пости мають
   // стан: чернетку, яку Вова ще не вичитав, читач бачити не має.
   // 🛑 Це ДРУГА лінія, а не єдина: головна стоїть у політиці читання самої бази
@@ -2602,8 +2691,9 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
     .is('deleted_at', null)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(limit + 1);
   if (pageId != null) q = q.eq('page_id', pageId);
+  if (beforeTs) q = q.lt('created_at', beforeTs);
   const { data, error } = await q;
   if (error) {
     // Той самий запобіжник, що у `fetchPages`: без нього відсутня колонка
@@ -2613,13 +2703,32 @@ export async function fetchPagePosts(pageId = null, limit = 60) {
       .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(limit + 1);
     if (pageId != null) q2 = q2.eq('page_id', pageId);
+    if (beforeTs) q2 = q2.lt('created_at', beforeTs);
     const legacy = await q2;
-    if (legacy.error) { console.warn('[supabase] fetchPagePosts:', legacy.error.message); return []; }
-    return legacy.data || [];
+    if (legacy.error) { console.warn('[supabase] fetchPagePosts:', legacy.error.message); return { posts: [], hasMore: false }; }
+    return зрізати(legacy.data, limit);
   }
-  return data || [];
+  return зрізати(data, limit);
+}
+
+// Зайвий (limit + 1) рядок НЕ показуємо — він лише відповідь на питання
+// «чи є ще». Показати його означало б віддати 61 допис там, де обіцяли 60,
+// і наступна сторінка почалась би з дубля.
+function зрізати(rows, limit) {
+  const all = rows || [];
+  const hasMore = all.length > limit;
+  return { posts: hasMore ? all.slice(0, limit) : all, hasMore };
+}
+
+// Стара форма — масив без ознаки «є ще». Лишається для тих, кому пагінація не
+// потрібна за задумом: віджет Громади бере кілька свіжих дописів, капсули
+// рахують по останніх. Переводити їх на сторінки означало б ускладнити код
+// заради екрана, який більше двох рядків усе одно не показує.
+export async function fetchPagePosts(pageId = null, limit = 60) {
+  const { posts } = await fetchPagePostsPage(pageId, { limit });
+  return posts;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
