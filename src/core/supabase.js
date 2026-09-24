@@ -415,11 +415,19 @@ export async function fetchAllReactions(anonId) {
     return map.get(postId);
   };
 
-  const лічильники = await supa.from('reaction_counts').select('post_id, emoji, cnt');
+  // 🔴 ОБИДВА ЗАПИТИ ПАРАЛЕЛЬНО, І ЦЕ НЕ МІКРО-ОПТИМІЗАЦІЯ. Перша редакція
+  // питала їх по черзі, і стенд `offline-screens` це впіймав: при обірваній
+  // мережі кожен запит чекає свою стелю, тобто дві стелі поспіль — і Дошка не
+  // встигала сказати «не вдалося звʼязатись», лишаючись на «Завантажую…».
+  // Людині це виглядає як зависання замість чесної відповіді.
+  const [лічильники, мої] = await Promise.all([
+    supa.from('reaction_counts').select('post_id, emoji, cnt'),
+    anonId ? supa.from('reactions').select('post_id, emoji').eq('user_id', anonId)
+           : Promise.resolve({ data: [], error: null }),
+  ]);
   if (!лічильники.error) {
     for (const r of (лічильники.data || [])) комірка(r.post_id).counts[r.emoji] = r.cnt || 0;
     if (!anonId) return map;
-    const мої = await supa.from('reactions').select('post_id, emoji').eq('user_id', anonId);
     if (!мої.error) {
       for (const r of (мої.data || [])) комірка(r.post_id).my = r.emoji;
       return map;
@@ -428,6 +436,19 @@ export async function fetchAllReactions(anonId) {
     // підсвіченого емодзі, ніж порожньо.
     console.warn('[supabase] fetchAllReactions (свої):', мої.error.message);
     return map;
+  }
+
+  // 🔴 ЯК ВІДРІЗНИТИ «ПОДАННЯ ЩЕ НЕМАЄ» ВІД «МЕРЕЖІ НЕМАЄ» — і чому це важливо.
+  // Обидва випадки дають помилку на першому запиті. Але при обірваній мережі
+  // запасний запит теж чекатиме свою стелю, і людина замість чесного «не
+  // вдалося звʼязатись» дивитиметься на «Завантажую…» вдвічі довше. Саме це
+  // впіймав стенд `offline-screens`, коли цей код писався.
+  // 🔑 Розрізняє їх другий запит, який уже зроблено паралельно: якщо ВІН теж
+  // упав — це мережа, і пробувати ще раз нема сенсу. Якщо він пройшов, а
+  // подання ні — подання справді ще не накотили.
+  if (anonId && мої.error) {
+    console.warn('[supabase] fetchAllReactions: база не відповіла');
+    return new Map();
   }
 
   // Запасний шлях: подання ще немає — стара дорога, з її межею в 1000 рядків.
@@ -2879,10 +2900,15 @@ export async function fetchPageReactions(userKey) {
   //     сам налайкав.
   // ⚠️ Запасний шлях лишається з тієї ж причини, що й у гостя вище: код і
   // міграції їдуть різними дорогами і якийсь час житимуть у різних станах.
-  const лічильники = await supa.from('page_reaction_counts').select('post_id, cnt');
+  // Паралельно, з тієї ж причини, що й у `fetchAllReactions`: послідовні запити
+  // при обірваній мережі складають дві стелі очікування, і екран замість
+  // чесного «не вдалося» лишається на «Завантажую…».
+  const [лічильники, мої] = await Promise.all([
+    supa.from('page_reaction_counts').select('post_id, cnt'),
+    supa.from('page_reactions').select('post_id').eq('user_id', userKey),
+  ]);
   if (!лічильники.error) {
     for (const r of (лічильники.data || [])) map.set(r.post_id, { count: r.cnt || 0, my: false });
-    const мої = await supa.from('page_reactions').select('post_id').eq('user_id', userKey);
     if (!мої.error) {
       for (const r of (мої.data || [])) {
         if (!map.has(r.post_id)) map.set(r.post_id, { count: 0, my: false });
@@ -2895,6 +2921,10 @@ export async function fetchPageReactions(userKey) {
     console.warn('[supabase] fetchPageReactions (свої):', мої.error.message);
     return map;
   }
+
+  // Мережа чи відсутнє подання — розрізняємо другим запитом (див. довід у
+  // `fetchAllReactions`): упали обидва означає мережу, і другої спроби не буде.
+  if (мої.error) { console.warn('[supabase] fetchPageReactions: база не відповіла'); return map; }
 
   // Запасний шлях: подання ще немає — стара дорога, з її межею в 1000 рядків.
   const { data, error } = await supa.from('page_reactions').select('post_id, user_id');
