@@ -1,0 +1,36 @@
+# security/csp.txt — політика безпеки вмісту (CSP) застосунку CSTL LIFE.
+#
+# 🔴 ЦЕЙ ФАЙЛ — ДЖЕРЕЛО ПРАВДИ, А НЕ КОПІЯ. Його читає стенд
+# `tests/csp-report.mjs` і підсовує браузерові бойовою, щоб побачити, що саме
+# політика зламала б. Коли застосунок переїде під сервер, який уміє заголовки,
+# той самий рядок піде заголовком.
+#
+# ⚠️ У `index.html` теґа CSP НЕМАЄ навмисно — там записано чому (режим звіту в
+# `<meta>` браузер ігнорує, а бойовий теґ з помилкою ламає застосунок мовчки).
+#
+# 📐 ЗВІДКИ ПЕРЕЛІК (виписано з коду 24.09, не з голови):
+#   script  — свій + `gc.zgo.at` (GoatCounter, лічильник без cookies)
+#   connect — Supabase (запити й websocket), open-meteo, nominatim, vopas,
+#             goatcounter, dima-courier
+#   frame   — `youtube-nocookie` (відео у Стрічці)
+#   img     — 🔴 НАВМИСНО БУДЬ-ЯКИЙ хост, включно з `http:`. Новини тягнуть
+#             світлини з десятків чужих сайтів (`data/articles.json`), частина
+#             досі не на https. Звузити тут — лишити Новини без картинок; це
+#             окреме завдання (проксі або власні мініатюри).
+#   style   — `unsafe-inline` потрібен: у розмітці є атрибути `style="…"`.
+# 🔑 `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` — безкоштовні
+#    заборони: цього в застосунку немає взагалі.
+#
+# Рядки з `#` — пояснення, стенд їх відкидає.
+default-src 'self';
+script-src 'self' https://gc.zgo.at;
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob: https: http:;
+font-src 'self' data:;
+connect-src 'self' https://uabyfecseqnemvcqhdem.supabase.co wss://uabyfecseqnemvcqhdem.supabase.co https://api.open-meteo.com https://nominatim.openstreetmap.org https://vopas.com.ua https://cstl-life.goatcounter.com https://api.dima-courier.app;
+frame-src https://www.youtube-nocookie.com;
+worker-src 'self';
+manifest-src 'self';
+object-src 'none';
+base-uri 'self';
+form-action 'self';
