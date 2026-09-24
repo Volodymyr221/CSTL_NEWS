@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260924-1334';
+const CACHE_NAME = 'cstl-20260924-1905';
 
 // 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
 // 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш
@@ -17,23 +17,22 @@ const VENDOR_CACHE = 'cstl-vendor-v1';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './style/tokens.css',      // 🆕 20.08 — спільні токени бренду: їх читає і base.css, і admin.html
-  './style/base.css',
-  './style/filters.css',
-  './style/news.css',
-  './style/events.css',
-  './style/buses.css',
-  './style/power.css',
-  './style/modal.css',
-  './style/tabbar.css',
-  './style/community.css',
-  './style/board.css',         // 🆕 05.08 — стилі Дошки виділено з community.css
-  './style/feed.css',
-  './style/account.css',
-  './style/messages.css',
-  './style/sidebar.css',
-  './style/home.css',          // 🆕 04.08 — головна як Home Dashboard
+  // 🔴 24.09 — ОДИН ФАЙЛ СТИЛІВ ЗАМІСТЬ ПʼЯТНАДЦЯТИ.
+  // Було: `style.css` + 14 файлів `style/*.css` перелічені руками. Два лиха
+  // одразу. Перше — список відставав: сім файлів (`news-card.css`,
+  // `news-hub.css`, `install.css`, `crop.css`, `dev-lock.css`,
+  // `desktop-gate.css`, `fund-screen.css`) до нього так і не дописали, тобто
+  // офлайн частина екранів лишалась без стилів. Друге — браузер тягнув їх
+  // ланцюжком `@import`, де кожен запит чекав на попередній.
+  // Стало: `build.js` складає все в `style.min.css` (52 КБ gzip проти 385 КБ
+  // сумою), і передкешувати треба рівно один рядок, який нічого не забуде.
+  './style.min.css',
+  // ⚠️ `style/tokens.css` ЛИШАЄТЬСЯ окремим рядком, хоч він і всередині збірки.
+  // Причина не в застосунку, а в `admin.html`: це окрема сторінка, вона тягне
+  // токени напряму, і без них адмінка офлайн лишається взагалі без кольорів.
+  // Це вимога стенда `tests/admin-shell.mjs` — знято було помилково, стенд
+  // упіймав. 16 КБ.
+  './style/tokens.css',
   './bundle.js',
   './logo.png',
   './icons/castle-icon.png',   // лого центральної кнопки ГРОМАДА — precache, щоб не зникало після bump CACHE
@@ -63,7 +62,13 @@ self.addEventListener('install', e => {
     caches.open(CACHE_NAME)
       .then(cache => Promise.allSettled(
         STATIC_ASSETS.map(url =>
-          fetch(url, { cache: 'reload' }).then(r => {
+          // 🔴 24.09 — теж `no-cache` замість `reload` (див. `мережаПершою`).
+          // Тут це болить найбільше: `CACHE_NAME` міняється при КОЖНОМУ деплої,
+          // тобто передкеш качався ЦІЛКОМ щоразу — близько мегабайта на кожен
+          // телефон за файли, з яких більшість не змінилась. Умовний запит
+          // віддає їх як `304` без тіла, а `fetch` однаково резолвиться повною
+          // відповіддю з кешу браузера, тож `cache.put` кладе справжній вміст.
+          fetch(url, { cache: 'no-cache' }).then(r => {
             if (!r.ok) throw new Error(url + ' ' + r.status);
             return cache.put(url, r);
           })
@@ -159,11 +164,23 @@ function сказатиСторінкам(дані) {
     .then(список => список.forEach(c => { try { c.postMessage(дані); } catch (_) {} }));
 }
 
-function мережаПершою(request, { перезавантажити = false, колиПорожньо = null } = {}) {
+function мережаПершою(request, { звірити = false, колиПорожньо = null } = {}) {
   return caches.match(request).then(зКешу => {
     const булаМітка = міткаВідповіді(зКешу);
 
-    const зМережі = fetch(request, перезавантажити ? { cache: 'reload' } : undefined)
+    // 🔴 24.09 — БУЛО `cache: 'reload'`, СТАЛО `'no-cache'`. Різниця в одному
+    // слові й у сотнях кілобайтів на кожне відкриття. `reload` каже «не питай
+    // кеш узагалі» — тобто браузер НЕ шле `If-None-Match`, і сервер фізично не
+    // може відповісти «не змінилось». Наслідок: `bundle.js` (667 КБ) і
+    // `style.min.css` качались ЦІЛКОМ щоразу, навіть коли не змінювались ні на
+    // байт. `no-cache` теж ніколи не віддає копію без питання — свіжість та
+    // сама, — але питає УМОВНО, і незмінений файл приїжджає як `304` без тіла.
+    // 🔑 Що це не здогадка: вартовий `health-watch` заміряв на живому Pages —
+    // `ETag`/`304` він віддає (23.09, записано в `NOW.md`).
+    // 🛑 Проблема, заради якої стояв `reload`, лишається закритою: на iOS PWA
+    // новий Service Worker активується із затримкою, і cache-first віддавав би
+    // старий код. `no-cache` ходить у мережу щоразу — просто дешевше.
+    const зМережі = fetch(request, звірити ? { cache: 'no-cache' } : undefined)
       .then(r => {
         // Кладемо в кеш НАВІТЬ якщо відповідь спізнилась і людина вже бачить копію:
         // у цьому й суть фонового оновлення.
@@ -256,9 +273,9 @@ self.addEventListener('fetch', e => {
   // а кеш лишається запасним для офлайну. Прибирає «застряглий старий вигляд».
   const isAppCode = url.pathname.endsWith('.css') || url.pathname.endsWith('bundle.js');
   if (isAppCode) {
-    // { cache: 'reload' } — обходимо HTTP-кеш браузера (GitHub Pages віддає
-    // CSS/JS з max-age ~10хв), інакше fetch повертав би застарілий код.
-    e.respondWith(мережаПершою(e.request, { перезавантажити: true }));
+    // `звірити` — умовний запит (`If-None-Match`): свіжість як була, а
+    // незмінений файл не качається вдруге. Подробиці — у `мережаПершою`.
+    e.respondWith(мережаПершою(e.request, { звірити: true }));
     return;
   }
 

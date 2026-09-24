@@ -79,6 +79,29 @@ function busTag(kind: string, sub: any): string {
 // ⚠️ `verify_jwt` лишається УВІМКНЕНИМ: секрет тут ДРУГИЙ рубіж, а не заміна
 // першого. Cron шле обидва заголовки. (Перша редакція цієї правки прибрала
 // `Authorization` з cron — тоді платформа відхиляла б виклик ДО нашого коду.)
+/** Читає ВСІ рядки запиту сторінками, а не перші 1000. */
+async function усіРядки<T>(
+  збудувати: (від: number, до: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  крок = 1000,
+): Promise<T[]> {
+  const усе: T[] = [];
+  for (let від = 0; ; від += крок) {
+    const { data, error } = await збудувати(від, від + крок - 1);
+    if (error) throw error;
+    const пачка = data || [];
+    усе.push(...пачка);
+    if (пачка.length < крок) return усе;
+    if (усе.length > 200_000) return усе;
+  }
+}
+
+/** Ріже перелік на шматки — щоб `.in(...)` не зібрав адресу на десятки КБ. */
+function частинами<T>(масив: T[], розмір: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < масив.length; i += розмір) out.push(масив.slice(i, i + розмір));
+  return out;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -106,10 +129,20 @@ serve(async (req) => {
   await supa.from('push_subscriptions').delete().lt('track_date', today);
 
   // Всі сьогоднішні підписки
-  const { data: subs, error } = await supa
-    .from('push_subscriptions')
-    .select('*')
-    .eq('track_date', today);
+  // 🔴 24.09 — СТОРІНКАМИ. `select('*')` без `.range()` віддає щонайбільше
+  // 1000 рядків (стеля PostgREST `db-max-rows`) і мовчить про це. На 1001-й
+  // підписці частина людей просто не отримала б сповіщення про свій рейс, а
+  // функція відзвітувала б успіхом. Сьогодні підписок нуль — запуску не було, —
+  // тож це робота на перспективу, а не лагодження болю.
+  let subs: any[] = [];
+  let error: { message: string } | null = null;
+  try {
+    subs = await усіРядки<any>((від, до) => supa
+      .from('push_subscriptions').select('*')
+      .eq('track_date', today).order('id').range(від, до));
+  } catch (e) {
+    error = { message: (e as Error).message };
+  }
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -164,10 +197,14 @@ serve(async (req) => {
         .filter((u) => u && UUID_RE.test(u)),
     )];
     if (uids.length) {
-      const { data: prefs } = await supa
-        .from('notif_prefs').select('uid, buses').in('uid', uids);
-      for (const r of ((prefs || []) as Array<{ uid: string; buses: boolean }>)) {
-        if (r.buses === false) вимкнули.add(r.uid);
+      // 🔴 24.09 — шматками по 200: весь перелік uid в одному `.in(...)` їде
+      // в адресі запиту, і на кількох тисячах сервер відповідає `414`.
+      for (const шматок of частинами(uids, 200)) {
+        const { data: prefs } = await supa
+          .from('notif_prefs').select('uid, buses').in('uid', шматок);
+        for (const r of ((prefs || []) as Array<{ uid: string; buses: boolean }>)) {
+          if (r.buses === false) вимкнули.add(r.uid);
+        }
       }
     }
   }
@@ -270,7 +307,10 @@ serve(async (req) => {
   }
 
   if (toDelete.length) {
-    await supa.from('push_subscriptions').delete().in('id', toDelete);
+    // Шматками: перелік id їде в адресі запиту, і на тисячах вона не влізе.
+    for (const шматок of частинами(toDelete, 200)) {
+      await supa.from('push_subscriptions').delete().in('id', шматок);
+    }
   }
 
   return new Response(

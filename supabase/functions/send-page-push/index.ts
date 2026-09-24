@@ -29,6 +29,82 @@ const VAPID_EMAIL               = 'mailto:olykacastle@gmail.com';
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+// ── РОЗСИЛКА НА ВЕЛИКУ АУДИТОРІЮ (24.09, аудит готовності) ──────────────────
+//
+// 🔴 ТРИ МЕЖІ, ЯКІ ЦЯ ФУНКЦІЯ ПЕРЕХОДИЛА МОВЧКИ. Жодна з них не давала помилки —
+// саме тому їх і не було видно:
+//   1. PostgREST віддає щонайбільше **1000 рядків** на запит (`db-max-rows`).
+//      `.select('uid')` без сторінок на 1001-му підписнику просто обрізається:
+//      тисяча отримує сповіщення, решта — ні, і в журналі стоїть «надіслано».
+//   2. `.in('uid', [...])` кладе весь перелік В АДРЕСУ запиту. Кілька тисяч
+//      uid — це десятки кілобайт адреси, і сервер відповідає `414`, тобто
+//      розсилка падає цілком.
+//   3. Edge Function має стелю **150 секунд**. Надсилання йшло по одному
+//      пристрою в черзі; при ~150 мс на пуш це близько тисячі пристроїв, далі
+//      функція вмирає на півдорозі — частина отримала, журнал каже «готово».
+//
+// 🛑 Запуску ще не було, тож сьогодні підписників десятки і жодна з меж не
+// болить. Але всі три спрацюють БЕЗ ПОПЕРЕДЖЕННЯ і саме тоді, коли аудиторія
+// нарешті виросте — тобто в найгірший можливий момент.
+
+/** Читає ВСІ рядки запиту сторінками, а не перші 1000. */
+async function усіРядки<T>(
+  збудувати: (від: number, до: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  крок = 1000,
+): Promise<T[]> {
+  const усе: T[] = [];
+  for (let від = 0; ; від += крок) {
+    const { data, error } = await збудувати(від, від + крок - 1);
+    if (error) throw error;
+    const пачка = data || [];
+    усе.push(...пачка);
+    // Коротша за крок пачка означає, що це був останній шматок.
+    if (пачка.length < крок) return усе;
+    // 🛑 Запобіжник від нескінченного циклу, якщо сервер колись почне віддавати
+    // рівно `крок` рядків назавжди. Краще недорозіслати, ніж крутитись до стелі.
+    if (усе.length > 200_000) return усе;
+  }
+}
+
+/** Ріже перелік на шматки — щоб `.in(...)` не зібрав адресу на десятки КБ. */
+function частинами<T>(масив: T[], розмір: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < масив.length; i += розмір) out.push(масив.slice(i, i + розмір));
+  return out;
+}
+
+/**
+ * Шле пуш пачками по `ширина` штук одночасно.
+ * 🔑 Чому не всі одразу: тисяча одночасних запитів до чужого push-сервісу — це
+ * спосіб отримати `429` і втратити розсилку цілком. Пачка — компроміс між
+ * швидкістю і чемністю.
+ */
+async function слатиПачками(
+  пристрої: Array<{ id: number; endpoint: string; p256dh: string; auth_key: string }>,
+  payload: string,
+  ширина = 50,
+): Promise<{ sent: number; dead: number[] }> {
+  let sent = 0;
+  const dead: number[] = [];
+  for (const пачка of частинами(пристрої, ширина)) {
+    const наслідки = await Promise.allSettled(пачка.map((d) =>
+      webpush.sendNotification(
+        { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
+        payload,
+      )
+    ));
+    наслідки.forEach((н, i) => {
+      if (н.status === 'fulfilled') { sent++; return; }
+      const код = (н.reason as { statusCode?: number })?.statusCode;
+      // 410/404 — підписка мертва (людина знесла застосунок або відкликала
+      // дозвіл). Це єдиний випадок, коли рядок можна прибрати: решта збоїв
+      // тимчасові, і видаляти по них означало б тихо втрачати живих людей.
+      if (код === 410 || код === 404) dead.push(пачка[i].id);
+    });
+  }
+  return { sent, dead };
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cstl-push-secret',
@@ -97,11 +173,13 @@ serve(async (req) => {
 
     // Підписники сторінки, крім АВТОРА ПОСТА. Беремо саме post.author_uid, а не
     // викликача: при виклику з тригера бази викликач — сервер, а не людина.
-    let subsQuery = admin
-      .from('page_subscriptions').select('uid')
-      .eq('page_id', post.page_id);
-    if (post.author_uid) subsQuery = subsQuery.neq('uid', post.author_uid);
-    const { data: subs } = await subsQuery;
+    // Сторінками: на 1001-му підписнику запит без `.range()` мовчки обрізався б.
+    const subs = await усіРядки<{ uid: string }>((від, до) => {
+      let q = admin.from('page_subscriptions').select('uid')
+        .eq('page_id', post.page_id).order('uid').range(від, до);
+      if (post.author_uid) q = q.neq('uid', post.author_uid);
+      return q;
+    });
     // 🆕 24.08 (B-33) — хто вимкнув «Стрічку» в кабінеті, того прибираємо
     // ще ДО перевірки «чи є взагалі кому слати». Інакше запис журналу лишився б
     // із думкою «надіслали», хоча всі адресати мовчать.
@@ -113,15 +191,20 @@ serve(async (req) => {
     const усі = (subs || []).map((s: { uid: string }) => s.uid);
     let recipientUids = усі;
     {
-      const { data: prefs, error } = await admin
-        .from('notif_prefs').select('uid, feed').in('uid', усі);
-      if (!error) {
-        const off = new Set(
-          ((prefs || []) as Array<{ uid: string; feed: boolean }>)
-            .filter((r) => r.feed === false).map((r) => r.uid),
-        );
-        recipientUids = усі.filter((u: string) => !off.has(u));
+      // Шматками по 200: весь перелік в одному `.in(...)` зібрав би адресу
+      // запиту на десятки кілобайт і отримав `414`.
+      const off = new Set<string>();
+      let збій = false;
+      for (const шматок of частинами(усі, 200)) {
+        const { data: prefs, error } = await admin
+          .from('notif_prefs').select('uid, feed').in('uid', шматок);
+        if (error) { збій = true; break; }
+        ((prefs || []) as Array<{ uid: string; feed: boolean }>)
+          .filter((r) => r.feed === false).forEach((r) => off.add(r.uid));
       }
+      // 🔑 Відсутній рядок = ДОЗВОЛЕНО; збій запиту — теж (краще зайве
+      // сповіщення, ніж мовчки проковтнута підписка, яку людина зробила сама).
+      if (!збій) recipientUids = усі.filter((u: string) => !off.has(u));
     }
     // ⚠️ Виходимо ТІЛЬКИ прибравши запис журналу. Інакше «нікому не надіслали» лишалось
     // би позначеним як «надіслано», і повтор уже не спрацював би. Реальна гонка: тригер
@@ -131,9 +214,14 @@ serve(async (req) => {
     if (!recipientUids.length) return await bail(admin, post.id, 'no subscribers');
 
     // Пристрої всіх підписників
-    const { data: devices } = await admin
-      .from('user_push_devices').select('*').in('uid', recipientUids);
-    if (!devices?.length) return await bail(admin, post.id, 'no devices');
+    const devices: Array<{ id: number; endpoint: string; p256dh: string; auth_key: string }> = [];
+    for (const шматок of частинами(recipientUids, 200)) {
+      const пачка = await усіРядки<typeof devices[number]>((від, до) => admin
+        .from('user_push_devices').select('id, endpoint, p256dh, auth_key')
+        .in('uid', шматок).order('id').range(від, до));
+      devices.push(...пачка);
+    }
+    if (!devices.length) return await bail(admin, post.id, 'no devices');
 
     const hasPhoto = Array.isArray(post.image_urls) && post.image_urls.length > 0;
     const bodyText = (post.text && post.text.trim()) || (hasPhoto ? '📷 Фото' : 'Новий пост');
@@ -148,20 +236,10 @@ serve(async (req) => {
       url:     `./#/post/feed/${post.id}`,
     });
 
-    let sent = 0;
-    const dead: number[] = [];
-    for (const d of devices) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
-          payload,
-        );
-        sent++;
-      } catch (e: any) {
-        if (e.statusCode === 410 || e.statusCode === 404) dead.push(d.id);
-      }
+    const { sent, dead } = await слатиПачками(devices, payload);
+    for (const шматок of частинами(dead, 200)) {
+      await admin.from('user_push_devices').delete().in('id', шматок);
     }
-    if (dead.length) await admin.from('user_push_devices').delete().in('id', dead);
 
     // Якщо не дійшло НІКОМУ (тимчасовий збій сервісу push) — прибираємо запис із журналу,
     // щоб повтор (підстраховка з клієнта / ручний виклик) міг спробувати ще раз.

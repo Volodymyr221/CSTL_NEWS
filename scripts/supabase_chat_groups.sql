@@ -1,0 +1,123 @@
+-- scripts/supabase_chat_groups.sql
+-- ГРУПОВИЙ ЧАТ — ДЗЕРКАЛО ПРОДА, зняте 24.09.2026.
+--
+-- 🔴 ЧОМУ ЦЬОГО ФАЙЛУ ДОСІ НЕ БУЛО, І ЧОМУ ЦЕ ВАЖИЛО. Аудит 24.09 звірив
+-- репозиторій із живою базою і знайшов: клієнт читає й пише `chat_groups`,
+-- `chat_group_members`, `chat_group_messages` (`src/core/supabase.js:1204` і
+-- далі), `security_regression.sql:76` перевіряє їх від імені аноніма — а
+-- `create table` чи `enable row level security` для них немає в ЖОДНОМУ з 88
+-- файлів `scripts/*.sql` (перевірено грепом, нуль збігів).
+--
+-- ➡️ Тобто ПРИВАТНА ГРУПОВА ПЕРЕПИСКА жителів трималась на правилах, яких
+--    не можна було ні перечитати в код-рев'ю, ні відновити після відкату.
+--    Політики на проді виявились правильними — але «виявились» і «перевірено»
+--    це різні речі, і другого досі не існувало.
+--
+-- ⚠️ ЦЕ ДЗЕРКАЛО, А НЕ МІГРАЦІЯ. Таблиці на проді вже є. Файл існує, щоб
+--    правила можна було ЧИТАТИ й ЗВІРЯТИ. Накочувати його на живу базу не
+--    треба і не можна — `create table` там упаде, а `create policy` подвоїть
+--    політики. Перевірити розбіжність: `scripts/dump_prod_mirror.sql`.
+--
+-- 🔑 ПРАВИЛО, ЩО ПОРОДИЛО ЦЕЙ ФАЙЛ (з `NOW.md`): «пишеш RPC — звіряй
+--    `pg_get_functiondef`, а не файл у репо». Тут те саме для цілої підсистеми.
+
+-- ── ТАБЛИЦІ (склад колонок на 24.09.2026) ───────────────────────────────────
+--
+-- chat_groups
+--   id bigint not null · name text not null · description text
+--   type text not null default 'locality' · avatar_emoji text · avatar_gradient text
+--   owner_uid uuid not null · is_private boolean not null default true
+--   last_message_text text · last_message_at timestamptz
+--   created_at timestamptz not null default now()
+--
+-- chat_group_members   (PK: group_id, uid)
+--   group_id bigint not null · uid uuid not null
+--   role text not null default 'member' · status text not null default 'member'
+--   joined_at timestamptz not null default now() · name text
+--   ⚠️ `name` тут денормалізоване — його ставить тригер `trg_enforce_identity`,
+--      не клієнт (див. нижче).
+--
+-- chat_group_messages  (PK: id)
+--   id bigint not null · group_id bigint not null · sender_uid uuid not null
+--   text text · photo_url text · reply_to_id bigint · client_tag uuid
+--   created_at timestamptz not null default now()
+--   edited_at timestamptz · deleted_at timestamptz
+--
+-- chat_group_invites   (PK: token)
+--   token uuid not null default gen_random_uuid() · group_id bigint not null
+--   created_by uuid not null · created_at timestamptz not null default now()
+--   expires_at timestamptz · requires_approval boolean not null default false
+
+-- ── ОПОРНА ФУНКЦІЯ ──────────────────────────────────────────────────────────
+--
+-- 🔑 Уся видимість групового чату тримається на ОДНІЙ функції. Вона
+--    `SECURITY DEFINER` навмисно: політика на `chat_group_messages` мусить
+--    зазирнути в `chat_group_members`, а та закрита своєю ж політикою — без
+--    `DEFINER` вийшла б рекурсія «щоб побачити, чи я учасник, треба бути
+--    учасником». `search_path` виставлений, тож підміни схеми немає.
+-- ⚠️ `status = 'member'` у тілі — не косметика: людина із запрошення лежить у
+--    тій самій таблиці з іншим станом, і без цієї умови вона читала б чат
+--    ЩЕ ДО схвалення.
+--
+-- create or replace function public.is_group_member(p_gid bigint)
+--   returns boolean language sql stable security definer set search_path to 'public'
+-- as $$
+--   select exists(
+--     select 1 from public.chat_group_members
+--     where group_id = p_gid and uid = auth.uid() and status = 'member'
+--   );
+-- $$;
+
+-- ── ПОЛІТИКИ RLS (дослівно з прода 24.09.2026) ──────────────────────────────
+
+-- chat_groups — бачить учасник або власник; створює тільки себе власником.
+-- create policy "cg_select" on public.chat_groups for select to public
+--   using ((is_group_member(id) OR (owner_uid = auth.uid())));
+-- create policy "cg_insert" on public.chat_groups for insert to public
+--   with check ((owner_uid = auth.uid()));
+-- create policy "cg_update" on public.chat_groups for update to public
+--   using ((owner_uid = auth.uid())) with check ((owner_uid = auth.uid()));
+
+-- chat_group_members — свій рядок або склад своєї групи.
+-- ⚠️ Політики на INSERT/UPDATE/DELETE тут НЕМАЄ: склад міняють лише RPC
+--    (`create_group`, `join_group_by_token`, `approve_member`, `leave_group`,
+--    `transfer_group_owner`), усі `SECURITY DEFINER`. Це свідомо — правило
+--    «кого можна додати» задається кодом функції, а не рядком політики.
+-- create policy "cgm_select" on public.chat_group_members for select to public
+--   using (((uid = auth.uid()) OR is_group_member(group_id)));
+
+-- chat_group_messages — читає учасник, пише учасник і лише від свого імені.
+-- create policy "cgmsg_select" on public.chat_group_messages for select to public
+--   using (is_group_member(group_id));
+-- create policy "cgmsg_insert" on public.chat_group_messages for insert to public
+--   with check ((is_group_member(group_id) AND (sender_uid = auth.uid())));
+-- create policy "cgmsg_update" on public.chat_group_messages for update to public
+--   using ((sender_uid = auth.uid())) with check ((sender_uid = auth.uid()));
+
+-- chat_group_invites — RLS увімкнено, політик НУЛЬ.
+-- 🔑 Це не недогляд, а найсуворіший стан: «нуль політик» означає, що таблицю
+--    не бачить і не чіпає НІХТО, крім `service_role` і RPC із `SECURITY
+--    DEFINER` (`create_group_invite`, `get_group_by_invite`,
+--    `join_group_by_token`). Токен запрошення й не має витікати вибіркою.
+-- ⚠️ Але стан цей МОВЧАЗНИЙ: якщо колись знадобиться прочитати запрошення з
+--    клієнта, воно поверне порожньо без жодної помилки. Цей коментар — єдине
+--    місце, де сказано, що так задумано.
+
+-- ── ТРИГЕРИ ─────────────────────────────────────────────────────────────────
+-- create trigger trg_enforce_identity before insert or update
+--   on public.chat_group_members for each row execute function enforce_denorm_identity();
+-- create trigger trg_cg_last_message after insert
+--   on public.chat_group_messages for each row execute function cg_touch_last_message();
+
+-- ── ІНДЕКСИ ─────────────────────────────────────────────────────────────────
+-- chat_groups_pkey            unique (id)
+-- chat_group_members_pkey     unique (group_id, uid)
+-- idx_cgm_uid                        (uid)
+-- chat_group_messages_pkey    unique (id)
+-- idx_cgmsg_group                    (group_id, created_at)
+-- chat_group_invites_pkey     unique (token)
+
+-- 🛑 ЧОГО ТУТ НЕМАЄ І ЦЕ ЗНАХІДКА АУДИТУ (В4): антиспам-тригера на
+--    `chat_group_messages`. `comments` і `page_comments` захищені
+--    `supabase_antispam_shared.sql` (вікно 15 с, 8 повідомлень), груповий чат —
+--    ні. Заводиться окремою міграцією, не цим файлом.
