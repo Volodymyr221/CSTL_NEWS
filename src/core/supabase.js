@@ -394,17 +394,51 @@ export function getAnonId() {
 
 // Усі реакції на всі опубліковані пости.
 // Повертає Map<post_id, { counts: {emoji: count}, my: emoji|null }>.
+// 🔴 24.09 — РАХУЄ БАЗА, А НЕ ТЕЛЕФОН. Було: один запит по ВСІЙ таблиці
+// `reactions` (усі реакції всіх людей на всі пости) і підрахунок на пристрої.
+// На 7 рядках це нічого не коштувало, і саме тому трималось.
+// 🛑 Межа не в трафіку, а в тиші: PostgREST віддає щонайбільше 1000 рядків, і
+// на 1001-й реакції вибірка обрізається БЕЗ ПОМИЛКИ — під постами стоятимуть
+// числа МЕНШІ за справжні. Не «повільно колись», а «неправильно, щойно
+// спільнота оживе».
+// ➡️ Тепер два дрібні запити: кількості з подання `reaction_counts` (рядок на
+// пост+емодзі) і СВОЯ реакція окремо (`user_id = я`) — своїх рядків стільки,
+// скільки людина сама наставила.
+// ⚠️ ЗАПАСНИЙ ШЛЯХ ОБОВʼЯЗКОВИЙ (той самий довід, що у `fetchPageReactions`):
+// код їде на сайт деплоєм, міграція накочується руками — вони НЕОДМІННО якийсь
+// час житимуть у різних станах, у будь-якому порядку.
 export async function fetchAllReactions(anonId) {
   if (!supa) return new Map();
+  const map = new Map();
+  const комірка = (postId) => {
+    if (!map.has(postId)) map.set(postId, { counts: {}, my: null });
+    return map.get(postId);
+  };
+
+  const лічильники = await supa.from('reaction_counts').select('post_id, emoji, cnt');
+  if (!лічильники.error) {
+    for (const r of (лічильники.data || [])) комірка(r.post_id).counts[r.emoji] = r.cnt || 0;
+    if (!anonId) return map;
+    const мої = await supa.from('reactions').select('post_id, emoji').eq('user_id', anonId);
+    if (!мої.error) {
+      for (const r of (мої.data || [])) комірка(r.post_id).my = r.emoji;
+      return map;
+    }
+    // Числа є, своя реакція не прочиталась — краще правильний лічильник без
+    // підсвіченого емодзі, ніж порожньо.
+    console.warn('[supabase] fetchAllReactions (свої):', мої.error.message);
+    return map;
+  }
+
+  // Запасний шлях: подання ще немає — стара дорога, з її межею в 1000 рядків.
   const { data, error } = await supa.from('reactions').select('post_id, user_id, emoji');
   if (error) {
     console.warn('[supabase] fetchAllReactions error:', error.message);
     return new Map();
   }
-  const map = new Map();
+  map.clear();
   for (const r of (data || [])) {
-    if (!map.has(r.post_id)) map.set(r.post_id, { counts: {}, my: null });
-    const e = map.get(r.post_id);
+    const e = комірка(r.post_id);
     e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
     if (r.user_id === anonId) e.my = r.emoji;
   }
@@ -2830,9 +2864,42 @@ export async function fetchPageReactions(userKey) {
     return map;
   }
 
-  // Залогінений: рядки видно, тож одного запиту вистачає і на число, і на «мій лайк».
+  // 🔴 24.09 — ЗАЛОГІНЕНИЙ БІЛЬШЕ НЕ ТЯГНЕ ВСЮ ТАБЛИЦЮ. Було: один запит
+  // `select('post_id, user_id')` без жодного фільтра — тобто ВСІ лайки всіх
+  // людей на всі пости, на кожне відкриття застосунку. Виглядало ощадливо
+  // («одного запиту вистачає і на число, і на мій лайк»), і на 148 рядках так
+  // і є. Але межа тут не в трафіку:
+  // 🛑 PostgREST віддає ЩОНАЙБІЛЬШЕ 1000 РЯДКІВ. На 1001-му лайку вибірка
+  // мовчки обрізається — і лічильники під постами почнуть показувати МЕНШЕ,
+  // ніж є, без жодної помилки. Тобто це не «повільно колись», а «неправильні
+  // числа, щойно спільнота трохи оживе».
+  // ➡️ Тепер два дрібні запити замість одного великого:
+  //   • кількості — з подання `page_reaction_counts` (рядок на ПІСТ, не на лайк);
+  //   • «мій лайк» — лише свої рядки (`user_id = я`), їх стільки, скільки я
+  //     сам налайкав.
+  // ⚠️ Запасний шлях лишається з тієї ж причини, що й у гостя вище: код і
+  // міграції їдуть різними дорогами і якийсь час житимуть у різних станах.
+  const лічильники = await supa.from('page_reaction_counts').select('post_id, cnt');
+  if (!лічильники.error) {
+    for (const r of (лічильники.data || [])) map.set(r.post_id, { count: r.cnt || 0, my: false });
+    const мої = await supa.from('page_reactions').select('post_id').eq('user_id', userKey);
+    if (!мої.error) {
+      for (const r of (мої.data || [])) {
+        if (!map.has(r.post_id)) map.set(r.post_id, { count: 0, my: false });
+        map.get(r.post_id).my = true;
+      }
+      return map;
+    }
+    // Кількості є, свої лайки не прочитались — віддаємо числа без «мій».
+    // Краще правильний лічильник без підсвіченого серця, ніж порожньо.
+    console.warn('[supabase] fetchPageReactions (свої):', мої.error.message);
+    return map;
+  }
+
+  // Запасний шлях: подання ще немає — стара дорога, з її межею в 1000 рядків.
   const { data, error } = await supa.from('page_reactions').select('post_id, user_id');
   if (error) { console.warn('[supabase] fetchPageReactions:', error.message); return map; }
+  map.clear();
   for (const r of (data || [])) bump(r.post_id, r.user_id === userKey);
   return map;
 }

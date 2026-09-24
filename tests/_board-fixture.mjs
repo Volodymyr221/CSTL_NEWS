@@ -103,6 +103,30 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
           then(res) {
             window.__cstlQueries[table] = (window.__cstlQueries[table] || 0) + 1;
             let рядки = T[table] || [];
+            // 🔴 24.09 — ПОДАННЯ-ЛІЧИЛЬНИКИ ЗАГЛУШКА РАХУЄ САМА.
+            // Клієнт більше не тягне всю таблицю реакцій (межа PostgREST у 1000
+            // рядків мовчки різала б числа); він читає подання-лічильники
+            // reaction_counts і page_reaction_counts. Якби заглушка віддавала порожньо,
+            // стенд бачив би нуль лайків і зеленів над зламаним застосунком —
+            // або, гірше, червонів би на справному. Заглушка не сміє бути ні
+            // добрішою, ні біднішою за прод.
+            if (table === 'reaction_counts' || table === 'page_reaction_counts') {
+              const джерело = table === 'reaction_counts' ? 'reactions' : 'page_reactions';
+              const живі = new Set((T.posts || []).filter(r => !r.deleted_at).map(r => String(r.id)));
+              const лічба = new Map();
+              for (const r of (T[джерело] || [])) {
+                if (джерело === 'reactions' && r.post_id != null && !живі.has(String(r.post_id))) continue;
+                const ключ = джерело === 'reactions'
+                  ? String(r.post_id) + '\u0000' + String(r.emoji)
+                  : String(r.post_id);
+                лічба.set(ключ, (лічба.get(ключ) || 0) + 1);
+              }
+              рядки = [...лічба].map(([ключ, cnt]) => {
+                if (джерело === 'page_reactions') return { post_id: isNaN(+ключ) ? ключ : +ключ, cnt };
+                const [pid, emoji] = ключ.split('\u0000');
+                return { post_id: isNaN(+pid) ? pid : +pid, emoji, cnt };
+              });
+            }
             // 🔴 25.08 — RLS ЕМУЛЮЄТЬСЯ ЧЕСНО ДЛЯ МʼЯКОГО ВИДАЛЕННЯ.
             // У базі політика 'posts read' вимагає deleted_at is null, а
             // post_visible(post_id) переносить це на дочірні таблиці. Якби

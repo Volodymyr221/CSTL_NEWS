@@ -9,16 +9,16 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-24 13:09 UTC
+**Зріз на:** 2026-09-24 14:58 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/project-thread-p1j5mm` |
-| останній коміт людини | `2420ed6` 24.09 13:04 — fix(realtime): крок 7 — жива Дошка не працювала жодного разу [byyou] |
+| останній коміт людини | `e77729c` 24.09 13:09 — fix(push): крок 9 — розсилка перестала мовчки обриватись на масштабі [byyou] |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260924-1345` |
 | останній PR у `main` | #1203 |
 | стендів на диску | 178 |
-| незакомічених файлів | 11 ⚠️ |
+| незакомічених файлів | 4 ⚠️ |
 | журнал за 2026-09-24 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
@@ -40,19 +40,19 @@
 - `security/csp.txt`
 - `src/tabs/buses.js`
 - `style.min.css`
-- `supabase/migrations/0001_contact_column_lockdown.sql`
-- `supabase/migrations/0002_profile_insert_grants.sql`
-- `supabase/migrations/0003_analytics_retention.sql`
-- `supabase/migrations/0004_push_indexes.sql`
-- …ще 8
+- `supabase/functions/send-answer-push/index.ts`
+- `supabase/functions/send-bus-push/index.ts`
+- `supabase/functions/send-chat-push/index.ts`
+- `supabase/functions/send-comment-push/index.ts`
+- …ще 17
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `e77729c` 24.09 13:09 — fix(push): крок 9 — розсилка перестала мовчки обриватись на масштабі [byyou]
 - `2420ed6` 24.09 13:04 — fix(realtime): крок 7 — жива Дошка не працювала жодного разу [byyou]
 - `c17284d` 24.09 13:01 — feat(безпека): крок 6 — політика безпеки вмісту, сухий прогін у лабораторії [byyou]
 - `4b7cc7f` 24.09 12:58 — perf(sw): крок 5 — код звіряється замість того, щоб качатись заново [byyou]
 - `87c3b7b` 24.09 11:27 — docs(база): крок 8 — чотири міграції безпеки, написані але не накатані [byyou]
-- `e64b047` 24.09 11:27 — perf(стилі): крок 3+4 — 24 файли CSS збираються в один мініфікований [byyou]
 
 <!-- AUTO:END -->
 
