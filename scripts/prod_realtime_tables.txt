@@ -1,5 +1,5 @@
 # Дзеркало: які таблиці віддають realtime-події на проді.
-# Знято 24.09.2026 запитом:
+# Знято 24.09.2026, оновлено 24.09 після накату 0005. Запит:
 #   select tablename from pg_publication_tables where pubname='supabase_realtime';
 #
 # 🔴 НАВІЩО ФАЙЛ. Підписка в коді і публікація в базі — дві половини однієї
@@ -20,8 +20,9 @@ page_comment_reactions
 page_comments
 page_posts
 page_reactions
+posts
 reactions
 threads
 
 # --- чекає накату ---
-posts  # міграція 0005 (жива Дошка; підписка в коді є, публікації ще немає)
+# (порожньо — 0005 накатано 24.09, `posts` переїхав у верхній список)

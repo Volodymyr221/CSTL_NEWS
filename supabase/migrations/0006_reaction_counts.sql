@@ -26,13 +26,20 @@
 -- пост, емодзі й число. Тобто гість бачить кількість і не бачить, ХТО поставив
 -- — рівно те, що показує інтерфейс.
 
-create or replace view public.reaction_counts as
+-- 🔑 `security_invoker = on` — ДОДАНО ПЕРЕД НАКАТОМ 24.09, і це не дрібниця.
+-- За замовчуванням подання виконується з правами ВЛАСНИКА, тобто обходить RLS
+-- таблиці `reactions` (політика `reactions read` = `post_visible(post_id)`).
+-- Без цього рядка подання віддавало б лічильники й для видалених постів —
+-- рівно той клас витоку, від якого в проєкті стоїть `visibility-model.mjs`,
+-- і той самий вибір, який уже зроблено для `page_comment_counts`.
+create or replace view public.reaction_counts
+with (security_invoker = on) as
   select post_id, emoji, count(*)::int as cnt
   from public.reactions
   group by post_id, emoji;
 
 comment on view public.reaction_counts is
-  'Кількість реакцій за постом і емодзі (міграція 0006). Без user_id навмисно:
+  'Кількість реакцій за постом і емодзі (міграція 0006, накатано 24.09). Без user_id навмисно:
    інтерфейс показує число, а не список людей. Клієнт бере звідси лічильники,
    а «моя реакція» читається окремим запитом по своїх рядках.';
 
