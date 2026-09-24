@@ -9,50 +9,30 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-24 19:02 UTC
+**Зріз на:** 2026-09-24 19:21 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/project-thread-p1j5mm` |
-| останній коміт людини | `055170a` 24.09 19:01 — chore(byyou): Вова сказав «деплой» — брама відкрита |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260924-1905` |
-| останній PR у `main` | #1204 |
+| гілка | `claude/hotfix-reaction-view` |
+| останній коміт людини | `ee42c18` 24.09 19:09 — Аудит готовності: кроки 1-10 — стилі, кеш, розсилка, лічильники, безпека (#1205) |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260924-1925` |
+| останній PR у `main` | #1205 |
 | стендів на диску | 178 |
-| незакомічених файлів | 14 ⚠️ |
+| незакомічених файлів | 3 ⚠️ |
 | журнал за 2026-09-24 | є ✅ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/vopas-parser.yml`
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-24.md`
-- `build.js`
-- `bundle.js`
-- `index.html`
-- `scripts/dump_prod_mirror.sql`
-- `scripts/prod_realtime_tables.txt`
-- `scripts/supabase_analytics_rate_limit.sql`
-- `scripts/supabase_chat_groups.sql`
-- `scripts/supabase_page_comment_reactions.sql`
-- `scripts/supabase_post_contact.sql`
-- `security/csp.txt`
-- `src/core/supabase.js`
-- `src/tabs/buses.js`
-- …ще 26
+- ✅ нічого. Уся робота гілки вже в `main`.
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `055170a` 24.09 19:01 — chore(byyou): Вова сказав «деплой» — брама відкрита
-- `c23dbb9` 24.09 16:56 — fix(лайки): Дошка знову встигає сказати «не вдалося звʼязатись» [byyou]
-- `6840a45` 24.09 14:59 — docs(byyou): реліз-нотатки блоку кроків 1-10 [byyou]
-- `ecdc825` 24.09 14:58 — fix(лайки): крок 10 — лічильники рахує база, а не телефон [byyou]
-- `e77729c` 24.09 13:09 — fix(push): крок 9 — розсилка перестала мовчки обриватись на масштабі [byyou]
+- `ee42c18` 24.09 19:09 — Аудит готовності: кроки 1-10 — стилі, кеш, розсилка, лічильники, безпека (#1205)
+- `cd64911` 24.09 12:06 — ai(editor): свята-чернетки 24.09 12:06 UTC
+- `03829b5` 24.09 11:18 — Лічильник «N у Громаді» гасне після читання · парсер автобусів на явних хвилинах (#1204)
+- `b27b0a1` 24.09 09:51 — Передача в новий чат — 24.09.2026 (#1203)
+- `73be786` 24.09 09:46 — Вартовий: лист читається, коли база мовчить — і перші живі заміри з нього (#1202)
 
 <!-- AUTO:END -->
 
