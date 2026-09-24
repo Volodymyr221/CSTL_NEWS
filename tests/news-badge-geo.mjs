@@ -42,9 +42,24 @@ await p.addInitScript(([uid, ts]) => {
   try { localStorage.setItem('cstl_news_seen_ts:' + uid, String(ts)); } catch (_) {}
 }, [UID, Date.now() - 30 * 24 * 3600e3]);
 
+// 🔴 24.09 — СТЕНД ЧЕКАЄ ФОНОВИЙ ДОЛИВ ДОПИСІВ СПІЛЬНОТ, ПЕРШ НІЖ ТАПАТИ.
+// До цього він то зеленів, то червонів на тому самому коді (10/10 проти 9/10):
+// тап іноді встигав ДО доливу, іноді ПІСЛЯ. А вада жила саме «після» —
+// обробник тримав старий список і не знаходив у ньому допис. Тепер сцена завжди
+// та, що в житті (людина тапає через секунди, долив уже приїхав), і вердикт
+// однаковий щоразу.
+await p.addInitScript(() => {
+  window.__доливів = 0;
+  window.addEventListener('cstl-news-reloaded', e => {
+    if (e.detail?.причина === 'community') window.__доливів++;
+  });
+});
+
 await p.goto(url, { waitUntil: 'domcontentloaded' });
 await p.evaluate(() => window.switchTab && window.switchTab('community'));
 await p.waitForSelector('#cm-news-board .cm-news-new', { timeout: 15000 });
+const долив = await p.waitForFunction(() => window.__доливів > 0, null, { timeout: 8000 })
+  .then(() => true, () => false);
 await p.waitForTimeout(800);
 
 const текст = () => p.evaluate(() =>
@@ -118,6 +133,7 @@ await p.waitForTimeout(500);
 await p.evaluate(() => document.querySelector('#article-modal .nh-back, [data-ad-close]')?.click());
 await p.waitForTimeout(400);
 const стало = await число();
+ok('сцена як у житті: долив дописів спільнот приїхав ДО тапу', долив);
 ok('картка новини відкрилась', відкрив);
 ok('🔴 прочитана стаття Громади ЗМЕНШУЄ число', стало === було - 1,
    `${було} → ${стало}`);
