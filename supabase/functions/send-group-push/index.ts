@@ -22,6 +22,84 @@ const VAPID_EMAIL               = 'mailto:olykacastle@gmail.com';
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+
+// ── РОЗСИЛКА НА ВЕЛИКУ АУДИТОРІЮ (24.09, аудит готовності) ──────────────────
+//
+// 🔴 ТРИ МЕЖІ, ЯКІ ЦЯ ФУНКЦІЯ ПЕРЕХОДИЛА МОВЧКИ. Жодна не давала помилки —
+// саме тому їх і не було видно:
+//   1. PostgREST віддає щонайбільше **1000 рядків** на запит (`db-max-rows`).
+//      Вибірка без сторінок на 1001-му рядку просто обрізається: тисяча
+//      отримує сповіщення, решта — ні, а в журналі стоїть «надіслано».
+//   2. `.in('uid', [...])` кладе весь перелік В АДРЕСУ запиту. Кілька тисяч
+//      uid — десятки кілобайт адреси, і сервер відповідає `414`: розсилка
+//      падає цілком.
+//   3. Edge Function має стелю **150 секунд**. Надсилання йшло по одному
+//      пристрою в черзі; при ~150 мс на пуш це близько тисячі пристроїв, далі
+//      функція вмирає на півдорозі — частина отримала, журнал каже «готово».
+//
+// 🛑 Запуску ще не було, тож сьогодні підписників десятки і жодна межа не
+// болить. Але всі три спрацюють БЕЗ ПОПЕРЕДЖЕННЯ саме тоді, коли аудиторія
+// нарешті виросте — у найгірший можливий момент.
+// ⚠️ Ці три помічники СВІДОМО скопійовані в кожну функцію розсилки, а не
+// винесені в спільний модуль: функції деплояться поштучно, і відносний імпорт
+// зламав би накат через панель Supabase.
+
+/** Читає ВСІ рядки запиту сторінками, а не перші 1000. */
+async function усіРядки<T>(
+  збудувати: (від: number, до: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  крок = 1000,
+): Promise<T[]> {
+  const усе: T[] = [];
+  for (let від = 0; ; від += крок) {
+    const { data, error } = await збудувати(від, від + крок - 1);
+    if (error) throw error;
+    const пачка = data || [];
+    усе.push(...пачка);
+    if (пачка.length < крок) return усе;
+    // Запобіжник від нескінченного циклу: краще недорозіслати, ніж крутитись.
+    if (усе.length > 200_000) return усе;
+  }
+}
+
+/** Ріже перелік на шматки — щоб `.in(...)` не зібрав адресу на десятки КБ. */
+function частинами<T>(масив: T[], розмір: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < масив.length; i += розмір) out.push(масив.slice(i, i + розмір));
+  return out;
+}
+
+/**
+ * Шле пуш пачками по `ширина` штук одночасно.
+ * 🔑 Чому не всі одразу: тисяча одночасних запитів до чужого push-сервісу — це
+ * спосіб отримати `429` і втратити розсилку цілком. Пачка — компроміс між
+ * швидкістю і чемністю.
+ */
+async function слатиПачками(
+  пристрої: Array<{ id: number; endpoint: string; p256dh: string; auth_key: string }>,
+  payload: string,
+  ширина = 50,
+): Promise<{ sent: number; dead: number[] }> {
+  let sent = 0;
+  const dead: number[] = [];
+  for (const пачка of частинами(пристрої, ширина)) {
+    const наслідки = await Promise.allSettled(пачка.map((d) =>
+      webpush.sendNotification(
+        { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
+        payload,
+      )
+    ));
+    наслідки.forEach((н, i) => {
+      if (н.status === 'fulfilled') { sent++; return; }
+      const код = (н.reason as { statusCode?: number })?.statusCode;
+      // 410/404 — підписка мертва (застосунок знесли, дозвіл відкликали). Це
+      // єдиний випадок, коли рядок можна прибрати: решта збоїв тимчасові, і
+      // видаляти по них означало б тихо втрачати живих людей.
+      if (код === 410 || код === 404) dead.push(пачка[i].id);
+    });
+  }
+  return { sent, dead };
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -73,7 +151,7 @@ serve(async (req) => {
 
     // Пристрої всіх отримувачів
     const { data: devices } = await admin
-      .from('user_push_devices').select('*').in('uid', recipientUids);
+      .from('user_push_devices').select('id, endpoint, p256dh, auth_key').in('uid', recipientUids);
     if (!devices?.length) return json({ sent: 0, reason: 'no devices' });
 
     const bodyText = msg.text || (msg.photo_url ? '📷 Фото' : '');
@@ -87,20 +165,10 @@ serve(async (req) => {
       url:      './',
     });
 
-    let sent = 0;
-    const dead: number[] = [];
-    for (const d of devices) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
-          payload,
-        );
-        sent++;
-      } catch (e: any) {
-        if (e.statusCode === 410 || e.statusCode === 404) dead.push(d.id);
-      }
+    const { sent, dead } = await слатиПачками(devices, payload);
+    for (const шматок of частинами(dead, 200)) {
+      await admin.from('user_push_devices').delete().in('id', шматок);
     }
-    if (dead.length) await admin.from('user_push_devices').delete().in('id', dead);
 
     return json({ sent });
   } catch (e: any) {

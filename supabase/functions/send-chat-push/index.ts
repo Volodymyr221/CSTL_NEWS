@@ -21,6 +21,42 @@ const VAPID_EMAIL               = 'mailto:olykacastle@gmail.com';
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+/** Ріже перелік на шматки — щоб `.in(...)` не зібрав адресу на десятки КБ. */
+function частинами<T>(масив: T[], розмір: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < масив.length; i += розмір) out.push(масив.slice(i, i + розмір));
+  return out;
+}
+
+/**
+ * Шле пуш пачками по `ширина` штук одночасно.
+ * ⚠️ Свідома копія з інших функцій розсилки: функції деплояться поштучно, і
+ * відносний імпорт зламав би накат через панель Supabase.
+ */
+async function слатиПачками(
+  пристрої: Array<{ id: number; endpoint: string; p256dh: string; auth_key: string }>,
+  payload: string,
+  ширина = 50,
+): Promise<{ sent: number; dead: number[] }> {
+  let sent = 0;
+  const dead: number[] = [];
+  for (const пачка of частинами(пристрої, ширина)) {
+    const наслідки = await Promise.allSettled(пачка.map((d) =>
+      webpush.sendNotification(
+        { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
+        payload,
+      )
+    ));
+    наслідки.forEach((н, i) => {
+      if (н.status === 'fulfilled') { sent++; return; }
+      const код = (н.reason as { statusCode?: number })?.statusCode;
+      // 404/410 — пристрій відписався назавжди; решта помилок тимчасові.
+      if (код === 410 || код === 404) dead.push(пачка[i].id);
+    });
+  }
+  return { sent, dead };
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -63,7 +99,7 @@ serve(async (req) => {
 
     // Пристрої отримувача
     const { data: devices } = await admin
-      .from('user_push_devices').select('*').eq('uid', recipientUid);
+      .from('user_push_devices').select('id, endpoint, p256dh, auth_key').eq('uid', recipientUid);
     if (!devices?.length) return json({ sent: 0, reason: 'no devices' });
 
     // P-2: msg.text буває null (фото-повідомлення) — .length на null валив функцію
@@ -81,20 +117,14 @@ serve(async (req) => {
       url:   `./#/thread/${thread.id}`,
     });
 
-    let sent = 0;
-    const dead: number[] = [];
-    for (const d of devices) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
-          payload,
-        );
-        sent++;
-      } catch (e: any) {
-        if (e.statusCode === 410 || e.statusCode === 404) dead.push(d.id);
-      }
+    // 🔴 24.09 — пачками, як і решта розсилок. Тут отримувач ОДИН, тож виграшу
+    // в часі майже немає; сенс у однаковій формі: збій одного пристрою не
+    // затримує інші, і наступний, хто читатиме ці функції, не побачить два
+    // різні способи робити те саме.
+    const { sent, dead } = await слатиПачками(devices, payload);
+    for (const шматок of частинами(dead, 200)) {
+      await admin.from('user_push_devices').delete().in('id', шматок);
     }
-    if (dead.length) await admin.from('user_push_devices').delete().in('id', dead);
 
     return json({ sent });
   } catch (e: any) {

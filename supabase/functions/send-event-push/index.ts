@@ -52,6 +52,44 @@ const DEFAULT_HOUR = 10;
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+/**
+ * Шле пуш пачками по `ширина` штук одночасно.
+ * 🔑 Чому не всі одразу: сотні одночасних запитів до чужого push-сервісу — це
+ * спосіб отримати `429` і втратити розсилку цілком.
+ * ⚠️ Свідома копія з інших функцій розсилки: функції деплояться поштучно, і
+ * відносний імпорт зламав би накат через панель Supabase.
+ */
+async function слатиПачками(
+  пристрої: Array<{ id: number; endpoint: string; p256dh: string; auth_key: string }>,
+  payload: string,
+  ширина = 50,
+): Promise<{ sent: number; dead: number[] }> {
+  let sent = 0;
+  const dead: number[] = [];
+  for (const пачка of частинами(пристрої, ширина)) {
+    const наслідки = await Promise.allSettled(пачка.map((d) =>
+      webpush.sendNotification(
+        { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } },
+        payload,
+      )
+    ));
+    наслідки.forEach((н, i) => {
+      if (н.status === 'fulfilled') { sent++; return; }
+      const код = (н.reason as { statusCode?: number })?.statusCode;
+      // 404/410 — пристрій відписався назавжди; решта помилок тимчасові.
+      if (код === 410 || код === 404) dead.push(пачка[i].id);
+    });
+  }
+  return { sent, dead };
+}
+
+/** Ріже перелік на шматки — щоб `.in(...)` не зібрав адресу на десятки КБ. */
+function частинами<T>(масив: T[], розмір: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < масив.length; i += розмір) out.push(масив.slice(i, i + розмір));
+  return out;
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cstl-push-secret',
@@ -162,9 +200,17 @@ async function run(admin: Admin, dryRun: boolean) {
   // 🛑 ВИМИКАЧ КАБІНЕТУ ПОВАЖАЄМО (B-33: вимикач, який нічого не вимикає, гірший
   // за його відсутність — він підтверджує дію, якої ніхто не зробив).
   const uids = [...new Set(plan.map(p => p.uid))];
-  const { data: prefs } = await admin
-    .from('notif_prefs').select('uid, events').in('uid', uids);
-  const off = new Set((prefs || []).filter((p: any) => p.events === false).map((p: any) => p.uid));
+  // 🔴 24.09 — ШМАТКАМИ ПО 200. `.in('uid', [...])` кладе весь перелік в АДРЕСУ
+  // запиту: кілька тисяч uid — це десятки кілобайт, на які сервер відповідає
+  // `414`, тобто перевірка вимикачів падає цілком. А ще PostgREST віддає
+  // щонайбільше 1000 рядків, тож довгий перелік обрізався б мовчки і люди, які
+  // ВИМКНУЛИ сповіщення, отримували б їх далі.
+  const off = new Set<string>();
+  for (const шматок of частинами(uids, 200)) {
+    const { data: prefs } = await admin
+      .from('notif_prefs').select('uid, events').in('uid', шматок);
+    (prefs || []).filter((p: any) => p.events === false).forEach((p: any) => off.add(p.uid));
+  }
   const live = plan.filter(p => !off.has(p.uid));
 
   if (dryRun) {
@@ -197,23 +243,18 @@ function firstLine(text: string): string {
 }
 
 async function push(admin: Admin, uid: string, payload: Record<string, unknown>) {
-  const { data: devices } = await admin.from('user_push_devices').select('*').eq('uid', uid);
+  const { data: devices } = await admin
+    .from('user_push_devices').select('id, endpoint, p256dh, auth_key').eq('uid', uid);
   if (!devices?.length) return 0;
-  const msg = JSON.stringify(payload);
-  let sent = 0;
-  const dead: number[] = [];
-  for (const d of devices) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth_key } }, msg);
-      sent++;
-    } catch (e) {
-      // 404/410 — пристрій відписався назавжди; решта помилок тимчасові.
-      const code = (e as { statusCode?: number }).statusCode;
-      if (code === 404 || code === 410) dead.push(d.id);
-    }
+  // 🔴 24.09 — пачками, а не по одному. Тут в однієї людини пристроїв одиниці,
+  // тож виграш у часі невеликий; важливіше інше — збій ОДНОГО пристрою більше
+  // не затримує решту, і вся розсилка подій має однакову форму. Нагадування
+  // розходяться по всіх, у кого подія в календарі, і цей цикл крутиться
+  // стільки разів, скільки людей: послідовні паузи тут складаються.
+  const { sent, dead } = await слатиПачками(devices, JSON.stringify(payload));
+  for (const шматок of частинами(dead, 200)) {
+    await admin.from('user_push_devices').delete().in('id', шматок);
   }
-  if (dead.length) await admin.from('user_push_devices').delete().in('id', dead);
   return sent;
 }
 
