@@ -11,7 +11,7 @@ import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsPro
 import { currentUserId, currentUserName, isLoggedIn, requireAuth, onAuthChange, authReady } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName,
-  fetchPages, fetchPagePosts, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
+  fetchPages, fetchPagePosts, fetchPagePostsPage, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds, fetchPageTeam,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
@@ -70,6 +70,19 @@ const IC_TRASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // ── Стан ────────────────────────────────────────────────────────────────────
 let pages = [];               // усі сторінки-канали
 let posts = [];               // пости стрічки (усіх сторінок)
+// ── ПАГІНАЦІЯ СТРІЧКИ (крок 11, 24.09) ──────────────────────────────────────
+// `feedHasMore` — чи приїхав із бази «зайвий» 61-й допис (див. `limit + 1` у
+// `fetchPagePostsPage`). Тільки за ним і малюється кнопка «Показати старіші»:
+// окремого лічильника всього списку немає навмисно — два лічильники того самого
+// стану вже розходились у B-27.
+let feedHasMore = false;
+let feedLoadingMore = false;   // замок від подвійного тапу по кнопці
+// Курсор «старіше за це» — час найстарішого допису, який уже в руках. Беремо
+// його в МОМЕНТ завантаження сторінки, а не рахуємо з `posts`: у `posts`
+// підмішані чернетки (вони поза стрічкою часу) і діє `feedSortKey`, який у день
+// події піднімає її вгору — мінімум по видимому списку дав би не той час.
+let feedCursor = null;
+const FEED_PAGE = 60;          // скільки дописів в одній порції
 let reactionMap = new Map();  // post_id → { count, my }
 let commentMap = new Map();   // post_id → завантажені comments[] (лише для відкритих постів)
 let commentCounts = new Map();// post_id → скільки коментарів усього (для лічильника під карткою)
@@ -162,7 +175,7 @@ async function loadData() {
   // екрані, який він бачить першим.
   const [pg, ps, dr, rx, cm, cr, mine, subs] = await Promise.all([
     fetchPages(),
-    fetchPagePosts(null, 60),
+    fetchPagePostsPage(null, { limit: FEED_PAGE }),
     isLoggedIn() ? fetchPageDrafts(20) : Promise.resolve([]),
     fetchPageReactions(currentUserId()),
     fetchPageCommentCounts(),
@@ -184,11 +197,14 @@ async function loadData() {
   // при живих сторінках — законний стан «ще нічого не опублікували».
   if (pg === null) throw new Error('fetchPages: база не відповіла');
   // Чернетки — ПЕРШИМИ: це те, що чекає на дію, а не те, що читають.
-  pages = orderPages(pg); posts = [...dr, ...ps]; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  feedHasMore = !!ps.hasMore;
+  const свіжі = ps.posts;
+  feedCursor = найстаріший(свіжі);
+  pages = orderPages(pg); posts = [...dr, ...свіжі]; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
   // 🗓 Порядок стрічки з урахуванням републікації події в її день (feedSortKey).
   // ⚠️ Чернетки лишаються зверху: вони не в цьому сортуванні, бо це не «що
   // читати», а «що чекає на дію».
-  posts = [...dr, ...ps.sort((a, b) => feedSortKey(b) - feedSortKey(a))];
+  posts = [...dr, ...свіжі.sort((a, b) => feedSortKey(b) - feedSortKey(a))];
   // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
   // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
   commentMap = new Map(); commentPaging = new Map(); commentError = new Map();
@@ -1046,6 +1062,74 @@ export async function openFeedPage(pageId, focusPostId = null) {
 // 🔑 Дротування обробників — ТІЛЬКИ після справжньої перемальовки: якщо вузли ті
 // самі, `wireGalleries`/`wireClamps` уже на них стоять, і повторний прохід
 // нічого б не додав, окрім роботи.
+// ── «ПОКАЗАТИ СТАРІШІ» ──────────────────────────────────────────────────────
+// 🔴 ЩО БУЛО НЕ ТАК. Стрічка брала 60 останніх дописів і мовчала про решту:
+// шістдесят перший ставав недосяжним НАЗАВЖДИ — ні кнопки, ні прокрутки, ні
+// натяку. Заміряно 24.09: у базі 59 живих `page_posts`, тобто до стелі лишався
+// ОДИН допис.
+//
+// 🔑 КНОПКА, А НЕ НЕСКІНЧЕННА ПРОКРУТКА. У хабі новин (`news-hub.js`) порції
+// дописуються самі, і там це правильно: людина прийшла читати потік. Стрічка —
+// екран громади, з якого йдуть у спільноту або в коментарі; автопідвантаження
+// там означало б, що дно списку не настає ніколи, а разом з ним не настає і
+// відчуття «я все переглянув». Плюс кожна порція це похід у мережу, і робити
+// його БЕЗ прохання людини на мобільному інтернеті — та сама неввічливість, за
+// яку ми прибрали таймери-опитувачі.
+function найстаріший(список) {
+  let min = null;
+  for (const p of список) {
+    const t = p?.created_at;
+    if (!t) continue;
+    if (min === null || t < min) min = t;
+  }
+  return min;
+}
+
+// Кнопка живе ПОЗА `#feed-list` (вузол `#feed-more` у розмітці): `patchList`
+// звіряє дітей списку покартково за `data-post`, і сторонній вузол у хвості
+// збивав би звірку — саме та вада, від якої стоїть `tests/tab-return-repaint`.
+function renderFeedMore() {
+  const el = document.getElementById('feed-more');
+  if (!el) return;
+  if (!posts.length || !feedHasMore) { paintIfChanged(el, ''); return; }
+  const текст = feedLoadingMore ? 'Завантажую…' : 'Показати старіші';
+  paintIfChanged(el, `<button class="fd-more-btn" type="button" data-feed-more${feedLoadingMore ? ' disabled' : ''}>${текст}</button>`);
+}
+
+// Дозавантаження наступної порції. Дописуємо В КІНЕЦЬ — тобто `patchList` іде
+// гілкою `append` і жодне вже намальоване фото не перестворюється (заміряно
+// 15.08: повна заміна `innerHTML` дає 5 кадрів без жодної картинки).
+async function loadMoreFeed() {
+  if (feedLoadingMore || !feedHasMore || !feedCursor) return;
+  feedLoadingMore = true;
+  renderFeedMore();
+  try {
+    const порція = await fetchPagePostsPage(null, { limit: FEED_PAGE, beforeTs: feedCursor });
+    const нові = порція.posts || [];
+    feedHasMore = !!порція.hasMore;
+    // ⚠️ Звірка за id обовʼязкова: поки людина читала, автор міг підняти допис
+    // або база віддати межовий рядок удруге — дубль у списку виглядав би як
+    // поломка, а `patchList` на однакових ключах повівся б непередбачувано.
+    const відомі = new Set(posts.map(p => p.id));
+    const чисті = нові.filter(p => !відомі.has(p.id));
+    if (чисті.length) {
+      posts = [...posts, ...чисті.sort((a, b) => feedSortKey(b) - feedSortKey(a))];
+      feedCursor = найстаріший(чисті) || feedCursor;
+    } else if (!нові.length) {
+      // База не дала нічого нового — далі тиснути нема куди.
+      feedHasMore = false;
+    }
+    forgetFeedPaint();
+    renderFeed();
+  } catch (e) {
+    console.warn('[feed] loadMoreFeed:', e?.message || e);
+    showToast('Не вдалося завантажити старіші дописи', 0, 'error');
+  } finally {
+    feedLoadingMore = false;
+    renderFeedMore();
+  }
+}
+
 function renderFeed() {
   const circlesEl = document.getElementById('feed-circles');
   const listEl = document.getElementById('feed-list');
@@ -1054,6 +1138,7 @@ function renderFeed() {
   if (!listEl) return;
   if (!posts.length) {
     paintIfChanged(listEl, `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`);
+    renderFeedMore();
     return;
   }
   // ⚠️ Стрілка, а не голий `postCardHtml`: `map` передає другим аргументом ІНДЕКС, і він
@@ -1067,6 +1152,7 @@ function renderFeed() {
   // розмітка міняється САМА раз на хвилину — і через один текстовий рядок
   // перестворювались УСІ фотографії. Тепер звіряємо покартково.
   const res = patchList(listEl, posts, p => p.id, p => postCardHtml(p), 'data-post');
+  renderFeedMore();                              // кнопка живе своїм життям, поза списком
   if (res.mode === 'none') return;              // нічого не змінилось — екран не чіпали
   // Обробники дротуємо на те, що справді перестворене: при 'full' — весь список,
   // при 'patch' — вистачає всього списку теж (вузлів мало, а пропустити свіжу
@@ -4127,6 +4213,8 @@ function wireCards(root) {
   // Точка дотику пальця — потрібна, щоб відрізнити тап від скролу (див. isCleanTap).
   root.addEventListener('pointerdown', e => { tapDown = { x: e.clientX, y: e.clientY }; }, { passive: true });
   root.addEventListener('click', e => {
+    const moreFeed = e.target.closest('[data-feed-more]');  // «Показати старіші»
+    if (moreFeed) { loadMoreFeed(); return; }
     const menuBtn = e.target.closest('[data-post-menu]');   // «⋯» поста — перед open-page
     if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
     const pubBtn = e.target.closest('[data-publish]');   // чернетка → в ефір

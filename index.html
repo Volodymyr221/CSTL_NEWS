@@ -160,6 +160,10 @@
         <div id="feed-circles" class="fd-circles-wrap"></div>
       </div>
       <div id="feed-list" class="fd-list"></div>
+      <!-- «Показати старіші» — окремий вузол ПОЗА списком: patchList звіряє
+           дітей #feed-list покартково, і кнопка всередині нього збивала б
+           звірку (вузол без data-post у хвості). Рендерить feed.js. -->
+      <div id="feed-more" class="fd-more-wrap"></div>
     </div>
 
     <!-- Вкладка: Автобуси -->

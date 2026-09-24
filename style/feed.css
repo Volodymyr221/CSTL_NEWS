@@ -1470,3 +1470,21 @@
   margin: 14px 16px 6px; font-size: 13px; font-weight: 700;
   color: var(--fd-muted); letter-spacing: 0.1px;
 }
+
+/* ── «ПОКАЗАТИ СТАРІШІ» (пагінація стрічки, 24.09) ─────────────────────────────
+   Живе ПОЗА `#feed-list`: `patchList` звіряє дітей списку покартково за
+   `data-post`, і сторонній вузол у хвості збивав би звірку.
+   📐 Висота 44px — мінімальна зона дотику за Apple HIG (те саме правило, що
+   стереже `tests/tap-targets-hig.mjs`); ширина обмежена, щоб кнопка читалась як
+   дія, а не як ще одна картка списку. */
+.fd-more-wrap { display: flex; justify-content: center; padding: 4px 16px 22px; }
+.fd-more-wrap:empty { display: none; padding: 0; }
+.fd-more-btn {
+  min-height: 44px; padding: 0 22px;
+  background: var(--fd-card, #fff); border: 1px solid var(--board-line, #C4C4C1);
+  border-radius: 22px;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--ink, #1a1a1a);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.fd-more-btn:active { background: var(--board-press, #E4E4E1); }
+.fd-more-btn[disabled] { opacity: .55; cursor: default; }
