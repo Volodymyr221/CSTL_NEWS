@@ -20,7 +20,30 @@ drop policy if exists "pcomreact read"   on public.page_comment_reactions;
 drop policy if exists "pcomreact insert" on public.page_comment_reactions;
 drop policy if exists "pcomreact delete" on public.page_comment_reactions;
 
-create policy "pcomreact read"   on public.page_comment_reactions for select using (true);
+-- 🔴 24.09.2026 — ЦЕЙ РЯДОК БУВ `using (true)` І ВІДКОТИВ БИ ЖИВЕ ВИПРАВЛЕННЯ.
+-- Звірка з продом (аудит 24.09) показала: на базі політика ВЖЕ звужена до
+-- `page_comment_visible(comment_id)`, а файл лишався зі старим `true` — і, що
+-- гірше, рядком вище стоїть `drop policy if exists`. Тобто повторний прогін
+-- цього файлу МОВЧКИ зняв би звуження і знову відкрив би анонімам рядки
+-- реакцій під невидимими коментарями. Це саме той клас вади, через який у
+-- `NOW.md` стоїть правило «звіряй `pg_get_functiondef`, а не файл у репо».
+--
+-- ⚠️ ЧОМУ ЧЕРЕЗ `do $$`, А НЕ ПРОСТО ЗАМІНЕНИЙ РЯДОК. `page_comment_visible()`
+-- заводить ІНША міграція. Якби тут стояв прямий виклик, цей файл на чистій базі
+-- падав би з «функції немає» — і людина, яка накочує з нуля, лишилась би взагалі
+-- без політики читання, тобто з мовчки порожнім списком лайків. Запасний шлях
+-- відтворює стару поведінку, але гучно каже про це.
+do $$
+begin
+  if to_regprocedure('public.page_comment_visible(bigint)') is not null then
+    create policy "pcomreact read" on public.page_comment_reactions
+      for select using (public.page_comment_visible(comment_id));
+  else
+    raise warning 'page_comment_visible() ще немає — ставлю широку політику читання. Накотіть supabase_page_comments_visibility і перезапустіть цей файл.';
+    create policy "pcomreact read" on public.page_comment_reactions
+      for select using (true);
+  end if;
+end $$;
 create policy "pcomreact insert" on public.page_comment_reactions for insert with check (
   auth.uid() is not null and user_id = auth.uid()::text
 );
