@@ -17,23 +17,22 @@ const VENDOR_CACHE = 'cstl-vendor-v1';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './style/tokens.css',      // 🆕 20.08 — спільні токени бренду: їх читає і base.css, і admin.html
-  './style/base.css',
-  './style/filters.css',
-  './style/news.css',
-  './style/events.css',
-  './style/buses.css',
-  './style/power.css',
-  './style/modal.css',
-  './style/tabbar.css',
-  './style/community.css',
-  './style/board.css',         // 🆕 05.08 — стилі Дошки виділено з community.css
-  './style/feed.css',
-  './style/account.css',
-  './style/messages.css',
-  './style/sidebar.css',
-  './style/home.css',          // 🆕 04.08 — головна як Home Dashboard
+  // 🔴 24.09 — ОДИН ФАЙЛ СТИЛІВ ЗАМІСТЬ ПʼЯТНАДЦЯТИ.
+  // Було: `style.css` + 14 файлів `style/*.css` перелічені руками. Два лиха
+  // одразу. Перше — список відставав: сім файлів (`news-card.css`,
+  // `news-hub.css`, `install.css`, `crop.css`, `dev-lock.css`,
+  // `desktop-gate.css`, `fund-screen.css`) до нього так і не дописали, тобто
+  // офлайн частина екранів лишалась без стилів. Друге — браузер тягнув їх
+  // ланцюжком `@import`, де кожен запит чекав на попередній.
+  // Стало: `build.js` складає все в `style.min.css` (52 КБ gzip проти 385 КБ
+  // сумою), і передкешувати треба рівно один рядок, який нічого не забуде.
+  './style.min.css',
+  // ⚠️ `style/tokens.css` ЛИШАЄТЬСЯ окремим рядком, хоч він і всередині збірки.
+  // Причина не в застосунку, а в `admin.html`: це окрема сторінка, вона тягне
+  // токени напряму, і без них адмінка офлайн лишається взагалі без кольорів.
+  // Це вимога стенда `tests/admin-shell.mjs` — знято було помилково, стенд
+  // упіймав. 16 КБ.
+  './style/tokens.css',
   './bundle.js',
   './logo.png',
   './icons/castle-icon.png',   // лого центральної кнопки ГРОМАДА — precache, щоб не зникало після bump CACHE
