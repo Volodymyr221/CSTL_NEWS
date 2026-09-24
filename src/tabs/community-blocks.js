@@ -1872,6 +1872,18 @@ function pluralNew(n) {
 // ⚠️ Слухач вішається ОДИН раз на модуль, не з рендера: інакше кожна перемальовка
 // додавала б ще один, і один сигнал давав би десять походів у мережу.
 let _newsReloadWired = false;
+
+// 🔴 24.09 — ОБРОБНИКИ ЧИТАЮТЬ ОСТАННІЙ НАМАЛЬОВАНИЙ СПИСОК, А НЕ ЗАМИКАННЯ.
+// Слухачі секції вішаються ОДИН раз, а `renderCommunityNews()` кличеться ще й
+// після фонового доливу дописів спільнот (`cstl-news-reloaded`) — і тоді
+// `ensureNewsLoaded()` віддає ВЖЕ ІНШИЙ масив. Замкнений перший `arts` старів:
+// тап по допису спільноти шукав його в списку, де того ще не було, `find`
+// віддавав `undefined`, і `markArticleSeen` мовчки виходив — число не гасло,
+// а бейдж перемальовувався зі старого списку (стенд ловив 28 → 29).
+// Плавало від того, чи встиг долив ДО дротування: 21.09 записано як «стенд
+// плаває від даних», насправді — гонка.
+let _cmNewsArts = [];
+
 function wireNewsReloadRepaint() {
   if (_newsReloadWired) return;
   _newsReloadWired = true;
@@ -1883,6 +1895,7 @@ export async function renderCommunityNews() {
   const el = document.getElementById('cm-news-content');
   if (!el) return;
   const arts = await ensureNewsLoaded();
+  _cmNewsArts = arts;
   paintCmNews(el, arts);
 
   // Делеговані слухачі — вішаємо ОДИН раз на секцію блока.
@@ -1920,8 +1933,8 @@ export async function renderCommunityNews() {
         // `tests/tools/news-badge-probe.mjs` — тап по статті давав «20 нових»
         // → «20 нових». Перемальовуємо бейдж одразу, бо число мусить
         // змінитись під пальцем, а не при наступному заході на вкладку.
-        markArticleSeen(arts.find(a => a.id === id));
-        paintNewsBadge(arts);
+        markArticleSeen(_cmNewsArts.find(a => a.id === id));
+        paintNewsBadge(_cmNewsArts);
         openArticle(id);
       }
       return;
@@ -1937,5 +1950,5 @@ export async function renderCommunityNews() {
 
   // Хаб відкрили → новини побачено → бейдж гасне. Слухаємо ПОДІЮ, а не імпортуємо
   // хаб назад (він уже імпортований звідси — зворотний імпорт замкнув би коло).
-  window.addEventListener('cstl-news-seen', () => paintNewsBadge(arts));
+  window.addEventListener('cstl-news-seen', () => paintNewsBadge(_cmNewsArts));
 }

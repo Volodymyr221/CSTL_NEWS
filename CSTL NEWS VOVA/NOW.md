@@ -9,25 +9,29 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-24 16:56 UTC
+**Зріз на:** 2026-09-24 19:02 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/project-thread-p1j5mm` |
-| останній коміт людини | `6840a45` 24.09 14:59 — docs(byyou): реліз-нотатки блоку кроків 1-10 [byyou] |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260924-1345` |
-| останній PR у `main` | #1203 |
+| останній коміт людини | `055170a` 24.09 19:01 — chore(byyou): Вова сказав «деплой» — брама відкрита |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260924-1905` |
+| останній PR у `main` | #1204 |
 | стендів на диску | 178 |
-| незакомічених файлів | 3 ⚠️ |
-| журнал за 2026-09-24 | **НЕМАЄ** ⚠️ |
+| незакомічених файлів | 14 ⚠️ |
+| журнал за 2026-09-24 | є ✅ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `.github/workflows/vopas-parser.yml`
 - `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `_session-log/vova-2026-09-24.md`
 - `build.js`
 - `bundle.js`
 - `index.html`
@@ -40,19 +44,15 @@
 - `security/csp.txt`
 - `src/core/supabase.js`
 - `src/tabs/buses.js`
-- `style.min.css`
-- `supabase/functions/send-answer-push/index.ts`
-- `supabase/functions/send-bus-push/index.ts`
-- `supabase/functions/send-chat-push/index.ts`
-- …ще 20
+- …ще 26
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `055170a` 24.09 19:01 — chore(byyou): Вова сказав «деплой» — брама відкрита
+- `c23dbb9` 24.09 16:56 — fix(лайки): Дошка знову встигає сказати «не вдалося звʼязатись» [byyou]
 - `6840a45` 24.09 14:59 — docs(byyou): реліз-нотатки блоку кроків 1-10 [byyou]
 - `ecdc825` 24.09 14:58 — fix(лайки): крок 10 — лічильники рахує база, а не телефон [byyou]
 - `e77729c` 24.09 13:09 — fix(push): крок 9 — розсилка перестала мовчки обриватись на масштабі [byyou]
-- `2420ed6` 24.09 13:04 — fix(realtime): крок 7 — жива Дошка не працювала жодного разу [byyou]
-- `c17284d` 24.09 13:01 — feat(безпека): крок 6 — політика безпеки вмісту, сухий прогін у лабораторії [byyou]
 
 <!-- AUTO:END -->
 
