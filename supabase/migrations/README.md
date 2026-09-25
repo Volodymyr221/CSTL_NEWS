@@ -44,6 +44,7 @@
 
 | файл | що робить | чи можна накотити просто зараз |
 |---|---|---|
+| `0008_bus_push_secret_rotation.sql` | завдання `send-bus-push` більше не носить секрет у тілі + перевипуск `bus_push_secret` | ✅ **накатано 25.09** — звірено: `cron.job` без жодного секрету, жива розсилка віддала **200** на новому значенні |
 | `0007_service_logs_retention.sql` | чистить журнали `pg_cron` і `pg_net` + щоденний сторож | ✅ **накатано 24.09** |
 | `0006_reaction_counts.sql` | подання `reaction_counts` для лічильників реакцій | ✅ **накатано 24.09**, із `security_invoker=on` |
 | `0002_profile_insert_grants.sql` | знімає INSERT на `trusted/official/approved_count` | ✅ **накатано 24.09**, друга редакція (перша була косметикою) |
