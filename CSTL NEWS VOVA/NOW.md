@@ -9,33 +9,37 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-25 01:00 UTC
+**Зріз на:** 2026-09-25 17:46 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/feed-pagination` |
-| останній коміт людини | `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260924-2128` |
-| останній PR у `main` | #1209 |
-| стендів на диску | 178 |
+| гілка | `claude/contact-privacy` |
+| останній коміт людини | `0e303b44` 25.09 17:46 — feat(дошка): телефон жителя більше не їде в браузер — Дошка читає вітрину posts_public |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260925-1745` |
+| останній PR у `main` | #1210 |
+| стендів на диску | 179 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/functions-deploy.yml`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-09-24.md`
-- `supabase/config.toml`
+- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `bundle.js`
+- `src/core/supabase.js`
+- `sw.js`
+- `tests/_board-fixture.mjs`
+- `tests/ad-report.mjs`
+- `tests/board-contact-privacy.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination
-- `6a14a6d1` 25.09 00:59 — docs: пульс NOW.md наздоганяє git
-- `bfed74c8` 25.09 00:59 — ci(functions): Edge Functions їдуть у прод із репозиторію, а не руками
+- `0e303b44` 25.09 17:46 — feat(дошка): телефон жителя більше не їде в браузер — Дошка читає вітрину posts_public
+- `9a88772c` 25.09 12:06 — ai(editor): свята-чернетки 25.09 12:06 UTC
+- `d73a016b` 25.09 01:00 — Edge Functions їдуть у прод із репозиторію, а не руками (#1210)
 - `1abd9f79` 24.09 21:35 — Міграція 0001 стає виконанною + список завдань Вові (#1209)
-- `6238a94e` 24.09 21:34 — docs: пульс NOW.md наздоганяє git
+- `f9479a92` 24.09 21:30 — Стрічка: «Показати старіші». Дошка: знята стеля 200 (#1208)
 
 <!-- AUTO:END -->
 
