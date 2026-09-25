@@ -116,36 +116,109 @@ jobs:
       # відновлена база показувала б порожні рамки замість картинок.
       # Ключ для цього не потрібен: бакет `community-photos` публічний на читання,
       # тож файли беремо тим самим відкритим посиланням, що й застосунок.
+      #
+      # 🔴 25.09 — ЧОМУ ТУТ ЗʼЯВИВСЯ КЕШ, А НЕ «ПРОСТО ЯКОСЬ ШВИДШЕ».
+      #   Крок качав УСІ фото ЩОНОЧІ, хоча фото не змінюються. Заміряно 25.09:
+      #   161 файл, 65 МБ. Тобто ~2 ГБ вихідного трафіку Supabase на місяць при
+      #   НУЛІ користувачів, і росте з кожним завантаженим фото. На безкоштовному
+      #   тарифі стеля вихідного трафіку — 5 ГБ, тобто сам лише бекап зʼїдав
+      #   близько сорока відсотків квоти. Для порівняння: дамп самої бази це
+      #   ~8 МБ, тобто фото коштували у вісім разів дорожче за все інше разом.
+      #
+      # 🔑 КЕШ ТУТ НЕ СМІЄ БУТИ ДОБРІШИМ ЗА ПРАВДУ. Бекап зі вчорашнім фото —
+      #   це бекап, який бреше. Тому файл береться з кешу ЛИШЕ тоді, коли збігся
+      #   і розмір, і час зміни зі сховища; а файли, яких у сховищі вже немає,
+      #   з кешу викидаються. Інакше видалене фото жило б у бекапах вічно.
+      - name: Кеш фото між прогонами
+        uses: actions/cache@v4
+        with:
+          path: .photo-cache
+          # Ключ із номером прогону + restore-keys: кожен прогін зберігає СВІЙ
+          # зліпок, а піднімає найсвіжіший попередній. Незмінний ключ не оновлював
+          # би кеш узагалі (GitHub не перезаписує наявний ключ), і новіші фото
+          # качались би щоразу заново.
+          key: cstl-photos-${{ github.run_id }}
+          restore-keys: cstl-photos-
+
       - name: Фото зі сховища
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          mkdir -p out/storage
+          mkdir -p out/storage .photo-cache/files
+          touch .photo-cache/manifest.tsv
           # Адресу проєкту дістаємо з рядка підключення, щоб не тримати її ще одним секретом.
           REF=$(echo "$DB_URL" | grep -oE 'postgres\.[a-z0-9]+' | head -1 | cut -d. -f2)
           if [ -z "$REF" ]; then
             echo "::warning::Не вдалось визначити ref проєкту — фото пропущено, база збережена."
             exit 0
           fi
-          psql "$DB_URL" -At -c \
-            "select name from storage.objects where bucket_id='community-photos'" > out/_files.txt
-          COUNT=$(wc -l < out/_files.txt)
+          # Разом з іменем беремо розмір і час зміни — саме вони вирішують,
+          # чи можна вірити копії з кешу.
+          psql "$DB_URL" -At -F $'\t' -c \
+            "select name, coalesce(metadata->>'size','?'), coalesce(updated_at::text,'?') \
+               from storage.objects where bucket_id='community-photos'" > out/_files.tsv
+          COUNT=$(wc -l < out/_files.tsv)
           echo "Файлів у сховищі: $COUNT"
           FAIL=0
-          while IFS= read -r NAME; do
-            if [ -z "$NAME" ]; then continue; fi   # та сама форма, що й у сторожі вище
-            mkdir -p "out/storage/$(dirname "$NAME")"
-            curl -fsSL --retry 3 --retry-delay 2 \
-              "https://${REF}.supabase.co/storage/v1/object/public/community-photos/${NAME}" \
-              -o "out/storage/${NAME}" || FAIL=$((FAIL+1))
-          done < out/_files.txt
-          rm -f out/_files.txt
-          echo "Не завантажено: $FAIL з $COUNT"
+          FROM_CACHE=0
+          FETCHED=0
+          while IFS=$'\t' read -r NAME SIZE UPDATED; do
+            if [ -z "$NAME" ]; then continue; fi
+            SIG="${NAME}	${SIZE}	${UPDATED}"
+            mkdir -p "out/storage/$(dirname "$NAME")" ".photo-cache/files/$(dirname "$NAME")"
+            # З кешу — тільки при ТОЧНОМУ збігу підпису і наявності самого файлу.
+            if [ -s ".photo-cache/files/${NAME}" ] && grep -qxF "$SIG" .photo-cache/manifest.tsv; then
+              cp ".photo-cache/files/${NAME}" "out/storage/${NAME}"
+              FROM_CACHE=$((FROM_CACHE+1))
+              continue
+            fi
+            if curl -fsSL --retry 3 --retry-delay 2 \
+                 "https://${REF}.supabase.co/storage/v1/object/public/community-photos/${NAME}" \
+                 -o ".photo-cache/files/${NAME}"; then
+              cp ".photo-cache/files/${NAME}" "out/storage/${NAME}"
+              FETCHED=$((FETCHED+1))
+            else
+              # Невдале завантаження не сміє лишити по собі обрізок у кеші —
+              # завтра він зійшов би за цілий файл.
+              rm -f ".photo-cache/files/${NAME}"
+              FAIL=$((FAIL+1))
+            fi
+          done < out/_files.tsv
+          echo "З кешу: $FROM_CACHE · завантажено: $FETCHED · не вдалось: $FAIL з $COUNT"
+
+          # Викидаємо з кешу те, чого у сховищі вже немає, і записуємо новий
+          # підпис. Порядок саме такий: підпис має описувати те, що в кеші Є.
+          cut -f1 out/_files.tsv | sort -u > .photo-cache/_alive.txt
+          if [ -d .photo-cache/files ]; then
+            (cd .photo-cache/files && find . -type f -printf '%P\n') | sort -u > .photo-cache/_cached.txt
+            comm -13 .photo-cache/_alive.txt .photo-cache/_cached.txt | while IFS= read -r STALE; do
+              if [ -n "$STALE" ]; then rm -f ".photo-cache/files/${STALE}"; fi
+            done
+            find .photo-cache/files -type d -empty -delete || true
+          fi
+          # У підпис ідуть лише ті рядки, чий файл реально лежить у кеші.
+          : > .photo-cache/manifest.tsv
+          while IFS=$'\t' read -r NAME SIZE UPDATED; do
+            if [ -z "$NAME" ]; then continue; fi
+            if [ -s ".photo-cache/files/${NAME}" ]; then
+              printf '%s\t%s\t%s\n' "$NAME" "$SIZE" "$UPDATED" >> .photo-cache/manifest.tsv
+            fi
+          done < out/_files.tsv
+          rm -f out/_files.tsv .photo-cache/_alive.txt .photo-cache/_cached.txt
+
           # Поодинокий збій мережі не має валити весь бекап — база важливіша за картинку.
           # Але якщо не дійшла БІЛЬШІСТЬ файлів, це вже не мережа, а зламаний шлях.
           if [ "$COUNT" -gt 0 ] && [ "$FAIL" -gt $((COUNT / 2)) ]; then
             echo "::error::Не завантажилась більшість фото — шукати причину, а не ігнорувати."
+            exit 1
+          fi
+          # 🛑 Сторож проти тихого схуднення бекапу: у архів мусить лягти стільки
+          # файлів, скільки їх у сховищі, мінус ті, що чесно не завантажились.
+          IN_ARCHIVE=$(find out/storage -type f | wc -l)
+          EXPECTED=$((COUNT - FAIL))
+          if [ "$IN_ARCHIVE" -ne "$EXPECTED" ]; then
+            echo "::error::В архіві $IN_ARCHIVE фото, а мало бути $EXPECTED — кеш або шлях збрехав."
             exit 1
           fi
 
