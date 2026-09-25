@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-25 00:59 UTC
+**Зріз на:** 2026-09-25 01:00 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/feed-pagination` |
-| останній коміт людини | `bfed74c8` 25.09 00:59 — ci(functions): Edge Functions їдуть у прод із репозиторію, а не руками |
+| останній коміт людини | `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260924-2128` |
-| останній PR у `main` | #1207 |
+| останній PR у `main` | #1209 |
 | стендів на диску | 178 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-09-25 | **НЕМАЄ** ⚠️ |
@@ -26,29 +26,16 @@
 
 - `.github/workflows/functions-deploy.yml`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
 - `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-09-24.md`
-- `bundle.js`
-- `index.html`
-- `src/core/list-patch.js`
-- `src/core/supabase.js`
-- `src/tabs/feed.js`
-- `style.min.css`
-- `style/feed.css`
 - `supabase/config.toml`
-- `supabase/migrations/0001_contact_column_lockdown.sql`
-- `supabase/migrations/0001a_posts_public_view.sql`
-- `supabase/migrations/0001b_contact_column_lockdown.sql`
-- `supabase/migrations/README.md`
-- `sw.js`
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination
+- `6a14a6d1` 25.09 00:59 — docs: пульс NOW.md наздоганяє git
 - `bfed74c8` 25.09 00:59 — ci(functions): Edge Functions їдуть у прод із репозиторію, а не руками
+- `1abd9f79` 24.09 21:35 — Міграція 0001 стає виконанною + список завдань Вові (#1209)
 - `6238a94e` 24.09 21:34 — docs: пульс NOW.md наздоганяє git
-- `15d978b3` 24.09 21:34 — docs(db): міграцію 0001 розділено надвоє + вітрині повернуто 7 колонок
-- `9d9d28aa` 24.09 21:29 — feat(feed): «Показати старіші» у Стрічці, знята стеля Дошки
-- `db6c21bd` 24.09 21:16 — Репозиторій наздоганяє живу базу: 0002…0007 накатані (#1207)
 
 <!-- AUTO:END -->
 
