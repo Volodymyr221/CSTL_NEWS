@@ -110,6 +110,24 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             // стенд бачив би нуль лайків і зеленів над зламаним застосунком —
             // або, гірше, червонів би на справному. Заглушка не сміє бути ні
             // добрішою, ні біднішою за прод.
+            // 🔴 25.09 — ВІТРИНА posts_public ВИВОДИТЬСЯ З posts, ЯК У ПРОДІ.
+            // Дошка більше не читає саму таблицю: телефон качався всім разом зі
+            // списком (заміряно 24.09 від ролі гостя — 12 рядків, 6 телефонів).
+            // Якби заглушка не знала цього імені, вона віддала б ПОРОЖНЬО, і
+            // добра половина стендів Дошки почервоніла б на справному коді —
+            // рівно та вада, від якої застерігає шапка цього файлу.
+            // 🔑 І навпаки: віддати тут posts як є було б ще гірше — стенд
+            // зеленів би над клієнтом, що читає телефон, тобто стеріг би
+            // порожнечу. Тому розкрій дзеркалиться точно: ті самі рядки, без
+            // колонки contact, натомість булеве has_contact.
+            if (table === 'posts_public') {
+              рядки = (T.posts || [])
+                .filter(r => !r.deleted_at && r.status === 'published')
+                .map(({ contact, reject_reason, updated_at, ...решта }) => ({
+                  ...решта,
+                  has_contact: !!(contact && String(contact).trim()),
+                }));
+            }
             if (table === 'reaction_counts' || table === 'page_reaction_counts') {
               const джерело = table === 'reaction_counts' ? 'reactions' : 'page_reactions';
               const живі = new Set((T.posts || []).filter(r => !r.deleted_at).map(r => String(r.id)));
@@ -144,8 +162,8 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             // спершу «Сергій», потім підтягується прізвище).
             // ⚠️ Профілю немає → підпис лишається як є. Це не послаблення:
             // тригер поводиться так само з легасі-рядками, де uid порожній.
-            if (table === 'posts' || table === 'comments') {
-              const ключ = table === 'posts' ? 'owner_uid' : 'sender_uid';
+            if (table === 'posts' || table === 'posts_public' || table === 'comments') {
+              const ключ = table === 'comments' ? 'sender_uid' : 'owner_uid';
               const проф = window.__cstlProfiles || [];
               рядки = рядки.map(r => {
                 const pr = проф.find(x => x.uid === r[ключ]);

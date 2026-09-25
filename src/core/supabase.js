@@ -157,7 +157,17 @@ export async function isTeamMember() {
 export async function fetchPublishedPostsPage({ limit = 200, beforeBumped = null, inclusive = false } = {}) {
   if (!supa) return null;
   let q = supa
-    .from('posts')
+    // 🔴 25.09 — ЧИТАЄМО ВІТРИНУ, А НЕ ТАБЛИЦЮ (міграція 0001a/0001b, Б1).
+    // Заміряно 24.09 від ролі гостя: `select count(*), count(contact) from posts`
+    // давало 12 і 6 — тобто шість телефонів жителів качав будь-хто, кому
+    // вистачило публічного ключа з `bundle.js`, не відкриваючи жодного
+    // оголошення. `posts_public` віддає ті самі рядки без колонки `contact`,
+    // натомість з булевим `has_contact` («є що просити»), а сам номер тепер
+    // дає RPC `get_post_contact` із рейт-лімітом.
+    // ⚠️ `status`/`deleted_at` у вітрині вже відфільтровані, але фільтри нижче
+    // ЛИШАЮТЬСЯ: вони нічого не коштують і тримають функцію правильною, якщо
+    // колись доведеться повернути її на саму таблицю.
+    .from('posts_public')
     .select('*')
     .eq('status', 'published')
     .is('deleted_at', null)          // 🔴 17.09 — див. шапку: RLS для адміна пропускає видалене
@@ -226,10 +236,14 @@ export async function fetchPublishedPosts() {
 }
 
 // Один пост за id (для модалки коментарів — потім, у Спринт 4)
+// ⚠️ 25.09 — у `src/` ця функція НЕ МАЄ ЖОДНОГО виклику (звірено грепом по
+// `src/`, `tests/` і `admin.html`). Переведена на вітрину разом із рештою, щоб
+// не лишити пастку: той, хто колись її покличе, інакше отримав би телефон у
+// відповіді й тим повернув би закриту діру.
 export async function fetchPostById(id) {
   if (!supa) return null;
   const { data, error } = await supa
-    .from('posts')
+    .from('posts_public')
     .select('*')
     .eq('id', id)
     .is('deleted_at', null)          // deep-link на видалене питання теж не має відкриватись
@@ -1267,7 +1281,9 @@ export async function deleteMyAccount() {
 // роками. Економія трафіку не варта запиту, який ламається мовчки.
 export async function fetchAuthorAds(uid, limit = 12) {
   if (!supa || !uid) return [];
-  const { data, error } = await supa.from('posts')
+  // Вітрина, а не таблиця — див. `fetchPublishedPostsPage`. Тут це особливо
+  // важливо: секція «інші оголошення автора» показується СТОРОННІЙ людині.
+  const { data, error } = await supa.from('posts_public')
     .select('*')
     .eq('owner_uid', uid)
     .eq('status', 'published')

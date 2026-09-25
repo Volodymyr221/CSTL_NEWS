@@ -134,7 +134,22 @@ await ctx.addInitScript((posts) => {
         signInWithOAuth: async () => ({ data: null, error: null }),
         signOut: async () => ({ error: null }),
       },
-      from: (table) => Object.assign(thenable({ data: table === 'posts' ? posts : [], error: null }), {
+      // 🔴 25.09 — Дошка читає ВІТРИНУ posts_public, а не саму таблицю
+      // (міграція 0001a: телефон більше не їде в загальній вибірці). Заглушка
+      // мусить знати обидва імені, інакше екран не побудується взагалі, і
+      // стенд доповість про поламану розмітку там, де бракує рядка в ньому
+      // самому — п'ятий випадок тієї самої хвороби, описаної вище.
+      // Розкрій дзеркалиться: без колонки contact, натомість has_contact.
+      from: (table) => Object.assign(thenable({
+        data: table === 'posts' ? posts
+            : table === 'posts_public'
+              ? posts.filter(r => !r.deleted_at && r.status === 'published')
+                     .map(({ contact, ...решта }) => ({
+                       ...решта, has_contact: !!(contact && String(contact).trim()),
+                     }))
+              : [],
+        error: null,
+      }), {
         insert: async (row) => {
           const r = await fetch(`${baseUrl}/rest/v1/${table}`, {
             method: 'POST', headers: { 'content-type': 'application/json' },
