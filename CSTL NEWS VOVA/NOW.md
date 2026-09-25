@@ -9,43 +9,33 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-24 21:34 UTC
+**Зріз на:** 2026-09-25 01:00 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/feed-pagination` |
-| останній коміт людини | `15d978b3` 24.09 21:34 — docs(db): міграцію 0001 розділено надвоє + вітрині повернуто 7 колонок |
+| останній коміт людини | `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260924-2128` |
-| останній PR у `main` | #1207 |
+| останній PR у `main` | #1209 |
 | стендів на диску | 178 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-09-24 | є ✅ |
+| журнал за 2026-09-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/_ai-tools/BYYOU_PLAN.md`
+- `.github/workflows/functions-deploy.yml`
+- `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-09-24.md`
-- `bundle.js`
-- `index.html`
-- `src/core/list-patch.js`
-- `src/core/supabase.js`
-- `src/tabs/feed.js`
-- `style.min.css`
-- `style/feed.css`
-- `supabase/migrations/0001_contact_column_lockdown.sql`
-- `supabase/migrations/0001a_posts_public_view.sql`
-- `supabase/migrations/0001b_contact_column_lockdown.sql`
-- `supabase/migrations/README.md`
-- `sw.js`
+- `supabase/config.toml`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `15d978b3` 24.09 21:34 — docs(db): міграцію 0001 розділено надвоє + вітрині повернуто 7 колонок
-- `9d9d28aa` 24.09 21:29 — feat(feed): «Показати старіші» у Стрічці, знята стеля Дошки
-- `db6c21bd` 24.09 21:16 — Репозиторій наздоганяє живу базу: 0002…0007 накатані (#1207)
-- `b9d6181a` 24.09 20:10 — Гаряче: задуха бази 24.09 — запобіжник у клієнті + міграція 0007 (#1206)
-- `ee42c18f` 24.09 19:09 — Аудит готовності: кроки 1-10 — стилі, кеш, розсилка, лічильники, безпека (#1205)
+- `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination
+- `6a14a6d1` 25.09 00:59 — docs: пульс NOW.md наздоганяє git
+- `bfed74c8` 25.09 00:59 — ci(functions): Edge Functions їдуть у прод із репозиторію, а не руками
+- `1abd9f79` 24.09 21:35 — Міграція 0001 стає виконанною + список завдань Вові (#1209)
+- `6238a94e` 24.09 21:34 — docs: пульс NOW.md наздоганяє git
 
 <!-- AUTO:END -->
 

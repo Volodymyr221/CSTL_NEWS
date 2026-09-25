@@ -1,0 +1,66 @@
+# Деплой Edge Functions із репозиторію — щоб прод був ПОБАЙТОВОЮ копією.
+#
+# 🔴 Заведено 24.09.2026. До цього дня функції їхали в прод тільки руками, і
+# звірка того ж дня знайшла розходження у чотирьох функціях із восьми. Причина
+# структурна: коли файл їде через переписування, а не інструментом, він рано чи
+# пізно розійдеться. Тут його везе CLI — текст не проходить через нічиї руки.
+#
+# ⚠️ ПОТРІБЕН ОДИН СЕКРЕТ: `SUPABASE_ACCESS_TOKEN`
+#    Supabase → Account → Access Tokens → Generate new token,
+#    далі GitHub → Settings → Secrets and variables → Actions → New secret.
+#    🛑 Без нього прогін ЧЕСНО ПАДАЄ з поясненням, а не робить вигляд, що все
+#    гаразд. Мовчазний успіх на неробочому деплої — гірше за червоний хрестик:
+#    саме так `publish-now` півдня писав «1-2 хв» без секрету (урок 28.08).
+#
+# `verify_jwt` кожної функції береться з `supabase/config.toml` — з файлу, а не
+# з памʼяті того, хто запускає.
+
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/functions-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: functions-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Перевірити, що секрет є
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Немає секрету SUPABASE_ACCESS_TOKEN — деплой функцій неможливий."
+            echo "Постав його: Supabase → Account → Access Tokens, потім"
+            echo "GitHub → Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Задеплоїти всі функції
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Слаг = імʼя теки. Перелік беремо з диска, а не списком у файлі:
+          # список розійшовся б із текою рівно тоді, коли додасться нова функція.
+          for d in supabase/functions/*/; do
+            slug="$(basename "$d")"
+            [ -f "$d/index.ts" ] || { echo "↷ $slug — немає index.ts, пропускаю"; continue; }
+            echo "── $slug"
+            supabase functions deploy "$slug" --project-ref uabyfecseqnemvcqhdem
+          done
