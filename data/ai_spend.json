@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1790422959123,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 507,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
       "ts": 1790337975397,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -775,24 +788,11 @@
       "found": 1,
       "cost_usd": 0.0441,
       "note": "Особистісний розвиток для підлітків: в Олицькій громаді запрошують до програми G"
-    },
-    {
-      "ts": 1788185996031,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 521,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0125,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 12.8378,
-    "runs": 183,
+    "cost_usd": 12.846,
+    "runs": 184,
     "web_searches": 186
   },
   "months": {
@@ -807,13 +807,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 4.3695,
-      "runs": 58,
+      "cost_usd": 4.3777,
+      "runs": 59,
       "web_searches": 77,
-      "fair_usd": 3.7379
+      "fair_usd": 3.7461
     }
   },
-  "updated_ts": 1790337975397,
+  "updated_ts": 1790422959123,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
