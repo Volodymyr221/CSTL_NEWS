@@ -53,8 +53,13 @@ async function прогін(профілі, лічильник) {
                                    hasTouch: true, serviceWorkers: 'block' });
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(String(e)));
+  // 🔑 authSignal: true — ЄДИНИЙ стенд, який його просить, і без нього цей стенд
+  // безглуздий. Кабінет дізнається про жителя лише з сигналу INITIAL_SESSION
+  // (розбір — у шапці tests/_board-fixture.mjs). Стандартна сцена його не слає,
+  // бо вмикання всім накриває шість інших стендів модалкою — заміряно.
   await mockSupabase(p, { profiles: профілі, posts: [], announcements: [] },
-                     { user: { id: UID, email: 'test@example.invalid', user_metadata: {} } });
+                     { user: { id: UID, email: 'test@example.invalid', user_metadata: {} },
+                       authSignal: true });
   await p.route('**://api.open-meteo.com/**', r => r.abort());
   if (BUNDLE_REV) {
     const body = projectFile('bundle.js', BUNDLE_REV);

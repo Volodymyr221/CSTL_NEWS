@@ -1134,13 +1134,48 @@ function поСловах(показане, оригінал) {
   const м = await с.p.evaluate(() => {
     const край = (sel, кінець) => { const e = document.querySelector(sel); if (!e) return null;
       const r = e.getBoundingClientRect(); return Math.round(кінець ? r.bottom : r.top); };
+    // 🔴 27.09 — МІРЯЄМО ДО НАСТУПНОГО ВИДИМОГО БЛОКУ, А НЕ ДО НОВИН.
+    // Було прибито до `#cm-news-board .hm-kicker`, бо у серпні новини СПРАВДІ
+    // йшли відразу за смугою капсул. 27.09 між ними став блок знайомства
+    // (`#hm-intro`, видимий лише коли громада ще нічого не написала), і сторож
+    // почервонів на 463px — при тому, що сам ритм капсули не змінився НІ НА ПІКСЕЛЬ.
+    // 🔑 Це не послаблення: перевірка називається «капсула не приклеєна до
+    // жодного боку», а приклеєність — це відстань до СУСІДА, хто б ним не був.
+    // Прибита назва блоку робила сторожа крихким до будь-якої нової секції, а
+    // такий сторож червоніє не від вади, а від сусіда.
+    // ⚠️ І ТУТ ТЕЖ ВИДИМИЙ КРАЙ, А НЕ КОРОБКА — правило з шапки цього блоку.
+    // У секції свої невидимі відступи (.hm-sec має padding-top), тож її коробка
+    // починається вище за все, що людина бачить. Тому спускаємось у першого
+    // нащадка, який СПРАВДІ малюється: має власне тло, рамку або власний текст.
+    const малюється = (el) => {
+      const с = getComputedStyle(el);
+      if (с.backgroundColor && с.backgroundColor !== 'rgba(0, 0, 0, 0)' && с.backgroundColor !== 'transparent') return true;
+      if (parseFloat(с.borderTopWidth) > 0) return true;
+      return [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    };
+    const верхНаступного = (id) => {
+      let n = document.getElementById(id);
+      if (!n) return null;
+      for (n = n.nextElementSibling; n; n = n.nextElementSibling) {
+        if (n.hasAttribute('hidden')) continue;
+        if (n.getBoundingClientRect().height <= 0) continue;
+        const всі = [n, ...n.querySelectorAll('*')];
+        for (const el of всі) {
+          if (el.getBoundingClientRect().height > 0 && малюється(el)) {
+            return Math.round(el.getBoundingClientRect().top);
+          }
+        }
+        return Math.round(n.getBoundingClientRect().top);
+      }
+      return null;
+    };
     const пігулки = [...document.querySelectorAll('.hm-cap2')];
     return {
       є: пігулки.length > 0,
       герой: край('#page-community .hm-top', true),
       верхПігулки: пігулки.length ? Math.round(пігулки[0].getBoundingClientRect().top) : null,
       низПігулки: пігулки.length ? Math.round(пігулки[пігулки.length - 1].getBoundingClientRect().bottom) : null,
-      новини: край('#cm-news-board .hm-kicker', false),
+      новини: верхНаступного('hm-caps'),
     };
   });
   ok('сцена ритму: капсули справді намальовані', м.є && м.герой != null && м.новини != null);
@@ -1158,11 +1193,47 @@ function поСловах(показане, оригінал) {
 {
   const с = await сцена({ user: null, routes: [], posts: [] });
   const м = await с.p.evaluate(() => {
+    // 🔴 27.09 — МІРЯЄМО ДО НАСТУПНОГО ВИДИМОГО БЛОКУ, А НЕ ДО НОВИН.
+    // Було прибито до `#cm-news-board .hm-kicker`, бо у серпні новини СПРАВДІ
+    // йшли відразу за смугою капсул. 27.09 між ними став блок знайомства
+    // (`#hm-intro`, видимий лише коли громада ще нічого не написала), і сторож
+    // почервонів на 463px — при тому, що сам ритм капсули не змінився НІ НА ПІКСЕЛЬ.
+    // 🔑 Це не послаблення: перевірка називається «капсула не приклеєна до
+    // жодного боку», а приклеєність — це відстань до СУСІДА, хто б ним не був.
+    // Прибита назва блоку робила сторожа крихким до будь-якої нової секції, а
+    // такий сторож червоніє не від вади, а від сусіда.
+    // ⚠️ І ТУТ ТЕЖ ВИДИМИЙ КРАЙ, А НЕ КОРОБКА — правило з шапки цього блоку.
+    // У секції свої невидимі відступи (.hm-sec має padding-top), тож її коробка
+    // починається вище за все, що людина бачить. Тому спускаємось у першого
+    // нащадка, який СПРАВДІ малюється: має власне тло, рамку або власний текст.
+    const малюється = (el) => {
+      const с = getComputedStyle(el);
+      if (с.backgroundColor && с.backgroundColor !== 'rgba(0, 0, 0, 0)' && с.backgroundColor !== 'transparent') return true;
+      if (parseFloat(с.borderTopWidth) > 0) return true;
+      return [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    };
+    const верхНаступного = (id) => {
+      let n = document.getElementById(id);
+      if (!n) return null;
+      for (n = n.nextElementSibling; n; n = n.nextElementSibling) {
+        if (n.hasAttribute('hidden')) continue;
+        if (n.getBoundingClientRect().height <= 0) continue;
+        const всі = [n, ...n.querySelectorAll('*')];
+        for (const el of всі) {
+          if (el.getBoundingClientRect().height > 0 && малюється(el)) {
+            return Math.round(el.getBoundingClientRect().top);
+          }
+        }
+        return Math.round(n.getBoundingClientRect().top);
+      }
+      return null;
+    };
     const смуга = document.getElementById('hm-caps');
     const герой = document.querySelector('#page-community .hm-top');
-    const кікер = document.querySelector('#cm-news-board .hm-kicker');
+    const наступний = верхНаступного('hm-caps');
     return { прихована: !смуга || смуга.hidden,
-             розрив: (герой && кікер) ? Math.round(кікер.getBoundingClientRect().top - герой.getBoundingClientRect().bottom) : null };
+             розрив: (герой && наступний != null)
+               ? Math.round(наступний - герой.getBoundingClientRect().bottom) : null };
   });
   ok('сцена порожнього стану: смуга капсул прихована', м.прихована, JSON.stringify(м));
   // 🔑 Дві межі з ДВОХ боків скарги: «щоб не зливалось» і «щоб не було пустого

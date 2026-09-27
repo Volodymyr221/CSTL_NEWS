@@ -2084,7 +2084,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h)}  top0=${Math.round(g)
          з’явився зміст — повний розбір і мірка «порожньо» у src/tabs/home-intro.js.
          ⚠️ Зворотних лапок у цьому коментарі немає навмисно: розмітка лежить
          усередині шаблонного рядка, і перша ж лапка розриває його посеред HTML. -->
-    <section id="hm-intro" class="hm-sec" hidden></section>
+    <section id="hm-intro" class="hm-sec hm-intro-sec" hidden></section>
 
     <!-- ══ ЗБІР ════════════════════════════════════════════════════════════════
          Немає активних зборів → секції немає ЗОВСІМ (вимога Вови). -->
