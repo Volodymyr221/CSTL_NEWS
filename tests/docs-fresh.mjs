@@ -34,7 +34,7 @@
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, sep } from 'path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VOVA = join(ROOT, 'CSTL NEWS VOVA');
@@ -281,11 +281,24 @@ check(promptReading() !== null && promptReading().size > 0,
 // коштує цілої сесії.
 // ⚠️ Шукаємо в УСІХ текстових файлах проєкту, а не лише в обовʼязкових пʼяти:
 // причина механічна (недорозвʼязаний мердж), тож і охоплення механічне.
+//
+// 🔴 27.09 — ДОДАНО `.venv` І ПІДМОДУЛЬ `vendor/openmontage`. Це не смак.
+// Того дня OpenMontage (система монтажу відео) стала git-підмодулем, і `make setup`
+// створив усередині неї `.venv` з чужими бібліотеками. Сторож одразу впав на
+// `sympy/abc.py` і `sympy/physics/wigner.py`: у коді sympy є рядок з семи знаків
+// `=` як РОЗДІЛЬНИК КОМЕНТАРЯ, і наша регулярка чесно прийняла його за маркер
+// мерджу. Тобто сторож почав брехати — а брехливий сторож гірший за відсутнього,
+// бо його падіння перестають читати.
+// 🔑 Сенс перевірки — НАШІ документи, які мерджить людина. Чужий код у підмодулі
+// і в віртуальному оточенні ніхто руками не мерджить, тому там шукати нічого.
+// ⚠️ `vendor/supabase-js-*.min.js` лишається під перевіркою: він у нашому дереві.
 const МАРКЕР = /^(<{7} |={7}$|>{7} )/m;
+const ПІДМОДУЛІ = [join(ROOT, 'vendor', 'openmontage')];
 const брудні = [];
 const обхід = (дір) => {
+  if (ПІДМОДУЛІ.some((п) => дір === п || дір.startsWith(п + sep))) return;
   for (const е of readdirSync(дір, { withFileTypes: true })) {
-    if (/^(node_modules|\.git|_out|dist|coverage)$/.test(е.name)) continue;
+    if (/^(node_modules|\.git|\.venv|_out|dist|coverage)$/.test(е.name)) continue;
     const шлях = join(дір, е.name);
     if (е.isDirectory()) { обхід(шлях); continue; }
     if (!/\.(md|js|mjs|json|py|css|ya?ml)$/.test(е.name)) continue;
