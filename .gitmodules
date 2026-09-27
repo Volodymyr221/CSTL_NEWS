@@ -1,0 +1,4 @@
+[submodule "vendor/openmontage"]
+	path = vendor/openmontage
+	url = https://github.com/calesthio/OpenMontage.git
+	branch = main
