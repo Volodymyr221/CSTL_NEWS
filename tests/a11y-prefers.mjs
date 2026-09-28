@@ -87,13 +87,21 @@ const режим = async (фіча, значення) => {
 };
 
 // Непрозорість тла: 1 = щільне, 0 = діри немає взагалі.
+// 🔴 28.09 — РОЗМИТТЯ ШУКАЄМО І НА `::before`. У капсули Громади скло переїхало
+// на псевдоелемент (`style/home.css`, `.hm-cap2::before`): у WebKit
+// `backdrop-filter` губить обрізку по заокругленню, коли елемент лежить у
+// контейнері з прокруткою, і за пігулкою в слайдері визирав прямокутник.
+// Контракт «капсула це скло» не змінився — змінилось місце, де його міряти,
+// тож стенд міряє обидва шари, а не тільки сам вузол.
 const поверхня = (sel) => p.evaluate(s => {
   const el = document.querySelector(s);
   if (!el) return null;
   const c = getComputedStyle(el);
+  const b = getComputedStyle(el, '::before');
+  const млин = (cs) => (cs.backdropFilter || cs.webkitBackdropFilter || 'none');
   const m = /rgba?\(([^)]+)\)/.exec(c.backgroundColor);
   const альфа = m ? (m[1].split(',').length > 3 ? parseFloat(m[1].split(',')[3]) : 1) : 1;
-  return { альфа, blur: (c.backdropFilter || c.webkitBackdropFilter || 'none') };
+  return { альфа, blur: млин(c) !== 'none' ? млин(c) : млин(b) };
 }, sel);
 
 // ── ЗВИЧАЙНИЙ РЕЖИМ: скло має лишитись склом ────────────────────────────────
@@ -121,11 +129,15 @@ if (трансп) {
 }
 
 // Жодного розмиття не лишилось НІДЕ — правило глобальне, і саме це перевіряємо.
+// ⚠️ Псевдоелементи рахуємо теж: правило в `base.css` покриває `*::before`
+// і `*::after`, і саме там тепер живе скло капсули.
 const скляних = await p.evaluate(() => {
   let n = 0;
   for (const el of document.querySelectorAll('body *')) {
-    const c = getComputedStyle(el);
-    if ((c.backdropFilter || c.webkitBackdropFilter || 'none') !== 'none') n++;
+    for (const який of [null, '::before', '::after']) {
+      const c = getComputedStyle(el, який);
+      if ((c.backdropFilter || c.webkitBackdropFilter || 'none') !== 'none') n++;
+    }
   }
   return n;
 });
