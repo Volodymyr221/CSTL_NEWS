@@ -9,33 +9,35 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-25 01:00 UTC
+**Зріз на:** 2026-09-28 14:54 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/feed-pagination` |
-| останній коміт людини | `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination |
+| гілка | `claude/project-thread-fafoks` |
+| останній коміт людини | `3780982` 28.09 14:54 — docs: бриф креативів запуску + журнал 25-28.09 + пульс |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260924-2128` |
-| останній PR у `main` | #1209 |
-| стендів на диску | 178 |
+| останній PR у `main` | #1210 |
+| стендів на диску | 179 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-09-25 | **НЕМАЄ** ⚠️ |
+| журнал за 2026-09-28 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/functions-deploy.yml`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-09-24.md`
-- `supabase/config.toml`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/docs/KREATYVY_ZAPUSKU.md`
+- `_session-log/vova-2026-09-25.md`
+- `supabase/functions/send-unanswered-push/index.ts`
+- `tests/qa-unanswered-circle.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `fca3f9d3` 25.09 01:00 — Merge remote-tracking branch 'origin/main' into claude/feed-pagination
-- `6a14a6d1` 25.09 00:59 — docs: пульс NOW.md наздоганяє git
-- `bfed74c8` 25.09 00:59 — ci(functions): Edge Functions їдуть у прод із репозиторію, а не руками
-- `1abd9f79` 24.09 21:35 — Міграція 0001 стає виконанною + список завдань Вові (#1209)
-- `6238a94e` 24.09 21:34 — docs: пульс NOW.md наздоганяє git
+- `3780982` 28.09 14:54 — docs: бриф креативів запуску + журнал 25-28.09 + пульс
+- `989f728` 25.09 18:20 — fix(push): тип 4 не мовчить на запуску — коло з трьох фактів замість одного
+- `9a88772` 25.09 12:06 — ai(editor): свята-чернетки 25.09 12:06 UTC
+- `d73a016` 25.09 01:00 — Edge Functions їдуть у прод із репозиторію, а не руками (#1210)
+- `1abd9f7` 24.09 21:35 — Міграція 0001 стає виконанною + список завдань Вові (#1209)
 
 <!-- AUTO:END -->
 
