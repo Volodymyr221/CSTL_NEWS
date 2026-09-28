@@ -2531,3 +2531,64 @@ button.hm-card:active,
 }
 .app-modal--fund .fmod-safe-ic { flex: 0 0 auto; display: inline-flex; margin-top: 1px; }
 .app-modal--fund .fmod-safe-ic svg { width: 13px; height: 13px; }
+
+/* ══ ЗНАЙОМСТВО НА ПОРОЖНІЙ ГРОМАДІ ═════════════════════════════
+   🔴 27.09 — єдине місце, де застосунок словами каже, що він таке. З’являється
+   лише коли громада ще нічого не написала (умова — `src/tabs/home-intro.js`).
+
+   🔑 ЦЕ НЕ ПОРОЖНІЙ СТАН, ТОМУ ВИГЛЯД ІНШИЙ. `.hm-empty` — тихий сірий текст
+   по центру: він повідомляє про відсутність і не просить уваги. Тут навпаки —
+   це єдиний змістовний елемент на екрані в день запуску, тож він має поверхню
+   картки, як усе, що в цьому застосунку можна читати й натискати.
+
+   ⚠️ Текст ліворуч, не по центру. Три рядки прози по центру читаються гірше:
+   око щоразу шукає початок рядка заново. По центру лишається лише те, що
+   коротке (`.hm-empty`). */
+/* 🔴 ОДИН КРОК ШКАЛИ ВГОРУ, І ТІЛЬКИ КОЛИ СМУГА КАПСУЛ ПРИХОВАНА.
+   Заміряно сторожем home-caps, який на цьому й почервонів (22px при порозі 24px).
+   Правило вище (.hm-caps[hidden] + .hm-sec) навмисно тисне перший блок до 8px,
+   щоб на місці відсутньої смуги не лишалось діри. Воно писалось під НОВИНИ, у
+   яких є власний кікер із відступом; у цієї картки кікера немає, вона починається
+   одразу — тому ті 8px ставлять її впритул до героя.
+   🔑 Не послаблюю сторожа і не ламаю правило про діру: беру наступний крок тієї
+   самої шкали (12px замість 8px) і лише для цієї однієї секції. */
+.hm-caps[hidden] + .hm-sec.hm-intro-sec { padding-top: var(--hm-s3); }
+.hm-intro {
+  background: var(--board-card);
+  border: 1px solid var(--board-line);
+  border-radius: var(--hm-r-card);
+  box-shadow: var(--hm-shadow);
+  padding: var(--hm-s5) var(--hm-s4);
+}
+/* Не капс і не `.hm-kicker`: це заголовок того, що людина зараз читає, а не
+   мітка секції — капс тут змагався б із назвами сусідніх секцій. */
+.hm-intro-title {
+  font: 700 18px/1.25 system-ui, -apple-system, sans-serif;
+  color: var(--ink); margin: 0 0 var(--hm-s2);
+}
+.hm-intro-text {
+  font: 400 14px/1.5 system-ui, -apple-system, sans-serif;
+  color: var(--ink-soft); margin: 0 0 var(--hm-s4);
+}
+/* Дії в рядок із переносом: на 390px три чіпи в один рядок не влазять, а
+   горизонтальний скрол сховав би третій. Перенос показує всі три одразу. */
+.hm-intro-acts { display: flex; flex-wrap: wrap; gap: var(--hm-s2); }
+/* 🔑 ГЕОМЕТРІЯ ВЗЯТА В `.bd-empty-reset` (style/board.css), а не підібрана тут
+   заново: той самий відступ 12/18, той самий радіус 12px, та сама рамка і той
+   самий бордовий напис. Власні числа тут завели б ДРУГУ шкалу дотику в
+   тому самому застосунку, а кнопка тут робить рівно те саме, що там — веде з
+   порожнього екрана в дію.
+   ⚠️ Фон — `--board-bg`, а не `--board-card`, бо сама картка вже `--board-card`:
+   біле на білому зробило б чіпи невидимими. */
+.hm-intro-act {
+  appearance: none; -webkit-appearance: none;
+  padding: 12px 18px;
+  border: 1px solid var(--board-line);
+  border-radius: 12px;
+  background: var(--board-bg);
+  color: var(--red);
+  font: 600 14px/1.5 system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm-intro-act:active { background: var(--board-press); }

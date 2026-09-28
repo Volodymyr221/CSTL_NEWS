@@ -679,3 +679,15 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   font-size: 13px; font-weight: 700; padding: 10px 16px; cursor: pointer;
 }
 .consent-accept:active { opacity: 0.85; }
+
+/* Вхід на публічну `privacy.html` із модалки політики (27.09). Тихий рядок під
+   документом: він не змагається зі змістом, але існує — до цього на сторінку не
+   посилалось НІЩО, крім `build.js`. */
+.legal-public {
+  margin: 24px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--board-line);
+  font: 400 13px/1.5 system-ui, -apple-system, sans-serif;
+  color: var(--ink-soft);
+}
+.legal-public a { color: var(--red); font-weight: 600; }

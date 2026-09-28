@@ -52,6 +52,30 @@ const SDK_ШЛЯХИ = [
  */
 export async function mockSupabase(page, tables = {}, opts = {}) {
   const user = opts.user || null;
+  // 🔴 27.09 — СИГНАЛ ВХОДУ: НА ВИМОГУ, А НЕ ЗАВЖДИ, І ЦЕ ЗАМІРЯНО.
+  //
+  // Заглушка onAuthStateChange НІКОЛИ не кликала зворотний виклик. У проді
+  // Кабінет дізнається про жителя саме з першого сигналу INITIAL_SESSION: у
+  // app.js порядок initAuth → заслінка → гейт → initAccountUI, тобто Кабінет
+  // підписується ПІСЛЯ того, як initAuth уже покликав emitAuthChange. Отже все,
+  // що висить на onAuthChange, було для стендів НЕДОСЯЖНИМ — і стенд, який туди
+  // цілив, зеленів би на БУДЬ-ЯКОМУ коді (так і сталось із profile-name-ask).
+  //
+  // 🛑 ЧОМУ НЕ ВВІМКНУТИ ВСІМ, хоч прод робить саме так. Спробував — заміряно:
+  // повний прогін дав 175/183. Шість стендів, яких я не чіпав, почервоніли
+  // (bus-stop-picker, home-caps, press-feedback, tap-targets, tap-targets-hig,
+  // qa-unread), і причина щоразу одна: на цю подію спрацьовує код Кабінету і
+  // ВІДКРИВАЄ модалку — .app-modal-backdrop накриває екран посеред заміру.
+  // Доведено зворотним заходом: заглушка з main + цей код = зелено; ця заглушка
+  // + код з main = так само червоно. Тобто це не моя правка, а сцена, якої
+  // стенди ніколи не бачили.
+  //
+  // ⚠️ НЕДОРОБЛЕНЕ, НЕ ПРИБИРАТИ ЦЕ ЗАСТЕРЕЖЕННЯ. Стандартна сцена лишається
+  // БІДНІШОЮ ЗА ПРОД: сигналу в ній немає. Це окрема робота — переміряти ті
+  // шість стендів на живому сигналі, — і робити її треба СВОЄЮ правкою, а не
+  // всередині чужої. Поки цього не зроблено, кожен НОВИЙ стенд, який цілить у
+  // onAuthChange, ставить authSignal: true сам.
+  const authSignal = opts.authSignal === true;
   // 1. Замість бібліотеки з CDN — крихітна заглушка з тим самим інтерфейсом.
   await Promise.all(SDK_ШЛЯХИ.map(шлях => page.route(шлях, r => r.fulfill({
     contentType: 'application/javascript',
@@ -63,6 +87,7 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       const T = window.__cstlTables;
       const U = ${JSON.stringify(user)};
       const SESSION = U ? { user: U } : null;
+      const AUTH_SIGNAL = ${authSignal ? 'true' : 'false'};
       // 🆕 07.08 (B-30): { назваТаблиці: мс } — відповідь приходить ПІЗНО.
       // Живий телефон майже ніколи не встигає віддати все до першого рендера, і
       // саме «пізня» відповідь відкриває гілки коду, яких миттєва заглушка не
@@ -279,7 +304,15 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
           auth: {
             getSession: async () => ({ data: { session: SESSION }, error: null }),
             getUser:    async () => ({ data: { user: U }, error: null }),
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+            // setTimeout(..., 0), а не синхронно: справжній SDK віддає цей сигнал
+            // АСИНХРОННО, і синхронна заглушка була б ДОБРІША за прод — тобто
+            // приховала б гонки, які у жителя будуть.
+            onAuthStateChange: (cb) => {
+              if (AUTH_SIGNAL && typeof cb === 'function') {
+                setTimeout(() => cb('INITIAL_SESSION', SESSION), 0);
+              }
+              return { data: { subscription: { unsubscribe() {} } } };
+            },
             signInWithOAuth: async () => ({ data: null, error: null }),
             signOut: async () => ({ error: null }),
           },
