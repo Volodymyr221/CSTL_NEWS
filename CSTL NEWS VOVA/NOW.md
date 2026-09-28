@@ -9,48 +9,32 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-27 23:32 UTC
+**Зріз на:** 2026-09-28 15:10 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `vova/porozhni-stany-ta-onbording` |
-| останній коміт людини | `8cc2a420` 27.09 23:32 — docs(пульс): зріз 27.09, CACHE_NAME, кількість стендів 180 → 183 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20260927-2257` |
-| останній PR у `main` | #1220 |
+| гілка | `claude/project-thread-94isd9` |
+| останній коміт людини | `e3768f9` 28.09 14:35 — test(a11y-prefers): міряти скло капсули і на ::before |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20260928-1515` |
+| останній PR у `main` | #1225 |
 | стендів на диску | 183 |
-| незакомічених файлів | 0 ✅ |
-| журнал за 2026-09-27 | **НЕМАЄ** ⚠️ |
+| незакомічених файлів | 1 ⚠️ |
+| журнал за 2026-09-28 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `bundle.js`
-- `src/core/account-ui.js`
-- `src/core/sidebar.js`
-- `src/tabs/board.js`
-- `src/tabs/community.js`
-- `src/tabs/home-intro.js`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `style.min.css`
 - `style/home.css`
-- `style/sidebar.css`
-- `sw.js`
-- `tests/_board-fixture.mjs`
-- `tests/board-empty-first.mjs`
-- `tests/home-caps.mjs`
-- `tests/home-intro.mjs`
-- `tests/legal-privacy.mjs`
-- `tests/profile-name-ask.mjs`
+- `tests/a11y-prefers.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `8cc2a420` 27.09 23:32 — docs(пульс): зріз 27.09, CACHE_NAME, кількість стендів 180 → 183
-- `3857e1ee` 27.09 22:25 — fix(стенди): сигнал входу на вимогу, ритм Громади переміряно до сусіда
-- `10dd5361` 27.09 20:36 — feat(онбординг): порожні екрани, знайомство, імʼя профілю, публічна політика
-- `d971ba4f` 27.09 12:21 — ai(editor): свята-чернетки 27.09 12:21 UTC
-- `e3781bc8` 26.09 20:00 — fix(home): скасований рейс більше не перебиває відстежуваний у капсулі (#1220)
+- `e3768f9` 28.09 14:35 — test(a11y-prefers): міряти скло капсули і на ::before
+- `b51ac07` 28.09 14:18 — fix(home): прибрано прямокутний фон за капсулою в слайдері
+- `3829615` 28.09 00:07 — Перший екран першого жителя: порожні стани, знайомство, імʼя профілю, публічна політика (#1225)
+- `d971ba4` 27.09 12:21 — ai(editor): свята-чернетки 27.09 12:21 UTC
 
 <!-- AUTO:END -->
 
