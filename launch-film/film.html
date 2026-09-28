@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>CSTL LIFE — ролик запуску</title>
+<!--
+  🔴 ЧОМУ СТОРІНКА, А НЕ ВІДЕОРЕДАКТОР.
+  Кожен кадр ролика малює браузер, а не монтажка. Причина одна: екрани застосунку
+  тут СПРАВЖНІ (`shots/*.png`, знято `shoot.mjs` із живого коду), і найдешевший
+  спосіб не зіпсувати їх ресемплом — покласти в ту саму сцену, де вони й знімались.
+
+  🔑 УСЕ КЕРУЄТЬСЯ ОДНІЄЮ ФУНКЦІЄЮ `seek(t)`. Жодної CSS-анімації, жодного
+  requestAnimationFrame: положення КОЖНОГО елемента — чиста функція від часу.
+  Рендер викликає seek(кадр/30) і знімає. Тому:
+    • кадри відтворювані байт-у-байт, повтор рендера дає те саме відео;
+    • можна зняти будь-який кадр окремо, не програючи 30 секунд;
+    • нема гонитви «встиг чи не встиг доанімуватись» — стан завжди точний.
+  ⚠️ Саме на цьому попередній підхід (CSS-анімації + скріншоти) і ламається:
+  скріншот ловить елемент посеред переходу, і в ролику зʼявляється смикання.
+-->
+<style>
+  /* 🔴 ДВА НАБОРИ НА КОЖНУ ВАГУ, З ЯВНИМ `unicode-range`. Кирилиця й латиниця
+     лежать у Inter окремими файлами (по 8 КБ замість 100+). Без `unicode-range`
+     браузер бере ОСТАННІЙ оголошений набір цілком — і «CSTL LIFE» та
+     «castlelife.org» лишились би без гліфів, підставившись системним шрифтом
+     посеред кадру. Спіймано б це аж на готовому відео. */
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400;
+    src: url('fonts/inter-lat-400.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0000-00FF, U+0131, U+2000-206F, U+2070-209F, U+20A0-20BF, U+2122, U+2190-21BB; }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600;
+    src: url('fonts/inter-lat-600.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0000-00FF, U+0131, U+2000-206F, U+2070-209F, U+20A0-20BF, U+2122, U+2190-21BB; }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 700;
+    src: url('fonts/inter-lat-700.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0000-00FF, U+0131, U+2000-206F, U+2070-209F, U+20A0-20BF, U+2122, U+2190-21BB; }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400;
+    src: url('fonts/inter-400.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600;
+    src: url('fonts/inter-600.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 700;
+    src: url('fonts/inter-700.woff2') format('woff2'); font-display: block;
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+  :root {
+    --dark: #171719;
+    --light: #F7F6F3;
+    --white: #FFFFFF;
+    --accent: #C41E3A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--dark); }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden;
+           background: var(--dark); }
+
+  /* 🔑 Дуже слабке бордове світло під телефоном. Рівний чорний на 1080×1920
+     виглядає не «мінімалістично», а недоробленим, і при стисканні в H.264
+     розпадається смугами. Це коло дає глибину і заразом приносить у кадр
+     фірмовий колір там, де інтерфейсу ще не видно. Прозорість — соті частки:
+     його не можна помітити, можна лише відчути, що фон не мертвий. */
+  #halo { position: absolute; left: 50%; top: 50%; width: 1500px; height: 1500px;
+          margin-left: -750px; margin-top: -750px; pointer-events: none;
+          background: radial-gradient(circle,
+            rgba(196,30,58,.16) 0%, rgba(196,30,58,.07) 32%,
+            rgba(196,30,58,.02) 52%, rgba(196,30,58,0) 70%);
+          will-change: opacity, transform; }
+
+  .layer { position: absolute; inset: 0; will-change: opacity, transform; }
+
+  /* Кадри Олики. Обрізка по центру — фото ширші за 9:16. */
+  .plate { position: absolute; inset: 0; background-size: cover;
+           background-position: center; will-change: transform, opacity, filter; }
+
+  /* Затемнення під текст. Без нього білий заголовок на світлому небі зникає. */
+  .scrim { position: absolute; inset: 0;
+           background: linear-gradient(180deg,
+             rgba(23,23,25,.86) 0%, rgba(23,23,25,.34) 34%,
+             rgba(23,23,25,.40) 62%, rgba(23,23,25,.92) 100%); }
+
+  /* ── Типографіка ─────────────────────────────────────────────────────────
+     Заголовки навмисно ВЕЛИКІ й рідкі: у вертикальному кадрі, який дивляться
+     з долоні, дрібний текст не читається взагалі. Трекінг відʼємний — так
+     великий кегль Inter перестає розсипатись на окремі літери. */
+  .h1 { position: absolute; left: 96px; right: 96px;
+        font-size: 104px; line-height: 1.02; font-weight: 700;
+        letter-spacing: -0.035em; color: var(--white);
+        will-change: opacity, transform, filter; }
+  .h1.sm { font-size: 86px; }
+  .h1.dark { color: var(--dark); }
+  .kicker { position: absolute; left: 96px; font-size: 34px; font-weight: 600;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            color: rgba(255,255,255,.62); will-change: opacity, transform; }
+
+  /* Тонка вертикальна лінія першого кадру. */
+  #line { position: absolute; left: 540px; width: 3px; background: var(--white);
+          will-change: height, opacity, transform; }
+
+  /* ── Телефон ─────────────────────────────────────────────────────────────
+     Корпус — не картинка, а верстка: так він лишається чітким на будь-якому
+     масштабі, і екран усередину лягає піксель-у-піксель без другого ресемплу.
+     Знімки 1170×2532 (iPhone ×3) показуються як 390×844 ×1.36 — тобто НІКОЛИ
+     не розтягуються вище за власну щільність. */
+  #phoneWrap { position: absolute; left: 50%; top: 50%;
+               will-change: transform, opacity, filter; transform-origin: 50% 50%; }
+  #phone { position: relative; width: 530px; height: 1147px;
+           margin-left: -265px; margin-top: -573px;
+           border-radius: 74px; background: #0b0b0c;
+           padding: 11px;
+           box-shadow: 0 2px 0 rgba(255,255,255,.14) inset,
+                       0 0 0 2px #2a2a2d,
+                       0 60px 120px rgba(0,0,0,.62),
+                       0 18px 44px rgba(0,0,0,.44); }
+  #screen { position: relative; width: 508px; height: 1125px; border-radius: 63px;
+            overflow: hidden; background: #F7F6F3; }
+  #screen img { position: absolute; left: 0; top: 0; width: 508px; height: 1125px;
+                object-fit: cover; object-position: top center;
+                will-change: opacity; }
+  /* Динамічний острівець — дрібниця, без якої корпус читається як рамка з 2016. */
+  #island { position: absolute; left: 50%; top: 13px; width: 116px; height: 34px;
+            margin-left: -58px; border-radius: 17px; background: #0b0b0c; z-index: 5; }
+  /* Відблиск на склі. Рухається разом із «нахилом» — саме він робить корпус
+     предметом, а не прямокутником. */
+  #glare { position: absolute; inset: 0; border-radius: 63px; z-index: 4;
+           background: linear-gradient(118deg,
+             rgba(255,255,255,0) 30%, rgba(255,255,255,.10) 44%,
+             rgba(255,255,255,.015) 52%, rgba(255,255,255,0) 66%);
+           will-change: opacity, transform; }
+
+  /* ── Капсули ─────────────────────────────────────────────────────────────
+     Той самий силует, що у віджета автобуса в самому застосунку. */
+  .cap { position: absolute; display: flex; align-items: center; gap: 18px;
+         padding: 22px 34px; border-radius: 999px;
+         background: rgba(255,255,255,.085);
+         border: 1px solid rgba(255,255,255,.17);
+         backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+         color: var(--white); font-size: 32px; font-weight: 600;
+         letter-spacing: -0.012em; white-space: nowrap;
+         will-change: opacity, transform, filter; }
+  .cap b { font-weight: 700; }
+  .cap .dot { width: 13px; height: 13px; border-radius: 50%; background: #35c26a;
+              box-shadow: 0 0 16px rgba(53,194,106,.8); }
+  .cap.warm { background: rgba(196,30,58,.16); border-color: rgba(196,30,58,.42); }
+
+  /* ── Фінал ───────────────────────────────────────────────────────────────*/
+  #mark { position: absolute; left: 50%; width: 244px; margin-left: -122px;
+          will-change: opacity, transform, filter; }
+  #mark svg { width: 100%; height: auto; display: block; }
+  #wordmark { position: absolute; left: 0; right: 0; text-align: center;
+              font-size: 92px; font-weight: 700; letter-spacing: -0.03em;
+              color: var(--white); will-change: opacity, transform, filter; }
+  #wordmark span { color: var(--accent); }
+  #subline { position: absolute; left: 0; right: 0; text-align: center;
+             font-size: 40px; font-weight: 400; letter-spacing: -0.005em;
+             color: rgba(255,255,255,.66); will-change: opacity, transform; }
+  #qr { position: absolute; left: 50%; width: 236px; margin-left: -118px;
+        border-radius: 26px; overflow: hidden; background: #fff; padding: 16px;
+        will-change: opacity, transform; }
+  #qr img { width: 100%; height: auto; display: block; }
+  #cta { position: absolute; left: 0; right: 0; text-align: center;
+         font-size: 34px; font-weight: 600; letter-spacing: 0.02em;
+         color: rgba(255,255,255,.9); will-change: opacity, transform; }
+  #domain { position: absolute; left: 0; right: 0; text-align: center;
+            font-size: 28px; font-weight: 500; letter-spacing: 0.16em;
+            text-transform: uppercase; color: rgba(255,255,255,.42);
+            will-change: opacity; }
+
+  /* Зерно. Один напівпрозорий шар — рівно стільки, щоб великі заливки
+     перестали «бандитись» смугами при стисканні в H.264. */
+  #grain { position: absolute; inset: 0; pointer-events: none; opacity: .028;
+           mix-blend-mode: overlay;
+           background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); }
+
+  /* Чорні поля переходу — «hard cut» робиться саме ними. */
+  #flash { position: absolute; inset: 0; background: var(--dark); opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <!-- ШАРИ ФОНУ -->
+  <div id="halo"></div>
+  <div class="layer" id="bgDay"><div class="plate" id="plateDay"></div></div>
+  <div class="layer" id="bgEve"><div class="plate" id="plateEve"></div></div>
+  <div class="layer" id="scrimL"><div class="scrim"></div></div>
+
+  <!-- ЛІНІЯ + ПЕРШИЙ ЗАГОЛОВОК -->
+  <div id="line"></div>
+
+  <!-- ТЕЛЕФОН -->
+  <div id="phoneWrap">
+    <div id="phone">
+      <div id="screen">
+        <div id="island"></div>
+        <img id="s1" src="shots/01-громада.png" alt="">
+        <img id="s2" src="shots/03-стрічка.png" alt="">
+        <img id="s3" src="shots/05-дошка.png" alt="">
+        <img id="s4" src="shots/04-питання.png" alt="">
+        <img id="s5" src="shots/06-автобуси.png" alt="">
+        <div id="glare"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЗАГОЛОВКИ. Кожен — свій вузол; seek() керує кожним окремо. -->
+  <div class="h1" id="t1">Що відбувається<br>поруч із тобою?</div>
+  <div class="h1" id="t2a">Новини.</div>
+  <div class="h1" id="t2b">Події.</div>
+  <div class="h1" id="t2c">Люди.</div>
+  <div class="h1 sm" id="t3">Тепер усе це<br>у твоєму смартфоні.</div>
+  <div class="h1" id="t4a">Все важливе.</div>
+  <div class="h1" id="t4b">В одному місці.</div>
+  <div class="h1" id="t5">Будь у курсі.</div>
+  <div class="h1" id="t6a">Потрібне?</div>
+  <div class="h1" id="t6b">Знайдеш поруч.</div>
+  <div class="h1" id="t7">Громада —<br>це люди.</div>
+  <div class="h1" id="t9a">Твоє місто.</div>
+  <div class="h1" id="t9b">У твоєму<br>смартфоні.</div>
+
+  <!-- КАПСУЛИ -->
+  <div class="cap" id="c1"><span class="dot"></span>Автобус через&nbsp;<b>12 хв</b></div>
+  <div class="cap" id="c2">+18°</div>
+  <div class="cap warm" id="c3">Електропостачання</div>
+  <div class="cap" id="c4">Олицька громада</div>
+
+  <!-- ФІНАЛ -->
+  <div id="mark"></div>
+  <div id="wordmark">CSTL <span>LIFE</span></div>
+  <div id="subline">Твоя громада у смартфоні.</div>
+  <div id="qr"><img src="qr.png" alt=""></div>
+  <div id="cta">Спробуй CSTL LIFE</div>
+  <div id="domain">castlelife.org</div>
+
+  <div id="grain"></div>
+  <div id="flash"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ЧАСОВА ШКАЛА
+// ═══════════════════════════════════════════════════════════════════════════
+
+// 🔑 ПОМʼЯКШЕННЯ. Одне на весь ролик і навмисно НЕ пружинне: замовлення прямо
+// забороняє «springy cartoon motion». Це стандартна крива Apple (0.32, 0.72,
+// 0, 1) — різкий старт, довге плавне гальмування. Саме вона дає відчуття, що
+// предмет має вагу, а не що його смикнули.
+const bez = (x1, y1, x2, y2) => {
+  // Розвʼязуємо x(t)=p методом Ньютона — 8 кроків вистачає з головою.
+  const cx = 3*x1, bx = 3*(x2-x1)-cx, ax = 1-cx-bx;
+  const cy = 3*y1, by = 3*(y2-y1)-cy, ay = 1-cy-by;
+  const fx = t => ((ax*t+bx)*t+cx)*t;
+  const dfx = t => (3*ax*t+2*bx)*t+cx;
+  return p => {
+    if (p <= 0) return 0; if (p >= 1) return 1;
+    let t = p;
+    for (let i = 0; i < 8; i++) {
+      const e = fx(t) - p;
+      if (Math.abs(e) < 1e-6) break;
+      const d = dfx(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= e / d;
+    }
+    return ((ay*t+by)*t+cy)*t;
+  };
+};
+const EASE     = bez(0.32, 0.72, 0, 1);    // основна: поява, рух
+const EASE_IO  = bez(0.65, 0, 0.35, 1);    // симетрична: зміна плану
+const LINEAR   = p => p;
+
+// Нормована частка часу на відрізку [a,b], із помʼякшенням.
+const P = (t, a, b, e) => {
+  if (b <= a) return t >= b ? 1 : 0;
+  const p = Math.min(1, Math.max(0, (t - a) / (b - a)));
+  return (e || EASE)(p);
+};
+const mix = (a, b, p) => a + (b - a) * p;
+
+const $ = id => document.getElementById(id);
+
+// ── Поява тексту: opacity + translateY + blur ──────────────────────────────
+// 🔑 Розмиття (blur) обовʼязкове саме в парі зі зсувом. Без нього текст просто
+// «зʼїжджає»; з ним він наче виринає з фокусу — і це єдиний прийом у переліку
+// дозволених, який дає глибину без жодної додаткової графіки.
+function reveal(el, t, from, to, opts) {
+  const o = opts || {};
+  const dy = o.dy === undefined ? 46 : o.dy;
+  const blur = o.blur === undefined ? 16 : o.blur;
+  const hold = o.hold === undefined ? 0.55 : o.hold;   // скільки триває поява
+  const out = o.out;                                    // коли починає зникати
+  const outDur = o.outDur === undefined ? 0.4 : o.outDur;
+
+  const pIn = P(t, from, from + hold, EASE);
+  let a = pIn, y = mix(dy, 0, pIn), b = mix(blur, 0, pIn);
+  let s = o.scale ? mix(o.scale, 1, pIn) : 1;
+
+  if (out !== undefined && t >= out) {
+    const pOut = P(t, out, out + outDur, EASE_IO);
+    a = 1 - pOut;
+    y = mix(0, o.outDy === undefined ? -26 : o.outDy, pOut);
+    b = mix(0, o.outBlur === undefined ? 12 : o.outBlur, pOut);
+    if (o.outScale) s = mix(1, o.outScale, pOut);
+  }
+  if (t < from) { a = 0; }
+  if (to !== undefined && t > to) { a = 0; }
+
+  el.style.opacity = a.toFixed(4);
+  el.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)` + (s !== 1 ? ` scale(${s.toFixed(4)})` : '');
+  el.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : 'none';
+}
+
+// Сховати вузол намертво (щоб не лишався на попередньому кадрі).
+const hide = el => { el.style.opacity = '0'; };
+
+// ── Фон: повільний наїзд ──────────────────────────────────────────────────
+// Наїзд лінійний і дуже малий (1.00 → 1.07 за кілька секунд). Будь-що швидше
+// в кадрі 1080×1920 читається як «зум на телефоні», а не як робота оператора.
+function plate(el, t, from, to, z0, z1, opts) {
+  const o = opts || {};
+  const p = P(t, from, to, LINEAR);
+  const z = mix(z0, z1, p);
+  const fade = o.fade === undefined ? 0.5 : o.fade;
+  let a = P(t, from, from + fade, EASE);
+  if (o.out !== undefined) a *= 1 - P(t, o.out, o.out + (o.outDur || 0.5), EASE_IO);
+  if (t < from - 0.001) a = 0;
+  el.parentElement.style.opacity = a.toFixed(4);
+  const dx = o.panX ? mix(0, o.panX, p) : 0;
+  const dy = o.panY ? mix(0, o.panY, p) : 0;
+  el.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) scale(${z.toFixed(4)})`;
+  el.style.filter = o.blur ? `blur(${mix(o.blur, 0, Math.min(1, p * 3)).toFixed(2)}px)` : 'none';
+}
+
+const SCREENS = ['s1', 's2', 's3', 's4', 's5'];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// seek(t) — ЄДИНЕ ДЖЕРЕЛО ПРАВДИ ПРО КАДР
+// ═══════════════════════════════════════════════════════════════════════════
+window.seek = function (t) {
+  const S = id => $(id);
+
+  // ── усе за замовчуванням сховане ───────────────────────────────────────
+  ['t1','t2a','t2b','t2c','t3','t4a','t4b','t5','t6a','t6b','t7','t9a','t9b',
+   'c1','c2','c3','c4','mark','wordmark','subline','qr','cta','domain'].forEach(id => hide(S(id)));
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:00–00:03 · ЧОРНЕ. ЛІНІЯ. ПИТАННЯ.
+  // ────────────────────────────────────────────────────────────────────────
+  // Лінія росте від центру в обидва боки — це «розкриття», а не «падіння».
+  {
+    const p = P(t, 0.25, 1.35, EASE);
+    const h = mix(0, 300, p);
+    const l = S('line');
+    l.style.height = h.toFixed(1) + 'px';
+    l.style.top = (760 - h / 2).toFixed(1) + 'px';
+    // Гасне рівно тоді, коли зʼявляється текст: дві події на одній секунді
+    // читаються як одна, і кадр не встигає стати «списком анімацій».
+    const fade = 1 - P(t, 1.55, 2.05, EASE_IO);
+    l.style.opacity = (t < 0.25 ? 0 : (p * fade)).toFixed(4);
+    l.style.transform = `scaleX(${mix(0.4, 1, p).toFixed(3)})`;
+  }
+  if (t < 3.05) {
+    S('t1').style.top = '860px';
+    reveal(S('t1'), t, 1.25, undefined, { hold: 0.85, dy: 52, blur: 20, out: 2.72, outDur: 0.33, outBlur: 18 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:03–00:06 · ОЛИКА. КІНЕТИЧНИЙ ТЕКСТ.
+  // ────────────────────────────────────────────────────────────────────────
+  // Жорсткий стик на 3.00: чорне змінюється кадром без переходу. Це і є
+  // «hard cut» із переліку дозволених — і найсильніший момент у перших
+  // десяти секундах, бо після повної темряви око отримує все одразу.
+  plate($('plateDay'), t, 3.0, 9.4, 1.0, 1.09, { fade: 0.01, out: 8.85, outDur: 0.55, panY: -26 });
+  $('scrimL').style.opacity = (t >= 3.0 && t < 9.4 ? String(Math.min(1, P(t, 3.0, 3.2, EASE))) : '0');
+
+  if (t >= 3.0 && t < 6.15) {
+    // Три слова одне за одним, на одному місці. Кожне виштовхує попереднє —
+    // «match cut» на рівні типографіки: позиція не змінюється, змінюється слово.
+    S('t2a').style.top = '1180px'; S('t2b').style.top = '1180px'; S('t2c').style.top = '1180px';
+    reveal(S('t2a'), t, 3.32, undefined, { hold: 0.42, dy: 40, blur: 14, out: 4.12, outDur: 0.26 });
+    reveal(S('t2b'), t, 4.30, undefined, { hold: 0.42, dy: 40, blur: 14, out: 5.06, outDur: 0.26 });
+    reveal(S('t2c'), t, 5.24, undefined, { hold: 0.42, dy: 40, blur: 14, out: 5.92, outDur: 0.26 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ТЕЛЕФОН. Живе з 06:00 до 27:00 і НІКОЛИ не зникає між сценами.
+  // ────────────────────────────────────────────────────────────────────────
+  // 🔑 Це головне рішення всього ролика. Сцени змінюються навколо телефона,
+  // а він лишається на місці — тому перехід між вкладками читається як робота
+  // ОДНОГО додатка, а не як нарізка шести різних картинок. Замовлення називає
+  // це «seamless UI morph transitions» і «magnetic UI positioning».
+  {
+    const w = $('phoneWrap');
+    let a = 0, scale = 1, x = 0, y = 0, rot = 0, blur = 0;
+
+    if (t >= 5.86 && t < 27.0) {
+      // Поява: виринає з розмиття, знизу, трохи дрібнішим.
+      const pIn = P(t, 5.86, 6.92, EASE);
+      a = pIn;
+      scale = mix(0.86, 1, pIn);
+      y = mix(120, 0, pIn);
+      blur = mix(26, 0, pIn);
+
+      // Дрейф по сценах. Зміщення мікроскопічні (десятки пікселів) — рівно
+      // стільки, щоб кадр не був мертвим, і не більше, щоб не відволікати.
+      const drift =
+        t < 9.0  ? 0 :
+        t < 12.0 ? mix(0, -16, P(t, 9.0, 12.0, EASE_IO)) :
+        t < 15.0 ? mix(-16, 10, P(t, 12.0, 15.0, EASE_IO)) :
+        t < 18.0 ? mix(10, -8, P(t, 15.0, 18.0, EASE_IO)) :
+        t < 21.0 ? mix(-8, 6, P(t, 18.0, 21.0, EASE_IO)) :
+                   mix(6, 0, P(t, 21.0, 24.4, EASE_IO));
+      y += drift;
+
+      // 🔴 21.4–24.0 — ТЕЛЕФОН ВІДХОДИТЬ ДАЛЕКО, до 0.70. Перша редакція мала
+      // тут 0.885, і капсули на першому ж прогоні ЛЯГЛИ ПОВЕРХ корпусу:
+      // «Автобус через 12 хв» перерізав верх телефона, «Олицька громада» —
+      // низ. Читалось як помилка верстки, а не як задум.
+      // 🔑 При 0.70 корпус займає по вертикалі 452…1361 px, і над ним та під
+      // ним лишається по ~440 px чистого поля — рівно туди й стають капсули,
+      // двома парами. Ширина капсул (до 460 px) у бік від телефона не влазить
+      // ЖОДНОЮ мірою: по 305 px з кожного боку. Тому вони саме зверху й знизу.
+      if (t >= 21.4) scale *= mix(1, 0.70, P(t, 21.4, 22.3, EASE));
+      // 24.0–27.0 — герой: телефон входить у середовище, злегка більшає.
+      if (t >= 24.0) scale *= mix(0.70, 1.015, P(t, 24.0, 25.4, EASE));
+
+      // Ледь помітний «нахил» — 0.4°. Менше не видно, більше вже читається
+      // як 3D-трюк, якого замовлення не хоче.
+      rot = Math.sin(P(t, 6.0, 27.0, LINEAR) * Math.PI * 2) * 0.4;
+
+      // Догорання на фінальному стику.
+      if (t >= 26.45) { const p = P(t, 26.45, 27.0, EASE_IO); a *= 1 - p; scale *= mix(1, 1.04, p); blur = mix(0, 14, p); }
+    }
+    w.style.opacity = a.toFixed(4);
+    w.style.transform = `translate3d(${x}px, ${y.toFixed(2)}px, 0) scale(${scale.toFixed(4)}) rotate(${rot.toFixed(3)}deg)`;
+    w.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+
+    // Відблиск повзе по склу — привʼязаний до нахилу, а не до власного таймера.
+    const g = $('glare');
+    g.style.opacity = (a * 0.9).toFixed(4);
+    g.style.transform = `translate3d(${(rot * 120).toFixed(1)}px, 0, 0)`;
+  }
+
+  // Який екран показано. Перехід між екранами — чиста перехресна проявка
+  // 0.34 с: це і є «UI morph», бо корпус не рухається, змінюється лише вміст.
+  {
+    const marks = [
+      { id: 's1', from: 5.86, to: 12.2 },   // Громада
+      { id: 's2', from: 12.2, to: 15.2 },   // Стрічка
+      { id: 's3', from: 15.2, to: 18.2 },   // Дошка
+      { id: 's4', from: 18.2, to: 21.2 },   // Питання
+      { id: 's5', from: 21.2, to: 27.0 },   // Автобуси
+    ];
+    const FADE = 0.34;
+    SCREENS.forEach((id, i) => {
+      const m = marks[i];
+      let a = 0;
+      if (t >= m.from - FADE) {
+        a = P(t, m.from - FADE, m.from, EASE_IO);
+        if (i < marks.length - 1 && t >= m.to - FADE) a = 1 - P(t, m.to - FADE, m.to, EASE_IO);
+      }
+      $(id).style.opacity = Math.max(0, Math.min(1, a)).toFixed(4);
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:06–00:09 · «Тепер усе це у твоєму смартфоні.»
+  // ────────────────────────────────────────────────────────────────────────
+  if (t >= 6.0 && t < 9.5) {
+    S('t3').style.top = '220px';
+    reveal(S('t3'), t, 6.55, undefined, { hold: 0.7, dy: 44, blur: 18, out: 8.6, outDur: 0.4 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:09–00:12 · «Все важливе.» → «В одному місці.»
+  // ────────────────────────────────────────────────────────────────────────
+  if (t >= 8.9 && t < 12.4) {
+    S('t4a').style.top = '250px'; S('t4b').style.top = '250px';
+    reveal(S('t4a'), t, 9.32, undefined, { hold: 0.55, dy: 40, blur: 15, out: 10.55, outDur: 0.3 });
+    reveal(S('t4b'), t, 10.72, undefined, { hold: 0.55, dy: 40, blur: 15, out: 11.86, outDur: 0.3 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:12–00:15 · «Будь у курсі.»
+  // ────────────────────────────────────────────────────────────────────────
+  if (t >= 11.9 && t < 15.4) {
+    S('t5').style.top = '250px';
+    reveal(S('t5'), t, 12.5, undefined, { hold: 0.6, dy: 42, blur: 16, out: 14.6, outDur: 0.34 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:15–00:18 · «Потрібне?» → «Знайдеш поруч.»
+  // ────────────────────────────────────────────────────────────────────────
+  if (t >= 14.9 && t < 18.4) {
+    S('t6a').style.top = '250px'; S('t6b').style.top = '250px';
+    reveal(S('t6a'), t, 15.42, undefined, { hold: 0.5, dy: 40, blur: 15, out: 16.52, outDur: 0.28 });
+    reveal(S('t6b'), t, 16.74, undefined, { hold: 0.55, dy: 40, blur: 15, out: 17.86, outDur: 0.3 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:18–00:21 · «Громада — це люди.»
+  // ────────────────────────────────────────────────────────────────────────
+  if (t >= 17.9 && t < 21.4) {
+    S('t7').style.top = '196px';
+    reveal(S('t7'), t, 18.46, undefined, { hold: 0.62, dy: 44, blur: 16, out: 20.6, outDur: 0.34 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:21–00:24 · КАПСУЛИ НАВКОЛО ТЕЛЕФОНА
+  // ────────────────────────────────────────────────────────────────────────
+  // Чотири капсули заходять по черзі, кожна зі свого боку, з масштабом і
+  // розмиттям. Тримаються разом і йдуть однією хвилею — інакше кінець сцени
+  // розсипається на чотири окремі зникання.
+  {
+    // Дві пари: над корпусом і під ним. Зсув по горизонталі різний, щоб пара
+    // не читалась як таблиця з двох рядків. Заходять зі свого боку кадру.
+    const caps = [
+      { id: 'c1', left: 104, top: 236, in: 21.30, dx: -70, dy: 12 },
+      { id: 'c2', left: 640, top: 350, in: 21.68, dx:  70, dy: 12 },
+      { id: 'c3', left: 130, top: 1452, in: 22.06, dx: -70, dy: -10 },
+      { id: 'c4', left: 566, top: 1566, in: 22.44, dx:  70, dy: -10 },
+    ];
+    const OUT = 23.62;
+    caps.forEach(c => {
+      const el = S(c.id);
+      if (t < c.in - 0.02 || t > 24.15) { hide(el); return; }
+      el.style.left = c.left + 'px';
+      el.style.top = c.top + 'px';
+      const pIn = P(t, c.in, c.in + 0.5, EASE);
+      let a = pIn, s = mix(0.88, 1, pIn), b = mix(14, 0, pIn);
+      let x = mix(c.dx, 0, pIn), y = mix(c.dy, 0, pIn);
+      if (t >= OUT) {
+        const pOut = P(t, OUT, OUT + 0.42, EASE_IO);
+        a = 1 - pOut; s = mix(1, 0.94, pOut); b = mix(0, 10, pOut);
+        y = mix(0, -14, pOut);
+      }
+      el.style.opacity = a.toFixed(4);
+      el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
+      el.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : 'none';
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:24–00:27 · ГЕРОЙ. ВЕЧІРНЯ ОЛИКА. «Твоє місто. У твоєму смартфоні.»
+  // ────────────────────────────────────────────────────────────────────────
+  // 🔑 Вечірній кадр — ТА САМА ТОЧКА ЗЙОМКИ, що й денний на 00:03, тільки
+  // вночі. Тобто фінал буквально повертає глядача туди, звідки почався ролик,
+  // і замикає його. Ці дві світлини лежать у репозиторії парою — гріх не
+  // скористатись.
+  plate($('plateEve'), t, 23.85, 27.1, 1.06, 1.0, { fade: 0.42, out: 26.62, outDur: 0.42, panY: 18 });
+  if (t >= 23.85 && t < 27.1) {
+    $('scrimL').style.opacity = String(Math.min(1, P(t, 23.85, 24.25, EASE)));
+  }
+  if (t >= 23.9 && t < 27.1) {
+    S('t9a').style.top = '236px';
+    S('t9b').style.top = '236px';
+    reveal(S('t9a'), t, 24.38, undefined, { hold: 0.6, dy: 44, blur: 16, out: 25.42, outDur: 0.3 });
+    reveal(S('t9b'), t, 25.62, undefined, { hold: 0.62, dy: 44, blur: 16, out: 26.56, outDur: 0.34 });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 00:27–00:30 · ЛОГОТИП. QR. ЗАКЛИК.
+  // ────────────────────────────────────────────────────────────────────────
+  // Перед логотипом — 0.24 с чистої темряви. Пауза перед знаком коштує
+  // дешевше за будь-яку анімацію і робить рівно те, чого від неї чекають.
+  if (t >= 27.0) {
+    S('mark').style.top = '560px';
+    reveal(S('mark'), t, 27.26, undefined, { hold: 0.78, dy: 30, blur: 18, scale: 0.88 });
+    S('wordmark').style.top = '892px';
+    reveal(S('wordmark'), t, 27.62, undefined, { hold: 0.7, dy: 34, blur: 14 });
+    S('subline').style.top = '1022px';
+    reveal(S('subline'), t, 27.96, undefined, { hold: 0.62, dy: 26, blur: 10 });
+    S('qr').style.top = '1232px';
+    reveal(S('qr'), t, 28.42, undefined, { hold: 0.6, dy: 28, blur: 12, scale: 0.9 });
+    S('cta').style.top = '1560px';
+    reveal(S('cta'), t, 28.76, undefined, { hold: 0.55, dy: 22, blur: 8 });
+    S('domain').style.top = '1638px';
+    reveal(S('domain'), t, 28.98, undefined, { hold: 0.55, dy: 18, blur: 6 });
+  }
+
+  // Німб живе рівно стільки, скільки телефон, і трохи дихає з ним разом.
+  {
+    const h = $('halo');
+    let a = 0, s2 = 1;
+    if (t >= 5.6 && t < 27.0) {
+      a = P(t, 5.6, 7.2, EASE) * (1 - P(t, 26.3, 27.0, EASE_IO));
+      // Ледь ширшає до 24-ї секунди — разом із наростанням музики.
+      s2 = mix(0.9, 1.12, P(t, 6.0, 24.0, LINEAR));
+      // На вечірньому кадрі ховаємо: там світло дає сама світлина.
+      if (t >= 23.85) a *= 1 - P(t, 23.85, 24.4, EASE);
+    }
+    h.style.opacity = a.toFixed(4);
+    h.style.transform = `scale(${s2.toFixed(4)})`;
+  }
+
+  // Фон фіналу — рівний темний.
+  if (t >= 26.95) { $('bgDay').style.opacity = '0'; $('bgEve').style.opacity = '0';
+                    $('scrimL').style.opacity = '0'; $('halo').style.opacity = '0'; }
+};
+
+// ── Завантаження ───────────────────────────────────────────────────────────
+$('plateDay').style.backgroundImage = "url('photos/olyka.day-2.jpg')";
+$('plateEve').style.backgroundImage = "url('photos/olyka.evening-2.jpg')";
+
+fetch('znak-zamku.svg').then(r => r.text()).then(svg => {
+  // Знак у фіналі — білий на темному.
+  $('mark').innerHTML = svg.replace(/fill="#[0-9a-fA-F]{3,8}"/g, m =>
+    m.includes('#000') ? m : 'fill="#FFFFFF"');
+  document.documentElement.dataset.markReady = '1';
+});
+
+window.seek(0);
+document.documentElement.dataset.ready = '1';
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<svg viewBox="0 0 512 427" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+<mask id="cm" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="427">
+  <rect width="512" height="427" fill="#000"/>
+  <polygon points="96,16 154,130 38,130" fill="#fff"/>
+  <polygon points="257,24 340,172 174,172" fill="#fff"/>
+  <polygon points="414,12 480,130 348,130" fill="#fff"/>
+  <rect x="50"  y="142" width="88"  height="216" fill="#fff"/>
+  <rect x="368" y="136" width="92"  height="222" fill="#fff"/>
+  <rect x="173" y="190" width="162" height="168" fill="#fff"/>
+  <rect x="50"  y="270" width="410" height="88"  fill="#fff"/>
+  <rect x="6"   y="374" width="206" height="50" rx="5" fill="#fff"/>
+  <rect x="294" y="374" width="212" height="50" rx="5" fill="#fff"/>
+  <path d="M212 360 V314 A41 41 0 0 1 294 314 V360 Z" fill="#000"/>
+  <path d="M78 246 V199 a13 13 0 0 1 26 0 V246 Z"   fill="#000"/>
+  <path d="M400 242 V195 a13 13 0 0 1 26 0 V242 Z"  fill="#000"/>
+  <path d="M216 270 V234 a11 11 0 0 1 22 0 V270 Z"  fill="#000"/>
+  <path d="M266 270 V234 a11 11 0 0 1 22 0 V270 Z"  fill="#000"/>
+</mask>
+<rect width="512" height="427" fill="#722F37" mask="url(#cm)"/>
+</svg>
