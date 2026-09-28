@@ -1129,10 +1129,37 @@
      окремий предмет, лишаючись склом. */
   border: 1px solid rgba(255, 255, 255, .38);
   background: linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .15) 100%);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-          backdrop-filter: blur(16px) saturate(1.6);
   box-shadow: var(--elev-dark-3), inset 0 1px 0 rgba(255, 255, 255, .34);
   color: #fff; text-align: left;
+  /* 🔴 28.09 — ЧОМУ СКЛО ПЕРЕЇХАЛО НА `::before` (псевдоелемент — намальований
+     шар, якого немає в розмітці).
+     🗣️ Вова: «коли в капсулах дві капсули і слайд капсул, то по кутах чогось
+     фон» — за заокругленою пігулкою визирав ПРЯМОКУТНИК розмитого фону, рівно
+     по габаритах капсули. Видно було тільки в слайдері, на одиничній капсулі —
+     ніколи.
+     🔑 Причина: `backdrop-filter` (розмиття того, що ПІД елементом) у WebKit
+     (рушій Safari на iPhone) втрачає обрізку по `border-radius`, коли елемент
+     лежить у контейнері з прокруткою (`.hm-capsl-track` має `overflow-x: auto`).
+     Скролер піднімає вміст в окремий шар композитора (склеювача картинки), і
+     округлий клип шару не доїжджає — розмиття лишається прямокутним. Саме тому
+     артефакт зʼявлявся РАЗОМ зі слайдером: без нього прокрутки немає.
+     🛑 `will-change` тут не вихід — рядок 1313 цього файлу вже описує, чим це
+     закінчується в Safari (застиглий кадр разом із `backdrop-filter`).
+     🔑 Ліки: розмиття живе на `::before`, а округлу обрізку йому дає БАТЬКО
+     через `overflow: hidden` + `border-radius`. Обрізка контейнера переживає
+     підняття шару, тож прямокутнику нема звідки взятись.
+     ⚠️ `::before` малюється ПОВЕРХ власного тла кнопки, тому вміст (кружечок
+     іконки і текст) підняли над ним `position: relative; z-index: 1` — інакше
+     скло лягло б на букви. Градієнт тла лишається на кнопці: він рівний, і те,
+     що розмиття бачить його у своєму фоні, вигляду не змінює. */
+  position: relative;
+  overflow: hidden;
+}
+.hm-cap2::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  border-radius: inherit;
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+          backdrop-filter: blur(16px) saturate(1.6);
 }
 .hm-cap2:active {
   background: linear-gradient(180deg, rgba(255, 255, 255, .36) 0%, rgba(255, 255, 255, .24) 100%);
@@ -1147,12 +1174,13 @@
    кружечка, і на склі іконка читалась би дрібнішою за емодзі, яку замінює. */
 .hm-cap2-ic {
   flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  position: relative; z-index: 1;
   background: rgba(255, 255, 255, .26);
   display: grid; place-items: center; font-size: 16px; line-height: 1;
   color: #fff;
 }
 .hm-cap2-ic svg { width: 18px; height: 18px; }
-.hm-cap2-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-cap2-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; position: relative; z-index: 1; }
 /* 🔴 17.08 (пізній вечір) — МІТКА ТЕПЕР НЕСЕ КОНТЕКСТ, а не одне слово ролі.
    Було «ПОВІДОМЛЕННЯ», стало «ПОВІДОМЛЕННЯ · ПЛУГ МТЗ» — тобто рядок став
    змінної довжини, і його треба тримати В ОДНОМУ рядку.
