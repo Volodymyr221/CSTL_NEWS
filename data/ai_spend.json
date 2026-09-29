@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1790687670709,
+      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 538,
+      "cache_read": 0,
+      "cache_write": 1242,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0085,
+      "note": ""
+    },
+    {
       "ts": 1790605313957,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -775,24 +788,11 @@
       "found": 2,
       "cost_usd": 0.2985,
       "note": ""
-    },
-    {
-      "ts": 1788239612059,
-      "mission": "Громада №2",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10,
-      "output_tokens": 5071,
-      "cache_read": 97577,
-      "cache_write": 43576,
-      "web_searches": 6,
-      "found": 2,
-      "cost_usd": 0.3288,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 12.8633,
-    "runs": 186,
+    "cost_usd": 12.8718,
+    "runs": 187,
     "web_searches": 186
   },
   "months": {
@@ -807,13 +807,13 @@
       "web_searches": 46
     },
     "2026-09": {
-      "cost_usd": 4.395,
-      "runs": 61,
+      "cost_usd": 4.4035,
+      "runs": 62,
       "web_searches": 77,
-      "fair_usd": 3.8386
+      "fair_usd": 3.9367
     }
   },
-  "updated_ts": 1790605313957,
+  "updated_ts": 1790687670709,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
