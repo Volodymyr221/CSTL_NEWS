@@ -86,22 +86,26 @@
 
   <!-- Шапка сайту -->
   <header class="app-header">
-    <!-- Ліва група: бургер + лого впритул (рішення Роми 08.07). Погоду з шапки
-         прибрано (лишилась блоком на Громаді).
-         🔴 18.09 — ЛІЧИЛЬНИК ВЕРСІЇ ПЕРЕЇХАВ У БУРГЕР-МЕНЮ (замовлення Вови):
-         він стояв по центру шапки і ліз у КОЖЕН знімок екрана — а знімки
-         йдуть у презентацію й рекламу. Тепер він у `.sidebar-head`, під назвою. -->
-    <!-- Розклад шапки (рішення Вови 16.07): лого вліво; справа — закладка, бургер
-         у самий правий край. Іконка кабінету — біля привітання на Громаді. -->
+    <!-- 🔴 30.09 — РОЗКЛАД ШАПКИ ЯК В INSTAGRAM (замовлення Вови): бургер ЗЛІВА,
+         назва CSTL LIFE ПО ЦЕНТРУ, закладка СПРАВА.
+         Було (16.07): лого вліво; справа — закладка і бургер поруч. Через це
+         дві цілі дотику стояли поруч і билися за палець (арифметика зон —
+         `style/base.css`, `.header-right`); тепер вони на різних краях і
+         перетнутись не можуть.
+         🔴 18.09 — ЛІЧИЛЬНИК ВЕРСІЇ живе в бургер-меню (`.sidebar-head`), не тут:
+         він ліз у КОЖЕН знімок екрана, а знімки йдуть у презентацію й рекламу.
+         Іконка кабінету — біля привітання на Громаді. -->
     <div class="header-left">
+      <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Меню" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="header-center">
       <div class="header-logo">CSTL <span>LIFE</span></div>
     </div>
     <div class="header-right">
       <button class="saved-hub-btn" id="saved-hub-btn" type="button" aria-label="Збережені">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-      </button>
-      <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Меню" aria-expanded="false">
-        <span></span><span></span><span></span>
       </button>
     </div>
   </header>
