@@ -130,15 +130,30 @@ async function привид(затримка) {
 // ── 1. Небезпека справді існує (діагностика, не вирок) ──────────────────────
 await page.evaluate(() => document.getElementById('sidebar-toggle').click());
 await page.waitForTimeout(700);
+// 🔄 30.09 — ПРИЛАД ПЕРЕМІРЯНО ПІСЛЯ ПЕРЕЇЗДУ ШАПКИ (бургер поїхав у лівий кут,
+// закладка лишилась у правому — розклад як в Instagram, замовлення Вови).
+// Тут стояло «✕ накриває БУРГЕР — 86%». Після переїзду це просто неправда: 0%.
+// 🛑 Але небезпека НЕ зникла, а ПЕРЕЇХАЛА РАЗОМ ІЗ КНОПКАМИ — заміряно 98%
+// площі закладки «Збережені» під тим самим ✕ (`332,14 · 44×44` проти
+// `348,14 · 28×28`). Тобто привид тапу після закриття меню ✕ тепер влучає не в
+// бургер, а в закладку. Клас той самий, жертва інша.
+// 🔑 Тому прилад міряє УМОВУ, а не конкретну кнопку: чи лежить під хрестиком
+// ЖИВИЙ елемент шапки. Поки лежить — правило нижче має сенс.
 const перекриття = await page.evaluate(() => {
-  const b = document.getElementById('sidebar-toggle').getBoundingClientRect();
   const x = document.getElementById('sidebar-close').getBoundingClientRect();
-  const s = Math.max(0, Math.min(b.right, x.right) - Math.max(b.left, x.left))
-          * Math.max(0, Math.min(b.bottom, x.bottom) - Math.max(b.top, x.top));
-  return Math.round(s / (b.width * b.height) * 100);
+  const частка = sel => {
+    const e = document.querySelector(sel);
+    if (!e) return 0;
+    const b = e.getBoundingClientRect();
+    const s = Math.max(0, Math.min(b.right, x.right) - Math.max(b.left, x.left))
+            * Math.max(0, Math.min(b.bottom, x.bottom) - Math.max(b.top, x.top));
+    return Math.round(s / (b.width * b.height) * 100);
+  };
+  return { бургер: частка('#sidebar-toggle'), закладка: частка('.saved-hub-btn') };
 });
-ok('хрестик меню накриває бургер (тому привид тапу і небезпечний)',
-   перекриття > 50, `${перекриття}% площі бургера`);
+ok('хрестик меню накриває живу кнопку шапки (тому привид тапу і небезпечний)',
+   перекриття.бургер > 50 || перекриття.закладка > 50,
+   `бургер ${перекриття.бургер}% · закладка ${перекриття.закладка}%`);
 await закритиНачисто();
 
 // ── 2. 🔴 ПРИВИД ТАПУ НЕ ЗАКРИВАЄ МЕНЮ — обидва вікна ───────────────────────
