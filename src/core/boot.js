@@ -2,6 +2,7 @@
 
 import { logEvent, getAnonId, analyticsUid } from './supabase.js';
 import { currentUserId } from './auth.js';
+import { sourceTag } from './source-tag.js';
 
 // PWA manifest — статичний у index.html (<link rel="manifest" href="manifest.json">).
 // B-16 fix: прибрано динамічний Blob-manifest який дублювався і конфліктував
@@ -12,7 +13,16 @@ import { currentUserId } from './auth.js';
 // «можна встановити», ще не факт встановлення).
 function setupInstallTracking() {
   window.addEventListener('appinstalled', () => {
-    logEvent(currentUserId() || getAnonId(), 'pwa_install');
+    // 🔖 01.10 — МІТКА ДЖЕРЕЛА САМЕ ТУТ ВАЖИТЬ БІЛЬШЕ, НІЖ ДЕ-ІНДЕ.
+    // Питання кампанії — «яка точка дала ВСТАНОВЛЕННЯ», а не «яка дала
+    // відкриття»: наліпка, яку сто людей сфотографували і дві поставили
+    // застосунок, і наліпка з двадцятьма встановленнями — це різні рішення
+    // про те, куди клеїти наступну сотню.
+    // 🔑 Мітка приходить із памʼяті пристрою (`source-tag.js`), а не з адреси:
+    // на момент `appinstalled` у адресі її вже немає — ми самі її прибрали при
+    // заході, та й `start_url` у манифесті однаково `./` без запиту.
+    const src = sourceTag();
+    logEvent(currentUserId() || getAnonId(), 'pwa_install', src ? { meta: { src } } : {});
   });
 }
 
