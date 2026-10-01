@@ -9,40 +9,44 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-09-30 20:53 UTC
+**Зріз на:** 2026-10-01 18:29 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/project-thread-leea6e` |
-| останній коміт людини | `fa62084e` 30.09 20:21 — feat(sidebar): панель меню виїжджає зліва, слідом за бургером |
+| гілка | `claude/project-thread-69waix` |
+| останній коміт людини | `b067b6f` 01.10 18:23 — feat(push): стеля частоти для класу «громада» |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260930-2019` |
-| останній PR у `main` | не видно в останніх комітах |
-| стендів на диску | 183 |
-| незакомічених файлів | 1 ⚠️ |
-| журнал за 2026-09-30 | є ✅ |
+| останній PR у `main` | #1227 |
+| стендів на диску | 187 |
+| незакомічених файлів | 7 ⚠️ |
+| журнал за 2026-10-01 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-09-30.md`
 - `bundle.js`
-- `index.html`
-- `src/core/sidebar.js`
+- `scripts/supabase_post_reads.sql`
+- `scripts/supabase_push_quota.sql`
+- `src/app.js`
+- `src/core/boot.js`
+- `src/core/source-tag.js`
+- `src/core/supabase.js`
+- `src/tabs/feed.js`
 - `style.min.css`
-- `style/base.css`
-- `style/sidebar.css`
-- `sw.js`
-- `tests/sidebar-ghost-tap.mjs`
-- `tests/sidebar-overlay.mjs`
+- `style/feed.css`
+- `supabase/functions/send-page-push/index.ts`
+- `tests/_board-fixture.mjs`
+- `tests/post-reads.mjs`
+- `tests/push-quota.mjs`
+- `tests/source-tag.mjs`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `fa62084e` 30.09 20:21 — feat(sidebar): панель меню виїжджає зліва, слідом за бургером
-- `87c5a196` 30.09 20:05 — test(sidebar-ghost-tap): прилад міряє умову, а не конкретну кнопку
-- `d951b5c9` 30.09 19:59 — feat(header): шапка як в Instagram — бургер зліва, назва по центру, закладка справа
-- `d5227cb9` 30.09 12:55 — ai(editor): свята-чернетки 30.09 12:55 UTC
+- `b067b6f` 01.10 18:23 — feat(push): стеля частоти для класу «громада»
+- `4cdaca9` 01.10 18:18 — feat(стрічка): автор бачить, скільком людям дійшов його допис
+- `24175ac` 01.10 18:09 — feat(аналітика): позначка джерела — звідки прийшла людина
+- `e757df1` 01.10 13:46 — ai(editor): свята-чернетки 01.10 13:46 UTC
+- `8c213c3` 30.09 20:54 — Шапка і меню як в Instagram: бургер зліва, назва по центру, панель виїжджає зліва (#1227)
 
 <!-- AUTO:END -->
 

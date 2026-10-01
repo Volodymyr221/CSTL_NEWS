@@ -2191,12 +2191,17 @@ export async function markThreadSeenRemote(postId) {
 // далі шле сповіщення, які людина щойно вимкнула. Рівно клас B-33 («вимикач,
 // що підтверджує дію, якої не сталось»), тільки з іншого боку.
 // 🗓 `events` додано 04.09 разом із нагадуваннями про події спільнот.
-export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed', 'events'];
+// 🌅 `digest` додано 01.10 разом із ранковим зведенням (`send-digest-push`).
+// 🛑 Перелік мусить збігатися з КОЛОНКАМИ `notif_prefs` і з `NOTIF_KEYS` у
+// кабінеті. Розходження тут — найтихіша з можливих вад: тумблер клацає,
+// знімок на пристрої оновлюється, а в базу не доїжджає нічого, і сервер далі
+// шле те, що людина щойно вимкнула (рівно клас B-33).
+export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed', 'events', 'digest'];
 
 export async function fetchNotifPrefs(uid) {
   if (!supa || !uid) return null;
   const { data, error } = await supa
-    .from('notif_prefs').select('buses, board, questions, feed, events').eq('uid', uid).maybeSingle();
+    .from('notif_prefs').select(NOTIF_TOPICS.join(', ')).eq('uid', uid).maybeSingle();
   if (error) { console.warn('[supabase] fetchNotifPrefs:', error.message); return null; }
   return data || null;   // null = рядка ще немає (людина не міняла нічого)
 }
