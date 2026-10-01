@@ -334,6 +334,11 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             // документів: там треба довести, що кнопка «Видалити акаунт»
             // справді доходить до бази, а не лише малює модалку.
             (window.__cstlRpcNames = window.__cstlRpcNames || []).push(fn);
+            // 🆕 01.10 — не лише ІМЕНА, а й АРГУМЕНТИ. Стенду post-reads треба
+            // довести, що застосунок питає числа читань ЛИШЕ по своїх дописах:
+            // саме це звуження і стереже чуже число, а імені виклику для цього
+            // недосить.
+            (window.__cstlRpcCallsLog = window.__cstlRpcCallsLog || []).push({ fn: fn, args: args });
             const затримка = SLOW[fn] || 0;
             if (затримка) await new Promise(r => setTimeout(r, затримка));
             const all = window.__cstlProfiles || [];
@@ -377,6 +382,32 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
               if (row) row.seen_at = new Date(next).toISOString();
               else T.user_seen_threads.push({ uid, post_id: args.p_post_id, seen_at: new Date(next).toISOString() });
               return { data: new Date(next).toISOString(), error: null };
+            }
+            // 🆕 01.10 — «ПРОЧИТАЛИ N ЛЮДЕЙ». Дзеркало post_read_counts.
+            //
+            // 🛑 ЗВУЖЕННЯ ПРАВ ЕМУЛЮЄМО ЧЕСНО, і це тут головне. Справжня
+            // функція SECURITY DEFINER віддає числа ЛИШЕ по дописах, де той,
+            // хто питає, автор або в команді сторінки (page_admins).
+            // Заглушка, добріша за прод, зеленіла б над кодом, що показує
+            // число по чужому допису — п'ятий випадок у цьому файлі, і щоразу
+            // брехала саме підкладка, а не застосунок.
+            // 📐 Числа беремо з таблиці content_reads сцени: post_id + людей.
+            // (зворотні лапки в цьому блоці заборонені — він у шаблонному рядку)
+            if (fn === 'post_read_counts') {
+              const uid = U ? U.id : null;
+              if (!uid) return { data: [], error: null };
+              const ids = (args && args.p_ids) || [];
+              const мої = (T.page_posts || []).filter(pp =>
+                ids.includes(pp.id) &&
+                (pp.author_uid === uid ||
+                 (T.page_admins || []).some(pa => pa.page_id === pp.page_id && pa.uid === uid)));
+              return {
+                data: мої.map(pp => ({
+                  post_id: pp.id,
+                  'людей': ((T.content_reads || []).find(r => r.post_id === pp.id) || {})['людей'] || 0,
+                })),
+                error: null,
+              };
             }
             // 🆕 19.09 — ПРАПОРЦІ ОНОВЛЕНЬ. Дзеркало серверної my_features():
             // 'all' бачать усі, 'circle' — лише ті, хто в колі, 'off' — ніхто.

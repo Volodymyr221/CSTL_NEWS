@@ -329,6 +329,18 @@
 .fd-share { margin-left: auto; background: none; border: 0; padding: 0; cursor: pointer; color: var(--fd-muted); }
 .fd-share .fd-ic { width: 24px; height: 24px; display: inline-flex; }
 .fd-share .fd-ic svg { width: 23px; height: 23px; }
+/* 📖 «Прочитали N» — службовий рядок у підвалі картки, видно лише автору
+   допису і команді сторінки (вирішує `feed.js`, а право звужує й сама база).
+   🔑 Навмисно тихіший за лайк і коментар поруч: це не дія, а відомість. Тому
+   приглушений колір і 13px — на один щабель менше за 14px кнопок.
+   📐 `tabular-nums` із тієї ж причини, що в `.fd-cnt`: число оновлюється на
+   місці, і без нього рядок сіпався б на зміні ширини цифр. */
+.fd-reads {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--fd-muted); font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.fd-reads svg { width: 17px; height: 17px; flex: none; }
+
 /* Підсвітка поста при відкритті за deep-link. */
 @keyframes fd-flash { 0%,100% { background: transparent; } 30% { background: rgba(114,47,55,0.10); } }
 .fd-card--flash { animation: fd-flash 1.5s ease; }
