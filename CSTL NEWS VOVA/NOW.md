@@ -9,30 +9,50 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-02 05:39 UTC
+**Зріз на:** 2026-10-02 19:30 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/project-thread-324o8i` |
-| останній коміт людини | `32506430` 02.10 05:39 — docs: передача в новий чат — треди, гілки поза main, розділ З у реєстрі |
+| гілка | `vova/zapusk-hvosty` |
+| останній коміт людини | `a8339278b` 02.10 19:30 — docs: авто-блок пульсу звірено з git |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260930-2019` |
-| останній PR у `main` | не видно в останніх комітах |
-| стендів на диску | 183 |
+| останній PR у `main` | #1229 |
+| стендів на диску | 184 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-02 | є ✅ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
+- `.github/workflows/deploy.yml`
+- `.github/workflows/tests.yml`
+- `.gitmodules`
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/_archive/NEVYKONANI_закрите_до_2026-09-17.md`
-- `_session-log/vova-2026-10-02.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-10-02.md`
+- `CSTL NEWS VOVA/docs/KREATYVY_ZAPUSKU.md`
+- `_session-log/vova-2026-10-02b.md`
+- `docs/OPENMONTAGE.md`
+- `launch-film/.gitignore`
+- `launch-film/README.md`
+- `launch-film/audio.py`
+- `launch-film/build.sh`
+- `launch-film/film.html`
+- `launch-film/fonts/inter-400.woff2`
+- `launch-film/fonts/inter-600.woff2`
+- `launch-film/fonts/inter-700.woff2`
+- `launch-film/fonts/inter-lat-400.woff2`
+- …ще 23
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `32506430` 02.10 05:39 — docs: передача в новий чат — треди, гілки поза main, розділ З у реєстрі
-- `e757df13` 01.10 13:46 — ai(editor): свята-чернетки 01.10 13:46 UTC
+- `a8339278b` 02.10 19:30 — docs: авто-блок пульсу звірено з git
+- `c4b948dd7` 02.10 19:30 — docs: 184 стенди; матеріали кампанії поза git названі винятком із причиною
+- `31a00de89` 02.10 19:10 — docs: журнал сесії 02.10b
+- `656b79df5` 02.10 19:10 — docs: ручні кроки Вові після сесії 02.10
+- `63a39941a` 02.10 19:09 — test(fund-screen): дата збору відносна — з 01.10 фікстура «завершилась» і ховала кнопку банки
 
 <!-- AUTO:END -->
 
