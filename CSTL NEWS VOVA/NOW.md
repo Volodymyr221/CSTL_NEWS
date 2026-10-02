@@ -9,12 +9,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-02 19:13 UTC
+**Зріз на:** 2026-10-02 19:29 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/project-thread-69waix` |
-| останній коміт людини | `b4285773` 02.10 19:13 — test(digest): сторож бачить і саму дорогу, не лише межі |
+| останній коміт людини | `d93a0be59` 02.10 19:29 — docs: авто-блок пульсу звірено з git |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260930-2019` |
 | останній PR у `main` | #1229 |
 | стендів на диску | 187 |
@@ -24,6 +24,7 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `.github/workflows/tests.yml`
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
@@ -31,16 +32,15 @@
 - `scripts/now_update.mjs`
 - `scripts/supabase_digest_push.sql`
 - `scripts/supabase_post_reads.sql`
-- `scripts/supabase_push_quota.sql`
-- …ще 15 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 19 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `b4285773` 02.10 19:13 — test(digest): сторож бачить і саму дорогу, не лише межі
-- `75eb2901` 02.10 19:07 — docs: авто-блок пульсу звірено з git
-- `379b59fa` 02.10 19:06 — docs: авто-блок пульсу після злиття main
-- `72e9eadb` 02.10 19:06 — fix(push): ранкове зведення не мовчить через неіснуючий ключ адреси
-- `e7138beb` 02.10 18:53 — merge: main у 69waix (NOW.md — версія main)
+- `d93a0be59` 02.10 19:29 — docs: авто-блок пульсу звірено з git
+- `35c166408` 02.10 19:29 — Merge remote-tracking branch 'origin/claude/project-thread-69waix' into claude/project-thread-69waix
+- `b5edced1c` 02.10 19:24 — test(fund-screen): дата збору відносна — з 01.10 фікстура «завершилась» і ховала кнопку банки
+- `83540d91d` 02.10 19:24 — ci(стенди): три червоні в CI — причина в середовищі, не в коді
+- `7ffb33c42` 02.10 19:13 — docs: авто-блок пульсу звірено з git
 
 <!-- AUTO:END -->
 
