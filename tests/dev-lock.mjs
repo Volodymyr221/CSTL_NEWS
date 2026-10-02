@@ -67,8 +67,16 @@ const { url, stop } = await serve();
 const port = new URL(url).port;
 
 const executablePath = chromiumPath();
+// 🔴 02.10 — У CI ТУТ БУВ ІНШИЙ БРАУЗЕР, І ЧЕРЕЗ НЬОГО СТЕНД ЧЕРВОНІВ ЩОДНЯ.
+// На раннері немає `/opt/pw-browsers`, `executablePath` порожній, і Playwright
+// за замовчуванням бере `chromium-headless-shell` — урізаний безголовий браузер,
+// який прапорець `--unsafely-treat-insecure-origin-as-secure` ІГНОРУЄ. Тоді
+// `crypto.subtle` немає, і 4 перевірки падали з «Сайт відкрито без захищеного
+// зʼєднання» над справним замком. 📐 Відтворено локально, підсунувши той самий
+// `headless_shell`: рівно ті самі 4 червоні, 40/44. `channel: 'chromium'` бере
+// ПОВНИЙ Chromium у новому безголовому режимі — той, яким стенд і так ходить тут.
 const browser = await chromium.launch({
-  ...(executablePath ? { executablePath } : {}),
+  ...(executablePath ? { executablePath } : { channel: 'chromium' }),
   args: [
     // Вигадане імʼя → 127.0.0.1. Дає НЕ-localhost хост на тому самому сервері.
     `--host-resolver-rules=MAP cstl.local 127.0.0.1`,

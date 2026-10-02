@@ -129,9 +129,17 @@ const відкрив = await p.evaluate(() => {
   card.click();
   return true;
 });
-await p.waitForTimeout(500);
+// 🔑 02.10 — ЧЕКАЄМО ПОДІЮ, А НЕ ВГАДАНІ МІЛІСЕКУНДИ. Тут стояли сліпі паузи
+// 500 і 400мс: на повільному раннері модалка могла ще не відкритись, а число —
+// ще не перемалюватись, і стенд червонів би над справним кодом. Тепер чекаємо
+// саму модалку і саму зміну числа; не дочекались за стелю — вердикт однаково
+// виносить перевірка нижче, тобто справжня вада червоніє так само.
+await p.waitForSelector('#article-modal .nh-back, [data-ad-close]', { timeout: 5000 }).catch(() => {});
 await p.evaluate(() => document.querySelector('#article-modal .nh-back, [data-ad-close]')?.click());
-await p.waitForTimeout(400);
+await p.waitForFunction(b => {
+  const t = document.querySelector('.cm-news-new')?.textContent || '';
+  return parseInt(t.match(/\d+/)?.[0] || '0', 10) !== b;
+}, було, { timeout: 4000 }).catch(() => {});
 const стало = await число();
 ok('сцена як у житті: долив дописів спільнот приїхав ДО тапу', долив);
 ok('картка новини відкрилась', відкрив);
