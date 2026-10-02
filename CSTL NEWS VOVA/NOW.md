@@ -9,12 +9,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-02 19:29 UTC
+**Зріз на:** 2026-10-02 20:19 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/project-thread-69waix` |
-| останній коміт людини | `d93a0be59` 02.10 19:29 — docs: авто-блок пульсу звірено з git |
+| останній коміт людини | `8cbd37b8` 02.10 20:18 — test(news-widget): підміна статей нарешті доїжджає — прилад міряв новини дня |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260930-2019` |
 | останній PR у `main` | #1229 |
 | стендів на диску | 187 |
@@ -32,15 +32,15 @@
 - `scripts/now_update.mjs`
 - `scripts/supabase_digest_push.sql`
 - `scripts/supabase_post_reads.sql`
-- …ще 19 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 21 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `d93a0be59` 02.10 19:29 — docs: авто-блок пульсу звірено з git
-- `35c166408` 02.10 19:29 — Merge remote-tracking branch 'origin/claude/project-thread-69waix' into claude/project-thread-69waix
-- `b5edced1c` 02.10 19:24 — test(fund-screen): дата збору відносна — з 01.10 фікстура «завершилась» і ховала кнопку банки
-- `83540d91d` 02.10 19:24 — ci(стенди): три червоні в CI — причина в середовищі, не в коді
-- `7ffb33c42` 02.10 19:13 — docs: авто-блок пульсу звірено з git
+- `8cbd37b8` 02.10 20:18 — test(news-widget): підміна статей нарешті доїжджає — прилад міряв новини дня
+- `345041e1` 02.10 19:29 — docs: авто-блок пульсу звірено з git
+- `35c16640` 02.10 19:29 — Merge remote-tracking branch 'origin/claude/project-thread-69waix' into claude/project-thread-69waix
+- `b5edced1` 02.10 19:24 — test(fund-screen): дата збору відносна — з 01.10 фікстура «завершилась» і ховала кнопку банки
+- `83540d91` 02.10 19:24 — ci(стенди): три червоні в CI — причина в середовищі, не в коді
 
 <!-- AUTO:END -->
 
