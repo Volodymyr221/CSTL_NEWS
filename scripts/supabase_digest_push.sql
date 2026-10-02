@@ -68,11 +68,13 @@ BEGIN
     RAISE NOTICE 'notify_morning_digest: немає секрета page_push_secret';
     RETURN NULL;
   END IF;
-  SELECT value INTO _url FROM app_secrets WHERE name = 'functions_base_url';
-  IF _url IS NULL THEN
-    RAISE NOTICE 'notify_morning_digest: немає functions_base_url';
-    RETURN NULL;
-  END IF;
+  -- 🔴 02.10 — АДРЕСА ПРОПИСАНА ПРЯМО, ЯК В УСІХ СУСІДНІХ ТРИГЕРАХ.
+  -- Перша редакція брала її з `app_secrets` під ключем `functions_base_url`,
+  -- якого не створює ЖОДЕН файл проєкту (звірено грепом по scripts/ і
+  -- supabase/). Тобто зведення мовчало б ЗАВЖДИ, лише з NOTICE у журналі —
+  -- рівно клас «не працює неможливо відрізнити від усе гаразд». Адреса не
+  -- секрет (вона в кожному `send-*-push`), тож її місце — тут.
+  _url := 'https://uabyfecseqnemvcqhdem.supabase.co/functions/v1';
 
   SELECT net.http_post(
     url     := _url || '/send-digest-push',
@@ -115,8 +117,7 @@ SELECT cron.schedule('prune-digest-log', '45 3 * * *',
 
 -- 🔎 ПЕРЕВІРИТИ, НІЧОГО НЕ НАДСИЛАЮЧИ (сухий прогін) — із SQL Editor:
 --   SELECT net.http_post(
---     url := (SELECT value FROM app_secrets WHERE name='functions_base_url')
---            || '/send-digest-push',
+--     url := 'https://uabyfecseqnemvcqhdem.supabase.co/functions/v1/send-digest-push',
 --     headers := jsonb_build_object('Content-Type','application/json',
 --                'x-cstl-push-secret',(SELECT value FROM app_secrets WHERE name='page_push_secret')),
 --     body := '{"dry_run":true}'::jsonb);
