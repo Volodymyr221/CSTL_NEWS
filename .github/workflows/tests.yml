@@ -50,6 +50,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 🔴 02.10 — `ceo-facts` питає `git log HEAD ^origin/main`. З типовою
+          # глибиною 1 рефа `origin/main` на раннері НЕМАЄ, і стенд падав щодня
+          # з «Command failed» над справним кодом. Повна історія дає і рефу.
+          fetch-depth: 0
 
       - name: Node
         uses: actions/setup-node@v4
