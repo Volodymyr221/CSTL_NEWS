@@ -14,6 +14,7 @@ import {
   fetchPages, fetchPagePosts, fetchPagePostsPage, fetchPageDrafts, publishPagePost, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds, fetchPageTeam,
+  fetchPostReadCounts,   // «прочитали N людей» — число для автора (01.10)
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, setPagePostPinned, fetchMySubscriptions, setPageSubscription,
   subscribePagePosts,
@@ -53,6 +54,9 @@ const IC_IMG    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_SEND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
 // Іконка «Поділитися» у стилі Facebook — СУЦІЛЬНА (залита) стрілка вправо з хвостиком-
 // гачком донизу-вліво (як на фото від Вови). fill=currentColor тягне колір кнопки.
+// 👁 Око для рядка «Прочитали N» — бачить його лише автор допису. Обведення, а
+// не заливка: рядок службовий і не має важити більше за лайк поруч.
+const IC_EYE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const IC_SHARE  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.75" stroke-linejoin="round"><path d="M14 9V5.2c0 -.53 .64 -.8 1.02 -.42l7.2 7.2a.6 .6 0 0 1 0 .85l-7.2 7.2c-.38 .38 -1.02 .1 -1.02 -.42V16c-5 0 -8.5 1.6 -11 5.1 1 -5 4 -10 11 -11z"/></svg>';
 // 🗑 27.08 — `IC_CLOSE` прибрано: його носив лише переглядач фото, а той переїхав
 // у `core/photo-viewer.js` разом зі своїм значком.
@@ -90,6 +94,7 @@ let commentPaging = new Map();// post_id → { hasMore, oldestTs } — стан 
 let commentError = new Map(); // post_id → true, якщо остання спроба завантажити впала
 let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
+let readCounts = new Map();   // id допису → скільком людям він дійшов (лише для своїх)
 // 🔴 ЧИЇМИ ОЧИМА ЧИТАЛИ ДАНІ. `undefined` = ще не читали жодного разу.
 // Потрібно, щоб відрізнити «вхід справді змінився» від повторної події про ТУ САМУ
 // людину: `onAuthChange` шлеться кілька разів поспіль (відновлення сесії, оновлення
@@ -208,6 +213,18 @@ async function loadData() {
   // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
   // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
   commentMap = new Map(); commentPaging = new Map(); commentError = new Map();
+
+  // 📖 «Прочитали N людей» — тільки для СВОЇХ дописів, і тільки якщо такі є.
+  // 🔑 Стоїть ПІСЛЯ розбору `myPageIds`, бо саме він вирішує, що тут моє:
+  // раніше в послідовності список був би порожній, і число не прийшло б нікому.
+  // ⚠️ Окремим запитом, а не в `Promise.all` вище з тієї самої причини —
+  // там ще невідомо, по яких дописах питати.
+  // 🛑 Не питаємо зовсім, якщо дописів моїх немає: зайвий виклик RPC на кожне
+  // оновлення стрічки для 99% читачів, які нічого не пишуть.
+  const моїДописи = posts
+    .filter(p => myPageIds.has(p.page_id) || (p.author_uid && p.author_uid === currentUserId()))
+    .map(p => p.id);
+  readCounts = моїДописи.length ? await fetchPostReadCounts(моїДописи) : new Map();
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
@@ -846,6 +863,29 @@ function postCardHtml(post, onPage = false) {
   // 🔑 Тобто вся команда сторінки бачить чернетки і публікує їх нарівні з власником:
   // окремого механізму «тегу редактора» заводити не треба, він уже є.
   const чернетка = post.status === 'draft';
+  // ── 📖 «ПРОЧИТАЛИ N» — ВИДНО ЛИШЕ СВОЇМ (01.10) ───────────────────────────
+  // 🔴 Заради чого: адмін спільноти на старті бачить нуль лайків і вирішує
+  // «мене ніхто не читає» — саме тоді, коли його вже читають. Лайк ставить
+  // один із багатьох; читають значно більше, і це єдине, чим можна показати
+  // авторові, що писати не дарма.
+  //
+  // 🛑 ТРИ МЕЖІ, І КОЖНА — СВІДОМЕ РІШЕННЯ, НЕ НЕДОРОБКА:
+  //   • ЧИСЛО, НІКОЛИ ІМЕНА. «Прочитали 40» — так, «прочитав Сергій» — ніколи:
+  //     Олика це містечко, де всі одне одного знають, і натяк на стеження
+  //     відлякує сильніше, ніж допомагає (правило капсул, `HOT_RULES.md` №12).
+  //   • НУЛЬ НЕ ПОКАЗУЄМО ВЗАГАЛІ. Рядок «прочитали 0» робить ровно те, проти
+  //     чого вся ця робота: гасить автора. Поки читачів немає, порожнє місце
+  //     чесніше за нуль.
+  //   • ТІЛЬКИ АВТОРОВІ Й КОМАНДІ СТОРІНКИ. Читачеві це число не потрібне, а
+  //     публічний показ зробив би зі Стрічки змагання — не та мотивація, яку
+  //     курс просить.
+  // 🔑 Право те саме, що на «⋯» (`canEditPost`), плюс автор допису: обидва
+  // звужені так само в сторожі самої функції бази, інакше вийшло б «кнопка є,
+  // числа немає», що читалось би як поломка.
+  const прочитали = readCounts.get(post.id) || 0;
+  const мійДопис = canEditPost || (post.author_uid && post.author_uid === currentUserId());
+  const читання = (мійДопис && прочитали > 0 && !чернетка)
+    ? `<div class="fd-reads" title="Скільком людям дійшов цей допис">${IC_EYE}Прочитали ${прочитали}</div>` : '';
   return `
     <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
       <!-- 🔴 05.09 — ШАПКА КАРТКИ: ДВА ЯРУСИ, БЕЗ ЖОДНИХ УМОВ.
@@ -895,6 +935,7 @@ function postCardHtml(post, onPage = false) {
           <button class="fd-cbtn" data-comments="${post.id}" type="button">
             <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ''}</span>
           </button>
+          ${читання}
           <button class="fd-share" data-share="${post.id}" type="button" aria-label="Поділитися постом">
             <span class="fd-ic">${IC_SHARE}</span>
           </button>

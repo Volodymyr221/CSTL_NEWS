@@ -9,50 +9,38 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-02 20:09 UTC
+**Зріз на:** 2026-10-02 20:47 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `vova/zapusk-hvosty` |
-| останній коміт людини | `9be686a59` 02.10 20:09 — docs: авто-блок пульсу звірено з git |
+| гілка | `claude/project-thread-69waix` |
+| останній коміт людини | `0b5aa4ba3` 02.10 20:47 — docs: авто-блок пульсу звірено з git |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20260930-2019` |
-| останній PR у `main` | #1229 |
-| стендів на диску | 184 |
+| останній PR у `main` | #1230 |
+| стендів на диску | 188 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-02 | є ✅ |
 | потік `/byyou` | active — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/deploy.yml`
-- `.github/workflows/tests.yml`
-- `.gitmodules`
 - `CSTL NEWS VOVA/CLAUDE.md`
-- `CSTL NEWS VOVA/NEVYKONANI_ZAVDANNIA.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/_ai-tools/ZAVDANNIA_VOVI_2026-10-02.md`
-- `CSTL NEWS VOVA/docs/KREATYVY_ZAPUSKU.md`
-- `_session-log/vova-2026-10-02b.md`
-- `docs/OPENMONTAGE.md`
-- `launch-film/.gitignore`
-- `launch-film/README.md`
-- `launch-film/audio.py`
-- `launch-film/build.sh`
-- `launch-film/film.html`
-- `launch-film/fonts/inter-400.woff2`
-- `launch-film/fonts/inter-600.woff2`
-- `launch-film/fonts/inter-700.woff2`
-- …ще 25
+- `bundle.js`
+- `scripts/now_update.mjs`
+- `scripts/supabase_digest_push.sql`
+- `scripts/supabase_post_reads.sql`
+- `scripts/supabase_push_quota.sql`
+- …ще 17 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9be686a59` 02.10 20:09 — docs: авто-блок пульсу звірено з git
-- `83155760d` 02.10 20:09 — docs: правдива причина в drift — Service Worker, не проксі; пульс
-- `4ab0a1228` 02.10 20:08 — test(news-widget): фікстура не діяла ніколи — масив замість обгортки, SW заблоковано
-- `3af895266` 02.10 19:31 — docs: авто-блок пульсу звірено з git
-- `a3235241a` 02.10 19:31 — docs(реєстр): З1, З3в, Б11, vopas, news-badge-geo — закрито 02.10b
+- `0b5aa4ba3` 02.10 20:47 — docs: авто-блок пульсу звірено з git
+- `09478d495` 02.10 20:47 — merge: main (#1230) у 69waix — 188 стендів, NOW з main
+- `ae0437467` 02.10 20:46 — Хвости запуску: push тип 4, бриф і ролик у main, легший артефакт, CI зелений (#1230)
+- `bd1d05da0` 02.10 20:23 — docs: авто-блок пульсу звірено з git
+- `6f2977036` 02.10 20:22 — merge: news-widget полагодили паралельно — беру версію з гілки, додаю рядок сторожа
 
 <!-- AUTO:END -->
 

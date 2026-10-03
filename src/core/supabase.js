@@ -2191,12 +2191,17 @@ export async function markThreadSeenRemote(postId) {
 // далі шле сповіщення, які людина щойно вимкнула. Рівно клас B-33 («вимикач,
 // що підтверджує дію, якої не сталось»), тільки з іншого боку.
 // 🗓 `events` додано 04.09 разом із нагадуваннями про події спільнот.
-export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed', 'events'];
+// 🌅 `digest` додано 01.10 разом із ранковим зведенням (`send-digest-push`).
+// 🛑 Перелік мусить збігатися з КОЛОНКАМИ `notif_prefs` і з `NOTIF_KEYS` у
+// кабінеті. Розходження тут — найтихіша з можливих вад: тумблер клацає,
+// знімок на пристрої оновлюється, а в базу не доїжджає нічого, і сервер далі
+// шле те, що людина щойно вимкнула (рівно клас B-33).
+export const NOTIF_TOPICS = ['buses', 'board', 'questions', 'feed', 'events', 'digest'];
 
 export async function fetchNotifPrefs(uid) {
   if (!supa || !uid) return null;
   const { data, error } = await supa
-    .from('notif_prefs').select('buses, board, questions, feed, events').eq('uid', uid).maybeSingle();
+    .from('notif_prefs').select(NOTIF_TOPICS.join(', ')).eq('uid', uid).maybeSingle();
   if (error) { console.warn('[supabase] fetchNotifPrefs:', error.message); return null; }
   return data || null;   // null = рядка ще немає (людина не міняла нічого)
 }
@@ -3464,6 +3469,32 @@ export async function fetchMyEditablePageIds() {
   const { data, error } = await supa.from('page_admins').select('page_id');
   if (error) { console.warn('[supabase] page_admins:', error.message); return new Set(); }
   return new Set((data || []).map(r => r.page_id));
+}
+
+// ── 📖 «ПРОЧИТАЛИ N ЛЮДЕЙ» — ЧИСЛО ДЛЯ АВТОРА (01.10) ───────────────────────
+//
+// 🔴 Друга половина цілі курсу — живі спільноти з живими адмінами, а адміну
+// 🗣️ «важливо те, щоб вони бачили що це не дарма, що їх читають». Події читання
+// пишуться з 21.09, але показу не було: адмін на старті бачить нуль лайків і
+// вирішує «мене не читають» саме тоді, коли його вже читають.
+//
+// 🛑 ЧОМУ RPC, А НЕ ЗАПИТ ДО `content_views_daily`. Підсумок там по ДНЯХ, і сума
+// `людей` по днях — не число людей: хто прочитав у вівторок і перечитав у
+// четвер, увійде двічі, тобто число поїде ВГОРУ. На ньому адмін вирішує, писати
+// далі, — а завищене число гірше за відсутнє (`HOT_RULES.md` №12), тим паче
+// коли воно підлещує. Функція `post_read_counts` рахує
+// `COUNT(DISTINCT читач)` по сирих подіях і несе сторожу прав у самому запиті.
+// 📄 Повний розбір і межа 90 днів — `scripts/supabase_post_reads.sql`.
+//
+// ⚠️ Віддаємо `Map`, а не масив: рендер картки питає по id допису, і пошук у
+// масиві на кожну картку був би зайвим проходом на кожну перемальовку.
+export async function fetchPostReadCounts(ids) {
+  if (!supa || !Array.isArray(ids) || !ids.length) return new Map();
+  // 🔑 Самі числа ніколи не привід ламати екран: не дійшло — просто немає
+  // рядка «прочитали», як і до цієї роботи. Тому помилку лише записуємо.
+  const { data, error } = await supa.rpc('post_read_counts', { p_ids: ids });
+  if (error) { console.warn('[supabase] post_read_counts:', error.message); return new Map(); }
+  return new Map((data || []).map(r => [r.post_id, Number(r['людей']) || 0]));
 }
 
 // Створити пост сторінки (від імені сторінки; author_uid = людина-автор для підпису).

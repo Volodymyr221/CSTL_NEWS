@@ -17,6 +17,7 @@ import { initAuth, authReady, currentUserId, refreshOwnProfile } from './core/au
 import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
 import { passDesktopGate } from './core/desktop-gate.js';   // екран «поки що тільки телефон» на компʼютері (29.08)
 import { logEvent, getAnonId } from './core/supabase.js';
+import { captureSource, sourceTag } from './core/source-tag.js';   // звідки прийшла людина — наліпка, Viber, костел (01.10)
 import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
 import { initConsent } from './core/consent.js';
@@ -513,6 +514,18 @@ function hideSplashWhenReady() {
 // Ініціалізація при завантаженні сторінки
 async function init() {
   bootApp();
+
+  // 🔖 ЗВІДКИ ПРИЙШЛА ЛЮДИНА — ПЕРШИМ РЯДКОМ ПІСЛЯ bootApp(), і не нижче.
+  // Три причини саме на цьому місці, кожна — свій спосіб згубити мітку:
+  //   1. адресу треба прочитати ДО того, як її перепишуть обробники deep-link'ів;
+  //   2. ДО заслінки й екрана «тільки телефон»: обидва роблять `return`, і мітка
+  //      з наліпки не дійшла б до памʼяті пристрою взагалі — а саме цій людині
+  //      ми потім порахуємо встановлення;
+  //   3. ДО `session_start` нижче, бо перша подія заходу мусить нести мітку.
+  // Функція сама нічого не малює і не чекає мережі — лише читає адресу,
+  // чистить її і кладе перший дотик у памʼять пристрою.
+  captureSource();
+
   initAuth();   // Фаза Б: відновити сесію входу (гість → no-op). Гейтинг ще вимкнено.
 
   // 🔴 ЗАСЛІНКА РОЗРОБКИ (Вова 30.07) — стоїть ТУТ і не нижче.
@@ -633,9 +646,16 @@ async function init() {
   await authReady();
 
   const _ua = _uaBits();
+  // 🔖 `src` — звідки ця людина прийшла (перший дотик, не поточний перехід).
+  // ⚠️ Кладемо ЛИШЕ коли мітка є: `src: null` у кожному заході зробив би поле
+  // шумом, а запит «скільки прийшло з наліпки» однаково дивиться на наявність.
+  const _src = sourceTag();
   logEvent(currentUserId() || getAnonId(), 'session_start', {
     tab: currentTab,
-    meta: { device: _analyticsDevice, app_mode: _appMode(), browser: _ua.browser, os: _ua.os },
+    meta: {
+      device: _analyticsDevice, app_mode: _appMode(), browser: _ua.browser, os: _ua.os,
+      ...(_src ? { src: _src } : {}),
+    },
   });
 
   // Аналітика: switchTab() рано виходить коли tab===currentTab, тому початковий
