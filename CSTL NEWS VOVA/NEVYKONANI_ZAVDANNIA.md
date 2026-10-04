@@ -84,7 +84,7 @@
 ➡️ Береш креативи — забери бриф, не переписуй:
 `git checkout origin/claude/project-thread-fafoks -- "CSTL NEWS VOVA/docs/KREATYVY_ZAPUSKU.md"`
 
-### З2. 🔴 РУКОЮ ВОВИ ПІД PR #1228 — без цього три пункти з чотирьох мовчать
+### З2. ✅ ЗАКРИТО 04.10 — РУКОЮ ВОВИ ПІД PR #1228 (SQL накочено, функції задеплоєно, сухий прогін 200)
 
 Три файли в Supabase → SQL Editor → Run: `scripts/supabase_post_reads.sql` ·
 `scripts/supabase_push_quota.sql` · `scripts/supabase_digest_push.sql`.
