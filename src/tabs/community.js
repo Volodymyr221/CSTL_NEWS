@@ -59,7 +59,6 @@ import { onReturn } from '../core/refresh-on-return.js';   // «повернув
 import { renderHomeCaps } from './home-caps.js';
 import { renderHomeFund } from './home-fund.js';
 import { renderHomeFeed } from './home-feed.js';
-import { renderHomeIntro } from './home-intro.js';   // знайомство на порожній громаді (27.09)
 import { renderContactsBlock } from './home-contacts.js';
 import {
   renderWeatherBlock,
@@ -177,13 +176,6 @@ function renderSkeleton() {
          🔴 Порожньо → смуги немає зовсім. Деталі й запобіжники руху — home-caps.js. -->
         <div id="hm-caps" class="hm-caps" hidden></div>
 
-    <!-- ══ ЗНАЙОМСТВО ══════════════════════════════════════════════
-         Що це за застосунок — єдине місце, де це сказано людині, а не юристу.
-         З’являється ЛИШЕ коли громада ще нічого не написала, і сам зникає, щойно
-         з’явився зміст — повний розбір і мірка «порожньо» у src/tabs/home-intro.js.
-         ⚠️ Зворотних лапок у цьому коментарі немає навмисно: розмітка лежить
-         усередині шаблонного рядка, і перша ж лапка розриває його посеред HTML. -->
-    <section id="hm-intro" class="hm-sec hm-intro-sec" hidden></section>
 
     <!-- ══ ЗБІР ════════════════════════════════════════════════════════════════
          Немає активних зборів → секції немає ЗОВСІМ (вимога Вови). -->
@@ -374,8 +366,10 @@ export function initCommunity() {
   // перезавантаження — саме це Вова й побачив: подія в базі є, віджета немає.
   wireEventBlockRefresh();
   renderContactsBlock();
-  // Останнім — бо він дивиться на РЕЗУЛЬТАТ усіх інших, а не на базу.
-  renderHomeIntro();
+  // 🗑 04.10 — блок знайомства «Місцеве — в одному місці» ПРИБРАНО (Вова: «вибиває
+  // інколи на 1 секунду і пропадає»). Він дивився на результат інших блоків, а ті
+  // вантажаться асинхронно: поки дані не доїхали, громада «порожня» → картка
+  // зʼявлялась і зникала, щойно приходив зміст.
 }
 
 // B-21 fix: делегування замість inline onclick (XSS hardening). Один слухач на
