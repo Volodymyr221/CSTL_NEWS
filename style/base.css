@@ -445,6 +445,19 @@ html, body {
   letter-spacing: 1px;
 }
 .header-logo span { color: var(--red); }
+/* 🆕 04.10 — ПРОБА РЕБРЕНДИНГУ «Громада» (Вова: «з чорного в бордовий, щоб
+   переливалося»). Одне слово замість «CSTL + LIFE», тож два кольори стали
+   градієнтом ПО ЛІТЕРАХ: зліва чорний, перехід посередині, справа бордо.
+   `background-clip: text` — фон видно лише крізь літери; `color: transparent`
+   обовʼязковий, інакше суцільний колір тексту накриє градієнт. Запасний
+   `color` для браузерів без clip — бордо, щоб назва не зникла. */
+.header-logo--grad {
+  color: var(--red);
+  background: linear-gradient(90deg, var(--black) 20%, var(--red) 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 /* Кнопка «Збережені» в шапці (хаб збережених карток) — стиль як account-btn */
 .saved-hub-btn {
   display: inline-flex;
