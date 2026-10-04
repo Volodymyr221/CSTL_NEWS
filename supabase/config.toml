@@ -59,3 +59,9 @@ verify_jwt = false
 
 [functions.send-page-push]
 verify_jwt = false
+
+# 🆕 04.10 — ранкове зведення кличе розклад бази (`notify_morning_digest()`
+# через `pg_net`), токена людини теж немає. Секрет `x-cstl-push-secret`
+# функція перевіряє сама (index.ts ~182). Дозвіл Вови 04.10: «Роби».
+[functions.send-digest-push]
+verify_jwt = false
