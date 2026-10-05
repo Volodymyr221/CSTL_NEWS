@@ -3151,6 +3151,27 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
     if candidates and not рівень:
         рівень = "картки"
 
+    # 🔴 05.10 — ВЕРСТКА САЙТУ ОЛИЦЬКОЇ ГРОМАДИ (знято розбором у лог, #1244).
+    # Новина = `.one_news_col`, усередині `.news_title` · `.news_date` ·
+    # `.news_img` · `.news_preview` · `.news_read_more`. Заголовок НЕ в h1-h3 —
+    # тому два рівні вище давали нуль; а загальний запасний шлях нижче дивився
+    # лише перші 50 посилань, і їх цілком зʼїдало меню сайту (194 посилання на
+    # сторінці). Звідси «0 кандидатів» за ВЕСЬ час існування джерела.
+    if not candidates:
+        for item in soup.select(".one_news_col")[:25]:
+            t = item.select_one(".news_title")
+            a = ((t.find("a", href=True) if t else None)
+                 or item.select_one(".news_read_more a[href]")
+                 or item.find("a", href=True))
+            title = (t.get_text(" ", strip=True) if t else "") or (a.get_text(" ", strip=True) if a else "")
+            if a and title:
+                href = a["href"]
+                if not href.startswith("http"):
+                    href = GROMADA_BASE + ("" if href.startswith("/") else "/") + href
+                candidates.append((href, title, item))
+    if candidates and not рівень:
+        рівень = "one_news_col"
+
     # Загальний fallback — будь-які посилання що ведуть на статті
     if not candidates:
         for a in soup.select("a[href]")[:50]:
@@ -3219,7 +3240,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
 
         # Excerpt
         exc_el = (container.find(
-            class_=re.compile(r"intro|excerpt|summary|description|anons", re.I),
+            class_=re.compile(r"intro|excerpt|summary|description|anons|preview", re.I),
         ) if hasattr(container, "find") else None)
         excerpt = exc_el.get_text(strip=True)[:400] if exc_el else ""
 
