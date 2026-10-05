@@ -336,8 +336,8 @@ body:not(:has(.sidebar--open)) .sidebar-overlay::before {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 20px;
   font-weight: 700;
-  letter-spacing: 2px;   /* 05.10 — як у шапці: «ГРОМАДА» капсом */
-  color: var(--ink, #2b2b2b);
+  letter-spacing: 2px;   /* «ГРОМАДА» капсом — у меню бренд застосунку */
+  color: var(--brand-ink, #4A121C);   /* 05.10 — суцільний, без переливу */
 }
 .sidebar-logo span { color: var(--red, #722F37); }
 /* 🔴 ХРЕСТИК — ЯК В УСІХ МОДАЛКАХ (10.08, зауваження Вови: «він не
