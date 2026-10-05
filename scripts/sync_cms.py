@@ -395,7 +395,7 @@ def cms_to_article(row, next_id):
         "image": row.get("image"),
         "image_type": row.get("image_type") or ("source" if row.get("image") else "none"),
         "image_credit": row.get("image_credit"),
-        "source": row.get("source") or "CSTL LIFE",
+        "source": row.get("source") or "Громада",
         "sourceUrl": row.get("source_url"),
         "exclusive": bool(row.get("exclusive", True)),
         "ts": ts,

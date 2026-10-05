@@ -54,7 +54,7 @@ export function initConsent() {
     <div class="consent-text">${updated
       ? `Ми оновили <a href="#" class="consent-link">Політику конфіденційності та Правила</a>.
          Продовжуючи, ви приймаєте нову редакцію.`
-      : `Користуючись CSTL LIFE, ви погоджуєтесь з
+      : `Користуючись застосунком «Громада», ви погоджуєтесь з
          <a href="#" class="consent-link">Політикою конфіденційності та Правилами</a>.`}</div>
     <button class="consent-accept" type="button">${updated ? 'Зрозуміло' : 'Погоджуюсь'}</button>`;
   bar.querySelector('.consent-link').addEventListener('click', (e) => {

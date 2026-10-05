@@ -31,8 +31,8 @@ const СТОРІНКА = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#4A121C">
-<meta name="description" content="Політика конфіденційності та Правила користування CSTL LIFE — застосунку громади Олики">
-<title>Політика конфіденційності — CSTL LIFE</title>
+<meta name="description" content="Політика конфіденційності та Правила користування застосунку «Громада» (громада Олики)">
+<title>Політика конфіденційності — Громада</title>
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root { --red: #4A121C; --ink: #1a1a1a; --quiet: #6b6b6b; }
@@ -61,7 +61,7 @@ const СТОРІНКА = `<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <div class="brand">CSTL <span>LIFE</span></div>
+  <div class="brand">ГРОМАДА</div>
   <h1>Політика конфіденційності та Правила користування</h1>
   <a class="back" href="./">← До застосунку</a>
 </header>

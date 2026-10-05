@@ -71,7 +71,7 @@ function buildGate() {
 
   el.innerHTML = `
     <div class="dg-in">
-      <div class="dg-logo">CSTL <span>LIFE</span></div>
+      <div class="dg-logo">ГРОМАДА</div>
       <h1 class="dg-title">Застосунок поки що<br>живе в телефоні</h1>
       <p class="dg-text">Версію для компʼютера ще не зробили.
         Наведіть камеру телефона на код — відкриється саме ця сторінка.</p>

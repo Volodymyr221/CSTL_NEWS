@@ -429,6 +429,14 @@ export async function ensureNewsLoaded({ force = false } = {}) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('не масив');
+      // 🔴 05.10 — РЕБРЕНДИНГ «CSTL LIFE» → «Громада». Нові статті агенти вже
+      // підписують новою назвою, а старі (файл і рядки кабінету в базі) несуть
+      // стару. Переписуємо лише ПОКАЗ — дані не чіпаємо, міграція не потрібна.
+      for (const a of data) {
+        if (a && typeof a.source === 'string' && a.source.startsWith('CSTL LIFE')) {
+          a.source = 'Громада' + a.source.slice('CSTL LIFE'.length);
+        }
+      }
       allArticles = data;
       _newsLoadFailed = false;
     } catch (e) {

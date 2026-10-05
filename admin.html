@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#4A121C">
-  <meta name="description" content="Адмінка CSTL LIFE — модерація Дошки громади">
+  <meta name="description" content="Адмінка «Громади» — модерація Дошки громади">
   <meta name="apple-mobile-web-app-title" content="CSTL Admin">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>CSTL LIFE — Адмінка</title>
+  <title>Громада — Адмінка</title>
 
   <!--
     ⚙️  НАЛАШТУВАННЯ:
@@ -573,7 +573,7 @@
 
 <header class="header">
   <div class="header-brand">
-    <span class="header-logo">CSTL LIFE</span>
+    <span class="header-logo">ГРОМАДА</span>
     <span class="header-tag">Адмінка</span>
   </div>
   <div class="header-user" id="header-user" style="display:none">
@@ -1854,7 +1854,7 @@ function failureText(data) {
   // цілий блок роботи. Тому активні йдуть ПЕРШИМИ, закриті окремим списком у кінці.
   const живі = gs.filter(g => !g.resolved);
   const закриті = gs.filter(g => g.resolved);
-  const шапка = `ЗБОЇ CSTL LIFE · період: ${data.period}\n`
+  const шапка = `ЗБОЇ · ГРОМАДА · період: ${data.period}\n`
     + `активних випадків: ${data.active_total ?? data.total}`
     + (закриті.length ? ` · полагоджених поломок: ${закриті.length}` : '')
     + (data.regressed_n ? ` · ПОВЕРНУЛИСЬ ПІСЛЯ ВИПРАВЛЕННЯ: ${data.regressed_n}` : '')

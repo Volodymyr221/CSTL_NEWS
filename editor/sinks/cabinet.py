@@ -46,7 +46,7 @@ class CabinetSink(Sink):
             "content": draft.content, "category": draft.category or "Свято",
             "geo": draft.geo, "image": draft.image,
             "image_type": draft.image_type, "image_credit": draft.image_credit,
-            "source": "CSTL LIFE", "exclusive": True,
+            "source": "Громада", "exclusive": True,
             # Джерела-обґрунтування НЕ губимо: перше — у source_url (колонка є в схемі;
             # sync_cms переносить її в стрічку як sourceUrl). Алла бачить, звідки факти.
             "source_url": (draft.source_urls[0] if draft.source_urls else None),

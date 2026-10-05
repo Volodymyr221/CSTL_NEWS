@@ -31,7 +31,7 @@ export function pushBlockedMsg() {
     return 'На iPhone сповіщення працюють лише у встановленому додатку: «Поділитися» → «На екран Домів»';
   }
   if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
-  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях телефону — увімкни їх для CSTL LIFE';
+  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях телефону — увімкни їх для «Громади»';
   return null;
 }
 

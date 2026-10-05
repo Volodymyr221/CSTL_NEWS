@@ -92,7 +92,7 @@ function renderFeed() {
 
     <div id="mk-posts"></div>
 
-    <a class="mk-backhome" href="index.html">← Повернутися до Castle Life</a>`;
+    <a class="mk-backhome" href="index.html">← Повернутися до «Громади»</a>`;
 
   renderPosts();
 
@@ -206,7 +206,7 @@ function renderBusiness(biz) {
 
     <div id="mk-tabbody"></div>
 
-    <a class="mk-backhome" href="index.html" style="margin-top:16px">← Повернутися до Castle Life</a>`;
+    <a class="mk-backhome" href="index.html" style="margin-top:16px">← Повернутися до «Громади»</a>`;
 
   $('#mk-view').querySelectorAll('[data-tab]').forEach(el => {
     el.onclick = () => {
@@ -345,7 +345,7 @@ function renderPost(p) {
       <div class="mk-map">📍</div>
     </div>
 
-    <a class="mk-backhome" href="index.html" style="margin-top:16px">← Повернутися до Castle Life</a>`;
+    <a class="mk-backhome" href="index.html" style="margin-top:16px">← Повернутися до «Громади»</a>`;
 
   wireBizLinks($('#mk-view'));
   updateBar();

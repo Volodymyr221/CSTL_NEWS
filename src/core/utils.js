@@ -425,7 +425,7 @@ export function deepLink(source, id) {
 // посилання веде людину в застосунок (docs/COMMUNITY_BOARD_VISION.md).
 export async function sharePost({ title, url }) {
   const shareData = {
-    title: title || 'CSTL LIFE',
+    title: title || 'Громада',
     url:   url || location.href,
   };
   // iOS Safari + Chrome Android підтримують navigator.share()
