@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-10-05T01:16:21.963474+03:00",
+  "fetched_at": "2026-10-05T04:09:20.628459+03:00",
   "date": "05.10.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -87,8 +87,8 @@
       "carrier": "Тульчинське АТП 10507 с.Нестер",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -117,8 +117,8 @@
       "carrier": "Тульчинське АТП 10507 с.Нестер",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -132,8 +132,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
