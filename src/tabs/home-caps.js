@@ -1491,12 +1491,17 @@ async function msgCapsule() {
 // 🛑 Перша редакція взяла тут `.hm-ndots` — клас крапок НОВИН, — і одразу
 // звалила сторож `carousel-shared`: він шукав крапки новин по всьому документу,
 // а капсули стоять вище за новини. Ім'я класу має називати ВЛАСНИКА.
+// 🔴 05.10 — `.hm-capsl-glass` ДОДАНО НАВКОЛО ДОРІЖКИ. Скло (розмиття) і тінь
+// живуть на цій нерухомій пігулці, а НЕ на слайдах у скролері: у Safari
+// розмиття всередині прокрутки малювалось поверх тексту (перша капсула
+// порожня), а скролер обрізав тінь прямокутником (гострі кути). Деталі —
+// `style/home.css` біля `.hm-capsl-glass`.
 function capSlidesHtml(c) {
   const слайди = c.slides.map((s, i) => capHtml({ ...s, key: c.key, slide: i })).join('');
   const крапки = c.slides.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('');
   return `
     <div class="hm-capsl" data-cap="${escapeHtml(c.key)}">
-      <div class="hm-capsl-track">${слайди}</div>
+      <div class="hm-capsl-glass"><div class="hm-capsl-track">${слайди}</div></div>
       <div class="hm-dots hm-capsl-dots" aria-hidden="true">${крапки}</div>
     </div>`;
 }
