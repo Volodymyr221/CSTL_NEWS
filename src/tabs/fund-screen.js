@@ -193,7 +193,7 @@ function proposeFormHtml() {
     <label class="fsf-agree">
       <input type="checkbox" id="fsf-ok">
       <span>Підтверджую, що дані правдиві, і що за збір відповідаю я.
-      CSTL LIFE не збирає й не зберігає кошти.</span>
+      Застосунок «Громада» не збирає й не зберігає кошти.</span>
     </label>
     <button class="fsf-send" id="fsf-send">Надіслати заявку</button>`;
 }

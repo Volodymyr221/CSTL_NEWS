@@ -172,7 +172,7 @@ const INFO = {
   support: {
     title: 'Підтримка',
     body: 'Питання, ідеї чи проблема? Напишіть нам на пошту — відповідаємо особисто.<br><br>' +
-          '<a class="info-mail-btn" href="mailto:' + CONTACT + '?subject=Підтримка%20CSTL%20LIFE">' +
+          '<a class="info-mail-btn" href="mailto:' + CONTACT + '?subject=Підтримка%20застосунку%20Громада">' +
           ICONS.mail + ' Написати в підтримку</a><br><br>' +
           '<span class="info-mail-plain">' + CONTACT + '</span>',
   },

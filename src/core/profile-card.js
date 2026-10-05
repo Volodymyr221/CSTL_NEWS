@@ -76,7 +76,7 @@ function cardHtml(p) {
     ? `<div class="pcard-bio"><span class="pcard-bio-h">Про себе</span><p>${escapeHtml(bioText)}</p></div>` : '';
 
   const jd = (p && p.created_at) ? joinDate(p.created_at) : '';
-  const since = jd ? `<div class="pcard-since">Учасник CSTL LIFE з ${jd}</div>` : '';
+  const since = jd ? `<div class="pcard-since">Учасник «Громади» з ${jd}</div>` : '';
 
   // 🔵 09.08 (потік 3) — СИНЯ ГАЛОЧКА «ОФІЦІЙНИЙ АКАУНТ», поруч з іменем.
   // 🛑 Це НЕ те саме, що бейдж «Довірений автор» вище: той малюється за `trusted`

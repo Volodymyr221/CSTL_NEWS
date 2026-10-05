@@ -139,7 +139,7 @@ function showBanner(iosMode) {
     <button class="pwa-cta-x" type="button" aria-label="Закрити">✕</button>
     <img class="pwa-cta-ic" src="icons/icon-192.png" alt="" width="40" height="40">
     <div class="pwa-cta-txt">
-      <b>Встанови CSTL LIFE на екран</b>
+      <b>Встанови «Громаду» на екран</b>
       <span>Швидкий доступ до життя громади</span>
     </div>
     <button class="pwa-cta-go" type="button">${iosMode ? 'Як встановити' : 'Встановити'}</button>`;
@@ -257,7 +257,7 @@ const СХЕМА_3 = `
 // 🗣️ Вова: «можна туди вставити нашу іконку додатку… це буде більш правдоподібно.
 // І написати CSTL LIFE в назві. А все остальне, рядки, залишити таким блюром».
 const СХЕМА_4 = `
-<svg viewBox="0 0 260 150" role="img" aria-label="Екран додавання: іконка CSTL LIFE і кнопка «Додати»">
+<svg viewBox="0 0 260 150" role="img" aria-label="Екран додавання: іконка «Громади» і кнопка «Додати»">
   <rect x="16" y="14" width="228" height="118" rx="16" fill="#fff" stroke="#E3E3E7"/>
   <rect x="34" y="36" width="52" height="9" rx="4.5" fill="#E8E8EC"/>
   <rect x="168" y="26" width="60" height="28" rx="14" fill="${БРЕНД}"/>
@@ -265,7 +265,7 @@ const СХЕМА_4 = `
   <rect x="160" y="18" width="76" height="44" rx="22" fill="none" stroke="${БРЕНД}" stroke-width="2.5"/>
   <image href="icons/icon-192.png" x="34" y="78" width="38" height="38" preserveAspectRatio="xMidYMid slice"
          clip-path="inset(0 round 9)"/>
-  <text x="84" y="94" font-size="12" fill="#2A2520" font-weight="700">CSTL LIFE</text>
+  <text x="84" y="94" font-size="12" fill="#2A2520" font-weight="700">Громада</text>
   <rect x="84" y="104" width="118" height="8" rx="4" fill="#F1F1F4"/>
 </svg>`;
 
@@ -277,7 +277,7 @@ const КРОКИ = [
   { схема: СХЕМА_3, назва: 'Знайди «На Початковий екран»',
     текст: 'Гортай список униз, поки не побачиш цей пункт, і натисни його.' },
   { схема: СХЕМА_4, назва: 'Натисни «Додати»',
-    текст: 'Кнопка вгорі справа. Іконка CSTL LIFE стане на твій екран — далі заходиш одним тапом.' },
+    текст: 'Кнопка вгорі справа. Іконка «Громади» стане на твій екран — далі заходиш одним тапом.' },
 ];
 
 function відкритиІнструкцію() {
@@ -288,15 +288,15 @@ function відкритиІнструкцію() {
   // підписами дали б довгу прокрутку, у якій «де я зараз» губиться. Лічильник
   // «1 / 3» відповідає на це питання, не займаючи місця.
   el.innerHTML = `
-    <div class="pwa-guide-sheet" role="dialog" aria-modal="true" aria-label="Як встановити CSTL LIFE">
+    <div class="pwa-guide-sheet" role="dialog" aria-modal="true" aria-label="Як встановити «Громаду»">
       <button class="pwa-guide-x" type="button" aria-label="Закрити">✕</button>
       <div class="pwa-guide-head">
-        <h2>Як встановити CSTL LIFE</h2>
+        <h2>Як встановити «Громаду»</h2>
         <!-- 🗣️ Вова 29.08: сказати чесно, що зараз це ВЕБ-версія, а не застосунок
              з App Store. Людина, яка чекала магазин застосунків, інакше вирішить,
              що її обманули на кроці «Поширити». Пояснення термінів у дужках — як
              усюди в проєкті: слово PWA більшості нічого не каже. -->
-        <p>Поки що CSTL LIFE — це <b>веб-версія</b> (PWA, застосунок із браузера):
+        <p>Поки що «Громада» — це <b>веб-версія</b> (PWA, застосунок із браузера):
            у магазинах застосунків його ще немає. Ставиться за 4 кроки, і далі
            працює як звичайний застосунок з іконкою на екрані.</p>
       </div>

@@ -552,7 +552,7 @@ function wireAdModalChrome(modal, close) {
         // мережева відповідь фізично не може її стерти. До цього хвіст доводилось
         // вирізати з тексту і приклеювати назад — крихко: рядок ділився за
         // видимим роздільником « · », тобто за оформленням, а не за даними.
-        sinceEl.textContent = `Учасник CSTL LIFE з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
+        sinceEl.textContent = `Учасник «Громади» з ${MONTHS_GEN[dt.getMonth()]} ${dt.getFullYear()}`;
       }
       // 🔵 09.08 — ГАЛОЧКУ ТУТ НЕ МАЛЮЄМО, І ЦЕ НАВМИСНО.
       // Перша редакція ставила її саме тут, з відповіді `fetchPublicProfile`.
@@ -918,7 +918,7 @@ function renderAdAuthor(p) {
         ${av}
         <span class="cm-ad-author-info">
           <span class="cm-ad-author-name">${nameSlot(p.owner_uid, name)}</span>
-          ${uid ? `<span class="cm-ad-author-since" data-ad-since>Учасник CSTL LIFE</span>` : ''}
+          ${uid ? `<span class="cm-ad-author-since" data-ad-since>Учасник «Громади»</span>` : ''}
           ${uid && others ? `<span class="cm-ad-author-more">Ще ${others} ${plural(others, 'оголошення', 'оголошення', 'оголошень')} автора</span>` : ''}
         </span>
         ${uid ? `<span class="cm-ad-author-go" aria-hidden="true">${CHEVRON_ICON_SVG}</span>` : ''}
@@ -1113,7 +1113,7 @@ function renderAdSafety() {
       ${SHIELD_ICON_SVG}
       <span class="cm-ad-safety-text">
         <b>Будьте обережні</b>
-        CSTL LIFE не є стороною угоди та не гарантує виконання домовленостей між
+        «Громада» не є стороною угоди та не гарантує виконання домовленостей між
         користувачами. Не здійснюйте передоплату, перевіряйте товар і продавця перед оплатою.
       </span>
     </div>`;

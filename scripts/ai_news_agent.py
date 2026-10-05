@@ -833,7 +833,7 @@ def item_to_article(item: dict) -> dict | None:
             "image_type": "none",              # уточнимо в enqueue (Wikimedia → illustration)
             "image_credit": None,
             "image_query": (item.get("image_query") or "").strip() or title,
-            "source": "CSTL LIFE · Олика",
+            "source": "Громада · Олика",
             "sourceUrl": None,                 # оригінал — без зовнішнього джерела
             "sources": sources,                # для аудиту/обґрунтування
             "exclusive": True,

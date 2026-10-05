@@ -1061,7 +1061,7 @@ def drip_story(existing_articles: list, next_id: int):
         "category": story.get("category", "Історія"),
         "geo": "Громада",
         "image": story.get("image"),
-        "source": story.get("source", "CSTL LIFE"),
+        "source": story.get("source", "Громада"),
         "sourceUrl": story.get("sourceUrl"),
         "exclusive": True,
         "ts": now,

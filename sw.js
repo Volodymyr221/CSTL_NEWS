@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20261005-0816';
+const CACHE_NAME = 'cstl-20261005-2011';
 
 // 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
 // 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш
@@ -318,7 +318,7 @@ self.addEventListener('push', e => {
         }); } catch (_) {} });
         // App is in foreground — skip system notification, in-app banner handles it
         if (list.some(c => c.visibilityState === 'visible')) return;
-        return self.registration.showNotification(data.title || 'CSTL LIFE', {
+        return self.registration.showNotification(data.title || 'Громада', {
           body:               data.body  || '',
           icon:               './logo.png',
           badge:              './logo.png',
