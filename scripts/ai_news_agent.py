@@ -896,7 +896,7 @@ def _sanitize_image_url(u):
     return u if u.startswith(("http://", "https://")) else None
 
 
-def fetch_wikimedia_image(query: str):
+def fetch_wikimedia_image(query: str, exclude: set | None = None):
     """Шукає ВІДКРИТО-ЛІЦЕНЗОВАНЕ фото на Wikimedia Commons за запитом.
     Повертає (url, credit) або (None, None). Це ІЛЮСТРАЦІЯ (не фото конкретної події)."""
     import urllib.parse
@@ -924,6 +924,8 @@ def fetch_wikimedia_image(query: str):
         url = info.get("thumburl") or info.get("url")
         if not url or not url.lower().split("?")[0].endswith((".jpg", ".jpeg", ".png", ".webp")):
             continue
+        if exclude and url in exclude:
+            continue   # 05.10 — це фото вже стоїть на іншій статті, беремо наступне
         meta = info.get("extmetadata") or {}
         artist = pr.strip_html((meta.get("Artist") or {}).get("value", "")).strip()
         lic = pr.strip_html((meta.get("LicenseShortName") or {}).get("value", "")).strip()
@@ -957,15 +959,95 @@ def fetch_wikimedia_image(query: str):
 ]
 
 
+# 🔴 05.10 — ОДНЕ Й ТЕ САМЕ ФОТО НА ВСІХ ЧЕРНЕТКАХ (скарга Вови зі знімка
+# кабінету: «треба підшукувати різні фото, по темі, з того чи іншого села»).
+# 📐 Причина: за конкретним запитом про село Commons зазвичай порожній, тож
+# сходинки падали на «Olyka Castle» — і ПЕРШИЙ результат цього запиту ставав
+# обкладинкою кожної статті. Лікування — три речі, від кращого до запасного:
+#   1) ФОТО ПЕРШОДЖЕРЕЛА. Агент пише з `sources` — найчастіше це сторінка сайту
+#      громади, де в новини є ВЛАСНЕ фото. Це фото саме цієї події, не ілюстрація.
+#   2) СЕЛО СТАТТІ. Якщо в заголовку/тексті названо село громади — спершу шукаємо
+#      його («Дерно Волинська область»), а не замок.
+#   3) БЕЗ ПОВТОРІВ. Фото, що вже стоїть на іншій статті (свіжі статті + чернетки
+#      кабінету + цей прогін), вдруге не беремо — йдемо до наступного результату.
+_ВЖИТІ_ФОТО: set | None = None
+
+
+def _вжиті_фото() -> set:
+    """Адреси фото, які вже стоять на статтях і чернетках — щоб не повторювати."""
+    global _ВЖИТІ_ФОТО
+    if _ВЖИТІ_ФОТО is not None:
+        return _ВЖИТІ_ФОТО
+    вжиті = set()
+    try:
+        for x in json.loads(Path("data/articles.json").read_text(encoding="utf-8"))[:150]:
+            if x.get("image"):
+                вжиті.add(x["image"])
+    except Exception:
+        pass
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if key:
+        import urllib.request
+        req = urllib.request.Request(
+            SUPA_URL + "/rest/v1/cms_articles?select=image&order=id.desc&limit=80",
+            headers={"apikey": key, "Authorization": "Bearer " + key})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                for x in json.loads(r.read().decode("utf-8")):
+                    if x.get("image"):
+                        вжиті.add(x["image"])
+        except Exception as e:
+            print(f"  ⚠ не прочитав фото чернеток ({e}) — повтори можливі")
+    _ВЖИТІ_ФОТО = вжиті
+    return вжиті
+
+
+def _села_статті(a: dict) -> list:
+    """Села громади, названі в заголовку чи тексті (за основою слова — «Дерні»,
+    «Жорнищенський» теж рахуються)."""
+    try:
+        села = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))["hromada"]["villages"]
+    except Exception:
+        return []
+    текст = ((a.get("title") or "") + " " + (a.get("content") or "")[:3000]).lower()
+    знайдені = []
+    for с in села:
+        основа = с.lower().replace("'", "ʼ")[:max(4, len(с) - 2)]
+        if основа and основа in текст.replace("'", "ʼ"):
+            знайдені.append(с)
+    return знайдені
+
+
+def _фото_першоджерела(a: dict):
+    """Фото зі сторінок `sources` (до трьох). Повертає (url, credit) або (None, None)."""
+    вжиті = _вжиті_фото()
+    for src in (a.get("sources") or [])[:3]:
+        try:
+            _, cover, _ = pr.fetch_article_page(src)
+            cover = cover or pr.fetch_og_image(src) or ""
+        except Exception:
+            cover = ""
+        cover = _sanitize_image_url(cover) if cover else None
+        if cover and cover not in вжиті:
+            return cover, "Фото: " + _domain(src)
+    return None, None
+
+
 def _ілюстрація(a: dict):
-    """Шукає ілюстрацію сходинками. Повертає (url, credit) або (None, None)."""
-    спроби = [a.get("image_query"), a.get("title")] + ЗАПАСНІ_ЗАПИТИ
+    """Шукає ілюстрацію сходинками без повторів. Повертає (url, credit) або (None, None)."""
+    вжиті = _вжиті_фото()
+    села = _села_статті(a)
+    # Порядок: запит самого агента (він знає тему) → село статті → заголовок →
+    # впізнавані місця громади. Стенд `article-image` стереже цей порядок.
+    спроби = ([a.get("image_query")]
+              + [f"{с} Волинська область" for с in села] + села
+              + [a.get("title")] + ЗАПАСНІ_ЗАПИТИ)
     for q in спроби:
         q = (q or "").strip()
         if not q:
             continue
         try:
-            img, credit = fetch_wikimedia_image(q)
+            img, credit = fetch_wikimedia_image(q, exclude=вжиті)
         except Exception:
             img, credit = None, None
         if img:
@@ -978,11 +1060,16 @@ def _enrich(a: dict):
     курована → реальне фото зі сторінки видавця + повний текст."""
     if a.get("original"):
         if not a.get("image"):
-            img, credit = _ілюстрація(a)
+            img, credit = _фото_першоджерела(a)
+            тип = "source"
+            if not img:
+                img, credit = _ілюстрація(a)
+                тип = "illustration"
             if img:
                 a["image"] = _sanitize_image_url(img)
-                a["image_type"] = "illustration"
+                a["image_type"] = тип
                 a["image_credit"] = credit
+                _вжиті_фото().add(a["image"])   # наступна стаття цього прогону не візьме те саме
             else:
                 a["image_type"] = "none"
     else:
