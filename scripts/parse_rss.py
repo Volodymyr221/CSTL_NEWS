@@ -85,6 +85,38 @@ SOURCES = [
 GROMADA_PROXY = "https://cstl-proxy.volodymyrshevchuk19.workers.dev"
 GROMADA_BASE  = "https://olytska-gromada.gov.ua"
 
+# 🔴 05.10 — ДАТА НОВИНИ САЙТУ ГРОМАДИ ЛЕЖИТЬ У САМІЙ АДРЕСІ. `/news/1790246466/`
+# — це час публікації в секундах (звірено: «Власна справа» = 24.09 10:41, як на
+# сайті). Текст `.news_date` наш розбір дат не впізнавав, і всі новини отримували
+# «зараз» — 19 новин від серпня до жовтня прийшли як сьогоднішні. Адреса —
+# надійніше за текст: формат тексту сайт може змінити, адресу статті — ні.
+_GROMADA_TS_RE = re.compile(r"/news/(1\d{9})/")
+
+
+def gromada_ts_from_url(url: str):
+    """Мілісекунди публікації з адреси новини сайту громади або None."""
+    m = _GROMADA_TS_RE.search(url or "")
+    if not m:
+        return None
+    sec = int(m.group(1))
+    # Межі здорового глузду: не раніше 2020 і не більше доби в майбутнє.
+    if sec < 1577836800 or sec > time.time() + 86400:
+        return None
+    return sec * 1000
+
+
+def heal_gromada_ts(articles: list) -> int:
+    """Одноразово лікує вже збережені новини сайту громади з датою «зараз»."""
+    n = 0
+    for a in articles:
+        if a.get("source") != "Олицька громада":
+            continue
+        ts = gromada_ts_from_url(a.get("sourceUrl") or "")
+        if ts and abs((a.get("ts") or 0) - ts) > 3600_000:
+            a["ts"] = ts
+            n += 1
+    return n
+
 # ── Анти-SSRF (Server-Side Request Forgery — підробка запиту з боку сервера) ──
 # fetch_full_article() ходить за посиланнями ЗІ СТРІЧКИ (RSS), а їх контролює
 # джерело. Зловмисне джерело могло б підсунути file:///etc/passwd або
@@ -3226,9 +3258,9 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
         if is_dup_title(tokens, section, seen_by_section):
             continue
 
-        # Дата з контейнера
-        ts = int(time.time() * 1000)
-        date_el = (container.find(
+        # Дата: спершу з адреси (надійно), далі з контейнера, інакше «зараз»
+        ts = gromada_ts_from_url(href) or int(time.time() * 1000)
+        date_el = None if gromada_ts_from_url(href) else (container.find(
             ["time", "span", "dd", "div"],
             class_=re.compile(r"date|time|published|create", re.I),
         ) if hasattr(container, "find") else None)
@@ -3808,6 +3840,8 @@ def main():
     # які вже лежать у стрічці, а не лише до завтрашніх. Інакше «полагодили
     # класифікатор» місяць виглядало б як «нічого не змінилось».
     recategorized = recategorize_stored_articles(existing_articles)
+    # 🔴 05.10 — дати новин сайту громади з адреси (див. `gromada_ts_from_url`).
+    recategorized += heal_gromada_ts(existing_articles)
 
     # 🔴 03.09 — РЕТРО-ДЕДУП (розбір над `retro_dedup`). Правило дедуплікації
     # застосовується не лише до нових статей, а й до вже збереженої стрічки.
