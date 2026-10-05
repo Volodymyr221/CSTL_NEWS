@@ -1,6 +1,61 @@
 {
   "runs": [
     {
+      "ts": 1791240298545,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10829,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0218,
+      "note": ""
+    },
+    {
+      "ts": 1791240296386,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 5701,
+      "cache_read": 33613,
+      "cache_write": 36286,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1945,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791240209125,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 65877,
+      "output_tokens": 5759,
+      "cache_read": 70677,
+      "cache_write": 35048,
+      "web_searches": 4,
+      "found": 1,
+      "cost_usd": 0.3311,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791240116902,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 7774,
+      "cache_read": 32320,
+      "cache_write": 33504,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.208,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1791219374521,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -740,64 +795,12 @@
       "found": 1,
       "cost_usd": 0.0398,
       "note": "В Олицькій громаді можна переглянути навчальні тренінги програми «Досвід має зна"
-    },
-    {
-      "ts": 1788349050826,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 597,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0136,
-      "note": ""
-    },
-    {
-      "ts": 1788348066541,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10532,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0318,
-      "note": ""
-    },
-    {
-      "ts": 1788348064315,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 8,
-      "output_tokens": 2911,
-      "cache_read": 62358,
-      "cache_write": 42428,
-      "web_searches": 6,
-      "found": 2,
-      "cost_usd": 0.2815,
-      "note": ""
-    },
-    {
-      "ts": 1788328668192,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10671,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0322,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 13.5952,
-    "runs": 194,
-    "web_searches": 202
+    "cost_usd": 14.3506,
+    "runs": 198,
+    "web_searches": 214
   },
   "months": {
     "2026-07": {
@@ -817,13 +820,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 0.7152,
-      "runs": 6,
-      "web_searches": 16,
-      "fair_usd": 0.7152
+      "cost_usd": 1.4706,
+      "runs": 10,
+      "web_searches": 28,
+      "fair_usd": 1.4706
     }
   },
-  "updated_ts": 1791219374521,
+  "updated_ts": 1791240298545,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",

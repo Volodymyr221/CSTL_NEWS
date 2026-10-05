@@ -1,6 +1,54 @@
 {
   "posts": [
     {
+      "ts": 1791240312140,
+      "title": "Інвестиційні земельні ділянки у шести населених пунктах громади чекають на бізнес",
+      "category": "Економіка",
+      "sources": [
+        "https://olytska-gromada.gov.ua/docs/2267496/",
+        "https://olytska-gromada.gov.ua/"
+      ],
+      "key": "бізнес громади ділянки земельні населених пунктах чекають шести інвестиційні"
+    },
+    {
+      "ts": 1791240309547,
+      "title": "Олика запровадила туристичний збір на 2026 рік: що це означає для громади",
+      "category": "Культура",
+      "sources": [
+        "https://olytska-gromada.gov.ua/docs/2055108/"
+      ],
+      "key": "2026 громади запровадила збір означає олика рік туристичний"
+    },
+    {
+      "ts": 1791240305418,
+      "title": "Мобільна гінекологічна бригада у жовтні відвідає Дерно, Покащів, Дідичі, Жорнище та Олику",
+      "category": "Війна",
+      "sources": [
+        "https://volyn.com.ua/news/313945-iak-u-zhovtni-pratsiuvatyme-mobilna-hinekolohichna-bryhada-na-volyni"
+      ],
+      "key": "бригада відвідає гінекологічна дерно дідичі жовтні жорнище мобільна олику покащів"
+    },
+    {
+      "ts": 1791240302939,
+      "title": "Екоурок у Дернівському ліцеї: школярі села Дерно вчаться берегти природу",
+      "category": "Освіта",
+      "sources": [
+        "https://kivertsi.rayon.in.ua/tags/derno",
+        "https://eco.rayon.in.ua/news/1067579-minekonomiki-ta-fao-zapuskaiut-projekt-vidnovlennia-lisiv"
+      ],
+      "key": "берегти вчаться дерно дернівському екоурок ліцеї природу села школярі"
+    },
+    {
+      "ts": 1791240301539,
+      "title": "Тимофій Климчук з Олицької громади виборов золото на турнірі з дзюдо у Хелмі",
+      "category": "Спорт",
+      "sources": [
+        "https://kivertsi.rayon.in.ua/news/1063452-dopomoga-z-tilu-olicka-gromada-peredala-dopomogu-viiskovim-na-xarkivskomu-napriamku",
+        "https://sport.rayon.in.ua/news/1103662-deviatiklasnik-iz-lucka-viborov-sriblo-cempionatu-svitu-z-boiovix-mistectv"
+      ],
+      "key": "виборов громади дзюдо золото климчук олицької тимофій турнірі хелмі"
+    },
+    {
       "ts": 1791219391473,
       "title": "У Дернівському ліцеї для другокласників провели захід про дружбу",
       "category": "Освіта",
@@ -572,5 +620,5 @@
       "key": "генератор громада олицька отримала партнерів тайваню"
     }
   ],
-  "updated_ts": 1791219391473
+  "updated_ts": 1791240312140
 }
