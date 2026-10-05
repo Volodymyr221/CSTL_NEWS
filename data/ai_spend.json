@@ -1,6 +1,75 @@
 {
   "runs": [
     {
+      "ts": 1791219374521,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 11211,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0225,
+      "note": ""
+    },
+    {
+      "ts": 1791219372277,
+      "mission": "Громада №4",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 4040,
+      "cache_read": 32663,
+      "cache_write": 34920,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1742,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791219316205,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 4304,
+      "cache_read": 32352,
+      "cache_write": 34771,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1764,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791219250537,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3137,
+      "cache_read": 32456,
+      "cache_write": 33400,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1614,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791219206395,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3977,
+      "cache_read": 31577,
+      "cache_write": 34651,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1727,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1790862414813,
       "mission": "holiday:🇺🇦⛪ День захисників і захисн",
       "model": "claude-sonnet-5",
@@ -723,77 +792,12 @@
       "found": 0,
       "cost_usd": 0.0322,
       "note": ""
-    },
-    {
-      "ts": 1788328665833,
-      "mission": "Громада №2",
-      "model": "claude-sonnet-5",
-      "input_tokens": 8,
-      "output_tokens": 8340,
-      "cache_read": 59977,
-      "cache_write": 38014,
-      "web_searches": 6,
-      "found": 2,
-      "cost_usd": 0.3457,
-      "note": ""
-    },
-    {
-      "ts": 1788328535693,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 8,
-      "output_tokens": 7176,
-      "cache_read": 58511,
-      "cache_write": 40166,
-      "web_searches": 6,
-      "found": 2,
-      "cost_usd": 0.3358,
-      "note": ""
-    },
-    {
-      "ts": 1788263798585,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 551,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0129,
-      "note": ""
-    },
-    {
-      "ts": 1788263786409,
-      "mission": "holiday:🇺🇦 День знань",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 429,
-      "cache_read": 0,
-      "cache_write": 1143,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0107,
-      "note": ""
-    },
-    {
-      "ts": 1788239771650,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 11145,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0336,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 12.888,
-    "runs": 189,
-    "web_searches": 186
+    "cost_usd": 13.5952,
+    "runs": 194,
+    "web_searches": 202
   },
   "months": {
     "2026-07": {
@@ -813,13 +817,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 0.008,
-      "runs": 1,
-      "web_searches": 0,
-      "fair_usd": 0.008
+      "cost_usd": 0.7152,
+      "runs": 6,
+      "web_searches": 16,
+      "fair_usd": 0.7152
     }
   },
-  "updated_ts": 1790862414813,
+  "updated_ts": 1791219374521,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
