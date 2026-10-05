@@ -3173,6 +3173,23 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
         print(f"  ⚠ {source.get('name')}: розмітку НЕ ВПІЗНАНО — 0 кандидатів "
               f"({len(raw)} байт, {len(soup.find_all('article'))} <article>, "
               f"{len(soup.select('a[href]'))} посилань). Сайт змінив верстку?")
+        # 🔬 05.10 — РОЗБІР СТОРІНКИ В ЛОГ. Сайт громади недосяжний ні з пісочниці
+        # Claude (проксі 403), ні напряму з GitHub (блок IP) — бачить його лише
+        # Worker. Тож єдиний спосіб дізнатись справжню верстку — надрукувати її
+        # тут. Друкуємо ПОСИЛАННЯ з довгим текстом (кандидати в заголовки) і
+        # найчастіші класи блоків — цього досить, щоб написати селектор.
+        try:
+            import collections
+            print(f"    🔬 <title>: {(soup.title.get_text(strip=True) if soup.title else '—')[:90]}")
+            довгі = [(a["href"], a.get_text(" ", strip=True)) for a in soup.select("a[href]")
+                     if len(a.get_text(" ", strip=True)) > 25][:15]
+            for href, text in довгі:
+                print(f"    🔬 a: {href[:90]} | {text[:70]}")
+            класи = collections.Counter(c for el in soup.find_all(class_=True)
+                                        for c in el.get("class", []))
+            print("    🔬 класи: " + ", ".join(f"{c}×{n}" for c, n in класи.most_common(25)))
+        except Exception as e:
+            print(f"    🔬 розбір не вдався: {e}")
     else:
         print(f"  · {source.get('name')}: {len(candidates)} кандидатів (рівень: {рівень})")
 
