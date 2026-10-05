@@ -1109,6 +1109,35 @@
 /* `flex: 0 0 100%` разом із `width: 100%` — без `flex-shrink: 0` контейнер
    стиснув би обидва боки в одне вікно замість того, щоб дати їм стати в ряд. */
 .hm-capsl-track > .hm-cap2 { scroll-snap-align: start; flex: 0 0 100%; width: 100%; }
+/* 🔴 05.10 — СКЛО І ТІНЬ СЛАЙДЕРА ЖИВУТЬ НА НЕРУХОМІЙ ПІГУЛЦІ, НЕ НА СЛАЙДАХ.
+   🗣️ Вова зі знімка: «коли капсула йде слайдом, то першу капсулу не видно» і
+   «по кутах капсули тінь з гострими кутами — тільки коли слайд».
+   🔑 Дві вади, одне джерело — скролер (`.hm-capsl-track`, `overflow-x: auto`):
+   (1) він обрізає все поза своїм прямокутником, тож тінь слайда різалась
+       прямими краями → «гострі кути»;
+   (2) у WebKit (Safari) розмиття `backdrop-filter` усередині прокрутки
+       малюється ПОВЕРХ вмісту попри `z-index` → іконка й текст першої
+       капсули зникали під склом. Фікс 28.09 (#1226) переніс розмиття на
+       `::before` слайда — прямокутник прибрав, але шар лишився в скролері.
+   ✅ Тепер розмиття і тінь — на `.hm-capsl-glass`, ПОЗА скролером; слайди в
+   слайдері лише напівпрозорі, без власного розмиття й зовнішньої тіні.
+   Одинична капсула (без слайдера) не змінилась ані на піксель.
+   ⚠️ Chromium цю ваду WebKit не відтворює — перевірено живим iPhone Вови. */
+.hm-capsl-glass {
+  position: relative;
+  border-radius: 999px;
+  box-shadow: var(--elev-dark-3);
+}
+.hm-capsl-glass::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  border-radius: inherit;
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+          backdrop-filter: blur(16px) saturate(1.6);
+  pointer-events: none;
+}
+.hm-capsl-glass > .hm-capsl-track { position: relative; z-index: 1; border-radius: 999px; }
+.hm-capsl-track > .hm-cap2 { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34); }
+.hm-capsl-track > .hm-cap2::before { content: none; }
 @media (prefers-reduced-motion: reduce) {
   .hm-capsl-track { scroll-behavior: auto; }
 }
