@@ -334,10 +334,12 @@ html, body {
   animation: splashPop 0.5s ease-out, shadowSweep 3.5s ease-in-out forwards;
 }
 .splash-logo {
-  font-size: 42px;
+  /* 05.10 — «ГРОМАДА» капсом: 42px для 7 великих літер виходило завеликим і
+     негармонійним (Вова). Менший кегль + ширший трекінг = знак, а не напис. */
+  font-size: 32px;
   font-weight: 700;
   color: white;
-  letter-spacing: 2px;
+  letter-spacing: 6px;
   font-family: Georgia, serif;
   margin-top: 30px;
   animation: splashFadeUp 0.5s ease-out 0.15s both, textShadowSweep 3.5s ease-in-out forwards;
@@ -442,10 +444,12 @@ html, body {
   font-weight: 700;
   color: var(--black);
   font-family: Georgia, serif;
-  letter-spacing: 1px;
+  letter-spacing: 2px;   /* 05.10 — капс «ГРОМАДА» дихає ширше */
 }
 .header-logo span { color: var(--red); }
-/* 🆕 04.10 — ПРОБА РЕБРЕНДИНГУ «Громада» (Вова: «з чорного в бордовий, щоб
+/* 05.10 — назва КАПСОМ «ГРОМАДА» (Вова: «всюди і в бургер меню»); той самий
+   клас стоїть і на `.sidebar-logo`, тож градієнт один на шапку й меню.
+   🆕 04.10 — ПРОБА РЕБРЕНДИНГУ «Громада» (Вова: «з чорного в бордовий, щоб
    переливалося»). Одне слово замість «CSTL + LIFE», тож два кольори стали
    градієнтом ПО ЛІТЕРАХ: зліва чорний, перехід посередині, справа бордо.
    `background-clip: text` — фон видно лише крізь літери; `color: transparent`
