@@ -16,7 +16,7 @@ import { reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
 
-const прогін = (влучає) => {
+const прогін = (влучає, вжиті = []) => {
   const код = `
 import sys, json
 sys.path.insert(0, 'scripts')
@@ -24,11 +24,16 @@ import ai_news_agent as ag
 
 спроби = []
 ВЛУЧАЄ = ${JSON.stringify(влучає)}
-def підробка(q):
+ВЖИТІ = set(${JSON.stringify(вжиті)})
+def підробка(q, exclude=None):
     спроби.append(q)
-    return ("https://example.org/foto.jpg", "автор") if q == ВЛУЧАЄ else (None, None)
+    url = "https://example.org/foto.jpg"
+    if q == ВЛУЧАЄ and not (exclude and url in exclude):
+        return (url, "автор")
+    return (None, None)
 
 ag.fetch_wikimedia_image = підробка
+ag._ВЖИТІ_ФОТО = ВЖИТІ
 img, credit = ag._ілюстрація({"image_query": "Radziwill lands census", "title": "Ставок: село при замку"})
 print("РЕЗУЛЬТАТ", json.dumps({"спроби": спроби, "фото": img, "автор": credit}, ensure_ascii=False))
 `;
@@ -62,7 +67,23 @@ print("РЕЗУЛЬТАТ", json.dumps({"спроби": спроби, "фото"
 {
   const r = прогін('нічого-не-влучає');
   ok('🔴 нічого не знайшлось — жодного фото, а не випадкове', r.фото === null, String(r.фото));
-  ok('запасні вичерпні й не безмежні', r.спроби.length === 5, `${r.спроби.length}: ${r.спроби.join(' → ')}`);
+  // 05.10: агент → «Ставок Волинська область» → «Ставок» (село зі статті) → заголовок → 3 запасні
+  ok('запасні вичерпні й не безмежні', r.спроби.length === 7, `${r.спроби.length}: ${r.спроби.join(' → ')}`);
+}
+
+// 4. 🆕 05.10 — СЕЛО СТАТТІ ШУКАЄТЬСЯ РАНІШЕ ЗА ЗАМОК (скарга Вови: на всіх
+//    чернетках одне й те саме фото замку).
+{
+  const r = прогін('Ставок Волинська область');
+  ok('🔴 село зі статті шукається раніше за запасні', !!r.фото
+     && r.спроби.indexOf('Ставок Волинська область') < r.спроби.indexOf('Olyka Castle') || r.спроби.indexOf('Olyka Castle') === -1,
+     r.спроби.join(' → '));
+}
+
+// 5. 🆕 05.10 — ФОТО, ЩО ВЖЕ СТОЇТЬ НА ІНШІЙ СТАТТІ, ВДРУГЕ НЕ БЕРЕТЬСЯ.
+{
+  const r = прогін('Olyka Castle', ['https://example.org/foto.jpg']);
+  ok('🔴 вжите фото не повторюється (краще жодного, ніж те саме вдруге)', r.фото === null, String(r.фото));
 }
 
 done();
