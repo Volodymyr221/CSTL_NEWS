@@ -30,7 +30,7 @@ import { mockSupabase } from './_board-fixture.mjs';
 const FUND_ROWS = [{
   id: 1,
   title: 'ТЕСТ — перевірка блока зборів',
-  org: 'CSTL NEWS',
+  org: 'Громада',
   url: 'https://send.monobank.ua/',
   goal: 100000,
   photo: './photos/olyka.day-2.jpg',

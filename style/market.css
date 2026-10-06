@@ -204,7 +204,7 @@ a { color: inherit; }
 .mk-post__bar .mk-heart { color: var(--mk-red-hi); }
 .mk-post__bar .mk-save { margin-left: auto; }
 
-/* ═══ «ПОВЕРНУТИСЯ ДО CASTLE LIFE» ═════════════════════════════════════════ */
+/* ═══ «ПОВЕРНУТИСЯ ДО «ГРОМАДИ» ═════════════════════════════════════════ */
 .mk-backhome {
   display: block; width: 100%; text-align: center; text-decoration: none;
   background: var(--mk-red-dim); border: 1px solid rgba(142,37,51,.45);

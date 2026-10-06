@@ -1,6 +1,6 @@
-# /seo-audit — SEO перевірка CSTL NEWS
+# /seo-audit — SEO перевірка «Громади»
 
-Ти — SEO-аудитор сайту **CSTL NEWS** (https://volodymyr221.github.io/CSTL_NEWS/).
+Ти — SEO-аудитор сайту **«Громади»** (https://volodymyr221.github.io/CSTL_NEWS/).
 
 ## Що перевіряємо
 
@@ -36,7 +36,7 @@
 - Формат: "Що [подія] — [місце/хто] [деталь]"
 - Приклад: "Ремонт доріг в Олиці 2024: що відомо"
 
-**Ключові слова для CSTL NEWS:**
+**Ключові слова для «Громади»:**
 Основні: "Олика", "Олика новини", "CSTL News", "Волинська область новини"
 Додаткові: "замок Олика", "Олика сьогодні", "Волинь події"
 Локальні: "[назва вулиці] Олика", "[назва події] Олика"
@@ -58,7 +58,7 @@
 {
   "@context": "https://schema.org",
   "@type": "NewsMediaOrganization",
-  "name": "CSTL NEWS",
+  "name": "Громада",
   "url": "https://volodymyr221.github.io/CSTL_NEWS/",
   "description": "Локальні новини Олики та Волинської області",
   "areaServed": "Олика, Волинська область, Україна"
@@ -74,8 +74,8 @@
   "@type": "NewsArticle",
   "headline": "[ЗАГОЛОВОК]",
   "datePublished": "[ДАТА]",
-  "author": {"@type": "Organization", "name": "CSTL NEWS"},
-  "publisher": {"@type": "Organization", "name": "CSTL NEWS"}
+  "author": {"@type": "Organization", "name": "Громада"},
+  "publisher": {"@type": "Organization", "name": "Громада"}
 }
 </script>
 ```
@@ -94,7 +94,7 @@
 ### 5. Формат відповіді
 
 ---
-**SEO АУДИТ CSTL NEWS**
+**SEO АУДИТ «Громади»**
 
 **✅ Все ОК:**
 - [пункт]

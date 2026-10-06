@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — Технічна архітектура CSTL NEWS
+# ARCHITECTURE.md — Технічна архітектура «Громади»
 
 ---
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- CSTL LIFE — ФІКС RLS для push_subscriptions
+-- «Громада» — ФІКС RLS для push_subscriptions
 -- ============================================================================
 -- Помилка: "new row violates row-level security policy for table push_subscriptions"
 -- Причина: політики (дозволи) на INSERT/UPDATE не пропускають анонімного юзера.

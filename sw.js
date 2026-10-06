@@ -1,7 +1,7 @@
-// sw.js — CSTL LIFE Service Worker
+// sw.js — «Громада» Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20261005-2227';
+const CACHE_NAME = 'cstl-20261006-0814';
 
 // 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
 // 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш

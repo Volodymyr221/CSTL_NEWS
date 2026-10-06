@@ -1,4 +1,4 @@
-# SESSION_ARCHIVE.md — Архів попередніх сесій CSTL NEWS
+# SESSION_ARCHIVE.md — Архів попередніх сесій «Громада»
 
 > Сюди переносяться деталі закритих сесій з SESSION_STATE.md.
 > SESSION_STATE.md тримає тільки поточний стан — деталі тут.

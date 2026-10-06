@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CSTL NEWS — Парсер розкладу автобусів з vopas.com.ua.
+"""«Громада» — Парсер розкладу автобусів з vopas.com.ua.
 
 ТОЧКА ВХОДУ ДЛЯ CRON: запускається з GitHub Actions
 (.github/workflows/vopas-parser.yml).

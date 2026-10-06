@@ -34,7 +34,7 @@ const { ok, done } = reporter();
 // Три статті Громади, усі свіжі — щоб «нових» було що рахувати.
 const ARTICLES = [1, 2, 3].map(i => ({
   id: 6000 + i, title: 'НОВИНА ГРОМАДИ ' + i, excerpt: 'Опис.', content: 'Текст.',
-  category: 'Суспільство', geo: 'Громада', image: null, source: 'CSTL NEWS',
+  category: 'Суспільство', geo: 'Громада', image: null, source: 'Громада',
   sourceUrl: null, exclusive: false, ts: Date.now() - i * 3600e3,
 }));
 
