@@ -34,7 +34,7 @@ const { ok, done } = reporter();
 const ts = Date.now() - 2 * 864e5;
 const ARTICLES = [
   { id: 5001, title: 'СТАТТЯ ПРО ДОРОГУ', excerpt: 'Опис.', content: 'Текст статті.',
-    category: 'Суспільство', geo: 'Олика', image: null, source: 'CSTL NEWS',
+    category: 'Суспільство', geo: 'Олика', image: null, source: 'Громада',
     sourceUrl: null, exclusive: true, ts },
 ];
 const POSTS = [

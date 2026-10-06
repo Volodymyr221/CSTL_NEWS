@@ -88,7 +88,7 @@ const r = await page.evaluate(async ({ patch, avatarSrc, escapeSrc, screenHtml }
   const PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
   // ── Крок 1: змінили все одразу (назва, опис, банер, аватар) ────────────────
-  Object.assign(pages[0], { name: 'CSTL LIFE', theme: 'новини Олики', banner_url: PX, avatar_url: PX });
+  Object.assign(pages[0], { name: 'Громада', theme: 'новини Олики', banner_url: PX, avatar_url: PX });
   await patchPageScreen(7);
   const one = {
     sameNode: document.querySelector('.fd-screen') === screen,
@@ -139,7 +139,7 @@ ok('липкий заголовок перевиміряно після змін
    `переміряно ${r.one.remeasured} раз(и)`);
 
 // ── Вміст шапки оновився ────────────────────────────────────────────────────
-ok('назва оновилась', r.one.name === 'CSTL LIFE', r.one.name);
+ok('назва оновилась', r.one.name === 'Громада', r.one.name);
 ok('опис оновився', r.one.theme === 'новини Олики', String(r.one.theme));
 ok('банера не було — зʼявився і його можна відкрити', r.one.bannerImg && r.one.bannerView);
 ok('аватар став фотографією', r.one.avaImg && r.one.avaView);

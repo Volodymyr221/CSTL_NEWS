@@ -1,5 +1,5 @@
 /**
- * CSTL NEWS — Cloudflare Worker
+ * «Громада» — Cloudflare Worker
  * Проксі (посередник) для olytska-gromada.gov.ua
  * Обходить IP-блокування: сайт громади блокує Azure (GitHub Actions),
  * але не Cloudflare. Worker забирає HTML і повертає нашому парсеру.

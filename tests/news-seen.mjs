@@ -43,7 +43,7 @@ const now = Date.now();
 const СТАТТІ = [];
 for (let i = 0; i < 5; i++) СТАТТІ.push({
   id: 9000 + i, title: `Новина громади ${i + 1}`, excerpt: 'Текст', content: 'Текст',
-  category: 'Суспільство', geo: 'Громада', image: null, source: 'CSTL LIFE',
+  category: 'Суспільство', geo: 'Громада', image: null, source: 'Громада',
   sourceUrl: null, exclusive: true, ts: now - (i + 1) * 3600e3,
 });
 // Чужий розділ — навмисно СВІЖІШИЙ за все інше: якби лічильник рахував не лише

@@ -977,7 +977,7 @@ async function sharePost(id) {
   const url = deepLink('feed', id);
   if (navigator.share) {
     try {
-      await navigator.share({ title: post?.pages?.name || 'CSTL Life', url });
+      await navigator.share({ title: post?.pages?.name || 'Громада', url });
     } catch (_) { /* користувач скасував — нічого */ }
     return;
   }
