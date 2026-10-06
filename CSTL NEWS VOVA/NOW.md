@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-06 05:15 UTC
+**Зріз на:** 2026-10-06 20:16 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/dreamy-archimedes-qpd9ke` |
-| останній коміт людини | `69b360dca` 06.10 05:15 — docs: реєстр — стиснуто розділ ребрендингу під стелю 40 KB |
+| останній коміт людини | `0b83cb86c` 06.10 20:16 — docs: авто-блок пульсу звірено з git |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261006-0814` |
-| останній PR у `main` | #1252 |
+| останній PR у `main` | #1253 |
 | стендів на диску | 187 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-06 | **НЕМАЄ** ⚠️ |
@@ -24,23 +24,19 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/commands/ai-seo.md`
-- `.claude/commands/analytics.md`
-- `.claude/commands/community.md`
-- `.claude/commands/content-strategy.md`
-- `.claude/commands/copy-editing.md`
-- `.claude/commands/copywriting.md`
-- `.claude/commands/finish.md`
-- `.claude/commands/launch.md`
-- …ще 90 (повністю — `git diff --name-only origin/main..HEAD`)
+- `CLAUDE.md`
+- `CSTL NEWS VOVA/CLAUDE.md`
+- `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/BRIEF_OLYKA_CASTLE.md`
+- `CSTL NEWS VOVA/_ai-tools/PROMPT_PERSONAL_WIDGETS.md`
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `69b360dca` 06.10 05:15 — docs: реєстр — стиснуто розділ ребрендингу під стелю 40 KB
-- `4943cf4fa` 06.10 05:14 — docs: авто-блок пульсу звірено з git
-- `1b5808c0b` 06.10 05:14 — merge: стара історія гілки
-- `8aabeee06` 06.10 05:14 — chore(ребрендинг): стара назва → «Громада» по всьому репозиторію; fix(агент): фото лише зі сторінки про ту саму подію
-- `8111cb410` 06.10 05:07 — cms: статті кабінету у стрічку 06.10 05:07 UTC
+- `0b83cb86c` 06.10 20:16 — docs: авто-блок пульсу звірено з git
+- `1f1321f91` 06.10 20:16 — merge: стара історія гілки
+- `8c4ff231e` 06.10 20:16 — docs: граматика — «Громада» на початку речення
+- `6c84fa5a3` 06.10 18:20 — cms: статті кабінету у стрічку 06.10 18:20 UTC
+- `1cd67389d` 06.10 17:12 — ai(news): памʼять+чернетки+витрати 06.10 17:12 UTC
 
 <!-- AUTO:END -->
 
