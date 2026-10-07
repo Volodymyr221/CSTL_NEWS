@@ -409,7 +409,7 @@ Vercel/Linear): `apple-design` · `animate` · `review-animations` ·
 
 **Лічильник версії** — маленький сірий текст **по центру шапки** (`.deploy-stamp`, `style/base.css`). Формат: `v{N} · DD.MM HH:MM`. Якщо після пушу число не змінилось — деплой не пройшов.
 
-**Запуск тільки при пуші у `main`**, але можна вручну: `github.com/Volodymyr221/CSTL_NEWS/actions → Deploy «Громада» → Run workflow`.
+**Запуск тільки при пуші у `main`**, але можна вручну: `github.com/Volodymyr221/CSTL_NEWS/actions → Deploy CSTL NEWS → Run workflow`.
 
 **Вимога (одноразово):** у `Settings → Pages → Source` мусить стояти "GitHub Actions" (не "Deploy from a branch").
 
