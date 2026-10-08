@@ -90,12 +90,59 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   ok('🖥 колонка не перетинається з навігацією', main && tab && main.x >= tab.r, `${main?.x} ≥ ${tab?.r}`);
   ok('🖥 шапки телефона немає', head && head.display === 'none', JSON.stringify(head));
   ok('🖥 права колонка праворуч від центральної', rail && main && rail.x >= main.r + 20, JSON.stringify(rail));
-  const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.textContent);
+  const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
   const more = await p.evaluate(() => [...document.querySelectorAll('.dk-more [data-dk-nav]')].map(x => x.dataset.dkNav));
-  ok('🖥 другорядні пункти дзеркалять бічне меню (Новини, Збережені, Політика…)',
-     ['news', 'saved', 'policy'].every(id => more.includes(id)), more.join(','));
+  ok('🖥 другорядні пункти дзеркалять бічне меню (Новини, Збережені…)',
+     ['news', 'saved', 'messages'].every(id => more.includes(id)), more.join(','));
   ok('🖥 вкладки в «Ще» не дублюються', !more.some(id => ['community', 'shotam', 'board', 'buses', 'discussions'].includes(id)), more.join(','));
+}
+// ── 08.10«б» — шліфовка після відгуку Вови («не професійно, копія інстаграму») ──
+{
+  const стан = await p.evaluate(() => ({
+    caps: [...document.querySelectorAll('.dk-more .dk-cap')].map(x => x.textContent.trim()),
+    info: !!document.querySelector('.dk-more [data-dk-nav="policy"]'),
+    foot: [...document.querySelectorAll('.dk-foot [data-dk-nav]')].map(x => x.dataset.dkNav),
+    myq: !!document.querySelector('.dk-more [data-dk-fab="discussions:disc-mine"]'),
+  }));
+  ok('🖥 групи меню з підписами («Моє»), а «Інформація» переїхала в підвал',
+     стан.caps.includes('Моє') && !стан.caps.includes('Інформація') && !стан.info, JSON.stringify(стан));
+  ok('🖥 підвал правої колонки: політика, правила, підтримка', ['policy', 'boardrules', 'support'].every(x => стан.foot.includes(x)), стан.foot.join(','));
+  ok('🖥 «Мої питання» мають вхід (кругла кнопка, де вони жили, на компʼютері прихована)', стан.myq, '');
+  const меню = await rect(p, '.dk-cta-menu');
+  await p.click('.dk-cta-btn');
+  await p.waitForTimeout(200);
+  const відкрито = await rect(p, '.dk-cta-menu');
+  ok('🖥 «Створити» відкриває меню дій', (!меню || меню.display === 'none') && відкрито && відкрито.display !== 'none' && відкрито.h > 60, JSON.stringify(відкрито));
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(200);
+  const закрито = await rect(p, '.dk-cta-menu');
+  ok('🖥 Esc закриває меню «Створити»', !закрито || закрито.display === 'none', JSON.stringify(закрито));
+  await p.click('.dk-cta-btn');
+  await p.click('.dk-cta-menu [data-dk-fab="board:post"]');
+  await p.waitForTimeout(1800);
+  const після = await p.evaluate(() => ({
+    tab: document.querySelector('.app-main')?.dataset.tab,
+    реакція: !!document.querySelector('.app-modal, .acc-join, .toast'),
+  }));
+  ok('🔴 🖥 «Подати оголошення» веде на Дошку і запускає ту саму дію, що кругла кнопка',
+     після.tab === 'board' && після.реакція, JSON.stringify(після));
+  await p.evaluate(() => document.querySelector('.app-modal .app-modal-close')?.click());
+  await p.waitForTimeout(600);
+  const fab = await rect(p, '.board-trigger--fixed');
+  ok('🖥 круглої кнопки «+» у куті колонки на компʼютері немає', !fab || fab.display === 'none', JSON.stringify(fab));
+  const тло = await p.evaluate(() => [getComputedStyle(document.body).backgroundColor,
+    getComputedStyle(document.querySelector('.app-main')).backgroundColor]);
+  ok('🖥 тло сторінки = тло Дошки (колонка не стоїть смугою іншого кольору)',
+     тло[1] === 'rgba(0, 0, 0, 0)' || тло[0] === тло[1], тло.join(' / '));
+  await p.evaluate(() => window.switchTab('discussions'));
+  await p.waitForTimeout(800);
+  await p.evaluate(() => { const m = document.querySelector('.app-main'); m.style.minHeight = '0'; const f = document.createElement('div'); f.style.height = '3000px'; f.id = 'tst-fill'; m.appendChild(f); m.scrollTop = 0; });
+  await p.mouse.move(1400, 700);
+  await p.mouse.wheel(0, 400);
+  await p.waitForTimeout(400);
+  const прокрут = await p.evaluate(() => { const m = document.querySelector('.app-main'); const v = m.scrollTop; document.getElementById('tst-fill')?.remove(); return v; });
+  ok('🖥 колесо миші на порожньому полі збоку крутить колонку', прокрут > 100, `scrollTop ${прокрут}`);
 }
 // Смуги розділів не вилазять за колонку
 for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip'], ['board', '.bd-controls']]) {
@@ -110,7 +157,7 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
 }
 // Вікно по центру + Esc
 {
-  await p.click('.dk-more [data-dk-nav="policy"]');
+  await p.click('.dk-foot [data-dk-nav="policy"]');
   await p.waitForTimeout(900);
   const s = await rect(p, '.app-modal-sheet');
   ok('🖥 вікно відкривається по центру екрана, а не аркушем на всю ширину',
