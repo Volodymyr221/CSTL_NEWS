@@ -150,6 +150,92 @@ function avatarHtml(url, name, cls) {
   return `<span class="${cls} ${cls}--ph">${letter}</span>`;
 }
 
+// ── ІКОНКА СПІЛЬНОТИ (09.10, варіант «Б» з макета) ─────────────────────────────
+// 🗣️ Вова: «це мають бути іконки спільнот». Було: однакові бордові кола з ОДНІЄЮ
+// літерою — «Olyka Castle» і «Олицька школа» виглядали як дві однакові «О».
+// 🔑 Спільнота — заокруглений квадрат (як іконка додатка), людина лишається колом:
+// форма сама каже, хто пише — установа чи житель.
+// Без логотипа — ДВІ літери на власному кольорі. Колір рахується з назви, тож у
+// спільноти він завжди той самий і в ряду, і в шапці допису, і на її екрані.
+// 🔙 Попередній вигляд — гілка `backup/feed-icons-before-squircle-20261009`.
+const MONO_TONES = ['#2E5AAC', '#2F7D5B', '#8B5E3C', '#6B4AA0', '#B5473A', '#3F6F80', '#7A3E62', '#5B6B2E'];
+function pageMonogram(name) {
+  const слова = String(name || '').replace(/[«»"'.,:;()]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!слова.length) return '?';
+  if (слова.length === 1) return слова[0].slice(0, 2).replace(/^./, ch => ch.toUpperCase());
+  return (слова[0][0] + слова[1][0]).toUpperCase();
+}
+// 🔑 Колір — від НОМЕРА спільноти, не від назви. Назва давала збіги (знімок 09.10:
+// школа і рада обидві сині); номери йдуть підряд, тож перші вісім спільнот
+// гарантовано різні, і колір не змінюється ні від перейменування, ні від нових.
+function pageTone(id, name) {
+  let h = Number(id);
+  if (!Number.isFinite(h)) { h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0; }
+  return MONO_TONES[Math.abs(h) % MONO_TONES.length];
+}
+function pageAvatarHtml(page, cls, id = page?.id) {
+  const url = page?.avatar_url, name = page?.name || '';
+  if (url) return `<img class="${cls} is-page" src="${escapeHtml(url)}" alt="" loading="lazy">`;
+  return `<span class="${cls} ${cls}--ph is-page fd-mono" style="--mono:${pageTone(id, name)}">${escapeHtml(pageMonogram(name))}</span>`;
+}
+
+// ── «НОВЕ У СПІЛЬНОТІ» — червоне число на іконці ────────────────────────────────
+// Нове = допис, якого людина ще не бачила: ані в Стрічці (картка побула на екрані —
+// той самий поріг, що й «Прочитали»), ані на екрані спільноти.
+// 📐 Пам'ять — на пристрої: { pageId: час найновішого побаченого допису }.
+// 🛑 Перший захід (спільноти ще нема в пам'яті) — НЕ «все нове»: відлік починається
+// з цієї миті. Інакше новачок побачив би червоні числа на кожній іконці.
+const SEEN_KEY = 'cstl-page-seen-v1';
+let pageSeen = null;
+function seenStore() {
+  if (pageSeen) return pageSeen;
+  try { pageSeen = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch (_) { pageSeen = {}; }
+  return pageSeen;
+}
+function saveSeen() { try { localStorage.setItem(SEEN_KEY, JSON.stringify(pageSeen)); } catch (_) {} }
+const postTs = p => Date.parse(p?.created_at) || 0;
+function ensureSeenBaseline() {
+  const st = seenStore(); let змін = false;
+  for (const pg of pages) {
+    if (st[pg.id] != null) continue;
+    st[pg.id] = posts.filter(p => p.page_id === pg.id && p.status !== 'draft').reduce((m, p) => Math.max(m, postTs(p)), 0) || Date.now();
+    змін = true;
+  }
+  if (змін) saveSeen();
+}
+function unreadCount(pageId) {
+  const межа = seenStore()[pageId];
+  if (межа == null) return 0;
+  return posts.filter(p => p.page_id === pageId && p.status !== 'draft' && postTs(p) > межа).length;
+}
+function markPageSeenUpTo(pageId, ts) {
+  const st = seenStore();
+  if (!ts || (st[pageId] ?? 0) >= ts) return false;
+  st[pageId] = ts; saveSeen(); return true;
+}
+// Латаємо ЛИШЕ число на одній іконці. Повна перемальовка ряду скинула б його
+// горизонтальну прокрутку — людина гортала спільноти, а ряд стрибнув би на початок.
+function patchCircleBadge(pageId) {
+  const btn = document.querySelector(`#feed-circles .fd-circle[data-open-page="${pageId}"]`);
+  if (!btn) return;
+  const n = unreadCount(pageId);
+  btn.classList.toggle('has-new', n > 0);
+  btn.classList.toggle('is-seen', n === 0);
+  const old = btn.querySelector('.fd-circle-badge');
+  if (!n) { old?.remove(); return; }
+  const txt = n > 9 ? '9+' : String(n);
+  if (old) { old.textContent = txt; old.setAttribute('aria-label', `Нових дописів: ${n}`); return; }
+  btn.querySelector('.fd-circle-ring')?.insertAdjacentHTML('beforeend', `<span class="fd-circle-badge" aria-label="Нових дописів: ${n}">${txt}</span>`);
+}
+function markPostSeen(postId) {
+  const post = posts.find(p => String(p.id) === String(postId));
+  if (post && markPageSeenUpTo(post.page_id, postTs(post))) patchCircleBadge(post.page_id);
+}
+function markPageSeen(pageId) {
+  const max = posts.filter(p => p.page_id === pageId && p.status !== 'draft').reduce((m, p) => Math.max(m, postTs(p)), 0);
+  if (markPageSeenUpTo(pageId, max)) patchCircleBadge(pageId);
+}
+
 // ── Порядок спільнот у стрічці ──────────────────────────────────────────────
 // Порядок кружечків задає адмінка (колонка pages.sort_order — розділ «Спільноти»,
 // стрілки ⬆⬇). База вже віддає сторінки відсортованими (fetchPages: sort_order,
@@ -230,17 +316,34 @@ async function loadData() {
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
   if (uids.length) await fetchAvatars(uids);
   loadedForUid = currentUserId();
+  snapshotCircleOrder();
   loaded = true;
 }
 
 // ── Рендер: кружечки-канали ─────────────────────────────────────────────────
+// 🔑 Спільноти з новим — першими. Порядок фіксуємо на завантаженні Стрічки, а не
+// на кожну зміну числа: інакше іконки стрибали б місцями просто під пальцем, поки
+// людина гортає дописи. Усередині груп — порядок з адмінки (sort_order).
+let circleOrder = null;
+function snapshotCircleOrder() {
+  ensureSeenBaseline();
+  const зНовим = pages.filter(p => unreadCount(p.id) > 0);
+  circleOrder = [...зНовим, ...pages.filter(p => !зНовим.includes(p))].map(p => p.id);
+}
 function circlesHtml() {
   if (!pages.length) return '';
-  return `<div class="fd-circles">${pages.map(p => `
-    <button class="fd-circle" data-open-page="${p.id}" type="button">
-      <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, 'fd-circle-ava')}</span>
+  const порядок = circleOrder
+    ? [...circleOrder.map(id => pages.find(p => p.id === id)).filter(Boolean), ...pages.filter(p => !circleOrder.includes(p.id))]
+    : pages;
+  return `<div class="fd-circles">${порядок.map(p => {
+    const n = unreadCount(p.id);
+    const badge = n ? `<span class="fd-circle-badge" aria-label="Нових дописів: ${n}">${n > 9 ? '9+' : n}</span>` : '';
+    return `
+    <button class="fd-circle${n ? ' has-new' : ' is-seen'}" data-open-page="${p.id}" type="button">
+      <span class="fd-circle-ring">${pageAvatarHtml(p, 'fd-circle-ava')}${badge}</span>
       <span class="fd-circle-label">${escapeHtml(p.name)}</span>
-    </button>`).join('')}</div>`;
+    </button>`;
+  }).join('')}</div>`;
 }
 
 // ── Рендер: картка поста ────────────────────────────────────────────────────
@@ -914,7 +1017,7 @@ function postCardHtml(post, onPage = false) {
            ⚠️ Зворотних лапок тут немає навмисно — коментар лежить усередині
            шаблонного рядка (третій раз за дві доби наступаю на це саме). -->
       <header class="fd-card-head" data-open-page="${post.page_id}">
-        <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
+        <span class="fd-ava-wrap">${pageAvatarHtml(page, 'fd-ava', post.page_id)}</span>
         <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
         ${eventRemindHtml(post)}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
@@ -1218,7 +1321,7 @@ function renderFeed() {
   // ⚠️ Кличемо після `patchList`, тобто лише коли щось справді перемалювалось
   // (вище стоїть вихід на `mode === 'none'`): уже побачені картки відсіює
   // власний Set модуля, а нові — підхоплюються тут.
-  observeContentCards(listEl, 'feed_post', '.fd-card[data-post]', 'data-post');
+  observeContentCards(listEl, 'feed_post', '.fd-card[data-post]', 'data-post', markPostSeen);
 }
 
 // ── ТОЧКОВЕ ОНОВЛЕННЯ ОДНІЄЇ КАРТКИ (без перемальовки всієї стрічки) ──────────
@@ -1428,7 +1531,7 @@ async function patchPageScreen(pageId) {
     const ava = screen.querySelector('.fd-screen-ava');
     if (ava) {
       ava.classList.toggle('fd-screen-ava--view', !!page.avatar_url);
-      ava.innerHTML = avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img');
+      ava.innerHTML = pageAvatarHtml(page, 'fd-screen-ava-img');
     }
     // Назва і опис.
     const nameEl = screen.querySelector('.fd-screen-name');
@@ -1849,7 +1952,7 @@ function commentRowHtml(c, reply = false, replyTo = null) {
   const edited = c.edited_at ? ` · <span class="fd-com-edited">змінено</span>` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${asPage
-        ? avatarHtml(asPage.avatar_url, asPage.name, 'fd-com-ava-img')
+        ? pageAvatarHtml(asPage, 'fd-com-ava-img', c.as_page_id)
         : avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
         <div class="fd-com-head"><span class="fd-com-name"${av}>${asPage ? nm : nameSlot(c.author_uid, nm)}</span>${badge}<span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
@@ -2299,7 +2402,7 @@ function openComments(postId, focusCommentId = null) {
     const on = asPageId() != null;
     if (avaBtn) {
       avaBtn.innerHTML = on
-        ? avatarHtml(сторінка.avatar_url, сторінка.name, 'fd-com-ava-img')
+        ? pageAvatarHtml(сторінка, 'fd-com-ava-img')
         : avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
       // Позначка «це можна перемкнути» — лише тому, хто справді може. Для решти
       // обличчя лишається тим самим підписом, що й було: нової кнопки вони не бачать.
@@ -2987,6 +3090,7 @@ function afishaHtml(events) {
 async function openPageScreen(pageId, reopen = false, focusPostId = null) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
+  markPageSeen(pageId);   // зайшов у спільноту → її червоне число гасне
   const canEdit = myPageIds.has(pageId);
   const subscribed = mySubs.has(pageId);
   // 🔑 ЗАКРІПЛЕНІ — ВГОРІ, І ЛИШЕ ТУТ (вимога Вови 27.07: «адмін спільноти може
@@ -3026,7 +3130,7 @@ async function openPageScreen(pageId, reopen = false, focusPostId = null) {
     <div class="fd-screen-body">
       <div class="fd-screen-id">
         <span class="fd-screen-ava-wrap">
-          <span class="fd-screen-ava${page.avatar_url ? ' fd-screen-ava--view' : ''}">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
+          <span class="fd-screen-ava${page.avatar_url ? ' fd-screen-ava--view' : ''}">${pageAvatarHtml(page, 'fd-screen-ava-img')}</span>
         </span>
       </div>
       <div class="fd-screen-title">
