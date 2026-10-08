@@ -608,6 +608,18 @@ function attachBackdropClose(back, vpEl, close) {
     downOn = null;
     if (started && onBack(started) && onBack(e.target)) close();
   });
+  // 🖥 08.10 — Esc закриває аркуш (компʼютер і зовнішня клавіатура). Лише ВЕРХНІЙ
+  // аркуш: якщо їх відкрито два, один натиск знімає один рівень. Слухач сам себе
+  // знімає, щойно аркуш зник із документа, — без витоку на кожне відкриття.
+  const onKey = e => {
+    if (!back.isConnected) { document.removeEventListener('keydown', onKey); return; }
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    const верхній = [...document.querySelectorAll('.fd-sheet-back')].pop();
+    if (верхній !== back) return;
+    e.preventDefault();
+    close();
+  };
+  document.addEventListener('keydown', onKey);
 }
 
 // ── Кнопки аркуша не забирають фокус у поля вводу ───────────────────────────────

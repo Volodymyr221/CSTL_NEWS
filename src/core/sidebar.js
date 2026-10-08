@@ -617,6 +617,10 @@ function renderNav() {
   });
 }
 
+// 🖥 08.10 — ліва панель компʼютерної версії (`desktop-shell.js`) дзеркалить пункти
+// цього меню і переходить ТИМ САМИМ шляхом, що й тап у меню: одна логіка на обидві рами.
+export function navigateFromMenu(id) { handleNav(id); }
+
 function handleNav(id) {
   const item = NAV.find(n => n.id === id);
   if (!item) return;

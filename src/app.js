@@ -15,7 +15,7 @@ import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';
 import { initAuth, authReady, currentUserId, refreshOwnProfile } from './core/auth.js';
 import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
-import { passDesktopGate } from './core/desktop-gate.js';   // екран «поки що тільки телефон» на компʼютері (29.08)
+import { initDesktopShell } from './core/desktop-shell.js'; // 🖥 компʼютерна версія (08.10): ліва панель, права колонка, Esc
 import { logEvent, getAnonId } from './core/supabase.js';
 import { captureSource, sourceTag } from './core/source-tag.js';   // звідки прийшла людина — наліпка, Viber, костел (01.10)
 import { initAccountUI } from './core/account-ui.js';
@@ -537,15 +537,13 @@ async function init() {
   // Знімається одним рядком — `DEV_LOCK = false` у core/dev-lock.js.
   if (!await passDevLock()) return;
 
-  // 🔴 ЕКРАН «ПОКИ ЩО ТІЛЬКИ ТЕЛЕФОН» (Вова 29.08) — стоїть ПІСЛЯ заслінки, це
-  // його пряме рішення. Заслінка питає «чи можна тобі сюди взагалі», цей екран —
-  // «чи вийде тобі тут користуватись». Порядок видно і в наслідку: код розробника
-  // з компʼютера прийме, а застосунок усе одно не відкриє, бо він не адаптований.
-  // Як і заслінка, він не «банер поверх», а зупинка: жодна вкладка не будується.
-  if (!passDesktopGate()) return;
+  // 🖥 08.10 — ЕКРАН «ПОКИ ЩО ТІЛЬКИ ТЕЛЕФОН» (29.08) ЗНЯТО: компʼютерна версія
+  // готова (`style/desktop.css` + `core/desktop-shell.js`, рішення Вови «на повну»).
+  // Рама будується ПІСЛЯ меню (`initSidebar`), бо ліва панель дзеркалить його пункти.
 
   initAccountUI();   // Фаза Б: іконка 👤 в шапці + екрани входу/Кабінету
   initSidebar();     // Бічне меню (бургер зліва) + «Кабінет» лише для команди
+  initDesktopShell();   // 🖥 компʼютерна рама — лише на широкому екрані з мишею
   initConsent();     // Банер згоди з Політикою/Правилами (перший вхід)
   initInstallBanner();   // Банер «Відкрий/встанови у додатку» — лише в браузері (не в PWA)
   initJoinInvite();      // Гостю після 3 переходів між розділами — пропозиція увійти (один раз)

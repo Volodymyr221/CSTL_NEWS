@@ -1,0 +1,202 @@
+/* style/desktop.css — КОМПʼЮТЕРНА ВЕРСІЯ «Громади» (08.10.2026).
+
+   🗣️ Замовлення Вови: «детально продумати комп'ютерну версію… в такому самому стилі…
+   з точки зору UI і UX дизайну все має бути правильно розміщено… просто і сучасно».
+   Макет погоджено на живій сторінці (PR #1258), рішення «Зараз, на повну».
+
+   🔑 ПРИНЦИП — НЕ РОЗТЯГУВАТИ ТЕЛЕФОН, А РОЗКЛАСТИ ЙОГО (як веб-версії Instagram і X):
+     ліворуч навігація · по центру ТОЙ САМИЙ застосунок колонкою 640px · праворуч корисне.
+   Центральна колонка — це вже відшліфований і перевірений стендами телефонний макет,
+   тож ми не малюємо другий застосунок, а лише міняємо раму навколо нього.
+
+   🛑 УСЕ ТУТ ЖИВЕ ЛИШЕ ПІД ОДНИМ ЗАПИТОМ: широке вікно І миша/трекпад. Ширина сама
+   по собі бреше (планшет дає «компʼютерні» 1024 при дотиковому макеті), тому питаємо
+   ще й вказівник — та сама логіка, що була в екрані «поки що тільки телефон».
+   ⚠️ Той самий рядок запиту стоїть у `src/core/desktop-shell.js` (`DESKTOP_MQ`) —
+   міняєш тут, міняй і там. Стенд `tests/desktop-layout.mjs` звіряє обидва.
+   ➡️ Телефон цих правил не отримує фізично: запит для нього хибний.
+
+   📐 Арифметика колонок (усе виведено з чотирьох токенів, без «магічних» px):
+     T = nav + gap + col + gap + rail   — повна ширина композиції
+     L = 50% − T/2 + nav + gap          — лівий край центральної колонки
+   Вужче за 1280 права колонка зникає (rail = 0): 248 + 32 + 640 = 920 < 960. */
+
+@media (min-width: 960px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --dk-nav: 248px; --dk-col: 640px; --dk-gap: 40px; --dk-rail: 300px;
+    --dk-T: calc(var(--dk-nav) + var(--dk-gap) + var(--dk-col) + var(--dk-gap) + var(--dk-rail));
+    --dk-L: calc(50% - var(--dk-T) / 2 + var(--dk-nav) + var(--dk-gap));
+    /* правий відступ від краю вікна до правого краю колонки (для кнопок «+») */
+    --dk-R: calc(50% + var(--dk-T) / 2 - var(--dk-nav) - var(--dk-gap) - var(--dk-col));
+    /* Шапки й таб-бару на компʼютері немає — усе, що відступало від них, стає до краю. */
+    --header-h: 0px;
+    --tabbar-h: 0px;
+  }
+  html, body { background: var(--app-bg); }
+  button, [role="button"], a, label, summary, .tab-item, [data-nav], [data-tab] { cursor: pointer; }
+
+  /* ── ШАПКА: на компʼютері її роль бере ліва панель (бренд, меню, збережені) ── */
+  .app-header { display: none; }
+
+  /* ── ЛІВА ПАНЕЛЬ: таб-бар стає вертикальною навігацією ──────────────────────
+     Панель біла на всю висоту і тягнеться від лівого краю вікна, а пункти стоять
+     у межах композиції — так на широкому моніторі ліворуч немає «дірки». */
+  .tab-bar {
+    top: 0; bottom: 0; left: 0; right: auto;
+    width: calc(50% - var(--dk-T) / 2 + var(--dk-nav) + 14px);
+    height: auto;
+    padding: 28px 14px 20px max(14px, calc(50% - var(--dk-T) / 2));
+    flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px;
+    background: var(--white);
+    border: 0; border-right: 1px solid var(--border);
+    border-radius: 0; box-shadow: none;
+    overflow-y: auto;
+  }
+  .tab-bar::before, .tab-bar::after { display: none; }
+  .tab-bar .tab-item, .tab-bar .tab-item--home {
+    flex: none; width: var(--dk-nav); height: 46px; min-height: 0;
+    flex-direction: row; justify-content: flex-start; align-items: center;
+    gap: 14px; padding: 0 14px; margin: 0; border-radius: 12px;
+    transform: none; position: relative; color: var(--ink-soft, #3a3d43);
+  }
+  .tab-bar .tab-item:hover { background: rgba(0, 0, 0, 0.04); }
+  .tab-bar .tab-item.active, .tab-bar .tab-item--home.active {
+    background: rgba(74, 18, 28, 0.07); color: var(--brand-ink);
+  }
+  .tab-bar .tab-item::before, .tab-bar .tab-item::after,
+  .tab-bar .tab-item--home::before, .tab-bar .tab-item--home::after { display: none; }
+  .tab-bar .tab-item .tab-label, .tab-bar .tab-item--home .tab-label--home {
+    font-size: 15px !important; font-weight: 600 !important;
+    text-transform: none; letter-spacing: 0; margin: 0;
+    position: static; opacity: 1; transform: none;
+  }
+  .tab-bar .tab-home-circle {
+    position: static; transform: none; flex: none;
+    width: 26px; height: 26px; border-radius: 8px; box-shadow: none !important;
+  }
+  .tab-bar .tab-castle-icon { width: 34px; height: 34px; }
+  /* Порядок: «Громада» першою — на телефоні вона в центрі таб-бару, тут список. */
+  .tab-bar .dk-brand { order: 0; }
+  .tab-bar [data-tab="community"] { order: 1; }
+  .tab-bar [data-tab="shotam"] { order: 2; }
+  .tab-bar [data-tab="discussions"] { order: 3; }
+  .tab-bar [data-tab="board"] { order: 4; }
+  .tab-bar [data-tab="buses"] { order: 5; }
+  .tab-bar [data-tab="power"] { display: none; }
+  .tab-bar .dk-more { order: 8; }
+  .tab-bar .dk-me { order: 10; }
+
+  .dk-brand {
+    font: 700 22px/1 Georgia, serif; letter-spacing: 2px; color: var(--brand-ink);
+    padding: 6px 14px 24px;
+  }
+  .dk-more {
+    width: var(--dk-nav); margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .dk-more button {
+    display: flex; align-items: center; gap: 12px; width: 100%; height: 40px;
+    padding: 0 14px; border: 0; border-radius: 10px; background: none;
+    color: var(--ink-soft, #55595f); font: 500 14px/1 inherit; text-align: left;
+  }
+  .dk-more button:hover { background: rgba(0, 0, 0, 0.04); color: var(--ink, #2b2b2b); }
+  .dk-more svg { width: 18px; height: 18px; flex: none; opacity: 0.8; }
+  .dk-more .dk-count {
+    margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+    background: var(--brand-grad-sm); color: #fff; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .dk-me {
+    margin-top: auto; width: var(--dk-nav); display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border: 0; border-radius: 12px; background: none; text-align: left;
+    font: 600 14px/1.2 inherit; color: var(--ink, #2b2b2b);
+  }
+  .dk-me:hover { background: rgba(0, 0, 0, 0.04); }
+  .dk-me .dk-me-av {
+    width: 36px; height: 36px; border-radius: 50%; flex: none; overflow: hidden;
+    background: var(--board-bg); display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft, #55595f);
+  }
+  .dk-me .dk-me-av .sb-av { width: 36px; height: 36px; min-width: 0; font-size: 15px; margin: 0; }
+  .dk-me .dk-me-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dk-me .dk-me-av svg { width: 20px; height: 20px; }
+  .dk-me small { display: block; font-weight: 400; color: var(--ink-mute, #777); font-size: 12px; margin-top: 2px; }
+
+  /* ── ЦЕНТРАЛЬНА КОЛОНКА ───────────────────────────────────────────────────── */
+  .app-main {
+    position: fixed; top: 0; bottom: 0; left: var(--dk-L);
+    width: var(--dk-col); height: 100vh;
+    padding-top: 20px; padding-bottom: 48px;
+    scrollbar-width: thin;
+  }
+  .app-main::-webkit-scrollbar { display: block; width: 8px; }
+  .app-main::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 4px; }
+
+  /* Усе, що на телефоні прибито до країв екрана (left:0/right:0) і є частиною
+     ЕКРАНА РОЗДІЛУ, вписуємо в колонку. Затемнення, вікна, меню, сповіщення —
+     навмисно НЕ тут: вони лягають на весь екран. Список виведено обходом усіх
+     `position: fixed` у стилях (08.10). Новий такий елемент — дописати сюди;
+     стенд `desktop-layout` перевіряє, що на компʼютері нічого не вилазить за колонку. */
+  .hm-bg, .cm-hero, .cm-topbar-blur,
+  .bd-controls, .board-bg, .qa-screen,
+  .bus-week-strip, .bus-search, .bus-track-banner,
+  .fd-screen, .fd-newposts, .fd-sheet-vp,
+  .nh-screen, .nh-fresh, .fs-screen,
+  .pm-screen, .chat-push-banner, .article-modal, .acc-cab, .shub-sheet, .cm-ad-screen {
+    left: var(--dk-L) !important; right: auto !important;
+    width: var(--dk-col) !important; max-width: var(--dk-col) !important;
+  }
+  /* Круглі кнопки «+» і їхнє меню — у правий нижній кут КОЛОНКИ, а не вікна. */
+  .board-trigger--fixed { right: calc(var(--dk-R) + 20px) !important; bottom: 28px !important; }
+  .board-fab-menu { right: calc(var(--dk-R) + 25px) !important; bottom: 112px !important; }
+  /* Сповіщення-полиці (згода, встановлення) — під колонкою, не на всю ширину. */
+  .consent-bar { left: calc(var(--dk-L) + 12px) !important; right: auto !important;
+    width: calc(var(--dk-col) - 24px) !important; }
+  /* «Встанови на екран» на компʼютері не має сенсу — встановлюють з телефона,
+     і для цього праворуч є QR. */
+  .pwa-cta { display: none !important; }
+
+  /* ── ВІКНА: аркуші знизу стають вікнами по центру екрана ───────────────────
+     Аркуш, що виїжджає з-під пальця, — жест телефона. На компʼютері людина чекає
+     вікно посередині, яке закривається Esc або кліком повз (Esc дає desktop-shell). */
+  .app-modal--sheet { align-items: center; padding: 24px; }
+  .app-modal-sheet {
+    width: 100%; max-width: 560px; max-height: 84vh;
+    border-radius: var(--modal-radius, 20px);
+  }
+  .app-modal-handle, .app-modal-grabber { display: none; }
+
+  /* ── ПРАВА КОЛОНКА ─────────────────────────────────────────────────────── */
+  .dk-rail {
+    position: fixed; top: 24px; z-index: 5;
+    left: calc(50% + var(--dk-T) / 2 - var(--dk-rail)); width: var(--dk-rail);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .dk-card {
+    background: var(--white); border-radius: 18px; padding: 18px 20px;
+    box-shadow: var(--elev-1, 0 1px 2px rgba(0, 0, 0, 0.05));
+  }
+  .dk-k { font-size: 13px; font-weight: 600; color: var(--ink-mute, #6E727A); }
+  .dk-t { font-size: 17px; font-weight: 700; color: var(--ink, #1a1a1a); margin: 6px 0 4px; line-height: 1.25; }
+  .dk-s { font-size: 14px; line-height: 1.45; color: var(--ink-soft, #555); }
+  .dk-s a { color: var(--red); font-weight: 600; text-decoration: none; }
+  .dk-s a:hover { text-decoration: underline; }
+  .dk-wx { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+  .dk-wx-ic { width: 40px; height: 40px; flex: none; color: var(--brand-ink); }
+  .dk-wx-ic svg { width: 100%; height: 100%; }
+  .dk-wx-t { font-size: 32px; font-weight: 700; color: var(--ink, #1a1a1a); line-height: 1; }
+  .dk-qr { width: 132px; height: 132px; margin-top: 12px; }
+  .dk-qr svg { width: 100%; height: 100%; display: block; }
+}
+
+/* Вужче за 1280 права колонка не влазить — ховаємо її і стискаємо проміжки. */
+@media (min-width: 960px) and (max-width: 1279px) and (hover: hover) and (pointer: fine) {
+  :root { --dk-rail: 0px; --dk-gap: 32px; }
+  .dk-rail { display: none; }
+}
+/* Права колонка існує лише на компʼютері: на телефоні вона не будується, але
+   страхуємось, якщо вікно звузили після побудови. */
+@media not all and (min-width: 960px), not all and (hover: hover), not all and (pointer: fine) {
+  .dk-rail, .dk-brand, .dk-more, .dk-me { display: none !important; }
+}
