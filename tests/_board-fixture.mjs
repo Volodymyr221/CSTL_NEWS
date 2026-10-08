@@ -302,7 +302,12 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
           from: q,
           // Без opts.user — ніхто не залогінений (публічний вигляд Дошки, як було).
           auth: {
-            getSession: async () => ({ data: { session: SESSION }, error: null }),
+            // 🆕 08.10 — SLOW.getSession: сесія відновлюється ПІЗНІШЕ за перший рендер
+            // (на проді так буває на холодному старті). Без затримки гонку не видно.
+            getSession: async () => {
+              if (SLOW.getSession) await new Promise(r => setTimeout(r, SLOW.getSession));
+              return { data: { session: SESSION }, error: null };
+            },
             getUser:    async () => ({ data: { user: U }, error: null }),
             // setTimeout(..., 0), а не синхронно: справжній SDK віддає цей сигнал
             // АСИНХРОННО, і синхронна заглушка була б ДОБРІША за прод — тобто

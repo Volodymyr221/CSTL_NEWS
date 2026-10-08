@@ -621,6 +621,12 @@ function renderNav() {
 // цього меню і переходить ТИМ САМИМ шляхом, що й тап у меню: одна логіка на обидві рами.
 export function navigateFromMenu(id) { handleNav(id); }
 
+// Перемалювати меню, навіть якщо воно закрите. На телефоні закрите меню нікому не
+// видно, і `renderNav` чекає найближчого відкриття. Але на компʼютері ліва панель
+// ДЗЕРКАЛИТЬ меню постійно (`desktop-shell.js`) — і без цього виклику після входу
+// там лишалось «Приєднатись · Вхід через Google» (скарга Вови 08.10).
+export function refreshMenu() { renderNav(); refreshCabinet(); }
+
 function handleNav(id) {
   const item = NAV.find(n => n.id === id);
   if (!item) return;
