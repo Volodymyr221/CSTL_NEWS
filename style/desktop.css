@@ -294,77 +294,21 @@
   /* Аркуші дій, що на телефоні виїжджають знизу, — по центру екрана. */
   .pm-actions-back, .pwa-guide { align-items: center; }
 
-  /* ── ГРОМАДА БЕЗ ФОТО ──────────────────────────────────────────────────────
-     🗣️ Вова 08.10: «знімок саме тут з компʼютерної версії взагалі не до чого… приберемо
-     з заднього фону і зробимо фон такий, як в інших вкладках». Фото вертикальне
-     (941×1672) і на широкому екрані лише розмите тло. На телефоні фото лишається.
-     Усе, що на телефоні лежало ПРЯМО на фото світлим текстом, тут стає темним. */
-  .hm-bg { display: none !important; }
+  /* ── ГРОМАДА: ФОТО НА ВСЮ СТОРІНКУ ──────────────────────────────────────────
+     08.10 пробували без фото (тло як у вкладках) — Вова: «без фото головна не йде,
+     втрачає стиль: прозорі елементи, капсули». Повернуто. Фото — тло всієї сторінки,
+     меню й права колонка лежать на ньому, як на шпалерах.
+     ⚠️ Зараз фото вертикальне (941×1672) — на широкому екрані розтяг ~1.5×, тому
+     сильніше розмиття. Горизонтальний знімок для компʼютера Вова замовляє окремо;
+     прийде — підключити через <picture> у community.js лише для компʼютера. */
+  .hm-bg { left: 0 !important; right: 0 !important; width: auto !important; }
+  .hm-bg img { filter: blur(6px) saturate(.88); transform: scale(1.08); }
+  html:has(.app-main[data-tab="community"]) .dk-card,
+  html:has(.app-main[data-tab="community"]) .dk-foot { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22); }
+  /* Над фото смуга тла не потрібна — фото і є тло. */
+  html:has(.app-main[data-tab="community"]) body::before { background: transparent; }
   .app-main[data-tab="community"] { background: transparent !important; }
-  /* Світла поверхня замість скла: те саме, що картки інших вкладок — біле, тонкий
-     обідок, легка тінь, темний текст. Бордова шапка, банер новин і картка збору
-     лишаються як є — вони мають власне тло і не залежали від фото. */
-  #cm-content.hm { --dk-hm-card: #fff; --dk-hm-line: var(--board-line, #E2E2DF);
-    --dk-hm-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 10px rgba(0, 0, 0, 0.04); }
-  #cm-content.hm .hm-top { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.06); }
-  #cm-content.hm .hm-kicker, #cm-content.hm .hm-empty, #cm-content.hm .hm-error,
-  #cm-content.hm .hm-tel-sum, #cm-content.hm .hm-csec-h, #cm-content.hm .hm-fd-c-name,
-  #cm-content.hm .hm-fd-c--on .hm-fd-c-name { text-shadow: none; }
-  #cm-content.hm .hm-kicker, #cm-content.hm .hm-csec-h { color: var(--ink-mute, #6E727A); }
-  #cm-content.hm .hm-kicker-cat, #cm-content.hm .hm-kicker-cat--own::before,
-  #cm-content.hm .hm-csec-n { color: var(--ink-mute, #8a8d93); }
-  #cm-content.hm .hm-empty, #cm-content.hm .hm-error { color: var(--ink-soft, #55595f); }
-  #cm-content.hm .hm-sk {
-    background: linear-gradient(90deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.09) 42%, rgba(0,0,0,.05) 84%);
-    background-size: 260px 100%;
-  }
-  /* Чіп «УСІ НОВИНИ →» */
-  #cm-content.hm .hm-more {
-    color: var(--brand-ink); background: var(--dk-hm-card); border-color: var(--dk-hm-line);
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  #cm-content.hm .hm-more:hover { background: #F6F2F3; }
-  /* Капсули «ЗАРАЗ / ПИТАННЯ» */
-  #cm-content.hm .hm-capsl-glass, #cm-content.hm .hm-capsl-glass::before {
-    background: var(--dk-hm-card) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-    box-shadow: var(--dk-hm-shadow) !important; border-color: var(--dk-hm-line) !important;
-  }
-  #cm-content.hm .hm-cap2, #cm-content.hm .hm-capsl-track > .hm-cap2 {
-    background: var(--dk-hm-card) !important; border-color: var(--dk-hm-line) !important;
-    box-shadow: var(--dk-hm-shadow) !important; color: var(--ink, #1a1a1a) !important;
-    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-  }
-  #cm-content.hm .hm-capsl-track > .hm-cap2 { box-shadow: none !important; background: transparent !important; border-color: transparent !important; }
-  #cm-content.hm .hm-cap2-ic { background: rgba(74, 18, 28, 0.08); color: var(--brand-ink); }
-  #cm-content.hm .hm-cap2-k { color: var(--ink-mute, #6E727A); }
-  /* Крапки каруселей */
-  #cm-content.hm .hm-dots i, #cm-content.hm .hm-ndots i, #cm-content.hm .hm-fdots i { background: rgba(0, 0, 0, 0.16); }
-  #cm-content.hm .hm-dots i.on, #cm-content.hm .hm-ndots i.on, #cm-content.hm .hm-fdots i.on { background: var(--brand-ink); }
-  /* Тихі рядки новин */
-  #cm-content.hm .nc--line {
-    --nc-line-bg: var(--dk-hm-card); --nc-line-br: var(--dk-hm-line); --nc-line-press: #F4F4F2;
-    --nc-line-fg: var(--ink, #1a1a1a); --nc-line-quiet: var(--ink-mute, #6E727A);
-  }
-  /* Збій новин */
-  #cm-content.hm .hm-nerr { background: var(--dk-hm-card); border-color: var(--dk-hm-line); }
-  #cm-content.hm .hm-nerr-tx { color: var(--ink-soft, #55595f); }
-  #cm-content.hm .hm-nerr-btn { color: var(--brand-ink); background: #F6F2F3; border-color: var(--dk-hm-line); }
-  /* Ряд спільнот у віджеті Стрічки */
-  #cm-content.hm .hm-fd-c-av { background: rgba(74, 18, 28, 0.06); border-color: var(--dk-hm-line); color: var(--brand-ink); }
-  #cm-content.hm .hm-fd-c-name { color: var(--ink-soft, #55595f); }
-  #cm-content.hm .hm-fd-c--on .hm-fd-c-name { color: var(--ink, #1a1a1a); }
-  /* Телефони громади й екстрені служби */
-  #cm-content.hm .hm-ct, #cm-content.hm .hm-sos-b {
-    background: var(--dk-hm-card); border-color: var(--dk-hm-line); color: var(--ink, #1a1a1a);
-    box-shadow: var(--dk-hm-shadow);
-  }
-  #cm-content.hm .hm-ct-ic { background: rgba(74, 18, 28, 0.06); color: var(--brand-ink); }
-  #cm-content.hm .hm-ct-name { color: var(--ink, #1a1a1a); }
-  #cm-content.hm .hm-ct-meta, #cm-content.hm .hm-sos-t { color: var(--ink-mute, #6E727A); }
-  #cm-content.hm .hm-ct-phone { color: var(--red, #722F37); }
-  #cm-content.hm .hm-ct-act { color: var(--ink-mute, #6E727A); }
-  #cm-content.hm .hm-ct-act:hover, #cm-content.hm .hm-ct:hover, #cm-content.hm .hm-sos-b:hover { background: #F7F7F5; }
-  #cm-content.hm .hm-fund-more { color: var(--ink-mute, #6E727A); }
+
   /* Бордова шапка Громади — така сама картка, як меню й погода: з полем зверху
      і всіма заокругленими кутами. На телефоні вона тягнеться під шапку застосунку
      (260px бордо вгору — запас для «гумки»), а тут шапки немає, і ця смуга

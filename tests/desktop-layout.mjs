@@ -100,16 +100,9 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
     return { top: Math.round(r.top), radius: cs.borderTopLeftRadius, border: cs.borderTopWidth }; });
   ok('🖥 бордова шапка Громади — картка з полем зверху й заокругленими кутами (верх на одній лінії з меню, 16px)',
      шапка && Math.abs(шапка.top - 16) <= 1 && шапка.radius === '20px' && шапка.border === '0px', JSON.stringify(шапка));
-  const громада = await p.evaluate(() => ({
-    фото: getComputedStyle(document.querySelector('.hm-bg') || document.body).display,
-    підпис: (() => { const k = document.querySelector('#cm-content.hm .hm-kicker'); return k ? getComputedStyle(k).color : null; })(),
-    тло: getComputedStyle(document.body).backgroundColor,
-  }));
-  // Вова 08.10: «знімок на компʼютері ні до чого… фон як в інших вкладках». Підписи,
-  // що на телефоні лежали білим на фото, тут мусять стати темними — інакше їх не видно.
-  ok('🖥 Громада без фото: тло як в інших вкладках, підписи секцій темні (не біле на світлому)',
-     громада.фото === 'none' && !!громада.підпис && !/255, 255, 255/.test(громада.підпис) && громада.тло !== 'rgba(0, 0, 0, 0)',
-     JSON.stringify(громада));
+  // Вова 08.10: «без фото головна не йде — втрачає стиль». Фото лишається тлом Громади.
+  const фото = await p.evaluate(() => getComputedStyle(document.querySelector('.hm-bg') || document.body).display);
+  ok('🖥 Громада на компʼютері — з фото на тлі (без нього капсули й скло втрачають стиль)', фото !== 'none', фото);
   const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
   const more = await p.evaluate(() => [...document.querySelectorAll('.tab-bar [data-dk-nav]')].map(x => x.dataset.dkNav));
