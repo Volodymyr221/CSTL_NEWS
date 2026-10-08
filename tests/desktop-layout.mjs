@@ -6,7 +6,7 @@
 //
 // 🔑 Стенд стереже ДВА боки, і другий важливіший:
 //   • на компʼютері (широке вікно + миша) — застосунок будується, ліва панель,
-//     колонка 640px, смуги розділів не вилазять за колонку, вікна по центру, Esc;
+//     колонка гнучка (600–760px), смуги розділів не вилазять за колонку, вікна по центру, Esc;
 //   • на ТЕЛЕФОНІ — нічого з цього не просочилось: таб-бар унизу, шапка на місці,
 //     застосунок на всю ширину. Рама робилась за 11 днів до запуску, і головний
 //     ризик був саме в тому, щоб зачепити телефонну версію.
@@ -89,12 +89,17 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   const rail = await rect(p, '.dk-rail');
   ok('🔴 🖥 застосунок будується на компʼютері (екрана «тільки телефон» більше немає)',
      !!tab && !(await p.$('.dg')), JSON.stringify(tab));
-  ok('🖥 навігація — картка ліворуч на всю висоту (з полями 16px)', tab && tab.x > 0 && tab.h >= 860 && tab.w <= 240, JSON.stringify(tab));
-  ok('🖥 навігація приєднана до колонки (проміжок ≤ 24px, а не рама від краю вікна)', tab && main && main.x - tab.r <= 24 && main.x - tab.r >= 8, `${main?.x} − ${tab?.r}`);
-  ok('🖥 центральна колонка рівно 640px', main && Math.round(main.w) === 640, JSON.stringify(main));
+  ok('🖥 навігація — картка біля лівого краю (≤ 48px) на всю висоту', tab && tab.x > 0 && tab.x <= 48 && tab.h >= 860 && tab.w <= 270, JSON.stringify(tab));
+  ok('🖥 навігація приєднана до колонки (проміжок ≤ 24px, а не рама від краю вікна)', tab && main && main.x - tab.r <= 25 && main.x - tab.r >= 8, `${main?.x} − ${tab?.r}`);
+  ok('🖥 центральна колонка гнучка: на 1440 забирає вільне місце (740 = 1440 − поля 2×40 − меню − права колонка − проміжки)', main && Math.round(main.w) === 740, JSON.stringify(main));
   ok('🖥 колонка не перетинається з навігацією', main && tab && main.x >= tab.r, `${main?.x} ≥ ${tab?.r}`);
   ok('🖥 шапки телефона немає', head && head.display === 'none', JSON.stringify(head));
   ok('🖥 права колонка праворуч від центральної', rail && main && rail.x >= main.r + 20, JSON.stringify(rail));
+  const шапка = await p.evaluate(() => { const h = document.querySelector('.hm-top'); if (!h) return null;
+    const r = h.getBoundingClientRect(); const cs = getComputedStyle(h);
+    return { top: Math.round(r.top), radius: cs.borderTopLeftRadius, border: cs.borderTopWidth }; });
+  ok('🖥 бордова шапка Громади — картка з полем зверху й заокругленими кутами (верх на одній лінії з меню, 16px)',
+     шапка && Math.abs(шапка.top - 16) <= 1 && шапка.radius === '20px' && шапка.border === '0px', JSON.stringify(шапка));
   const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
   const more = await p.evaluate(() => [...document.querySelectorAll('.tab-bar [data-dk-nav]')].map(x => x.dataset.dkNav));
@@ -231,7 +236,7 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
   await p.waitForTimeout(1200);
   const nh = await rect(p, '.nh-screen');
   const m = await rect(p, '.app-main');
-  ok('🖥 екран Новин відкривається в колонці', nh && m && Math.abs(nh.x - m.x) < 2 && Math.round(nh.w) === 640, JSON.stringify(nh));
+  ok('🖥 екран Новин відкривається в колонці', nh && m && Math.abs(nh.x - m.x) < 2 && Math.round(nh.w) === Math.round(m.w), JSON.stringify(nh));
   const позначка = await p.evaluate(() => ({
     news: document.querySelector('.tab-bar [data-dk-nav="news"]')?.classList.contains('dk-on'),
     вкладка: getComputedStyle(document.querySelector('.tab-bar .tab-item.active, .tab-bar .tab-item--home.active')).backgroundColor,
@@ -259,14 +264,14 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
 }
 await ctx.close();
 
-// ── 3. КОМПʼЮТЕР 1280: правої колонки немає, колонка та сама ─────────────────
+// ── 3. КОМПʼЮТЕР 1200: правої колонки немає, колонка забирає її місце ─────────
 {
   const { ctx, p } = await open({ viewport: { width: 1200, height: 800 } });
   const rail = await rect(p, '.dk-rail');
   const main = await rect(p, '.app-main');
   const tab = await rect(p, '.tab-bar');
-  ok('🖥 вужче за 1280 права колонка ховається', !rail || rail.display === 'none', JSON.stringify(rail));
-  ok('🖥 на 1200 колонка 640 і не налазить на навігацію', main && Math.round(main.w) === 640 && main.x >= tab.r && main.r <= 1200,
+  ok('🖥 вужче за 1360 права колонка ховається', !rail || rail.display === 'none', JSON.stringify(rail));
+  ok('🖥 на 1200 колонка ширша за 640 і не налазить на навігацію', main && main.w >= 640 && main.w <= 760 && main.x >= tab.r && main.r <= 1200 - 30,
      JSON.stringify(main));
   await ctx.close();
 }
