@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1791467652778,
+      "mission": "holiday:⛪ Собор Архангела Михаїла",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 455,
+      "cache_read": 0,
+      "cache_write": 1155,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0074,
+      "note": ""
+    },
+    {
       "ts": 1791240298545,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -782,24 +795,11 @@
       "found": 1,
       "cost_usd": 0.0082,
       "note": ""
-    },
-    {
-      "ts": 1788350703988,
-      "mission": "olyka:news:в-олицькій-громаді-можна",
-      "model": "claude-opus-5",
-      "input_tokens": 6050,
-      "output_tokens": 382,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0398,
-      "note": "В Олицькій громаді можна переглянути навчальні тренінги програми «Досвід має зна"
     }
   ],
   "totals": {
-    "cost_usd": 14.3506,
-    "runs": 198,
+    "cost_usd": 14.358,
+    "runs": 199,
     "web_searches": 214
   },
   "months": {
@@ -820,13 +820,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 1.4706,
-      "runs": 10,
+      "cost_usd": 1.478,
+      "runs": 11,
       "web_searches": 28,
-      "fair_usd": 1.4706
+      "fair_usd": 1.478
     }
   },
-  "updated_ts": 1791240298545,
+  "updated_ts": 1791467652778,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
