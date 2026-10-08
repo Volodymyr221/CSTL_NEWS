@@ -218,7 +218,7 @@
     padding-top: calc(var(--dk-y) + 4px); padding-bottom: 48px;
     background: transparent !important;
   }
-  body:not(:has(.app-main[data-tab="community"]))::before {
+  body::before {
     content: ''; position: fixed; z-index: 90; pointer-events: none;
     top: 0; left: var(--dk-L); width: var(--dk-col); height: var(--dk-y);
     background: var(--dk-page);
@@ -234,8 +234,11 @@
      крутиться всередині себе, і `overflow: hidden` її б зупинив. */
   .qa-screen, .fd-screen, .nh-screen, .fs-screen, .pm-screen,
   .article-modal, .acc-cab, .cm-ad-screen {
-    top: var(--dk-y) !important; bottom: var(--dk-y) !important; height: auto !important;
-    border-radius: var(--dk-r) !important; clip-path: inset(0 round var(--dk-r));
+    /* 🔴 Низ — до самого краю вікна, як і вміст вкладок. З полем 16px знизу крізь
+       нього просвічувала вкладка під екраном (Вова 08.10, знімок спільноти). */
+    top: var(--dk-y) !important; bottom: 0 !important; height: auto !important;
+    border-radius: var(--dk-r) var(--dk-r) 0 0 !important;
+    clip-path: inset(0 round var(--dk-r) var(--dk-r) 0 0);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 28px rgba(0, 0, 0, 0.08);
   }
   /* Дописи Стрічки — окремі картки з полями, а не стрічка від краю до краю. */
@@ -269,7 +272,7 @@
   .cm-hero, .cm-topbar-blur,
   .bd-controls, .board-bg, .qa-screen,
   .bus-week-strip, .bus-search, .bus-track-banner,
-  .fd-screen, .fd-newposts, .fd-sheet-vp,
+  .fd-screen, .fd-newposts,
   .nh-screen, .nh-fresh, .fs-screen,
   .pm-screen, .chat-push-banner, .article-modal, .acc-cab, .shub-sheet, .cm-ad-screen {
     left: var(--dk-L) !important; right: auto !important;
@@ -284,9 +287,77 @@
   /* Аркуші дій, що на телефоні виїжджають знизу, — по центру екрана. */
   .pm-actions-back, .pwa-guide { align-items: center; }
 
-  /* Фото Олики на Громаді — тло всієї сторінки, а не смужка під колонкою: панелі
-     ліворуч і праворуч лежать на ньому, як на шпалерах. */
-  .hm-bg { left: 0 !important; right: 0 !important; width: auto !important; }
+  /* ── ГРОМАДА БЕЗ ФОТО ──────────────────────────────────────────────────────
+     🗣️ Вова 08.10: «знімок саме тут з компʼютерної версії взагалі не до чого… приберемо
+     з заднього фону і зробимо фон такий, як в інших вкладках». Фото вертикальне
+     (941×1672) і на широкому екрані лише розмите тло. На телефоні фото лишається.
+     Усе, що на телефоні лежало ПРЯМО на фото світлим текстом, тут стає темним. */
+  .hm-bg { display: none !important; }
+  .app-main[data-tab="community"] { background: transparent !important; }
+  /* Світла поверхня замість скла: те саме, що картки інших вкладок — біле, тонкий
+     обідок, легка тінь, темний текст. Бордова шапка, банер новин і картка збору
+     лишаються як є — вони мають власне тло і не залежали від фото. */
+  #cm-content.hm { --dk-hm-card: #fff; --dk-hm-line: var(--board-line, #E2E2DF);
+    --dk-hm-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 10px rgba(0, 0, 0, 0.04); }
+  #cm-content.hm .hm-top { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.06); }
+  #cm-content.hm .hm-kicker, #cm-content.hm .hm-empty, #cm-content.hm .hm-error,
+  #cm-content.hm .hm-tel-sum, #cm-content.hm .hm-csec-h, #cm-content.hm .hm-fd-c-name,
+  #cm-content.hm .hm-fd-c--on .hm-fd-c-name { text-shadow: none; }
+  #cm-content.hm .hm-kicker, #cm-content.hm .hm-csec-h { color: var(--ink-mute, #6E727A); }
+  #cm-content.hm .hm-kicker-cat, #cm-content.hm .hm-kicker-cat--own::before,
+  #cm-content.hm .hm-csec-n { color: var(--ink-mute, #8a8d93); }
+  #cm-content.hm .hm-empty, #cm-content.hm .hm-error { color: var(--ink-soft, #55595f); }
+  #cm-content.hm .hm-sk {
+    background: linear-gradient(90deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.09) 42%, rgba(0,0,0,.05) 84%);
+    background-size: 260px 100%;
+  }
+  /* Чіп «УСІ НОВИНИ →» */
+  #cm-content.hm .hm-more {
+    color: var(--brand-ink); background: var(--dk-hm-card); border-color: var(--dk-hm-line);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  #cm-content.hm .hm-more:hover { background: #F6F2F3; }
+  /* Капсули «ЗАРАЗ / ПИТАННЯ» */
+  #cm-content.hm .hm-capsl-glass, #cm-content.hm .hm-capsl-glass::before {
+    background: var(--dk-hm-card) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    box-shadow: var(--dk-hm-shadow) !important; border-color: var(--dk-hm-line) !important;
+  }
+  #cm-content.hm .hm-cap2, #cm-content.hm .hm-capsl-track > .hm-cap2 {
+    background: var(--dk-hm-card) !important; border-color: var(--dk-hm-line) !important;
+    box-shadow: var(--dk-hm-shadow) !important; color: var(--ink, #1a1a1a) !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  }
+  #cm-content.hm .hm-capsl-track > .hm-cap2 { box-shadow: none !important; background: transparent !important; border-color: transparent !important; }
+  #cm-content.hm .hm-cap2-ic { background: rgba(74, 18, 28, 0.08); color: var(--brand-ink); }
+  #cm-content.hm .hm-cap2-k { color: var(--ink-mute, #6E727A); }
+  /* Крапки каруселей */
+  #cm-content.hm .hm-dots i, #cm-content.hm .hm-ndots i, #cm-content.hm .hm-fdots i { background: rgba(0, 0, 0, 0.16); }
+  #cm-content.hm .hm-dots i.on, #cm-content.hm .hm-ndots i.on, #cm-content.hm .hm-fdots i.on { background: var(--brand-ink); }
+  /* Тихі рядки новин */
+  #cm-content.hm .nc--line {
+    --nc-line-bg: var(--dk-hm-card); --nc-line-br: var(--dk-hm-line); --nc-line-press: #F4F4F2;
+    --nc-line-fg: var(--ink, #1a1a1a); --nc-line-quiet: var(--ink-mute, #6E727A);
+  }
+  /* Збій новин */
+  #cm-content.hm .hm-nerr { background: var(--dk-hm-card); border-color: var(--dk-hm-line); }
+  #cm-content.hm .hm-nerr-tx { color: var(--ink-soft, #55595f); }
+  #cm-content.hm .hm-nerr-btn { color: var(--brand-ink); background: #F6F2F3; border-color: var(--dk-hm-line); }
+  /* Ряд спільнот у віджеті Стрічки */
+  #cm-content.hm .hm-fd-c-av { background: rgba(74, 18, 28, 0.06); border-color: var(--dk-hm-line); color: var(--brand-ink); }
+  #cm-content.hm .hm-fd-c-name { color: var(--ink-soft, #55595f); }
+  #cm-content.hm .hm-fd-c--on .hm-fd-c-name { color: var(--ink, #1a1a1a); }
+  /* Телефони громади й екстрені служби */
+  #cm-content.hm .hm-ct, #cm-content.hm .hm-sos-b {
+    background: var(--dk-hm-card); border-color: var(--dk-hm-line); color: var(--ink, #1a1a1a);
+    box-shadow: var(--dk-hm-shadow);
+  }
+  #cm-content.hm .hm-ct-ic { background: rgba(74, 18, 28, 0.06); color: var(--brand-ink); }
+  #cm-content.hm .hm-ct-name { color: var(--ink, #1a1a1a); }
+  #cm-content.hm .hm-ct-meta, #cm-content.hm .hm-sos-t { color: var(--ink-mute, #6E727A); }
+  #cm-content.hm .hm-ct-phone { color: var(--red, #722F37); }
+  #cm-content.hm .hm-ct-act { color: var(--ink-mute, #6E727A); }
+  #cm-content.hm .hm-ct-act:hover, #cm-content.hm .hm-ct:hover, #cm-content.hm .hm-sos-b:hover { background: #F7F7F5; }
+  #cm-content.hm .hm-fund-more { color: var(--ink-mute, #6E727A); }
   /* Бордова шапка Громади — така сама картка, як меню й погода: з полем зверху
      і всіма заокругленими кутами. На телефоні вона тягнеться під шапку застосунку
      (260px бордо вгору — запас для «гумки»), а тут шапки немає, і ця смуга
@@ -295,11 +366,6 @@
      верхні краї всіх трьох карток мають бути на одній лінії. */
   .hm-top { border-top: 0 !important; margin-top: -10px !important; border-radius: var(--dk-r) !important; }
   .hm-top::before { display: none !important; }
-  /* ⚠️ Фото вертикальне (941×1672), а екран горизонтальний: розтяг ~1.5× дає
-     пікселі. Доки немає горизонтального знімка — сильніше розмиття, і воно
-     читається як задум (тло), а не як брак якості. Буде фото — `olyka-bg-wide.jpg`. */
-  .hm-bg img { filter: blur(6px) saturate(.88); transform: scale(1.08); }
-  html:has(.app-main[data-tab="community"]) .dk-card { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22); }
 
   /* Кругла кнопка «+» — жест телефона під великий палець. На компʼютері її роль
      бере «Створити» в навігації (`desktop-shell.js`), тож тут вона прихована.
@@ -311,6 +377,37 @@
   /* «Встанови на екран» на компʼютері не має сенсу — встановлюють з телефона,
      і для цього праворуч є QR. */
   .pwa-cta { display: none !important; }
+
+  /* ── АРКУШІ СТРІЧКИ (новий допис, коментарі, редагування, команда сторінки) ──
+     🗣️ Вова 08.10: «подачу посту… не так ніби вона знизу вилазить, а ніби окреме
+     вікно посередині екрану, і трошки збільшити». Ті самі правила, що й для решти
+     вікон: по центру, усі кути заокруглені, без рисочки-грабера (її тягнуть
+     пальцем), закриття — Esc або клік повз (`attachBackdropClose` у feed.js). */
+  .fd-sheet-vp {
+    left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important;
+    align-items: center !important; padding: 24px;
+  }
+  .fd-sheet {
+    max-width: 720px; max-height: 86vh; border-radius: var(--modal-radius, 20px) !important;
+    padding: 20px 24px 20px !important;
+    transform: translateY(12px) scale(0.98); opacity: 0;
+    transition: transform 0.2s var(--ease-out, ease), opacity 0.2s ease;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+  }
+  .fd-sheet-back.open .fd-sheet { transform: none; opacity: 1; }
+  .fd-sheet-handle { display: none; }
+  .fd-sheet { position: relative; }
+  .dk-sheet-x {
+    position: absolute; top: 14px; right: 14px; z-index: 3; width: 32px; height: 32px;
+    border: 0; border-radius: 50%; background: #F1F1EF; color: var(--ink-soft, #55595f);
+    display: grid; place-items: center;
+  }
+  .dk-sheet-x:hover { background: #E6E6E3; color: var(--ink, #1a1a1a); }
+  .dk-sheet-x svg { width: 16px; height: 16px; }
+  .fd-sheet-kbpad { display: none; }
+  /* Новий допис — простір для тексту, як у вікні листа. */
+  .fd-composer { min-height: min(560px, 80vh); }
+  .fd-comp-text { min-height: 220px; font-size: 17px; }
 
   /* ── ВІКНА: аркуші знизу стають вікнами по центру екрана ───────────────────
      Аркуш, що виїжджає з-під пальця, — жест телефона. На компʼютері людина чекає
