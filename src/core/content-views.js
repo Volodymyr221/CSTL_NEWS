@@ -88,7 +88,9 @@ export function trackContentOpen(kind, id) {
 //
 // 🔑 Спостерігач ОДИН на список, а не на картку: дротуємо після кожної
 // перемальовки, а вже побачені картки відсіює `побачене`.
-export function observeContentCards(root, kind, selector, attr) {
+// `onSeen(id)` — необовʼязково: кличеться в ту саму мить, що й подія (Стрічка
+// гасить нею червоне число «нове» на іконці спільноти, 09.10).
+export function observeContentCards(root, kind, selector, attr, onSeen) {
   if (!root || !('IntersectionObserver' in window)) return null;
   const картки = root.querySelectorAll(selector);
   if (!картки.length) return null;
@@ -118,6 +120,7 @@ export function observeContentCards(root, kind, selector, attr) {
         if (побачене.has(ключ)) return;
         побачене.add(ключ);
         logEvent(хтоЯ(), 'content_seen', { meta: { kind, id: Number(id) || id } });
+        try { onSeen?.(id); } catch (_) {}
         io.unobserve(вузол);      // більше стежити нема за чим
       }, ПОРІГ_МС));
     }

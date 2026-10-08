@@ -116,6 +116,24 @@
   color: #fff; font-weight: 700; font-family: Georgia, serif;
 }
 .fd-circle-ava--ph { font-size: 22px; border: 2.5px solid var(--fd-bg); }
+/* 🆕 09.10 — ІКОНКА СПІЛЬНОТИ = ЗАОКРУГЛЕНИЙ КВАДРАТ (варіант «Б», Вова).
+   Людина лишається колом, установа — квадратом: форма каже, хто пише.
+   Бордове кільце-прикраса зняте: воно нічого не означало. «Є нове» тепер каже
+   червоне число в куті, як на іконці додатка в телефоні.
+   🔙 Повернути коло — гілка backup/feed-icons-before-squircle-20261009. */
+.fd-circle-ring { position: relative; background: none; padding: 0; border-radius: 18px; }
+.fd-circle-ava.is-page { border: 0; border-radius: 18px; box-shadow: 0 0 0 1px rgba(16,18,22,0.08); }
+.fd-ava.is-page, .fd-com-ava-img.is-page { border-radius: 28%; }
+.fd-screen-ava-img.is-page { border-radius: 20px; }
+.fd-screen-ava-img.fd-mono { font-size: 28px; }
+.is-page.fd-mono { background: var(--mono); font-family: inherit; letter-spacing: 0.02em; }
+.fd-circle-ava.fd-mono { font-size: 20px; }
+.fd-circle-badge {
+  position: absolute; top: -5px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 10px; background: #D92D20; color: #fff; border: 2px solid var(--fd-bg);
+  font: 700 11px/16px system-ui, sans-serif; text-align: center; box-sizing: border-box;
+}
+.fd-circle.is-seen .fd-circle-label { color: var(--fd-muted, #8A8D93); font-weight: 600; }
 /* Перенос ЛИШЕ по словах (не по буквах); максимум 2 рядки — блок нижчий.
    Ширина підпису (86px, ширша за кільце 62px) дає 2 слова в рядок → «Відділ культури»
    в один рядок, «ОТГ» у другий (замість 3 рядків по слову). */
@@ -580,7 +598,7 @@
 /* Тінь аватарки — РІВНОМІРНА навколо (зсув 0), ті самі blur/прозорість що в .fd-screen-body:
    верхня половина кружечка виступає на банер → кидає таку саму тінь, що й край блоку →
    аватарка + верхній край блоку читаються одним силуетом, без перепаду на межі. */
-.fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
+.fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 24px; /* 09.10: спільнота — квадрат */ border: 4px solid var(--fd-bg);
   overflow: hidden; box-shadow: 0 0 18px rgba(0,0,0,0.20); }
 .fd-screen-ava-img--ph { font-size: 32px; }
 .fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: var(--fd-ink); }
