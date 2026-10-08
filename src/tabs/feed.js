@@ -153,11 +153,11 @@ function avatarHtml(url, name, cls) {
 // ── ІКОНКА СПІЛЬНОТИ (09.10, варіант «Б» з макета) ─────────────────────────────
 // 🗣️ Вова: «це мають бути іконки спільнот». Було: однакові бордові кола з ОДНІЄЮ
 // літерою — «Olyka Castle» і «Олицька школа» виглядали як дві однакові «О».
-// 🔑 Спільнота — заокруглений квадрат (як іконка додатка), людина лишається колом:
-// форма сама каже, хто пише — установа чи житель.
-// Без логотипа — ДВІ літери на власному кольорі. Колір рахується з назви, тож у
+// 🔑 Форма — КОЛО. Квадрат (варіант «Б») відкочено того ж дня: логотипи громади —
+// круглі печатки, і в квадраті вони стояли колом на білій плитці (знімок Вови).
+// Без логотипа — ДВІ літери на власному кольорі (від номера спільноти), тож у
 // спільноти він завжди той самий і в ряду, і в шапці допису, і на її екрані.
-// 🔙 Попередній вигляд — гілка `backup/feed-icons-before-squircle-20261009`.
+// 🔙 Вигляд до цих змін (бордові кола з однією літерою) — гілка `backup/feed-icons-before-squircle-20261009`.
 const MONO_TONES = ['#2E5AAC', '#2F7D5B', '#8B5E3C', '#6B4AA0', '#B5473A', '#3F6F80', '#7A3E62', '#5B6B2E'];
 function pageMonogram(name) {
   const слова = String(name || '').replace(/[«»"'.,:;()]/g, ' ').trim().split(/\s+/).filter(Boolean);
@@ -219,8 +219,6 @@ function patchCircleBadge(pageId) {
   const btn = document.querySelector(`#feed-circles .fd-circle[data-open-page="${pageId}"]`);
   if (!btn) return;
   const n = unreadCount(pageId);
-  btn.classList.toggle('has-new', n > 0);
-  btn.classList.toggle('is-seen', n === 0);
   const old = btn.querySelector('.fd-circle-badge');
   if (!n) { old?.remove(); return; }
   const txt = n > 9 ? '9+' : String(n);
@@ -339,7 +337,7 @@ function circlesHtml() {
     const n = unreadCount(p.id);
     const badge = n ? `<span class="fd-circle-badge" aria-label="Нових дописів: ${n}">${n > 9 ? '9+' : n}</span>` : '';
     return `
-    <button class="fd-circle${n ? ' has-new' : ' is-seen'}" data-open-page="${p.id}" type="button">
+    <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${pageAvatarHtml(p, 'fd-circle-ava')}${badge}</span>
       <span class="fd-circle-label">${escapeHtml(p.name)}</span>
     </button>`;
