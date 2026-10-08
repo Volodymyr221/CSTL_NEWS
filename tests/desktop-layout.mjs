@@ -85,14 +85,15 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   const rail = await rect(p, '.dk-rail');
   ok('🔴 🖥 застосунок будується на компʼютері (екрана «тільки телефон» більше немає)',
      !!tab && !(await p.$('.dg')), JSON.stringify(tab));
-  ok('🖥 навігація ліворуч на всю висоту', tab && tab.x === 0 && tab.h >= 899 && tab.w < 600, JSON.stringify(tab));
+  ok('🖥 навігація — картка ліворуч на всю висоту (з полями 16px)', tab && tab.x > 0 && tab.h >= 860 && tab.w <= 240, JSON.stringify(tab));
+  ok('🖥 навігація приєднана до колонки (проміжок ≤ 24px, а не рама від краю вікна)', tab && main && main.x - tab.r <= 24 && main.x - tab.r >= 8, `${main?.x} − ${tab?.r}`);
   ok('🖥 центральна колонка рівно 640px', main && Math.round(main.w) === 640, JSON.stringify(main));
   ok('🖥 колонка не перетинається з навігацією', main && tab && main.x >= tab.r, `${main?.x} ≥ ${tab?.r}`);
   ok('🖥 шапки телефона немає', head && head.display === 'none', JSON.stringify(head));
   ok('🖥 права колонка праворуч від центральної', rail && main && rail.x >= main.r + 20, JSON.stringify(rail));
   const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
-  const more = await p.evaluate(() => [...document.querySelectorAll('.dk-more [data-dk-nav]')].map(x => x.dataset.dkNav));
+  const more = await p.evaluate(() => [...document.querySelectorAll('.tab-bar [data-dk-nav]')].map(x => x.dataset.dkNav));
   ok('🖥 другорядні пункти дзеркалять бічне меню (Новини, Збережені…)',
      ['news', 'saved', 'messages'].every(id => more.includes(id)), more.join(','));
   ok('🖥 вкладки в «Ще» не дублюються', !more.some(id => ['community', 'shotam', 'board', 'buses', 'discussions'].includes(id)), more.join(','));
@@ -100,13 +101,23 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
 // ── 08.10«б» — шліфовка після відгуку Вови («не професійно, копія інстаграму») ──
 {
   const стан = await p.evaluate(() => ({
-    caps: [...document.querySelectorAll('.dk-more .dk-cap')].map(x => x.textContent.trim()),
-    info: !!document.querySelector('.dk-more [data-dk-nav="policy"]'),
+    caps: [...document.querySelectorAll('.tab-bar .dk-cap')].map(x => x.textContent.trim()),
+    info: !!document.querySelector('.tab-bar [data-dk-nav="policy"]'),
+    // порядок: розділи → «Створити» → Моє (рішення Вови 08.10«д»)
+    порядок: (() => { const y = s => document.querySelector(s)?.getBoundingClientRect().top ?? -1;
+      return y('.dk-sec [data-dk-nav="news"]') < y('.dk-cta-btn') && y('.dk-cta-btn') < y('.dk-more [data-dk-nav="messages"]'); })(),
     foot: [...document.querySelectorAll('.dk-foot [data-dk-nav]')].map(x => x.dataset.dkNav),
     myq: !!document.querySelector('.dk-more [data-dk-fab="discussions:disc-mine"]'),
   }));
   ok('🖥 групи меню з підписами («Моє»), а «Інформація» переїхала в підвал',
      стан.caps.includes('Моє') && !стан.caps.includes('Інформація') && !стан.info, JSON.stringify(стан));
+  ok('🖥 порядок: Новини й Збори з розділами → «Створити» → «Моє»', стан.порядок, JSON.stringify(стан));
+  const підвал = await p.evaluate(() => {
+    const f = document.querySelector('.dk-foot button');
+    return f ? [getComputedStyle(f).color, getComputedStyle(document.querySelector('.dk-foot')).backgroundColor] : null;
+  });
+  ok('🖥 підвал читається: темний текст на білій картці (а не білий на білому)',
+     !!підвал && підвал[1] === 'rgb(255, 255, 255)' && !/255, 255, 255/.test(підвал[0]), JSON.stringify(підвал));
   ok('🖥 підвал правої колонки: політика, правила, підтримка', ['policy', 'boardrules', 'support'].every(x => стан.foot.includes(x)), стан.foot.join(','));
   ok('🖥 «Мої питання» мають вхід (кругла кнопка, де вони жили, на компʼютері прихована)', стан.myq, '');
   const меню = await rect(p, '.dk-cta-menu');
@@ -131,10 +142,12 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   await p.waitForTimeout(600);
   const fab = await rect(p, '.board-trigger--fixed');
   ok('🖥 круглої кнопки «+» у куті колонки на компʼютері немає', !fab || fab.display === 'none', JSON.stringify(fab));
-  const тло = await p.evaluate(() => [getComputedStyle(document.body).backgroundColor,
-    getComputedStyle(document.querySelector('.app-main')).backgroundColor]);
-  ok('🖥 тло сторінки = тло Дошки (колонка не стоїть смугою іншого кольору)',
-     тло[1] === 'rgba(0, 0, 0, 0)' || тло[0] === тло[1], тло.join(' / '));
+  const тло = await p.evaluate(() => {
+    const m = document.querySelector('.app-main'); const cs = getComputedStyle(m); const r = m.getBoundingClientRect();
+    return { bg: cs.backgroundColor, radius: cs.borderTopLeftRadius, top: r.top, bottom: innerHeight - r.bottom };
+  });
+  ok('🖥 колонка — картка, як меню і праві картки: поля зверху/знизу і заокруглені кути',
+     тло.radius === '20px' && тло.top === 16 && тло.bottom === 16 && тло.bg !== 'rgba(0, 0, 0, 0)', JSON.stringify(тло));
   await p.evaluate(() => window.switchTab('discussions'));
   await p.waitForTimeout(800);
   await p.evaluate(() => { const m = document.querySelector('.app-main'); m.style.minHeight = '0'; const f = document.createElement('div'); f.style.height = '3000px'; f.id = 'tst-fill'; m.appendChild(f); m.scrollTop = 0; });
@@ -155,6 +168,20 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
   const m = await rect(p, '.app-main');
   ok(`🖥 ${sel} (${tab}) у межах колонки`, r && m && r.x >= m.x - 1 && r.r <= m.r + 1, `${JSON.stringify(r)} / колонка ${m?.x}–${m?.r}`);
 }
+// Список зупинок «Звідки» (Вова 08.10: «розтягується на всю ширину»)
+{
+  await p.evaluate(() => window.switchTab('buses'));
+  await p.waitForTimeout(1200);
+  await p.click('#bs-from-input');
+  await p.waitForTimeout(600);
+  const dd = await rect(p, '#bs-dropdown');
+  const m = await rect(p, '.app-main');
+  ok('🖥 список зупинок «Звідки» у межах колонки', dd && dd.w > 100 && dd.x >= m.x - 1 && dd.r <= m.r + 1,
+     `${JSON.stringify(dd)} / колонка ${m?.x}–${m?.r}`);
+  await p.keyboard.press('Escape');
+  await p.evaluate(() => document.getElementById('bs-dd-x')?.click());
+  await p.waitForTimeout(400);
+}
 // Вікно по центру + Esc
 {
   await p.click('.dk-foot [data-dk-nav="policy"]');
@@ -168,13 +195,13 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
 }
 // Клік по розділу закриває відкритий екран
 {
-  await p.click('.dk-more [data-dk-nav="news"]');
+  await p.click('.tab-bar [data-dk-nav="news"]');
   await p.waitForTimeout(1200);
   const nh = await rect(p, '.nh-screen');
   const m = await rect(p, '.app-main');
   ok('🖥 екран Новин відкривається в колонці', nh && m && Math.abs(nh.x - m.x) < 2 && Math.round(nh.w) === 640, JSON.stringify(nh));
   const позначка = await p.evaluate(() => ({
-    news: document.querySelector('.dk-more [data-dk-nav="news"]')?.classList.contains('dk-on'),
+    news: document.querySelector('.tab-bar [data-dk-nav="news"]')?.classList.contains('dk-on'),
     вкладка: getComputedStyle(document.querySelector('.tab-bar .tab-item.active, .tab-bar .tab-item--home.active')).backgroundColor,
   }));
   ok('🖥 відкриті Новини позначені в навігації, а вкладка під ними гасне',
@@ -185,6 +212,18 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
   const активна = await p.evaluate(() => document.querySelector('.app-main')?.dataset.tab);
   ok('🔴 🖥 клік по розділу в навігації закриває відкритий екран', !лишився && активна === 'board',
      `екран ${лишився ? 'лишився' : 'закрито'}, вкладка ${активна}`);
+  // Екран поверх екрана: відкриті Новини → клік «Збори». Закриття шару асинхронне
+  // (`history.go`), і без очікування воно закривало б уже НОВИЙ екран.
+  await p.click('.brules-ok', { timeout: 600 }).catch(() => {});
+  await p.waitForTimeout(400);
+  await p.click('.tab-bar [data-dk-nav="news"]');
+  await p.waitForTimeout(1200);
+  await p.click('.tab-bar [data-dk-nav="fund"]');
+  await p.waitForTimeout(1500);
+  const стан2 = await p.evaluate(() => ({ news: !!document.querySelector('.nh-screen'), fund: !!document.querySelector('.fs-screen') }));
+  ok('🔴 🖥 з відкритих Новин клік «Збори» відкриває Збори, а не блимає і зникає', !стан2.news && стан2.fund, JSON.stringify(стан2));
+  await p.goBack().catch(() => {});
+  await p.waitForTimeout(800);
 }
 await ctx.close();
 
