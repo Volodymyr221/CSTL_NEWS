@@ -1,0 +1,172 @@
+// src/core/desktop-shell.js
+// КОМПʼЮТЕРНА ВЕРСІЯ — рама навколо застосунку (08.10.2026).
+//
+// 🗣️ Вова: «детально продумати комп'ютерну версію… в такому самому стилі… просто і
+// сучасно», рішення по макету — «Зараз, на повну». Вигляд описує `style/desktop.css`;
+// тут лише те, чого CSS зробити не може:
+//   1. бренд, другорядні пункти й картка кабінету в лівій панелі;
+//   2. права колонка (погода в Олиці, QR «Громада в телефоні»);
+//   3. Esc закриває вікна й шари — на компʼютері це очікує кожен.
+//
+// 🔑 ДРУГОРЯДНІ ПУНКТИ НЕ ВЕДУТЬСЯ ТУТ ОКРЕМИМ СПИСКОМ. Їх уже має бічне меню
+// (`SECTIONS` у `sidebar.js` — єдине джерело правди: права команди, лічильник
+// непрочитаних, крапки «є нове»). Ми дзеркалимо ВЖЕ НАМАЛЬОВАНІ пункти меню і
+// перебудовуємось, коли меню перемальовується. Окремий список розійшовся б із
+// меню при першому ж новому пункті — це вже двічі траплялось у проєкті.
+//
+// 🛑 На телефоні модуль не робить НІЧОГО: перевірка `isDesktop()` стоїть першою.
+
+import { navigateFromMenu } from './sidebar.js';
+import { hasOpenLayer, closeAllLayers } from './layers.js';
+import { qrSvg } from './qr.js';
+import { weatherCodeInfo } from './weather-icons.js';
+import { OLYKA_COORDS } from './utils.js';
+
+// ⚠️ Той самий запит, що в `style/desktop.css`. Міняєш там — міняй тут.
+export const DESKTOP_MQ = '(min-width: 960px) and (hover: hover) and (pointer: fine)';
+
+export function isDesktop() {
+  try { return !!window.matchMedia && window.matchMedia(DESKTOP_MQ).matches; }
+  catch (_) { return false; }
+}
+
+// Вкладки вже стоять у панелі самі (таб-бар), у списку «Ще» їх не дублюємо.
+const ВКЛАДКИ = new Set(['community', 'shotam', 'discussions', 'board', 'buses', 'power']);
+
+let _built = false;
+
+function el(tag, cls, html) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+
+// ── Ліва панель ─────────────────────────────────────────────────────────────
+function syncMore(more) {
+  const src = document.getElementById('sidebar-nav');
+  if (!src) return;
+  const пункти = [...src.querySelectorAll('.sb-card--admin, .sb-group .sidebar-item')]
+    .filter(b => !b.hidden && !ВКЛАДКИ.has(b.dataset.nav));
+  const html = пункти.map(b => {
+    const іконка = b.querySelector('.sidebar-item-icon, .sb-card-ic')?.innerHTML || '';
+    const назва = b.querySelector('.sidebar-item-label, .sb-card-name')?.textContent || '';
+    const бейдж = b.querySelector('.sidebar-item-badge:not([hidden])')?.textContent || '';
+    return `<button type="button" data-dk-nav="${b.dataset.nav}">${іконка}<span>${назва}</span>`
+      + (бейдж ? `<span class="dk-count">${бейдж}</span>` : '') + '</button>';
+  }).join('');
+  if (more.innerHTML !== html) more.innerHTML = html;
+}
+
+function syncMe(me) {
+  const card = document.querySelector('#sidebar-nav .sb-card--me');
+  if (!card) return;
+  const ава = card.querySelector('.sb-av')?.outerHTML || '';
+  const імʼя = card.querySelector('.sb-card-name')?.textContent || 'Кабінет';
+  const підпис = card.querySelector('.sb-card-sub')?.textContent || '';
+  const html = `<span class="dk-me-av">${ава}</span><span>${імʼя}<small>${підпис}</small></span>`;
+  if (me.innerHTML !== html) me.innerHTML = html;
+}
+
+function buildNav() {
+  const nav = document.querySelector('.tab-bar');
+  if (!nav || nav.querySelector('.dk-brand')) return;
+  nav.prepend(el('div', 'dk-brand', 'ГРОМАДА'));
+  const more = el('div', 'dk-more');
+  more.setAttribute('aria-label', 'Ще');
+  more.addEventListener('click', e => {
+    const b = e.target.closest('[data-dk-nav]');
+    if (b) navigateFromMenu(b.dataset.dkNav);
+  });
+  nav.appendChild(more);
+  const me = el('button', 'dk-me');
+  me.type = 'button';
+  me.addEventListener('click', () => navigateFromMenu('account'));
+  nav.appendChild(me);
+
+  // Ліва панель видна завжди, тож клік по ній, поки відкрито екран чи статтю, мусить
+  // привести в розділ, а не перемкнути вкладку ПІД відкритим екраном. Перехоплюємо
+  // на фазі захоплення — раніше за обробник самого пункту.
+  nav.addEventListener('click', e => {
+    if (!e.target.closest('.tab-item, [data-dk-nav], .dk-me')) return;
+    if (hasOpenLayer()) closeAllLayers();
+    const стаття = document.getElementById('article-modal');
+    if (стаття && стаття.classList.contains('open')) window.closeArticleModal?.();
+  }, true);
+
+  const sync = () => { syncMore(more); syncMe(me); };
+  sync();
+  const src = document.getElementById('sidebar-nav');
+  if (src) new MutationObserver(sync).observe(src, { childList: true, subtree: true, attributes: true, characterData: true });
+}
+
+// ── Права колонка ───────────────────────────────────────────────────────────
+async function fillWeather(card) {
+  const { lat, lon } = OLYKA_COORDS;
+  const ac = new AbortController();
+  const стоп = setTimeout(() => ac.abort(), 6000);
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + '&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=auto', { signal: ac.signal });
+    const d = await r.json();
+    const c = d.current;
+    const info = weatherCodeInfo(c.weather_code);
+    card.innerHTML = `<div class="dk-k">Олика зараз</div>
+      <div class="dk-wx"><span class="dk-wx-ic">${info.icon}</span>
+        <span class="dk-wx-t">${Math.round(c.temperature_2m)}°</span></div>
+      <div class="dk-s">${info.text} · вітер ${Math.round(c.wind_speed_10m)} м/с</div>`;
+  } catch (_) {
+    // Немає погоди — немає картки. Порожня рамка «тимчасово недоступно» праворуч
+    // лише займала б місце, а повний прогноз однаково живе на Громаді.
+    card.remove();
+  } finally {
+    clearTimeout(стоп);
+  }
+}
+
+function buildRail() {
+  if (document.querySelector('.dk-rail')) return;
+  const rail = el('aside', 'dk-rail');
+  rail.setAttribute('aria-label', 'Корисне');
+  const wx = el('div', 'dk-card');
+  rail.appendChild(wx);
+  let qr = '';
+  try { qr = qrSvg(location.origin + location.pathname, { label: 'QR-код: відкрити «Громаду» на телефоні' }); } catch (_) { qr = ''; }
+  rail.appendChild(el('div', 'dk-card', `<div class="dk-k">Громада в телефоні</div>
+    <div class="dk-t">Постав застосунок на екран</div>
+    <div class="dk-s">Наведи камеру телефона — і сповіщення про автобус, відповіді на питання й
+      нові оголошення будуть завжди під рукою. <a href="install.html" target="_blank" rel="noopener">Як встановити</a></div>
+    ${qr ? `<div class="dk-qr">${qr}</div>` : ''}`));
+  document.body.appendChild(rail);
+  fillWeather(wx);
+}
+
+// ── Esc ─────────────────────────────────────────────────────────────────────
+// На телефоні вікна закривають свайпом і «назад», клавіатури немає. На компʼютері
+// Esc — перше, що натискає людина. Порядок — від найвищого шару до нижчого.
+function onEsc(e) {
+  if (e.key !== 'Escape' || e.defaultPrevented || !isDesktop()) return;
+  const закрити = document.querySelector('.app-modal .app-modal-close');
+  if (закрити) { закрити.click(); return; }
+  // Екран питання (`onChatEsc` у board-discussions.js) і аркуші Стрічки
+  // (`attachBackdropClose` у feed.js) закриваються по Esc самі, а сторінка оголошення
+  // ставить `preventDefault` — не дублюємо, інакше один натиск закрив би два рівні.
+  if (document.querySelector('.qa-screen, .fd-sheet-back')) return;
+  if (hasOpenLayer()) { history.back(); return; }
+  const стаття = document.getElementById('article-modal');
+  if (стаття && стаття.classList.contains('open')) window.closeArticleModal?.();
+}
+
+export function initDesktopShell() {
+  if (_built) return;
+  document.addEventListener('keydown', onEsc);
+  const build = () => {
+    if (_built || !isDesktop()) return;
+    _built = true;
+    buildNav();
+    buildRail();
+  };
+  build();
+  // Вікно могли розширити вже після старту (почали вузьким) — добудовуємо раму.
+  try { window.matchMedia(DESKTOP_MQ).addEventListener('change', build); } catch (_) {}
+}
