@@ -336,5 +336,44 @@ await ctx.close();
   await ctx.close();
 }
 
+// ── 6. ЕКРАН ПОВЕРХ ВКЛАДКИ НЕ ПРОСВІЧУЄ НІ ЗВЕРХУ, НІ ЗНИЗУ ────────────────────
+// Вова 08.10 (знімок: Громада → Новини): «зверху і знизу видно сторінку під —
+// такого не має бути з жодними сторінками». Над екраном (смуга 16px) має бути тло
+// сторінки, а знизу екран іде до краю вікна. `elementFromPoint` бачить елемент, а не
+// псевдоелемент: смуга тла — це `body::before`, тож у ній мусить бути `body`.
+{
+  const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
+  await p.evaluate(() => window.switchTab('community'));
+  await p.waitForTimeout(1200);
+  await p.click('.tab-bar [data-dk-nav="news"]');
+  await p.waitForTimeout(1300);
+  const m = await rect(p, '.nh-screen');
+  // Смуга тла має `pointer-events: none` (клік крізь неї не потрібен), а такі вузли
+  // `elementFromPoint` пропускає — на час виміру вмикаємо їй влучання.
+  await p.addStyleTag({ content: 'body::before { pointer-events: auto !important; }' });
+  const під = await p.evaluate(([x]) => ({
+    верх: document.elementFromPoint(x, 6)?.tagName,
+    низ: document.elementFromPoint(x, 898)?.closest('.nh-screen') ? 'nh' : document.elementFromPoint(x, 898)?.className,
+  }), [m.x + m.w / 2]);
+  ok('🔴 🖥 Громада → Новини: над екраном тло сторінки, а не вкладка; знизу — сам екран',
+     під.верх === 'BODY' && під.низ === 'nh', JSON.stringify(під));
+  await ctx.close();
+}
+
+// ── 5. НИЗЬКИЙ ЕКРАН: меню прокручується, а назва і кабінет стоять ─────────────
+// Вова 08.10: «нижня частина (кабінет) фіксована, а верхня — ГРОМАДА — ні».
+{
+  const { ctx, p } = await open({ viewport: { width: 1440, height: 600 } });
+  const до = await rect(p, '.dk-brand');
+  const можна = await p.evaluate(() => { const n = document.querySelector('.tab-bar'); n.scrollTop = 9999; return n.scrollTop; });
+  await p.waitForTimeout(200);
+  const після = await rect(p, '.dk-brand');
+  const me = await rect(p, '.dk-me');
+  ok('🖥 меню прокручене — назва «ГРОМАДА» лишається вгорі, кабінет унизу',
+     можна > 0 && до && після && Math.abs(після.y - до.y) <= 1 && me && me.b <= 600 - 16 + 1,
+     `прокрут ${можна}, назва ${до?.y}→${після?.y}, кабінет низ ${me?.b}`);
+  await ctx.close();
+}
+
 await b.close(); await stop();
 done();
