@@ -63,15 +63,17 @@ function el(tag, cls, html) {
 }
 
 // ── Ліва панель ─────────────────────────────────────────────────────────────
-// Групи з підписами («Моє», «Інформація») беруться з того самого меню, що й пункти:
-// підпис `.sb-cap` стоїть у меню рівно перед своєю групою. Група «Розділи» підпису не
-// дістає — її пункти (Новини, Збори) йдуть одразу під вкладками як їх продовження.
-const ПЕРШИЙ_ПІДПИС = 'Розділи';
-// «Інформація» (політика, правила, підтримка, контакти) живе в підвалі правої
-// колонки, як на будь-якому сайті (див. `ПІДВАЛ` у `syncMore`).
+// Порядок — від «куди піти» до «що моє» (рішення Вови 08.10):
+//   вкладки → інші розділи (Новини, Збори) → «Створити» → МОЄ → … → КОМАНДА → кабінет.
+// 🗣️ «Адмінка, дивитися як житель, новини, збори — воно все якось змішується»:
+// тому кожна купа — свій вузол, а не один список. Пункти беруться з бічного меню
+// (`SECTIONS` у `sidebar.js` — єдине джерело правди), групою за підписом `.sb-cap`.
+// «Інформація» (політика, правила, підтримка, контакти) — у підвалі правої колонки.
+const ПІДВАЛ = new Set(['contacts', 'support', 'boardrules', 'policy']);
+const КОМАНДА = new Set(['cabinet', 'as-resident']);
 // «Мої питання» живуть у меню круглої кнопки Питань, якої на компʼютері немає
 // (її роль бере «Створити»). Без цього рядка на компʼютері до них не було б входу.
-const ДОДАТКОВО = { 'Моє': [{ fab: 'discussions:disc-mine', label: 'Мої питання' }] };
+const МОЇ_ПИТАННЯ = `<button type="button" data-dk-fab="discussions:disc-mine">${'%Q%'}<span>Мої питання</span></button>`;
 
 function navItemHtml(b) {
   const іконка = b.querySelector('.sidebar-item-icon, .sb-card-ic')?.innerHTML || '';
@@ -80,32 +82,23 @@ function navItemHtml(b) {
   return `<button type="button" data-dk-nav="${b.dataset.nav}">${іконка}<span>${назва}</span>`
     + (бейдж ? `<span class="dk-count">${бейдж}</span>` : '') + '</button>';
 }
+const put = (node, html) => { if (node.innerHTML !== html) node.innerHTML = html; };
 
-function syncMore(more) {
+function syncGroups({ sec, more, team }) {
   const src = document.getElementById('sidebar-nav');
   if (!src) return;
-  let html = '';
-  // Службові пункти команди з «Інформації» («Дивитись як житель») у підвал не
-  // йдуть — вони стають поруч з «Адмінкою».
-  const ПІДВАЛ = new Set(['contacts', 'support', 'boardrules', 'policy']);
-  const адмін = src.querySelector('.sb-card--admin');
-  const службові = [...src.querySelectorAll('.sb-group .sidebar-item')]
-    .filter(b => !b.hidden && b.dataset.nav === 'as-resident');
-  const команда = [адмін && !адмін.hidden ? адмін : null, ...службові].filter(Boolean);
-  if (команда.length) html += `<div class="dk-grp">${команда.map(navItemHtml).join('')}</div>`;
-  let підпис = '';
-  for (const n of src.children) {
-    if (n.classList.contains('sb-cap')) { підпис = n.textContent.trim(); continue; }
-    if (!n.classList.contains('sb-group')) continue;
-    const пункти = [...n.querySelectorAll('.sidebar-item')]
-      .filter(b => !b.hidden && !ВКЛАДКИ.has(b.dataset.nav) && !ПІДВАЛ.has(b.dataset.nav) && b.dataset.nav !== 'as-resident');
-    const extra = (ДОДАТКОВО[підпис] || [])
-      .map(x => `<button type="button" data-dk-fab="${x.fab}">${QUESTION_IC}<span>${x.label}</span></button>`);
-    if (!пункти.length && !extra.length) continue;
-    const заголовок = підпис && підпис !== ПЕРШИЙ_ПІДПИС ? `<div class="dk-cap">${підпис}</div>` : '';
-    html += `<div class="dk-grp">${заголовок}${пункти.map(navItemHtml).join('')}${extra.join('')}</div>`;
-  }
-  if (more.innerHTML !== html) more.innerHTML = html;
+  const видимі = sel => [...src.querySelectorAll(sel)].filter(b => !b.hidden);
+  const group = caption => {
+    const cap = [...src.querySelectorAll('.sb-cap')].find(c => c.textContent.trim() === caption);
+    const g = cap?.nextElementSibling;
+    return g ? [...g.querySelectorAll('.sidebar-item')].filter(b => !b.hidden) : [];
+  };
+  put(sec, group('Розділи').filter(b => !ВКЛАДКИ.has(b.dataset.nav)).map(navItemHtml).join(''));
+  put(more, '<div class="dk-cap">Моє</div>' + group('Моє').map(navItemHtml).join('')
+    + МОЇ_ПИТАННЯ.replace('%Q%', QUESTION_IC));
+  const команда = видимі('.sb-card--admin, .sb-group .sidebar-item').filter(b => КОМАНДА.has(b.dataset.nav));
+  put(team, команда.length ? '<div class="dk-cap">Команда</div>' + команда.map(navItemHtml).join('') : '');
+  team.hidden = !команда.length;
 }
 
 function syncMe(me) {
@@ -136,11 +129,12 @@ function buildNav() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !ctaMenu.hidden) { e.preventDefault(); setMenu(false); }
   }, true);   // фаза захоплення: раніше за загальний Esc, який закрив би вікно під меню
-  nav.appendChild(cta);
-
+  const sec = el('div', 'dk-sec');
   const more = el('div', 'dk-more');
-  more.setAttribute('aria-label', 'Ще');
-  nav.appendChild(more);
+  more.setAttribute('aria-label', 'Моє');
+  const team = el('div', 'dk-team');
+  team.setAttribute('aria-label', 'Команда');
+  nav.append(sec, cta, more, team);
   nav.addEventListener('click', e => {
     const f = e.target.closest('[data-dk-fab]');
     if (f) { setMenu(false); runFab(f.dataset.dkFab); return; }
@@ -155,14 +149,21 @@ function buildNav() {
   // Ліва панель видна завжди, тож клік по ній, поки відкрито екран чи статтю, мусить
   // привести в розділ, а не перемкнути вкладку ПІД відкритим екраном. Перехоплюємо
   // на фазі захоплення — раніше за обробник самого пункту.
+  // 🔴 Закриття шарів — це `history.go(-n)`, і воно АСИНХРОННЕ: якщо одразу відкрити
+  // новий екран (Кабінет, Новини), запізнілий «назад» закриє вже його — екран
+  // блимав і зникав. Тому клік відкладаємо до моменту, коли шари справді закрились,
+  // і повторюємо його вже на чистому стеку.
   nav.addEventListener('click', e => {
-    if (!e.target.closest('.tab-item, [data-dk-nav], [data-dk-fab], .dk-me')) return;
-    if (hasOpenLayer()) closeAllLayers();
+    const ціль = e.target.closest('.tab-item, [data-dk-nav], [data-dk-fab], .dk-me');
+    if (!ціль) return;
     const стаття = document.getElementById('article-modal');
     if (стаття && стаття.classList.contains('open')) window.closeArticleModal?.();
+    if (!hasOpenLayer()) return;
+    e.stopPropagation(); e.preventDefault();
+    afterLayersClosed(() => ціль.click());
   }, true);
 
-  const sync = () => { syncMore(more); syncMe(me); syncActive(); };
+  const sync = () => { syncGroups({ sec, more, team }); syncMe(me); syncActive(); };
   sync();
   const src = document.getElementById('sidebar-nav');
   if (src) new MutationObserver(sync).observe(src, { childList: true, subtree: true, attributes: true, characterData: true });
@@ -190,6 +191,16 @@ function watchScreens() {
     if (_activeRaf) return;
     _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); });
   }).observe(document.body, { childList: true, subtree: true });
+}
+
+// Закрити всі шари й дочекатись, поки браузер відпрацює `history.go(-n)`.
+function afterLayersClosed(fn) {
+  let done = false;
+  const go = () => { if (done) return; done = true; window.removeEventListener('popstate', onPop); fn(); };
+  const onPop = () => setTimeout(go, 0);
+  window.addEventListener('popstate', onPop);
+  closeAllLayers();
+  setTimeout(go, 500);   // запасний вихід, якщо `popstate` не прийде
 }
 
 // ── Права колонка ───────────────────────────────────────────────────────────
@@ -241,8 +252,8 @@ function buildRail() {
   foot.addEventListener('click', e => {
     const b = e.target.closest('[data-dk-nav]');
     if (!b) return;
-    if (hasOpenLayer()) closeAllLayers();
-    navigateFromMenu(b.dataset.dkNav);
+    if (hasOpenLayer()) afterLayersClosed(() => navigateFromMenu(b.dataset.dkNav));
+    else navigateFromMenu(b.dataset.dkNav);
   });
   rail.appendChild(foot);
   document.body.appendChild(rail);
