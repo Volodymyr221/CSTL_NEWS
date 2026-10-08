@@ -115,14 +115,18 @@ Usage 21.09–04.10 (Free): **Cached Egress 4.17/5 ГБ (83%)** — решта �
 без переливу; «Олицька громада» пробували й відкотили — повернемось із другою громадою.
 ✅ **06.10 — по всьому репозиторію** (~95 файлів). 🛑 НЕ чіпали: літопис, цитати Вови,
 історичні коментарі коду, `DEFAULT 'CSTL LIFE'` у SQL, ключі `cstl_*`, теки, воркфлов.
-⏳ **Руками Вові (поза репозиторієм):** лист-код у Supabase (Auth → Email Templates) і назва
-в екрані згоди Google (OAuth consent screen).
+✅ **08.10 руками зроблено:** шаблони Magic Link · Confirm signup · Change Email (код
+`{{ .Token }}`), відправник SMTP «Громада» (Resend, `no-reply@castlelife.org`); Google Auth:
+App name «Громада», home/privacy (`castlelife.org/privacy.html`), домен `castlelife.org`,
+🔴 публікація **Testing → In production** — до 08.10 увійти Google могли лише тестувальники.
+⚠️ Логотип у Google НЕ ставили: він вмикає обовʼязкову перевірку — після переїзду домену.
 🔑 Громаду міняють у КАБІНЕТІ (гість — у меню), не тапом по шапці; поки громада одна —
 без «Змінити» і без вибору при реєстрації. Мішати громади — лише блоком «Поруч — <громада>».
 ✅ Іконка-замок лишається (Вова 05.10).
 🌐 **Домен — `gromada.com.ua`**, купує Вова пізніше. 🔴 Переїзд ДО запуску (інакше в людей
-злітає PWA, push і localStorage). Кроки: `CNAME` · DNS · Google OAuth redirect · Supabase
-Site/Redirect URLs · посилання · переадресація з `castlelife.org`.
+злітає PWA, push і localStorage). Кроки: `CNAME` · DNS · Supabase Site/Redirect URLs · Google Branding (home, privacy,
+authorized domain) · Resend: підтвердити домен + SMTP `no-reply@gromada.com.ua` · посилання ·
+переадресація з `castlelife.org`.
 ➡️ Багатогромадність (поле громади в даних, вибір) — з другою громадою.
 
 ### З5. 🔑 ЩО СПРАВДІ БЛОКУЄ ДЕНЬ Х (аудит 30.09)
