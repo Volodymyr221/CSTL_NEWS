@@ -100,6 +100,16 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
     return { top: Math.round(r.top), radius: cs.borderTopLeftRadius, border: cs.borderTopWidth }; });
   ok('🖥 бордова шапка Громади — картка з полем зверху й заокругленими кутами (верх на одній лінії з меню, 16px)',
      шапка && Math.abs(шапка.top - 16) <= 1 && шапка.radius === '20px' && шапка.border === '0px', JSON.stringify(шапка));
+  const громада = await p.evaluate(() => ({
+    фото: getComputedStyle(document.querySelector('.hm-bg') || document.body).display,
+    підпис: (() => { const k = document.querySelector('#cm-content.hm .hm-kicker'); return k ? getComputedStyle(k).color : null; })(),
+    тло: getComputedStyle(document.body).backgroundColor,
+  }));
+  // Вова 08.10: «знімок на компʼютері ні до чого… фон як в інших вкладках». Підписи,
+  // що на телефоні лежали білим на фото, тут мусять стати темними — інакше їх не видно.
+  ok('🖥 Громада без фото: тло як в інших вкладках, підписи секцій темні (не біле на світлому)',
+     громада.фото === 'none' && !!громада.підпис && !/255, 255, 255/.test(громада.підпис) && громада.тло !== 'rgba(0, 0, 0, 0)',
+     JSON.stringify(громада));
   const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
   const more = await p.evaluate(() => [...document.querySelectorAll('.tab-bar [data-dk-nav]')].map(x => x.dataset.dkNav));
@@ -284,7 +294,7 @@ await ctx.close();
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
   await ctx.addInitScript(() => { try { localStorage.setItem('cstl-legal-consent-v1', '05.10.2026'); } catch (_) {} });
   const p = await ctx.newPage();
-  await mockSupabase(p, { ...tables, threads: [], messages: [], thread_user_state: [] }, {
+  await mockSupabase(p, { ...tables, threads: [], messages: [], thread_user_state: [], page_admins: [{ page_id: 1, user_uid: 'u-me' }] }, {
     user: { id: 'u-me', email: 'me@example.com', user_metadata: { name: 'Вова' } },
     profiles: [{ uid: 'u-me', name: 'Вова Тестовий', avatar_url: '' }], slow: { getSession: 2500 } });
   await p.goto(url + '/index.html');
@@ -292,6 +302,37 @@ await ctx.close();
   await p.waitForTimeout(5000);
   const me = await p.evaluate(() => document.querySelector('.dk-me')?.textContent.trim());
   ok('🔴 🖥 після входу внизу навігації — імʼя, а не «Приєднатись»', !!me && !/Приєднатись/.test(me) && /Вова/.test(me), me);
+
+  // Новий допис у спільноті — вікно по центру, а не аркуш знизу (Вова 08.10).
+  await p.evaluate(() => window.switchTab('shotam'));
+  await p.waitForTimeout(1500);
+  await p.getByText('Поки пропустити').click({ timeout: 500 }).catch(() => {});
+  // Вікна, що могли вискочити залогіненому (доповнити профіль, правила), закриваємо.
+  for (let i = 0; i < 3 && await p.$('.app-modal.open'); i++) {
+    await p.evaluate(() => document.querySelector('.app-modal.open .app-modal-close')?.click());
+    await p.click('.brules-ok', { timeout: 300 }).catch(() => {});
+    await p.waitForTimeout(500);
+  }
+  await p.click('.fd-circle[data-open-page="1"]');
+  await p.waitForTimeout(1500);
+  const екран = await rect(p, '.fd-screen');
+  ok('🔴 🖥 екран спільноти йде до низу вікна — вкладка під ним не просвічує знизу',
+     екран && Math.abs(екран.b - 900) <= 1, JSON.stringify(екран));
+  await p.waitForTimeout(1500);
+  await p.click('.fd-compose-open');
+  await p.waitForTimeout(800);
+  const вікно = await rect(p, '.fd-composer');
+  ok('🖥 «Написати пост…» відкриває вікно по центру екрана (не аркуш від низу)',
+     вікно && Math.abs((вікно.x + вікно.w / 2) - 720) < 30 && вікно.b < 900 - 24 && вікно.y > 24 && вікно.w >= 640 && вікно.w <= 720,
+     JSON.stringify(вікно));
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
+  ok('🖥 Esc закриває вікно нового допису', !(await p.$('.fd-composer')), 'вікно лишилось');
+  await p.click('.fd-compose-open');
+  await p.waitForTimeout(800);
+  await p.click('.fd-composer .dk-sheet-x');
+  await p.waitForTimeout(600);
+  ok('🖥 хрестик ✕ закриває вікно нового допису', !(await p.$('.fd-composer')), 'вікно лишилось');
   await ctx.close();
 }
 

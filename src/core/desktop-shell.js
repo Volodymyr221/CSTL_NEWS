@@ -213,11 +213,26 @@ function ensureArrows() {
   });
 }
 
+// ✕ у вікнах Стрічки (новий допис, коментарі…). На телефоні їх закривають свайпом
+// за рисочку, якої тут немає; Esc і клік повз працюють, але кнопку людина шукає очима.
+// Закриття — тим самим шляхом, що й Esc (`attachBackdropClose` у feed.js), тобто без
+// другої логіки закриття.
+function ensureSheetClose() {
+  document.querySelectorAll('.fd-sheet-back .fd-sheet').forEach(sheet => {
+    if (sheet.querySelector(':scope > .dk-sheet-x')) return;
+    const x = el('button', 'dk-sheet-x', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Закрити');
+    x.addEventListener('click', () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    sheet.prepend(x);
+  });
+}
+
 let _activeRaf = 0;
 function watchScreens() {
   new MutationObserver(() => {
     if (_activeRaf) return;
-    _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); ensureArrows(); });
+    _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); ensureArrows(); ensureSheetClose(); });
   }).observe(document.body, { childList: true, subtree: true });
 }
 
