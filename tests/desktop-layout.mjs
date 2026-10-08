@@ -103,6 +103,15 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   // Вова 08.10: «без фото головна не йде — втрачає стиль». Фото лишається тлом Громади.
   const фото = await p.evaluate(() => getComputedStyle(document.querySelector('.hm-bg') || document.body).display);
   ok('🖥 Громада на компʼютері — з фото на тлі (без нього капсули й скло втрачають стиль)', фото !== 'none', фото);
+  const значок = await p.evaluate(() => {
+    const c = document.querySelector('.tab-bar .tab-home-circle'); const cs = getComputedStyle(c);
+    const l = [...document.querySelectorAll('.tab-bar .tab-item .tab-label')].map(x => Math.round(x.getBoundingClientRect().left));
+    return { bg: cs.backgroundImage, w: c.getBoundingClientRect().width, мітки: l };
+  });
+  // Вова 08.10: «іконка біля Громади — без червоного фону, суто логотип, як інші іконки».
+  ok('🖥 значок «Громади» в меню — сам замок без бордового кола, підписи пунктів в одну лінію',
+     значок.bg === 'none' && значок.w <= 26 && Math.max(...значок.мітки) - Math.min(...значок.мітки) <= 2,
+     JSON.stringify(значок));
   const brand = await p.evaluate(() => document.querySelector('.tab-bar .dk-brand')?.firstChild?.textContent);
   ok('🖥 бренд «ГРОМАДА» в навігації', brand === 'ГРОМАДА', brand);
   const more = await p.evaluate(() => [...document.querySelectorAll('.tab-bar [data-dk-nav]')].map(x => x.dataset.dkNav));

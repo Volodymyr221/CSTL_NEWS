@@ -79,11 +79,27 @@
     text-transform: none; letter-spacing: 0; margin: 0;
     position: static; opacity: 1; transform: none;
   }
+  /* Значок «Громади» — САМ ЗАМОК, як решта іконок меню (Вова 08.10: «без червоного
+     фону… суто логотип»). Картинка та сама, що в таб-барі (`castle-icon.png`, 180×225:
+     бордовий замок на білому колі з рамкою), але тут видно лише замок: віконце 24×24
+     вирізає його з центру, а `multiply` розчиняє біле коло в тлі пункту — на білому
+     меню і на рожевій плашці активного пункту однаково. Окремого файлу не заводимо. */
   .tab-bar .tab-home-circle {
-    position: static; transform: none; flex: none;
-    width: 26px; height: 26px; border-radius: 8px; box-shadow: none !important;
+    position: relative !important; inset: auto !important; transform: none !important; flex: none;
+    width: 24px; height: 24px; margin: 0 -2px 0 -1px;   /* 24px замість 22 у решти — підпис стає в рядок з іншими */
+    border-radius: 0; background: none !important; border: 0 !important;
+    box-shadow: none !important; overflow: hidden;
+    mix-blend-mode: multiply;   /* на обгортці: фільтр картинки + змішування на одному вузлі Chromium не поєднує */
   }
-  .tab-bar .tab-castle-icon { width: 34px; height: 34px; }
+  .tab-bar .tab-castle-icon {
+    position: absolute; width: 56px; height: 70px; max-width: none;
+    left: -16px; top: -21.5px;
+    transform: none !important;
+    /* Коло в картинці не чисто біле (ледь сірий градієнт) — без підсилення навколо
+       замку лишалась сіра плашка. Яскравість піднімає фон до білого, а бордо
+       замку від цього майже не світлішає. */
+    filter: brightness(1.14) contrast(1.18);
+  }
   /* Порядок: «Громада» першою — на телефоні вона в центрі таб-бару, тут список. */
   .tab-bar .dk-brand { order: 0; }
   .tab-bar [data-tab="community"] { order: 1; }
