@@ -365,6 +365,19 @@ await ctx.close();
   ok('🖥 меню прокручене — назва «ГРОМАДА» лишається вгорі, кабінет унизу',
      можна > 0 && до && після && Math.abs(після.y - до.y) <= 1 && me && me.b <= 600 - 16 + 1,
      `прокрут ${можна}, назва ${до?.y}→${після?.y}, кабінет низ ${me?.b}`);
+  // Кружечок «Громади» (з таб-бару телефона, z-index 1001) не сміє налазити на назву
+  // під час прокрутки — Вова 08.10: «іконка громади налазить на шапку».
+  const поверх = [];
+  for (const y of [30, 50, 70]) {
+    await p.evaluate(y => { document.querySelector('.tab-bar').scrollTop = y; }, y);
+    await p.waitForTimeout(120);
+    поверх.push(...await p.evaluate(() => { const r = document.querySelector('.dk-brand').getBoundingClientRect();
+      return [[r.left + 40, r.top + 30], [r.left + 40, r.bottom - 8], [r.left + 120, r.bottom - 8]]
+        .map(([x, y]) => document.elementFromPoint(x, y)?.closest('.dk-brand') ? '' : document.elementFromPoint(x, y)?.className)
+        .filter(Boolean); }));
+  }
+  ok('🔴 🖥 при прокрутці меню ніщо не налазить на назву (кружечок «Громади» ховається під нею)',
+     поверх.length === 0, поверх.join(', ') || 'чисто');
   await ctx.close();
 }
 

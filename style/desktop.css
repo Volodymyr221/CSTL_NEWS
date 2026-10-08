@@ -105,7 +105,7 @@
        меню назва лишається на місці (Вова 08.10: «на телефоні це зафіксовано»).
        Біле тло й відʼємні поля — щоб пункти під ним ховались повністю, від краю
        до краю картки, а не визирали з-під боків. */
-    position: sticky; top: 0; z-index: 2;
+    position: sticky; top: 0; z-index: 1100;   /* вище за кружечок «Громади» (z-index 1001 з tabbar.css) */
     margin: 0 -10px; background: var(--white);
     border-radius: 20px 20px 0 0;
   }
@@ -191,7 +191,7 @@
   .dk-me:hover { background: rgba(0, 0, 0, 0.04); }
   /* Низький екран (ноутбук 720-800px): картка кабінету прилипає до низу панелі, а
      не ховається під прокруткою — хто ти, видно завжди. */
-  .dk-me { position: sticky; bottom: 0; background: var(--white); z-index: 1; }
+  .dk-me { position: sticky; bottom: 0; background: var(--white); z-index: 1100; }
   .dk-me:hover { background: #F5F5F4; }
   .dk-team[hidden] + .dk-me, .tab-bar:not(:has(.dk-team:not([hidden]))) .dk-me { margin-top: auto; }
   .dk-me .dk-me-av {
