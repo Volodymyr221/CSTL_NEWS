@@ -173,6 +173,12 @@ for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip']
   const nh = await rect(p, '.nh-screen');
   const m = await rect(p, '.app-main');
   ok('🖥 екран Новин відкривається в колонці', nh && m && Math.abs(nh.x - m.x) < 2 && Math.round(nh.w) === 640, JSON.stringify(nh));
+  const позначка = await p.evaluate(() => ({
+    news: document.querySelector('.dk-more [data-dk-nav="news"]')?.classList.contains('dk-on'),
+    вкладка: getComputedStyle(document.querySelector('.tab-bar .tab-item.active, .tab-bar .tab-item--home.active')).backgroundColor,
+  }));
+  ok('🖥 відкриті Новини позначені в навігації, а вкладка під ними гасне',
+     позначка.news && позначка.вкладка === 'rgba(0, 0, 0, 0)', JSON.stringify(позначка));
   await p.click('.tab-bar .tab-item[data-tab="board"]');
   await p.waitForTimeout(1200);
   const лишився = await p.evaluate(() => !!document.querySelector('.nh-screen'));
@@ -191,6 +197,25 @@ await ctx.close();
   ok('🖥 вужче за 1280 права колонка ховається', !rail || rail.display === 'none', JSON.stringify(rail));
   ok('🖥 на 1200 колонка 640 і не налазить на навігацію', main && Math.round(main.w) === 640 && main.x >= tab.r && main.r <= 1200,
      JSON.stringify(main));
+  await ctx.close();
+}
+
+// ── 4. ЗАЛОГІНЕНИЙ: картка внизу навігації знає, хто увійшов ───────────────────
+// 🗣️ Вова 08.10 зі знімка: «я зайшов в акаунт, а знизу зліва пише "вхід", чому?»
+// Меню телефона перемальовується лише відкритим, а ліва панель — його дзеркало
+// постійно. `slow.getSession` — сесія приходить ПІСЛЯ першого рендера, як на проді.
+{
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => { try { localStorage.setItem('cstl-legal-consent-v1', '05.10.2026'); } catch (_) {} });
+  const p = await ctx.newPage();
+  await mockSupabase(p, { ...tables, threads: [], messages: [], thread_user_state: [] }, {
+    user: { id: 'u-me', email: 'me@example.com', user_metadata: { name: 'Вова' } },
+    profiles: [{ uid: 'u-me', name: 'Вова Тестовий', avatar_url: '' }], slow: { getSession: 2500 } });
+  await p.goto(url + '/index.html');
+  await p.waitForSelector('.dk-me', { timeout: 15000 });
+  await p.waitForTimeout(5000);
+  const me = await p.evaluate(() => document.querySelector('.dk-me')?.textContent.trim());
+  ok('🔴 🖥 після входу внизу навігації — імʼя, а не «Приєднатись»', !!me && !/Приєднатись/.test(me) && /Вова/.test(me), me);
   await ctx.close();
 }
 

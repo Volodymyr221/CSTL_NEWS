@@ -16,7 +16,8 @@
 //
 // 🛑 На телефоні модуль не робить НІЧОГО: перевірка `isDesktop()` стоїть першою.
 
-import { navigateFromMenu } from './sidebar.js';
+import { navigateFromMenu, refreshMenu } from './sidebar.js';
+import { onAuthChange } from './auth.js';
 import { hasOpenLayer, closeAllLayers } from './layers.js';
 import { qrSvg } from './qr.js';
 import { weatherCodeInfo } from './weather-icons.js';
@@ -67,9 +68,7 @@ function el(tag, cls, html) {
 // дістає — її пункти (Новини, Збори) йдуть одразу під вкладками як їх продовження.
 const ПЕРШИЙ_ПІДПИС = 'Розділи';
 // «Інформація» (політика, правила, підтримка, контакти) живе в підвалі правої
-// колонки, як на будь-якому сайті. У навігації вона подвоювала б підвал і
-// виштовхувала картку кабінету за нижній край вікна.
-const У_ПІДВАЛІ = 'Інформація';
+// колонки, як на будь-якому сайті (див. `ПІДВАЛ` у `syncMore`).
 // «Мої питання» живуть у меню круглої кнопки Питань, якої на компʼютері немає
 // (її роль бере «Створити»). Без цього рядка на компʼютері до них не було б входу.
 const ДОДАТКОВО = { 'Моє': [{ fab: 'discussions:disc-mine', label: 'Мої питання' }] };
@@ -86,14 +85,20 @@ function syncMore(more) {
   const src = document.getElementById('sidebar-nav');
   if (!src) return;
   let html = '';
+  // Службові пункти команди з «Інформації» («Дивитись як житель») у підвал не
+  // йдуть — вони стають поруч з «Адмінкою».
+  const ПІДВАЛ = new Set(['contacts', 'support', 'boardrules', 'policy']);
   const адмін = src.querySelector('.sb-card--admin');
-  if (адмін && !адмін.hidden) html += `<div class="dk-grp">${navItemHtml(адмін)}</div>`;
+  const службові = [...src.querySelectorAll('.sb-group .sidebar-item')]
+    .filter(b => !b.hidden && b.dataset.nav === 'as-resident');
+  const команда = [адмін && !адмін.hidden ? адмін : null, ...службові].filter(Boolean);
+  if (команда.length) html += `<div class="dk-grp">${команда.map(navItemHtml).join('')}</div>`;
   let підпис = '';
   for (const n of src.children) {
     if (n.classList.contains('sb-cap')) { підпис = n.textContent.trim(); continue; }
-    if (!n.classList.contains('sb-group') || підпис === У_ПІДВАЛІ) continue;
+    if (!n.classList.contains('sb-group')) continue;
     const пункти = [...n.querySelectorAll('.sidebar-item')]
-      .filter(b => !b.hidden && !ВКЛАДКИ.has(b.dataset.nav));
+      .filter(b => !b.hidden && !ВКЛАДКИ.has(b.dataset.nav) && !ПІДВАЛ.has(b.dataset.nav) && b.dataset.nav !== 'as-resident');
     const extra = (ДОДАТКОВО[підпис] || [])
       .map(x => `<button type="button" data-dk-fab="${x.fab}">${QUESTION_IC}<span>${x.label}</span></button>`);
     if (!пункти.length && !extra.length) continue;
@@ -157,10 +162,34 @@ function buildNav() {
     if (стаття && стаття.classList.contains('open')) window.closeArticleModal?.();
   }, true);
 
-  const sync = () => { syncMore(more); syncMe(me); };
+  const sync = () => { syncMore(more); syncMe(me); syncActive(); };
   sync();
   const src = document.getElementById('sidebar-nav');
   if (src) new MutationObserver(sync).observe(src, { childList: true, subtree: true, attributes: true, characterData: true });
+}
+
+// ── «Ти зараз тут» для екранів поверх вкладки ────────────────────────────────
+// Відкрито Кабінет чи Новини — а в навігації далі світилась «Громада», бо вкладка
+// під екраном не змінилась. На телефоні цього не видно (таб-бар під екраном
+// прихований), а на компʼютері навігація видна завжди — і брехала.
+const ЕКРАНИ = [
+  ['.acc-cab', 'me'], ['.nh-screen', 'news'], ['.fs-screen', 'fund'],
+  ['.pm-screen--list', 'messages'], ['.pm-screen--ads', 'myads'], ['.shub-sheet', 'saved'],
+];
+function syncActive() {
+  const nav = document.querySelector('.tab-bar');
+  if (!nav) return;
+  const тут = ЕКРАНИ.find(([sel]) => document.querySelector(sel))?.[1] || '';
+  nav.classList.toggle('dk-layer', !!тут);
+  nav.querySelectorAll('[data-dk-nav]').forEach(b => b.classList.toggle('dk-on', b.dataset.dkNav === тут));
+  nav.querySelector('.dk-me')?.classList.toggle('dk-on', тут === 'me');
+}
+let _activeRaf = 0;
+function watchScreens() {
+  new MutationObserver(() => {
+    if (_activeRaf) return;
+    _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); });
+  }).observe(document.body, { childList: true, subtree: true });
 }
 
 // ── Права колонка ───────────────────────────────────────────────────────────
@@ -258,6 +287,12 @@ export function initDesktopShell() {
     _built = true;
     buildNav();
     buildRail();
+    watchScreens();
+    // Ліва панель — дзеркало меню, тож меню мусить бути свіжим завжди, а не лише
+    // відкрите: вхід/вихід і зміна імені чи фото в кабінеті.
+    onAuthChange(() => refreshMenu());
+    window.addEventListener('cstl-profile-updated', () => refreshMenu());
+    refreshMenu();
   };
   build();
   // Вікно могли розширити вже після старту (почали вузьким) — добудовуємо раму.
