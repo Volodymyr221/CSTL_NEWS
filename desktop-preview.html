@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<title>Громада — макет комп'ютерної версії</title>
+<!--
+  🧪 ЖИВИЙ МАКЕТ КОМП'ЮТЕРНОЇ ВЕРСІЇ (08.10, замовлення Вови: «Роби макет, я буду дивитись»).
+
+  ЩО ЦЕ: окрема сторінка для перегляду на компʼютері. Бере СПРАВЖНІЙ застосунок
+  (`index.html`, той самий `bundle.js`, ті самі дані) і накладає поверх шар стилів
+  компʼютерного розкладу: навігація ліворуч, застосунок у центральній колонці,
+  корисне праворуч, аркуші знизу → вікна по центру.
+
+  🛑 ЧОГО ЦЕ НЕ Є: це НЕ реалізація. Телефонна версія і `index.html` не змінені ані
+  символом. Тут макет, щоб Вова потапав мишею й сказав «так / ні / інакше».
+  Справжня реалізація — після тихого запуску 19.10 (план — `PLAN_ZAPUSKU_2026-10.md`).
+  Коли комп'ютерна версія буде в застосунку — цей файл ВИДАЛИТИ.
+
+  🔑 Як зроблено: сторінка завантажує текст `index.html`, вставляє в голову
+  (1) обхід екрана «поки що тільки телефон» — він питає `matchMedia('(pointer: fine)')`,
+  і тут ми відповідаємо «ні», (2) стилі макета, і віддає документ браузеру.
+  Заслінка розробки (`DEV_LOCK`) діє як і всюди — потрібен код.
+-->
+</head>
+<body>
+<script>
+(async () => {
+  const OVERRIDE = `
+<script>
+(function(){
+  var mm = window.matchMedia.bind(window);
+  window.matchMedia = function(q){
+    if (/pointer:\\s*fine/.test(q)) return { matches:false, media:q, addEventListener:function(){}, removeEventListener:function(){}, addListener:function(){}, removeListener:function(){} };
+    return mm(q);
+  };
+})();
+<\/script>
+<style id="dk-style">
+:root { --dk-nav: 248px; --dk-col: 640px; --dk-gap: 40px; --dk-rail: 300px;
+  --dk-T: calc(var(--dk-nav) + var(--dk-gap) + var(--dk-col) + var(--dk-gap) + var(--dk-rail));
+  --dk-L: calc(50% - var(--dk-T) / 2 + var(--dk-nav) + var(--dk-gap));
+  --header-h: 0px !important; --tabbar-h: 0px !important; }
+@media (max-width: 1279px) { :root { --dk-rail: 0px; --dk-gap: 32px; } .dk-rail { display: none !important; } }
+html, body { background: var(--app-bg, #ECEEF1) !important; }
+.app-header { display: none !important; }
+.tab-bar { top: 0 !important; bottom: 0 !important; left: 0 !important; right: auto !important;
+  width: calc(50% - var(--dk-T) / 2 + var(--dk-nav)) !important; height: auto !important;
+  padding: 28px 14px !important; padding-left: max(14px, calc(50% - var(--dk-T) / 2)) !important;
+  flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; gap: 4px;
+  background: #fff !important; border: 0 !important; border-right: 1px solid rgba(0,0,0,.06) !important;
+  border-radius: 0 !important; box-shadow: none !important; }
+.tab-bar::before, .tab-bar::after { display: none !important; }
+.dk-brand { order: 0; font: 700 22px/1 Georgia, serif; letter-spacing: 2px; color: #4A121C; padding: 6px 14px 26px; }
+.tab-bar .tab-item, .tab-bar .tab-item--home { flex: none !important; width: var(--dk-nav) !important; height: 48px !important;
+  min-height: 0 !important; flex-direction: row !important; justify-content: flex-start !important; align-items: center !important;
+  gap: 14px !important; padding: 0 14px !important; border-radius: 12px !important; margin: 0 !important;
+  transform: none !important; position: relative; color: #3a3d43 !important; cursor: pointer; }
+.tab-bar .tab-item:hover { background: rgba(0,0,0,.05); }
+.tab-bar .tab-item.active { background: rgba(74,18,28,.07) !important; color: #4A121C !important; }
+.tab-bar .tab-item::before, .tab-bar .tab-item::after { display: none !important; }
+.tab-bar .tab-label, .tab-bar .tab-item .tab-label--home, .tab-bar .tab-item--home .tab-label--home { font-size: 15px !important; font-weight: 600 !important; text-transform: none !important;
+  letter-spacing: 0 !important; margin: 0 !important; position: static !important; opacity: 1 !important; transform: none !important; }
+.tab-bar .tab-home-circle { position: static !important; transform: none !important; width: 26px !important; height: 26px !important;
+  border-radius: 8px !important; box-shadow: none !important; flex: none; }
+.tab-bar .tab-castle-icon { width: 34px !important; height: 34px !important; }
+.tab-bar [data-tab="community"] { order: 1; } .tab-bar [data-tab="shotam"] { order: 2; }
+.tab-bar [data-tab="discussions"] { order: 3; } .tab-bar [data-tab="board"] { order: 4; }
+.tab-bar [data-tab="buses"] { order: 5; } .tab-bar [data-tab="power"] { display: none !important; }
+.dk-more { order: 8; width: var(--dk-nav); margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,.07);
+  display: flex; flex-direction: column; gap: 2px; }
+.dk-more button { all: unset; display: flex; align-items: center; height: 40px; padding: 0 14px; border-radius: 10px;
+  color: #55595f; font: 500 14px/1 -apple-system, system-ui, sans-serif; cursor: pointer; }
+.dk-more button:hover { background: rgba(0,0,0,.04); }
+.dk-me { order: 10; margin-top: auto; width: var(--dk-nav); box-sizing: border-box; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px; font: 600 14px/1.2 -apple-system, system-ui, sans-serif; color: #2a2a2a; cursor: pointer; }
+.dk-me:hover { background: rgba(0,0,0,.04); }
+.dk-me i { width: 36px; height: 36px; border-radius: 50%; background: #d9dbe0; display: block; flex: none; }
+.dk-me small { display: block; font-weight: 400; color: #777; font-size: 12px; margin-top: 2px; }
+.app-main { position: fixed !important; top: 0 !important; bottom: 0 !important; left: var(--dk-L) !important;
+  width: var(--dk-col) !important; height: 100vh !important; padding-top: 24px !important; padding-bottom: 48px !important;
+  scrollbar-width: thin !important; }
+.app-main::-webkit-scrollbar { display: block !important; width: 8px; }
+.hm-bg { left: var(--dk-L) !important; width: var(--dk-col) !important; right: auto !important; }
+.app-modal--sheet, .app-modal { align-items: center !important; justify-content: center !important; }
+.app-modal-sheet { width: 560px !important; max-width: 560px !important; border-radius: 20px !important;
+  margin: 0 auto !important; max-height: 80vh !important; }
+.app-modal-handle, .app-modal-grabber { display: none !important; }
+.dk-rail { position: fixed; top: 28px; width: var(--dk-rail); left: calc(50% + var(--dk-T) / 2 - var(--dk-rail));
+  display: flex; flex-direction: column; gap: 14px; font-family: -apple-system, system-ui, sans-serif; z-index: 5; }
+.dk-card { background: #fff; border-radius: 18px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.dk-k { font-size: 13px; color: #6E727A; font-weight: 600; }
+.dk-t { font-size: 17px; font-weight: 700; color: #1a1a1a; margin: 6px 0 4px; }
+.dk-s { font-size: 14px; color: #555; line-height: 1.45; }
+.dk-card a { color: #722F37; font-weight: 600; text-decoration: none; }
+.dk-note { font-size: 12px; color: #8a8d93; line-height: 1.4; padding: 0 6px; }
+</style>`;
+  const res = await fetch('index.html', { cache: 'no-store' });
+  let html = await res.text();
+  html = html.replace(/<head>/i, '<head>' + OVERRIDE);
+  document.open(); document.write(html); document.close();
+
+  // ── Після побудови: навігація, права колонка, фіксовані смуги в колонку ──
+  const ready = () => new Promise(r => {
+    const t = setInterval(() => { if (document.querySelector('.tab-bar') && document.body) { clearInterval(t); r(); } }, 100);
+  });
+  await ready();
+  const nav = document.querySelector('.tab-bar');
+  const clickNav = id => document.querySelector('#sidebar-nav [data-nav="' + id + '"]')?.click();
+  if (!nav.querySelector('.dk-brand')) {
+    const br = document.createElement('div'); br.className = 'dk-brand'; br.textContent = 'ГРОМАДА'; nav.prepend(br);
+    const more = document.createElement('div'); more.className = 'dk-more';
+    [['news','Новини'],['messages','Повідомлення'],['saved','Збережені'],['fund','Збори'],['contacts','Корисні контакти'],['policy','Політика і приватність']]
+      .forEach(([id, label]) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => clickNav(id); more.appendChild(b); });
+    nav.appendChild(more);
+    const me = document.createElement('div'); me.className = 'dk-me';
+    me.innerHTML = '<i></i><div>Мій кабінет<small>вхід і профіль</small></div>';
+    me.onclick = () => clickNav('account');
+    nav.appendChild(me);
+  }
+  if (!document.querySelector('.dk-rail')) {
+    const r = document.createElement('aside'); r.className = 'dk-rail';
+    r.innerHTML = '<div class="dk-card"><div class="dk-k">Громада в телефоні</div><div class="dk-t">Постав застосунок на екран</div>'
+      + '<div class="dk-s">Сповіщення про автобус, відповіді на питання й нові оголошення — завжди під рукою. '
+      + '<a href="install.html" target="_blank">Як встановити →</a></div></div>'
+      + '<div class="dk-card"><div class="dk-k">Тут буде</div><div class="dk-s">Погода зараз · найближчий автобус · новина дня — '
+      + 'справжніми даними в реалізації.</div></div>'
+      + '<div class="dk-note">🧪 Макет комп\'ютерної версії. Телефонна версія не змінювалась.</div>';
+    document.body.appendChild(r);
+  }
+  // Фіксовані смуги розділів (шапка Дошки, пошук Автобусів тощо) зроблені під
+  // ширину телефона: left:0 / right:0. Знаходимо такі правила й вписуємо в колонку.
+  // Вікна, затемнення, меню й сповіщення лишаються на весь екран.
+  const SKIP = /app-modal|modal|overlay|backdrop|toast|sidebar|tab-bar|splash|dev-lock|\.dg\b|consent|install|pwa|viewer|lightbox|dk-|hm-bg|\.app-main|\.app-header|sheet-vp|fd-sheet|cmp-|kb-/i;
+  const sels = new Set();
+  const walk = rules => { for (const r of rules) {
+    if (r.cssRules && !r.selectorText) { try { walk(r.cssRules); } catch (_) {} continue; }
+    if (r.style && r.style.position === 'fixed' && r.selectorText && !SKIP.test(r.selectorText)) sels.add(r.selectorText);
+  } };
+  const collect = () => { for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (_) {} } };
+  setTimeout(() => {
+    collect();
+    const css = [...sels].map(s => s + ' { left: var(--dk-L) !important; right: auto !important; width: var(--dk-col) !important; max-width: var(--dk-col) !important; }').join('\n');
+    const st = document.createElement('style'); st.id = 'dk-fixed'; st.textContent = css; document.head.appendChild(st);
+  }, 1500);
+})();
+</script>
+</body>
+</html>
