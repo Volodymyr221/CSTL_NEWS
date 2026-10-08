@@ -24,7 +24,7 @@ const { url: HOME_URL, stop: stopServer } = await serve();
 const VP = { width: 390, height: 844 };
 const ALLOW = [
   'cm-ev-carousel', 'cmbw-strip', 'cm-news-controls', 'fd-circles',
-  'fd-gal', 'bm-thumbs', 'fd-comp-thumbs', 'cm-cat-row', 'bm-cat-row',
+  'bm-thumbs', 'fd-comp-thumbs', 'cm-cat-row', 'bm-cat-row',
   // 🗑 05.08 — `bd-types` ЗВІДСИ ПРИБРАНО РАЗОМ ІЗ САМИМ РЯДОМ. Це не «прибрали
   // виняток, бо заважав»: ряду чіпів на Дошці більше немає, категорії переїхали в
   // меню кнопки шапки (`#bd-cat-btn`). Виняток на неіснуючий елемент — саме та

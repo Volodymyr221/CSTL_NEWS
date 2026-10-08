@@ -144,10 +144,11 @@
 /* 🔑 ЗАОКРУГЛЕНІ КУТИ КАРТКИ (Вова 25.07): «на самих постах зверху по кутах трохи
    заокруглити та знизу поста по кутах заокруглити». --fd-card-r — одне місце для правки.
    ⚠️ Свідомо БЕЗ `overflow: hidden` на картці. Він виглядає простіше, але в Safari
-   позиційовані діти з z-index (а це саме .fd-card-head--onphoto і .fd-card-body)
+   позиційовані діти з z-index (а це саме .fd-card-body)
    вміють вилазити за заокруглений обріз — кути лишились би квадратними. Тому радіус
    ставимо на самі кутові елементи; порядок у постi завжди сталий:
-   .fd-card-head (перший) → фото (посередині, кутів не торкається) → .fd-card-body (останній). */
+   .fd-card-head (перший) → .fd-card-body (текст) → фото/колаж (кутів не торкається) →
+   .fd-card-foot (останній, малює нижні кути). 08.10 — текст НАД фото, як у Facebook. */
 /* 🆕 30.07 — край картки дає ОБІДОК, а не тінь (модель Дошки/OLX, замовлення Вови).
    Тінь `0 1px 2px rgba(16,18,22,0.05)` знято свідомо: на Дошці разом із межею стоїть
    `box-shadow: none`, бо лінія + розмита тінь на одному краю дають подвоєний контур —
@@ -155,9 +156,7 @@
 .fd-card { --fd-card-r: 14px; background: var(--fd-surface);
   border: 1px solid var(--fd-line); box-shadow: none;
   border-radius: var(--fd-card-r); }
-/* Своє тло має лише шапка НАД ФОТО — їй і потрібні верхні кути (див. .fd-card-head--onphoto
-   нижче). Без фото шапка прозора, і верхні кути малює сама картка. Низ завжди малює
-   .fd-card-body — у нього тло є в обох випадках. */
+/* Верхні кути малює сама картка (шапка прозора), нижні — .fd-card-foot з рядком дій. */
 /* 🔴 05.09 — ДВА ЯРУСИ: НАЗВА, ПІД НЕЮ СЛУЖБОВИЙ РЯДОК.
    🗣️ Вова: «назва спільноти в пості має бути максимально горизонтально
    розтягнута… під ним вже закріплено, там дзвіночок нагадування».
@@ -247,11 +246,14 @@
 /* Фото обрамлене тінню зверху (від шапки) і знизу (від блоку опису) — «налягання», глибина. */
 /* 25.07: пробували заокруглити верхні кути блоку опису (радіус 14px + налягання на фото
    на ті самі 14px) — Вова подивився наживо: «не гарно виглядає, поверни назад». Відкочено. */
-.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: var(--elev-2);
-  border-radius: var(--fd-card-r) var(--fd-card-r) 0 0; }
-.fd-card-body { position: relative; z-index: 1; background: var(--fd-surface);
-  border-radius: 0 0 var(--fd-card-r) var(--fd-card-r); }
-.fd-card-body--onphoto { box-shadow: 0 -5px 12px rgba(16, 18, 22, 0.11); }
+/* 🔄 08.10 — ПОРЯДОК КАРТКИ: шапка → текст → фото → дії (як у Facebook, рішення Вови).
+   Тіні «налягання» шапки й опису на фото (.fd-card-head--onphoto / --onphoto) прибрано:
+   вони мали сенс, коли фото стояло між шапкою й текстом. Тепер шапка й текст — одна
+   біла площина, фото — вставка між нею і рядком дій. Кути: верх дає сама картка,
+   низ — `.fd-card-foot` (останній елемент), щоб фото кутів не торкалось. */
+.fd-card-body { position: relative; background: var(--fd-surface); }
+.fd-card-body--photo .fd-text { padding-bottom: 10px; }
+.fd-card-foot { background: var(--fd-surface); border-radius: 0 0 var(--fd-card-r) var(--fd-card-r); }
 
 .fd-text { --fd-clamp-lines: 7; padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
@@ -354,21 +356,21 @@
 .fd-cnt { min-width: 8px; font-variant-numeric: tabular-nums; }
 
 /* ── Галерея фото (кілька — свайп-карусель) ── */
-.fd-gallery { position: relative; background: #e9ebee; }
-/* scroll-snap увімкнено лише після старту (клас .snap) — інакше iOS стартує не з 1-го кадру.
-   overflow-anchor:none — щоб фото, яке довантажується (lazy), не «перетягувало» карусель на себе. */
-.fd-gal-track { display: flex; overflow-x: auto; overflow-anchor: none; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.fd-gal-track.snap { scroll-snap-type: x mandatory; }
-.fd-gal-track::-webkit-scrollbar { display: none; }
-.fd-gal-slide { flex: 0 0 100%; scroll-snap-align: start; cursor: pointer; }
-/* Карусель: усі слайди однакової висоти — пропорцію беремо з ПЕРШОГО фото (--fd-ar на
-   .fd-gallery), інакше висота стрибала б при свайпі. Стеля та сама 3:4. */
-.fd-gal-slide img { width: 100%; display: block; aspect-ratio: var(--fd-ar, 3 / 4); object-fit: cover; }
-.fd-gal-count { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.62); color: #fff;
-  font-size: 12px; padding: 3px 9px; border-radius: 12px; font-variant-numeric: tabular-nums; }
-.fd-gal-dots { position: absolute; bottom: 10px; left: 0; right: 0; z-index: 2; display: flex; gap: 5px; justify-content: center; pointer-events: none; }
-.fd-gal-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55); box-shadow: 0 0 2px rgba(0,0,0,0.4); transition: background 0.2s; }
-.fd-gal-dot.on { background: #fff; }
+/* ── 🔄 08.10 — КОЛАЖ (2+ фото) замість каруселі ──────────────────────────────
+   Сітка з проміжком 2px; кожна плитка — `cover`. Пропорції всього колажу сталі,
+   тож картка не стрибає, поки фото вантажаться.
+     2 → два квадрати поруч         (колаж 2:1)
+     3 → велике ліворуч + два праворуч (колаж 4:3)
+     4 → 2×2                         (колаж 1:1), на 4-й — «+N», якщо фото більше. */
+.fd-collage { display: grid; gap: 2px; background: var(--fd-surface); width: 100%; }
+.fd-collage--2 { grid-template-columns: 1fr 1fr; aspect-ratio: 2 / 1; }
+.fd-collage--3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; aspect-ratio: 4 / 3; }
+.fd-collage--3 .fd-col-tile:first-child { grid-row: span 2; }
+.fd-collage--4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; aspect-ratio: 1 / 1; }
+.fd-col-tile { position: relative; overflow: hidden; background: #e9ebee; cursor: pointer; min-height: 0; }
+.fd-col-tile img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.fd-col-more { position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(16, 18, 22, 0.48); color: #fff; font-size: 26px; font-weight: 700; }
 
 /* ── Повноекранний перегляд фото ── */
 /* ── ЄДИНИЙ ПЕРЕГЛЯД ФОТО (щипок · свайп між кадрами · свайп на закриття) ──

@@ -251,22 +251,27 @@ function postImages(post) {
   return [];
 }
 
-// Галерея: 1 фото — на всю ширину; 2+ — свайп-карусель (scroll-snap) + крапки + лічильник.
+// Галерея: 1 фото — на всю ширину; 2+ — колаж (див. galleryHtml нижче, з 08.10).
+// 🔄 08.10 — КІЛЬКА ФОТО: КОЛАЖ ЗАМІСТЬ КАРУСЕЛІ (рішення Вови: «не так, як в
+// Instagram свайпи, а як у Facebook»). Карусель ховала все, крім першого кадру, і
+// вимагала вгадати жест; колаж одразу показує, СКІЛЬКИ фото і що на них.
+//   2 → поруч · 3 → одне велике + два · 4 → сітка 2×2 · 5+ → 2×2 і «+N» на останньому.
+// Тап по будь-якій плитці відкриває той самий повноекранний перегляд з цього кадру
+// (`data-view` / `data-idx` — делегування в wireCards, як і було).
+const COLLAGE_MAX = 4;
 function galleryHtml(images, postId) {
   if (!images.length) return '';
   if (images.length === 1) {
-    // Стабільна рамка 4:5 (портрет-максимум), cover — як Instagram: без полів,
-    // рівний ритм стрічки. Повний кадр (без обрізки) — по тапу (openViewer, лайтбокс).
+    // Одне фото — рідна пропорція (стеля 3:4), повний кадр — по тапу (лайтбокс).
     return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
   }
-  const slides = images.map((u, i) =>
-    `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join('');
-  const dots = images.map((_, i) => `<span class="fd-gal-dot${i === 0 ? ' on' : ''}"></span>`).join('');
-  return `<div class="fd-gallery" data-count="${images.length}">
-    <div class="fd-gal-track">${slides}</div>
-    <div class="fd-gal-count"><span class="fd-gal-cur">1</span>/${images.length}</div>
-    <div class="fd-gal-dots">${dots}</div>
-  </div>`;
+  const shown = images.slice(0, COLLAGE_MAX);
+  const rest = images.length - shown.length;
+  const tiles = shown.map((u, i) => {
+    const more = (rest > 0 && i === shown.length - 1) ? `<span class="fd-col-more">+${rest}</span>` : '';
+    return `<div class="fd-col-tile" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy">${more}</div>`;
+  }).join('');
+  return `<div class="fd-collage fd-collage--${shown.length}" data-count="${images.length}">${tiles}</div>`;
 }
 
 // Пропорція фото у стрічці: РІДНА (як у файлі), але не вища за стелю 3:4.
@@ -282,9 +287,9 @@ function applyPhotoRatio(box, img) {
   box.style.setProperty('--fd-ar', (Math.max(w / h, PHOTO_MIN_AR)).toFixed(4));
 }
 
-// Для каруселі (2+ фото) беремо пропорцію ПЕРШОГО кадру — усі слайди однакової висоти.
+// Колаж (2+ фото) має власну сітку з фіксованими пропорціями — тут лише одиночне фото.
 function wirePhotoRatios(root) {
-  root.querySelectorAll('.fd-photo--single, .fd-gallery').forEach(box => {
+  root.querySelectorAll('.fd-photo--single').forEach(box => {
     if (box.dataset.arWired) return; box.dataset.arWired = '1';
     const img = box.querySelector('img');
     if (!img) return;
@@ -442,24 +447,10 @@ function togglePostText(id, btn) {
 }
 
 // Оновлення крапок/лічильника каруселі при свайпі (+ пропорції фото постів).
+// Імʼя лишилось історичне (до 08.10 тут оживала карусель): тепер колаж статичний,
+// і робота тут одна — рідна пропорція одиночного фото.
 function wireGalleries(root) {
   wirePhotoRatios(root);
-  root.querySelectorAll('.fd-gallery').forEach(g => {
-    if (g.dataset.wired) return; g.dataset.wired = '1';
-    const track = g.querySelector('.fd-gal-track');
-    const dots = g.querySelectorAll('.fd-gal-dot');
-    const cur = g.querySelector('.fd-gal-cur');
-    track.addEventListener('scroll', () => {
-      const i = Math.round(track.scrollLeft / track.clientWidth);
-      dots.forEach((d, k) => d.classList.toggle('on', k === i));
-      if (cur) cur.textContent = String(i + 1);
-    }, { passive: true });
-    // iOS Safari зі scroll-snap іноді ініціалізує трек не з першого кадру.
-    // Спершу гарантовано стаємо на 1-й слайд (без snap), і аж наступним кадром
-    // вмикаємо прилипання (.snap) — старт завжди 1/N, свайп працює як раніше.
-    track.scrollLeft = 0;
-    requestAnimationFrame(() => { track.scrollLeft = 0; track.classList.add('snap'); });
-  });
 }
 
 // 🗑 27.08 — `openViewer` переїхав у `core/photo-viewer.js`: користувачів стало
@@ -897,7 +888,9 @@ function postCardHtml(post, onPage = false) {
   const прочитали = readCounts.get(post.id) || 0;
   const мійДопис = canEditPost || (post.author_uid && post.author_uid === currentUserId());
   const читання = (мійДопис && прочитали > 0 && !чернетка)
-    ? `<div class="fd-reads" title="Скільком людям дійшов цей допис">${IC_EYE}Прочитали ${прочитали}</div>` : '';
+    // 🔄 08.10 — без слова «Прочитали»: око й число (Вова: «поставити просто око і
+    // лічильник»). Повний сенс лишився в підказці й для читача екрана.
+    ? `<div class="fd-reads" title="Прочитали: ${прочитали}" aria-label="Прочитали ${прочитали}">${IC_EYE}${прочитали}</div>` : '';
   return `
     <article class="fd-card${чернетка ? ' fd-card--draft' : ''}" data-post="${post.id}">
       <!-- 🔴 05.09 — ШАПКА КАРТКИ: ДВА ЯРУСИ, БЕЗ ЖОДНИХ УМОВ.
@@ -920,7 +913,7 @@ function postCardHtml(post, onPage = false) {
            (fitCardHeads і клас --stacked прибрано).
            ⚠️ Зворотних лапок тут немає навмисно — коментар лежить усередині
            шаблонного рядка (третій раз за дві доби наступаю на це саме). -->
-      <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
+      <header class="fd-card-head" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
         ${eventRemindHtml(post)}
@@ -930,8 +923,10 @@ function postCardHtml(post, onPage = false) {
           ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
         </span>
       </header>
-      ${photo}
-      <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
+      <!-- 🔄 08.10 — ПОРЯДОК ЯК У FACEBOOK: шапка → ТЕКСТ → фото → дії (Вова: «опис
+           не знизу, а зверху»). Людина спершу читає, про що допис, а фото його
+           ілюструє — для місцевої стрічки, де головне — новина, це природніше. -->
+      <div class="fd-card-body${hasPhoto ? ' fd-card-body--photo' : ''}">
         ${чернетка ? '<div class="fd-draft-badge">ЧЕРНЕТКА · її бачиш лише ти</div>' : ''}
         ${eventHeadHtml(post)}
         <div class="fd-text fd-text--preclip">${escapeHtml(post.text)}</div>
@@ -940,6 +935,9 @@ function postCardHtml(post, onPage = false) {
           <button class="fd-draft-pub" data-publish="${post.id}" type="button">Опублікувати</button>
           <span class="fd-draft-hint">Спершу перечитай. Правки — через «⋯» → Редагувати.</span>
         </div>` : ''}
+      </div>
+      ${photo}
+      <div class="fd-card-foot">
         <footer class="fd-actions">
           <button class="fd-like${rx.my ? ' fd-like--on' : ''}" data-like="${post.id}" type="button">
             <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ''}</span>
@@ -1264,23 +1262,11 @@ function patchPostCard(postId) {
   forgetFeedPaint();
   document.querySelectorAll(`[data-post="${postId}"]`).forEach(old => {
     const onPage = !!old.closest('.fd-screen');
-    // Яке фото зараз відкрите в каруселі — щоб після заміни лишилось те саме.
-    // Інакше людина, яка догорнула до 3-го знімка, після закріплення поста побачила б 1-й.
-    const shot = old.querySelector('.fd-gal-track')?.scrollLeft || 0;
     const node = cardNode(post, onPage);
     keepScroll(scrollerOf(old), () => {
       old.replaceWith(node);
-      wireGalleries(node);   // карусель і пропорції кадру — інакше померли б саме на цій картці
+      wireGalleries(node);   // пропорція одиночного фото — інакше померла б саме на цій картці
       wireClamps(node);      // «… Показати більше» (стан розгорнутих живе в expandedPosts, не в DOM)
-      if (shot) {
-        // Один кадр очікування — саме тому, що `wireGalleries` СВОЇМ rAF ставить трек на
-        // перший слайд (обхід iOS scroll-snap). Наш обробник зареєстрований пізніше, тож
-        // виконається після нього і поверне те фото, на якому людина зупинилась.
-        requestAnimationFrame(() => {
-          const t = node.querySelector('.fd-gal-track');
-          if (t) t.scrollLeft = shot;
-        });
-      }
     });
   });
 }
