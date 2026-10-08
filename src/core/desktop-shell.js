@@ -185,11 +185,39 @@ function syncActive() {
   nav.querySelectorAll('[data-dk-nav]').forEach(b => b.classList.toggle('dk-on', b.dataset.dkNav === тут));
   nav.querySelector('.dk-me')?.classList.toggle('dk-on', тут === 'me');
 }
+// Стрілки ‹ › над рядом спільнот — з'являються при наведенні, лише коли є куди гортати.
+const ARR = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+function syncArrows(wrap) {
+  const ряд = wrap.querySelector('.fd-circles');
+  if (!ряд) return;
+  const [l, r] = wrap.querySelectorAll('.dk-hs-btn');
+  const max = ряд.scrollWidth - ряд.clientWidth;
+  l.hidden = ряд.scrollLeft <= 2;
+  r.hidden = max <= 2 || ряд.scrollLeft >= max - 2;
+}
+function ensureArrows() {
+  document.querySelectorAll('.fd-circles-wrap').forEach(wrap => {
+    if (wrap.querySelector('.dk-hs-btn')) { syncArrows(wrap); return; }
+    const ряд = wrap.querySelector('.fd-circles');
+    if (!ряд) return;
+    const mk = (cls, d, dir) => {
+      const b = el('button', 'dk-hs-btn ' + cls, ARR(d));
+      b.type = 'button';
+      b.setAttribute('aria-label', dir < 0 ? 'Попередні спільноти' : 'Наступні спільноти');
+      b.addEventListener('click', () => ряд.scrollBy({ left: dir * ряд.clientWidth * 0.8, behavior: 'smooth' }));
+      return b;
+    };
+    wrap.append(mk('dk-hs-btn--l', 'M15 6l-6 6 6 6', -1), mk('dk-hs-btn--r', 'M9 6l6 6-6 6', 1));
+    ряд.addEventListener('scroll', () => syncArrows(wrap), { passive: true });
+    syncArrows(wrap);
+  });
+}
+
 let _activeRaf = 0;
 function watchScreens() {
   new MutationObserver(() => {
     if (_activeRaf) return;
-    _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); });
+    _activeRaf = requestAnimationFrame(() => { _activeRaf = 0; syncActive(); ensureArrows(); });
   }).observe(document.body, { childList: true, subtree: true });
 }
 
@@ -283,6 +311,14 @@ function onEsc(e) {
 // скролера (навігація, права колонка, відкриті екрани й вікна крутяться самі).
 function onWheel(e) {
   if (!isDesktop() || e.ctrlKey) return;
+  // Горизонтальний ряд (спільноти Стрічки): у мишки колесо лише вертикальне, тож
+  // над рядом воно крутить ряд убік — інакше дістатись правих кружечків не було б чим.
+  const ряд = e.target.closest?.('.fd-circles');
+  if (ряд && ряд.scrollWidth > ряд.clientWidth + 2 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    const до = ряд.scrollLeft;
+    ряд.scrollLeft += e.deltaY;
+    if (ряд.scrollLeft !== до) { e.preventDefault(); return; }
+  }
   if (e.target.closest?.('.app-main, .tab-bar, .dk-rail, .app-modal, .sidebar, [role="dialog"]')) return;
   if (hasOpenLayer() || document.querySelector('#article-modal.open, .fd-sheet-back, .qa-screen')) return;
   const main = document.querySelector('.app-main');
@@ -292,7 +328,7 @@ function onWheel(e) {
 export function initDesktopShell() {
   if (_built) return;
   document.addEventListener('keydown', onEsc);
-  window.addEventListener('wheel', onWheel, { passive: true });
+  window.addEventListener('wheel', onWheel, { passive: false });
   const build = () => {
     if (_built || !isDesktop()) return;
     _built = true;

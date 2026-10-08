@@ -27,7 +27,11 @@ const POSTS = [
     currency: 'UAH', location: 'Олика', author: 'Житель', owner_uid: 'u2', status: 'published',
     created_at: iso(30), bumped_at: iso(30) },
 ];
-const tables = { posts: POSTS, comments: [], announcements: [], reactions: [], saved_posts: [], pages: [], page_posts: [] };
+const СПІЛЬНОТИ = ['Історія Громади', 'Olyka Castle', 'Туристична Олика', 'Центр культури', 'Міська рада', 'Молодіжна рада', 'Школа', 'Бібліотека']
+  .map((name, i) => ({ id: i + 1, name }));
+const tables = { posts: POSTS, comments: [], announcements: [], reactions: [], saved_posts: [], pages: СПІЛЬНОТИ,
+  page_posts: [1, 2, 3].map(i => ({ id: 500 + i, page_id: i, author: 'x', author_uid: 'u-page', text: 'Допис ' + i,
+    photos: [], created_at: iso(i * 60), ts: Date.now() - i * 36e5, status: 'published' })) };
 
 async function open(ctxOpts) {
   const ctx = await b.newContext({ serviceWorkers: 'block', ...ctxOpts });
@@ -143,11 +147,12 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   const fab = await rect(p, '.board-trigger--fixed');
   ok('🖥 круглої кнопки «+» у куті колонки на компʼютері немає', !fab || fab.display === 'none', JSON.stringify(fab));
   const тло = await p.evaluate(() => {
-    const m = document.querySelector('.app-main'); const cs = getComputedStyle(m); const r = m.getBoundingClientRect();
-    return { bg: cs.backgroundColor, radius: cs.borderTopLeftRadius, top: r.top, bottom: innerHeight - r.bottom };
+    const m = document.querySelector('.app-main');
+    return { main: getComputedStyle(m).backgroundColor, body: getComputedStyle(document.body).backgroundColor,
+             board: getComputedStyle(document.documentElement).getPropertyValue('--board-bg').trim() };
   });
-  ok('🖥 колонка — картка, як меню і праві картки: поля зверху/знизу і заокруглені кути',
-     тло.radius === '20px' && тло.top === 16 && тло.bottom === 16 && тло.bg !== 'rgba(0, 0, 0, 0)', JSON.stringify(тло));
+  ok('🖥 вкладка лежить прямо на тлі сайту: колонка прозора, тло сторінки = тло Дошки',
+     тло.main === 'rgba(0, 0, 0, 0)' && тло.body !== 'rgba(0, 0, 0, 0)', JSON.stringify(тло));
   await p.evaluate(() => window.switchTab('discussions'));
   await p.waitForTimeout(800);
   await p.evaluate(() => { const m = document.querySelector('.app-main'); m.style.minHeight = '0'; const f = document.createElement('div'); f.style.height = '3000px'; f.id = 'tst-fill'; m.appendChild(f); m.scrollTop = 0; });
@@ -156,6 +161,33 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
   await p.waitForTimeout(400);
   const прокрут = await p.evaluate(() => { const m = document.querySelector('.app-main'); const v = m.scrollTop; document.getElementById('tst-fill')?.remove(); return v; });
   ok('🖥 колесо миші на порожньому полі збоку крутить колонку', прокрут > 100, `scrollTop ${прокрут}`);
+}
+// Ряд спільнот Стрічки (Вова 08.10: «перша спільнота обрізана, впритик до краю»)
+{
+  // Попередній крок міг лишити відкритим вікно (запрошення увійти / правила Дошки).
+  await p.click('.brules-ok', { timeout: 500 }).catch(() => {});
+  await p.evaluate(() => document.querySelector('.app-modal .app-modal-close')?.click());
+  await p.waitForTimeout(500);
+  await p.evaluate(() => window.switchTab('shotam'));
+  await p.waitForTimeout(1500);
+  // Гостю на вкладці зʼявляється запрошення увійти — закриваємо, як людина.
+  await p.getByText('Поки пропустити').click({ timeout: 800 }).catch(() => {});
+  await p.waitForTimeout(500);
+  const ряд = await p.evaluate(() => {
+    const r = document.querySelector('.fd-circles'); const c = r?.querySelector('.fd-circle');
+    const m = document.querySelector('.app-main').getBoundingClientRect();
+    return r && c ? { fit: r.classList.contains('is-fit'), over: r.scrollWidth > r.clientWidth + 2,
+      first: c.getBoundingClientRect().left - m.left } : null;
+  });
+  ok('🔴 🖥 ряд спільнот, що не влазить, гортається з лівого краю (перша спільнота не обрізана)',
+     ряд && ряд.over && !ряд.fit && ряд.first >= 8, JSON.stringify(ряд));
+  const кр = await rect(p, '.fd-circles');
+  await p.mouse.move(кр.x + кр.w / 2, кр.y + кр.h / 2);
+  await p.mouse.wheel(0, 300);
+  await p.waitForTimeout(300);
+  const зсув = await p.evaluate(([x, y]) => ({ sl: document.querySelector('.fd-circles').scrollLeft,
+    під: document.elementFromPoint(x, y)?.className}), [кр.x + кр.w / 2, кр.y + кр.h / 2]);
+  ok('🖥 колесо миші над рядом спільнот гортає його вбік', зсув.sl > 100, JSON.stringify(зсув));
 }
 // Смуги розділів не вилазять за колонку
 for (const [tab, sel] of [['buses', '.bus-search'], ['buses', '.bus-week-strip'], ['board', '.bd-controls']]) {
