@@ -39,7 +39,7 @@ import { onReturn } from '../core/refresh-on-return.js';
 import { paintLoading, paintOffline } from '../core/screen-state.js';   // «повернувся на вкладку → свіже» (07.08)
 import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
-import { attachKeyboardSheet, revealInScroller, keepKeyboardOnTap, keepKeyboardOnTapIn } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
+import { attachKeyboardSheet, revealInScroller, keepKeyboardOnTap, keepKeyboardOnTapIn, setupFocusLift } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
 import { observeContentCards } from '../core/content-views.js';   // читання (21.09)
 
@@ -2523,6 +2523,7 @@ function openComments(postId, focusCommentId = null) {
   // ⚠️ Саме підключення — НИЖЧЕ, після appendChild: модулю треба міряти реальну
   // розкладку, а поза документом браузер віддає нулі (та сама пастка, що у свайпу).
   let detachKb = () => {};
+  let stopLift = () => {};
 
   // Підсвітка адресата: знімаємо з усіх, ставимо потрібному. Через DOM, а не
   // перемалюванням списку — інакше збився б скрол просто від тапу «Відповісти».
@@ -2589,6 +2590,8 @@ function openComments(postId, focusCommentId = null) {
   });
 
   const close = () => {
+    stopLift();       // зняти трюк «поле нагорі» (і його таймер страховки — інакше закритий
+                      // за 1.5 с лист зарахувався б як «невдача трюку»)
     detachKb();       // зняти слухачі клавіатури і повернути оверлею/аркушу CSS-розкладку
     unlockScroll();   // повернути скрол сторінки (body був зафіксований під клавіатуру)
     comSheetFull = false;   // наступне відкриття — знову з початкової висоти
@@ -2911,6 +2914,16 @@ function openComments(postId, focusCommentId = null) {
   // майбутніх зсувів розкладки з інших причин.
   keepFocusOnButtons(comSheet);
 
+  // 🔴 09.10 — ТРЮК «ПОЛЕ НАГОРІ В МИТЬ ФОКУСА» і тут (core/keyboard.js).
+  // Вова: «верх модалки підтягується до верхнього краю, але тягнеться як резина —
+  // пройшло і повернулося назад». Корінь той самий, що в чаті: поле внизу → iOS сам
+  // зсуває webview, а модуль компенсує на кадр пізніше. Поле в мить фокуса стоїть
+  // над списком (видима зона) → зсуву нема → лист плавно (`kbAnim`) іде вгору й стоїть.
+  const lift = setupFocusLift({
+    input: kbInput, area: comSheet.querySelector('.fd-com-compose'),
+    anchor: () => (comSheet.querySelector('.fd-com-list')?.getBoundingClientRect().top || 0) + 8,
+  });
+  if (lift) stopLift = lift.stop;
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
     // Клас на оверлей лишається — на ньому висить `--kb-h` для підкладки.
@@ -2921,6 +2934,7 @@ function openComments(postId, focusCommentId = null) {
     // змінена — змінюється рівно те, від чого відлічується верх.
     expandTop: readTopGap(comSheet),
     onOpen: () => {
+      lift?.drop(true);   // клавіатуру розпізнано → поле на своє місце
       // Клавіатура доїхала: позначаємо лист піднятим (стан потрібен свайпу `twoStage`)
       // і перевіряємо, чи адресат відповіді не лишився за кадром. Плавність тут уже
       // НЕ вмикаємо — вона ввімкнена на `focus`, до першої зміни висоти (див. вище).
