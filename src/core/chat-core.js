@@ -17,7 +17,8 @@
 
 import { escapeHtml, avatarCircle } from './utils.js';
 import { cachedAvatar } from './supabase.js';   // Потік 12 Б: чуже фото по uid (кеш)
-import { openLayer, closeLayer } from './layers.js';   // екрани ↔ історія браузера (жест «назад»)
+import { openLayer, closeLayer } from './layers.js';
+import { attachKeyboardPad } from './keyboard.js';   // клавіатура: та сама механіка, що в коментарях (09.10)   // екрани ↔ історія браузера (жест «назад»)
 
 // Лінійні іконки для меню дій над повідомленням (монохром, у стилі чату)
 export const ACT_ICONS = {
@@ -125,104 +126,35 @@ export function threadListTime(ts) {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(-2)}`;
 }
 
-// ── Клавіатура iOS: підлаштування висоти екрану під visualViewport ────────
+// ── Клавіатура iOS: шапка стоїть, піднімається лише поле вводу ─────────────
+// 🔴 09.10 — ПЕРЕВЕДЕНО НА ТОЙ САМИЙ МОДУЛЬ, ЩО Й КОМЕНТАРІ (`core/keyboard.js`).
+// Скарга Вови зі знімками: тап у «Написати повідомлення» → уся сторінка разом із
+// шапкою й ім'ям співрозмовника їде вгору на висоту клавіатури; знизу лишається
+// порожній сірий екран, шапки не видно. Хоче як у месенджерах: шапка нерухома,
+// стрічка звужується, над клавіатурою піднімається тільки поле вводу.
+//
+// 🔑 ЧОМУ СТАРИЙ КОД НЕ МІГ ЦЬОГО ЗРОБИТИ. Він рахував клавіатуру однією формулою
+// `docH − (vv.offsetTop + vv.height)` — це лише «спосіб А» (Safari стискає видиму
+// область). У ВСТАНОВЛЕНОМУ додатку iOS працює «способом Б»: прокручує весь webview
+// угору і `vv.height` не міняє. Формула давала 0 → код вважав, що клавіатури нема, і
+// не робив нічого, а iOS тим часом сам задирав екран — рівно те, що на знімку.
+// Детектор `core/keyboard.js` знає обидва способи (історія — у його шапці) і вже
+// перевірений на айфоні Вови на коментарях («ідеально, фіксуємо цей варіант», 26.07).
+//
+// 📐 Як тут: `attachKeyboardPad` — той самий детектор, але екран НЕ міняє розміру
+// (урок 09.08: коротший за вікно чат відкривав Дошку під собою). Видиму смугу
+// задають відступи: згори — зсув iOS (шапка на верху видимого), знизу — до
+// клавіатури (поле вводу сідає на неї); стрічка — flex:1 — стискається сама.
+// 🔎 Діагностика на живому телефоні — та сама: `#kbdebug` в адресі.
 export function setupKeyboardResize(screen) {
-  const vv = window.visualViewport;
-  const stream = screen.querySelector('#pm-stream');
-
-  // Замок сторінки: фіксуємо body, щоб iOS не зсував/скролив документ під клавіатуру.
-  const scrollY  = window.scrollY || 0;
-  const prevBody = {
-    position: document.body.style.position,
-    top:      document.body.style.top,
-    left:     document.body.style.left,
-    right:    document.body.style.right,
-    width:    document.body.style.width,
-    overflow: document.body.style.overflow,
-  };
-  document.body.style.position = 'fixed';
-  document.body.style.top      = `-${scrollY}px`;
-  document.body.style.left     = '0';
-  document.body.style.right    = '0';
-  document.body.style.width    = '100%';
-  document.body.style.overflow = 'hidden';
-  const unlock = () => {
-    document.body.style.position = prevBody.position;
-    document.body.style.top      = prevBody.top;
-    document.body.style.left     = prevBody.left;
-    document.body.style.right    = prevBody.right;
-    document.body.style.width    = prevBody.width;
-    document.body.style.overflow = prevBody.overflow;
-    window.scrollTo(0, scrollY);
-  };
-
-  if (!vv) return unlock;
-
+  const stream = screen.querySelector('.pm-stream');
   const input = screen.querySelector('.pm-input');
-  let wasOpen = false, focused = false;
-  const apply = () => {
-    // Чи був користувач унизу стрічки ДО зміни висоти (щоб не збивати читання історії).
-    const atBottom = stream
-      ? (stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60)
-      : false;
-
-    // 🔴 09.08 — ЕКРАН БІЛЬШЕ НЕ СТИСКАЄТЬСЯ. Було:
-    //     screen.style.height = vv.height + 'px';
-    //     screen.style.top    = vv.offsetTop + 'px';
-    //
-    // Скарга Вови зі знімком: чат «підстрибнув» догори, клавіатури немає, а знизу
-    // просвічується Дошка з таб-баром.
-    //
-    // 🔑 ЧОМУ ЦЕ БУВ КЛАС ПОМИЛОК, А НЕ ОДИН БАГ. `.pm-screen` стоїть `top:0;
-    // bottom:0`, тобто сам собою накриває весь екран. Задати йому `height` — це
-    // ЄДИНИЙ спосіб зробити його коротшим за екран. Тож будь-яка хиба у визначенні
-    // «клавіатура відкрита» — застрягле `vv.height`, фокус без клавіатури, гонка з
-    // анімацією виїзду — неминуче відкривала сторінку під чатом.
-    // Заслінка `focused && …` тут уже стояла (див. історію нижче) і не врятувала:
-    // програмний автофокус робив `focused` істинним без клавіатури.
-    //
-    // ➡️ Тепер компенсуємо клавіатуру ВІДСТУПОМ ЗНИЗУ, а не висотою. Екран завжди
-    // на весь viewport, композер підіймається над клавіатурою так само, але
-    // найгірший можливий збій — смуга власного фону чату. Чужа сторінка під чатом
-    // не з'явиться вже НІЯК: коротшим за екран він стати не може.
-    //
-    // 📐 Висота клавіатури в координатах розкладки: від низу видимої області до
-    // низу вікна. `vv.offsetTop` враховуємо, бо iOS може зсунути видиму область.
-    const docH = document.documentElement.clientHeight;
-    const kb = Math.max(0, Math.round(docH - (vv.offsetTop + vv.height)));
-    // Поріг 80px: дрібні коливання (панель URL, автозаповнення) не мусять смикати
-    // розкладку. `focused` лишаємо як додаткову умову — вона зменшує хибні
-    // спрацювання, але більше НЕ є єдиним запобіжником: навіть якщо помилиться,
-    // сторінка знизу не відкриється.
-    const open = focused && kb > 80;
-    screen.style.paddingBottom = open ? kb + 'px' : '';
-    screen.classList.toggle('pm-kb-open', open);
-    // ⚠️ `height`/`top` більше не чіпаємо ніде — але чистимо, якщо лишились від
-    //    попередньої версії у вже відкритому екрані (наприклад після оновлення
-    //    застосунку з відкритим чатом).
-    if (screen.style.height) { screen.style.height = ''; screen.style.top = ''; }
-    if (open && stream && (!wasOpen || atBottom)) {
-      requestAnimationFrame(() => { stream.scrollTop = stream.scrollHeight; });
-    }
-    wasOpen = open;
-  };
-  const onFocus = () => { focused = true; requestAnimationFrame(apply); };
-  const onBlur  = () => { focused = false; requestAnimationFrame(apply); };
-  input?.addEventListener('focus', onFocus);
-  input?.addEventListener('blur', onBlur);
-  apply();
-  vv.addEventListener('resize', apply);   // без затримки → плавне відстеження
-  vv.addEventListener('scroll', apply);
-  return () => {
-    vv.removeEventListener('resize', apply);
-    vv.removeEventListener('scroll', apply);
-    input?.removeEventListener('focus', onFocus);
-    input?.removeEventListener('blur', onBlur);
-    screen.style.paddingBottom = '';
-    screen.style.height = ''; screen.style.top = '';   // спадок старої версії — прибрати про всяк
-    screen.classList.remove('pm-kb-open');
-    unlock();
-  };
+  const toBottom = () => requestAnimationFrame(() => { if (stream) stream.scrollTop = stream.scrollHeight; });
+  return attachKeyboardPad(screen, {
+    input, minHeight: 160, openClass: 'pm-kb-open',
+    // Клавіатура щойно відкрилась → останні повідомлення над полем вводу.
+    onOpen: toBottom,
+  });
 }
 
 // ── Жести над бульбашкою ──────────────────────────────────────────────────

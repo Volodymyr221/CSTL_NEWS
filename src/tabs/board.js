@@ -52,6 +52,7 @@ import {
   handleLikeClick, attachDiscussionsDelegation, attachDiscussionsRealtime,
   handleDiscussionsAuthChange, markQaFloorOnce, markQuestionsSeenOnLeave,
 } from './board-discussions.js';
+import { keepKeyboardOnTap } from '../core/keyboard.js';   // кнопка з першого тапу при відкритій клавіатурі (09.10)
 import { observeContentCards } from '../core/content-views.js';   // читання (21.09)
 
 // Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
@@ -979,6 +980,7 @@ function openAdReportSheet(postId) {
         const radios = [...wrap.querySelectorAll('input[name="ad-report-reason"]')];
         const area   = wrap.querySelector('.ad-rep-text');
         const send   = wrap.querySelector('.ad-rep-send');
+        keepKeyboardOnTap(send);
 
         const chosen = () => radios.find(r => r.checked)?.value || '';
         // «Інше» вимагає опису — рівно те саме правило, що й у базі. Дві копії правила

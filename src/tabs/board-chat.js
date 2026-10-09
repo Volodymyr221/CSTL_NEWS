@@ -45,6 +45,7 @@ import {
 } from '../core/chat-core.js';
 import { ensurePushSubscription } from '../core/push.js';
 import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
+import { keepKeyboardOnTap } from '../core/keyboard.js';   // кнопка з першого тапу при відкритій клавіатурі (09.10)
 import { ICONS } from '../core/icons.js';   // спільні векторні іконки (заміна емодзі в меню картки)
 import { search as smartSearch } from '../core/search.js';   // єдиний пошук CSTL (30.08), сюди підключено 06.09
 
@@ -653,8 +654,9 @@ export async function openChat(convOrThread, post, activeId = null) {
     if (!p) { showToast('Оголошення більше недоступне', 2500); return; }
     window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
   });
-  // Кнопка надсилання не забирає фокус (iOS клавіатура)
-  api.screen.querySelector('.pm-send')?.addEventListener('pointerdown', e => e.preventDefault());
+  // Кнопка надсилання з першого тапу при відкритій клавіатурі. 09.10: голий
+  // `pointerdown → preventDefault` на айфоні не тримав фокус (див. core/keyboard.js).
+  keepKeyboardOnTap(api.screen.querySelector('.pm-send'));
 
   api._cleanup.push(setupKeyboardResize(api.screen));   // real-time трекінг + очистка слухачів
   // 🔴 09.08 — АВТОФОКУС ПРИБРАНО. Тут стояло `setTimeout(() => input.focus(), 250)`.

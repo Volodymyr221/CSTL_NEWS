@@ -33,7 +33,7 @@ import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
          adoptLegacyScopedKey, chatSeenTs } from '../core/board-shared.js';
 import { fetchSeenThreads, markThreadSeenRemote, updateQuestion, deleteQuestion } from '../core/supabase.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
-import { revealInScroller } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
+import { revealInScroller, keepKeyboardOnTap } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
@@ -1215,7 +1215,8 @@ export function openChatModal(post, focusCommentId = null) {
   document.addEventListener('keydown', onChatEsc);
 
   // Кнопка надсилання не має забирати фокус з поля (інакше iOS ховає клавіатуру)
-  screen.querySelector('.qa-send')?.addEventListener('pointerdown', e => e.preventDefault());
+  // 09.10: на айфоні `pointerdown` не тримав фокус — тап на відпусканні (core/keyboard.js).
+  keepKeyboardOnTap(screen.querySelector('.qa-send'));
 
   // Дії над відповіддю — ЯВНІ КНОПКИ, а не жести. Було: свайп-вліво = відповісти,
   // довге натискання = меню (`setupBubbleGestures`). Приховані жести — мова

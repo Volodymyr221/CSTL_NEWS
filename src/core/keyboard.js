@@ -17,9 +17,9 @@
 // «видима область» — це буквально те, що користувач бачить між шапкою і клавіатурою.
 // Верх не може зсунутись за побудовою: він = top0 у будь-якому стані клавіатури.
 //
-// Використовують: tabs/feed.js (коментарі). Чат і Обговорення мають власну робочу
-// механіку (core/chat-core.js) — їх мігруємо ОКРЕМИМ кроком, після підтвердження
-// на живому пристрої, щоб не ламати те, що працює.
+// Використовують: tabs/feed.js (коментарі) і з 09.10 — чат Дошки (`attachKeyboardPad`
+// нижче, через core/chat-core.js): Вова показав знімком, що власна механіка чату не
+// знала «способу Б» і віддавала шапку за верхній край. Обговорення — ще на своїй.
 
 // Чи ввімкнено діагностику: додати #kbdebug у адресу (або один раз виконати
 // localStorage.setItem('kbdebug','1')). Показує живі числа поверх екрана —
@@ -28,6 +28,59 @@ export function kbDebugOn() {
   try {
     return location.hash.includes('kbdebug') || localStorage.getItem('kbdebug') === '1';
   } catch { return false; }
+}
+
+// ── КНОПКА ПРИ ВІДКРИТІЙ КЛАВІАТУРІ СПРАЦЬОВУЄ З ПЕРШОГО ТАПУ (09.10) ─────────────
+// 🗣️ Вова: «натискаю "Надіслати" — ховається клавіатура, але не надсилається;
+// натискаю ще раз — надсилається». Те саме з «Опублікувати» і в повідомленнях Дошки.
+// МЕХАНІКА: палець торкається кнопки → iOS знімає фокус з поля → клавіатура
+// ховається → аркуш/екран розтягується → кнопка з'їжджає з-під пальця, і `click`
+// приходить уже не в неї. Друга спроба працює, бо рухатись більше нічому.
+// 🔴 ЧОМУ НЕ ВИСТАЧИЛО ЛІКІВ 26.07 (`pointerdown` → `preventDefault`): на
+// компʼютерному браузері вони тримають фокус, а на айфоні — ні (баг повернувся на
+// живому телефоні Вови). Фокус в iOS переноситься на «сумісних» мишачих подіях, що
+// йдуть ПІСЛЯ `touchend`, і `pointerdown` їх не зупиняє.
+// ✅ Тепер: на `touchend` кнопки — `preventDefault` (iOS не знімає фокус і не
+// шле свій запізнілий `click`) і одразу програмний `btn.click()`. Усі наявні
+// обробники (`click`, `submit` форми) спрацьовують як були — їх не переписуємо.
+// Клавіатура лишається відкритою, як у Telegram.
+// 🛑 Тап, а не будь-який дотик: палець з'їхав > 10px (почав гортати чи передумав,
+// повівши вбік) — нічого не робимо, рішення лишається за людиною.
+// Мишка/компʼютер — старий шлях: `pointerdown` тримає фокус, `click` звичайний.
+const TAP_SLOP = 10;
+function wireTap(root, pick) {
+  let start = null;
+  root.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0];
+    const btn = pick(e.target);
+    start = (btn && t && e.touches.length === 1) ? { btn, id: t.identifier, x: t.clientX, y: t.clientY } : null;
+  }, { passive: true });
+  root.addEventListener('touchmove', e => {
+    if (!start) return;
+    const t = [...e.changedTouches].find(x => x.identifier === start.id);
+    if (t && Math.hypot(t.clientX - start.x, t.clientY - start.y) > TAP_SLOP) start = null;
+  }, { passive: true });
+  root.addEventListener('touchcancel', () => { start = null; });
+  root.addEventListener('touchend', e => {
+    const s = start; start = null;
+    // Кнопку вже обробив її власний слухач (одиночний поверх загального) — не двічі.
+    if (!s || e.defaultPrevented) return;
+    const t = [...e.changedTouches].find(x => x.identifier === s.id);
+    if (!t || Math.hypot(t.clientX - s.x, t.clientY - s.y) > TAP_SLOP) return;
+    if (s.btn.disabled || !s.btn.isConnected) return;
+    e.preventDefault();
+    s.btn.click();
+  }, { passive: false });
+  root.addEventListener('pointerdown', e => { if (pick(e.target)) e.preventDefault(); });
+}
+// Одна кнопка (Надіслати / Опублікувати).
+export function keepKeyboardOnTap(btn) {
+  if (btn) wireTap(btn, () => btn);
+}
+// Усі кнопки всередині контейнера (аркуш коментарів). Поля вводу не чіпаємо:
+// вони мусять отримувати фокус.
+export function keepKeyboardOnTapIn(root, selector = 'button') {
+  if (root) wireTap(root, el => el.closest?.(selector) || null);
 }
 
 // ── Замок ФОНУ: тримає сторінку позаду аркуша нерухомою ─────────────────────────
@@ -325,6 +378,71 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     sheet.style.height = '';
     if (kbClass) sheet.classList.remove(kbClass);
     if (overlayClass) overlay.classList.remove(overlayClass);
+    dbg?.remove();
+  };
+}
+
+// ── ПОВНОЕКРАННИЙ ЧАТ: та сама геометрія, але ВІДСТУПАМИ, а не розміром ────────
+// 🔴 09.10 — для чату Дошки (core/chat-core.js). Вова: тап у поле → уся сторінка з
+// шапкою їде вгору; хоче як у месенджерах — шапка стоїть, піднімається лише поле.
+// Розпізнавання клавіатури — РІВНО як у `attachKeyboardSheet` вище (обидва способи
+// iOS, той самий гейт фокуса, той самий заморожений фон): воно вже перевірене на
+// айфоні Вови на коментарях.
+// 🔑 Відмінність одна — і вона з уроку 09.08: екрану чату НЕ можна міняти розмір.
+// Коли йому задавали `height`, хибне «клавіатура відкрита» відкривало Дошку під
+// ним. Тож екран лишається `top:0; bottom:0` на все вікно, а видиму смугу задаємо
+// ВІДСТУПАМИ: згори — на скільки iOS зсунув видиму область (шапка стає на верх
+// видимого), знизу — до верху клавіатури (поле вводу сідає на неї). Стрічка між
+// ними — flex:1 — сама стискається. Найгірший збій — смуга власного фону чату.
+export function attachKeyboardPad(screen, { input, minHeight = 160, openClass = '', onOpen } = {}) {
+  const vv = window.visualViewport;
+  const dbg = kbDebugOn() ? createDebugPanel() : null;
+  const bg = freezeBackground(screen);
+  if (!vv) return () => { bg.unfreeze(); dbg?.remove(); };
+  const h0 = vv.height;
+  // Екранна клавіатура буває лише на сенсорному екрані. На компʼютері (чат відкритий
+  // у колонці) зменшене вікно з курсором у полі інакше читалось би як «клавіатура».
+  let touch = true;
+  try { touch = matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (_) {}
+  let focused = false, wasOpen = false;
+  const apply = () => {
+    const shrink = Math.max(0, h0 - vv.height);
+    const viewShift = Math.max(0, vv.offsetTop);
+    const pageShift = Math.max(0, window.scrollY || 0);
+    const kb = Math.max(shrink, viewShift, pageShift);
+    const open = touch && focused && kb > 80;
+    if (open) {
+      const docH = document.documentElement.clientHeight || h0;
+      const band = Math.max(minHeight, h0 - kb);           // висота видимої смуги
+      screen.style.paddingTop = viewShift + 'px';
+      screen.style.paddingBottom = Math.max(0, Math.round(docH - (viewShift + band))) + 'px';
+      bg.setShift(viewShift);
+    } else {
+      screen.style.paddingTop = ''; screen.style.paddingBottom = '';
+      bg.setShift(0);
+    }
+    if (openClass) screen.classList.toggle(openClass, open);
+    if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
+    wasOpen = open;
+    dbg?.update({ open, kb, shrink, viewShift, pageShift, top0: 0, h0, vv, sheet: screen, overlay: screen, bg });
+  };
+  // Синхронно, без requestAnimationFrame — причина та сама, що в attachKeyboardSheet:
+  // кадр запізнення × десятки подій анімації клавіатури = дьоргання.
+  const onFocus = () => { focused = true; apply(); };
+  const onBlur  = () => { focused = false; apply(); };
+  input?.addEventListener('focus', onFocus);
+  input?.addEventListener('blur', onBlur);
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+  if (dbg) apply();
+  return () => {
+    input?.removeEventListener('focus', onFocus);
+    input?.removeEventListener('blur', onBlur);
+    vv.removeEventListener('resize', apply);
+    vv.removeEventListener('scroll', apply);
+    screen.style.paddingTop = ''; screen.style.paddingBottom = '';
+    if (openClass) screen.classList.remove(openClass);
+    bg.unfreeze();
     dbg?.remove();
   };
 }
