@@ -154,7 +154,7 @@ export function setupKeyboardResize(screen) {
   const stopPad = attachKeyboardPad(screen, {
     input, minHeight: 160, openClass: 'pm-kb-open',
     // Клавіатура щойно відкрилась → поле на своє місце, останні повідомлення над ним.
-    onOpen: () => { lift?.drop(); toBottom(); },
+    onOpen: () => { lift?.drop(true); toBottom(); },
   });
   return () => { lift?.stop(); stopPad(); };
 }
@@ -174,13 +174,19 @@ export function setupKeyboardResize(screen) {
 // ⚠️ Тап ловимо самі (`touchend` → preventDefault → `focus()`): поле в цю мить не
 // під пальцем, і рідний тап iOS промахнувся б. `focus()` у `touchend` — це жест
 // людини, тож iOS клавіатуру відкриває.
-// 🛑 СТРАХОВКА: якщо за 900 мс після фокуса клавіатуру не розпізнано (значить, цей
-// айфон без зсуву не стискає й видиму область — нам нема з чого міряти), трюк
-// вимикається НАЗАВЖДИ на цьому пристрої (`cstl-kb-lift-off`) і поле повертається;
-// далі чат працює як до спроби. Вимкнути руками: `localStorage['cstl-kb-lift-off']='1'`.
+// 🛑 СТРАХОВКА: якщо за 1.5 с після фокуса клавіатуру не розпізнано, поле
+// повертається; ДВІ такі невдачі поспіль — трюк вимикається на пристрої назавжди
+// (`cstl-kb-lift-off`), далі чат як до спроби. Вдалий раз скидає лічильник.
+// 🔴 09.10 — було 900 мс і одна невдача. Стенд «інші телефони» показав: повільна
+// клавіатура (старий телефон, перший запуск — до ~1.2 с) вимикала трюк назавжди
+// з першого ж разу. Вимкнути руками: `localStorage['cstl-kb-lift-off']='1'`.
+// 🛑 Довге натискання (> 450 мс — людина хоче «Вставити») не чіпаємо: це не тап.
 // 🔙 Відкат цілком — прибрати виклик `setupFocusLift` у `setupKeyboardResize`.
 const LIFT_OFF_KEY = 'cstl-kb-lift-off';
+const LIFT_FAIL_KEY = 'cstl-kb-lift-fail';
 const LIFT_SLOP = 10;
+const LIFT_LONGPRESS_MS = 450;
+const LIFT_GUARD_MS = 1500;
 function setupFocusLift(screen, input) {
   if (!input || !window.visualViewport) return null;
   try {
@@ -188,11 +194,12 @@ function setupFocusLift(screen, input) {
     if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return null;
   } catch (_) { return null; }
   let start = null, lifted = false, guard = 0;
-  const drop = () => {
+  const drop = (вдалося = false) => {
     clearTimeout(guard); guard = 0;
     if (!lifted) return;
     lifted = false;
     input.style.transform = ''; input.style.opacity = '';
+    if (вдалося) { try { localStorage.removeItem(LIFT_FAIL_KEY); } catch (_) {} }
   };
   const lift = () => {
     const head = screen.querySelector('.pm-head');
@@ -206,23 +213,29 @@ function setupFocusLift(screen, input) {
   };
   const onStart = e => {
     const t = e.changedTouches[0];
-    start = (document.activeElement !== input && t && e.touches.length === 1) ? { x: t.clientX, y: t.clientY } : null;
+    start = (document.activeElement !== input && t && e.touches.length === 1) ? { x: t.clientX, y: t.clientY, t: Date.now() } : null;
   };
   const onEnd = e => {
     const s = start; start = null;
     if (!s || document.activeElement === input) return;
     const t = e.changedTouches[0];
     if (!t || Math.hypot(t.clientX - s.x, t.clientY - s.y) > LIFT_SLOP) return;
+    if (Date.now() - s.t > LIFT_LONGPRESS_MS) return;   // довге натискання — рідне меню iOS
     if (!lift()) return;
     e.preventDefault();
     input.focus();
     guard = setTimeout(() => {
       if (!lifted) return;
-      // Клавіатуру так і не розпізнано → трюк на цьому пристрої не працює.
+      // Клавіатуру так і не розпізнано → поле на місце; друга невдача поспіль —
+      // трюк на цьому пристрої вимикається.
       drop();
-      try { localStorage.setItem(LIFT_OFF_KEY, '1'); } catch (_) {}
+      try {
+        const n = (parseInt(localStorage.getItem(LIFT_FAIL_KEY), 10) || 0) + 1;
+        localStorage.setItem(LIFT_FAIL_KEY, String(n));
+        if (n >= 2) localStorage.setItem(LIFT_OFF_KEY, '1');
+      } catch (_) {}
       try { input.scrollIntoView({ block: 'end' }); } catch (_) {}
-    }, 900);
+    }, LIFT_GUARD_MS);
   };
   const onBlur = () => drop();
   input.addEventListener('touchstart', onStart, { passive: true });
