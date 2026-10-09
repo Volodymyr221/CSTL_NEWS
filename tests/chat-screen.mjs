@@ -31,7 +31,9 @@ const { ok, done } = reporter();
 const css = readFileSync(`${ROOT}/style/messages.css`, 'utf8');
 const CHAT_CORE = readFileSync(`${ROOT}/src/core/chat-core.js`, 'utf8');
 // Витягуємо setupKeyboardResize; її єдина залежність — core/keyboard.js (нижче).
-const fnSrc = /export function setupKeyboardResize[\s\S]*?\n}/.exec(CHAT_CORE)?.[0]
+// 09.10: разом із трюком «поле нагорі в мить фокуса» (setupFocusLift) — беремо весь
+// розділ до жестів над бульбашкою.
+const fnSrc = /export function setupKeyboardResize[\s\S]*?(?=\n\/\/ ── Жести над бульбашкою)/.exec(CHAT_CORE)?.[0]
   ?.replace(/^export /, '') || '';
 // 09.10: функція тепер стоїть на `attachKeyboardPad` з core/keyboard.js — підвантажуємо
 // модуль цілком (імпортів у нього немає), прибравши `export`.
@@ -70,7 +72,10 @@ ${css}
 
 const browser = await launch(chromium);
 const p = await (await browser.newContext({ viewport: { width: W, height: H }, isMobile: true, hasTouch: true })).newPage();
-await p.setContent(PAGE);
+// Сторінка з адресою, а не setContent: трюк пише прапорець у localStorage, а
+// about:blank доступу до нього не має (SecurityError).
+const віддати = async pg => { await pg.route('http://stand.local/', r => r.fulfill({ body: PAGE, contentType: 'text/html' })); await pg.goto('http://stand.local/'); };
+await віддати(p);
 
 ok('сцена: setupKeyboardResize вирізано з модуля', fnSrc.length > 200, `${fnSrc.length} символів`);
 ok('сцена: чат стоїть на attachKeyboardPad (детектор коментарів)', /attachKeyboardPad\(/.test(fnSrc), 'не знайдено');
@@ -177,12 +182,47 @@ ok('клавіатура сховалась → шапка на місці, ві
                : 'автофокуса немає (решта focus() — від дії пальця)');
 }
 
+// ── 5б. ТРЮК: у мить фокуса поле нагорі → iOS не зсуває сторінку (09.10) ─────
+// Справжній дотик (CDP). Стенд не доводить, що iOS справді не зсуне сторінку — це
+// лише на айфоні. Стереже нашу частину: поле підняте й невидиме рівно до появи
+// клавіатури, потім на місці; без клавіатури за 900 мс — трюк сам вимикається.
+{
+  const cdp = await p.context().newCDPSession(p);
+  const тап = async () => {
+    const { x, y } = await p.evaluate(() => { const r = document.getElementById('inp').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const стан = () => p.evaluate(() => {
+    const i = document.getElementById('inp');
+    return { фокус: document.activeElement === i, зсув: i.style.transform || '', видно: i.style.opacity !== '0',
+      відкрито: document.getElementById('scr').classList.contains('pm-kb-open'),
+      вимкнено: localStorage.getItem('cstl-kb-lift-off') };
+  });
+  await p.evaluate(() => { document.getElementById('inp').blur(); window.__vv.height = 844; window.__vv.offsetTop = 0; window.__fire(); });
+  await тап();
+  await p.waitForTimeout(60);
+  const піднято = await стан();
+  ok('🔴 тап у поле: фокус є, поле на мить нагорі і невидиме', піднято.фокус && /translateY\(-/.test(піднято.зсув) && !піднято.видно, JSON.stringify(піднято));
+  await p.evaluate((kb) => { window.__vv.height = 844 - kb; window.__fire(); }, KB);
+  await p.waitForTimeout(60);
+  const сіло = await стан();
+  ok('🔴 клавіатура з\'явилась → поле на місці й видиме, відступ під клавіатуру є', сіло.відкрито && !сіло.зсув && сіло.видно, JSON.stringify(сіло));
+  // Невдача: клавіатуру не розпізнано → страховка вимикає трюк.
+  await p.evaluate(() => { document.getElementById('inp').blur(); window.__vv.height = 844; window.__fire(); });
+  await тап();
+  await p.waitForTimeout(1100);
+  const страх = await стан();
+  ok('🛑 клавіатуру не розпізнано за 900 мс → поле повернуто, трюк вимкнено на пристрої',
+     !страх.зсув && страх.видно && страх.вимкнено === '1', JSON.stringify(страх));
+}
+
 // ── 6. Компʼютер: екранної клавіатури нема — механіка мовчить ───────────────
 // Чат на компʼютері відкритий у колонці; вікно, зменшене з курсором у полі, не має
 // читатись як «клавіатура» (інакше шапка й поле стрибнули б від зміни розміру вікна).
 {
   const d = await browser.newPage({ viewport: { width: 1280, height: H } });
-  await d.setContent(PAGE);
+  await віддати(d);
   const пк = await d.evaluate((kb) => {
     document.getElementById('inp').focus();
     window.__vv.height = 844 - kb; window.__fire();
