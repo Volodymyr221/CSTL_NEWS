@@ -399,13 +399,18 @@ export function attachKeyboardPad(screen, { input, minHeight = 160, openClass = 
   const dbg = kbDebugOn() ? createDebugPanel() : null;
   const bg = freezeBackground(screen);
   if (!vv) return () => { bg.unfreeze(); dbg?.remove(); };
-  const h0 = vv.height;
+  // h0 — висота «без клавіатури». 🔴 09.10: не стала. Поворот екрана міняє її, і
+  // стара цифра давала в ландшафті «клавіатуру» на сотні пікселів більшу за справжню
+  // (стенд «інші телефони»). Перерахунок — лише поки поле НЕ у фокусі: тоді
+  // клавіатури точно нема, і `vv.height` — чиста висота екрана.
+  let h0 = vv.height, w0 = vv.width;
   // Екранна клавіатура буває лише на сенсорному екрані. На компʼютері (чат відкритий
   // у колонці) зменшене вікно з курсором у полі інакше читалось би як «клавіатура».
   let touch = true;
   try { touch = matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (_) {}
   let focused = false, wasOpen = false;
   const apply = () => {
+    if (!focused && vv.width !== w0) { w0 = vv.width; h0 = vv.height; }
     const shrink = Math.max(0, h0 - vv.height);
     const viewShift = Math.max(0, vv.offsetTop);
     const pageShift = Math.max(0, window.scrollY || 0);

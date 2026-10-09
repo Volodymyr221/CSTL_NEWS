@@ -208,13 +208,96 @@ ok('клавіатура сховалась → шапка на місці, ві
   await p.waitForTimeout(60);
   const сіло = await стан();
   ok('🔴 клавіатура з\'явилась → поле на місці й видиме, відступ під клавіатуру є', сіло.відкрито && !сіло.зсув && сіло.видно, JSON.stringify(сіло));
-  // Невдача: клавіатуру не розпізнано → страховка вимикає трюк.
+  // Невдача: клавіатуру не розпізнано → поле на місце; друга поспіль — трюк вимкнено.
   await p.evaluate(() => { document.getElementById('inp').blur(); window.__vv.height = 844; window.__fire(); });
   await тап();
-  await p.waitForTimeout(1100);
+  await p.waitForTimeout(1700);
+  const раз = await стан();
+  ok('клавіатуру не розпізнано за 1.5 с → поле повернуто, але з ПЕРШОГО разу трюк живий',
+     !раз.зсув && раз.видно && раз.вимкнено !== '1', JSON.stringify(раз));
+  await p.evaluate(() => { document.getElementById('inp').blur(); });
+  await тап();
+  await p.waitForTimeout(1700);
   const страх = await стан();
-  ok('🛑 клавіатуру не розпізнано за 900 мс → поле повернуто, трюк вимкнено на пристрої',
+  ok('🛑 друга невдача поспіль → трюк вимкнено на пристрої',
      !страх.зсув && страх.видно && страх.вимкнено === '1', JSON.stringify(страх));
+}
+
+// ── 7. ІНШІ ТЕЛЕФОНИ — сценарії, яких на айфоні Вови не видно (09.10) ─────────
+// 🗣️ Вова: «треба переконатись, що і в інших користувачів не буде багів, не буде
+// підвисати, коли клавіатура опуститься». Кожен сценарій — реальна поведінка
+// якогось класу пристроїв; міряємо, що після нього НІЧОГО не лишилось висіти.
+{
+  const cdp7 = await p.context().newCDPSession(p);
+  const тап7 = async (утримання = 0) => {
+    const { x, y } = await p.evaluate(() => { const r = document.getElementById('inp').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await cdp7.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    if (утримання) await p.waitForTimeout(утримання);
+    await cdp7.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const скинути = () => p.evaluate(() => {
+    document.getElementById('inp').blur();
+    window.__vv.height = 844; window.__vv.offsetTop = 0; window.__vv.width = 390; window.__fire();
+    localStorage.removeItem('cstl-kb-lift-off'); localStorage.removeItem('cstl-kb-lift-fail');
+  });
+  const чисто = () => p.evaluate(() => {
+    const s = document.getElementById('scr'), i = document.getElementById('inp');
+    return { pt: s.style.paddingTop, pb: s.style.paddingBottom, зсув: i.style.transform, прозоре: i.style.opacity,
+      клас: s.classList.contains('pm-kb-open'), шапка: Math.round(document.querySelector('.pm-head').getBoundingClientRect().top) };
+  });
+  const нічогоНеВисить = r => !r.pt && !r.pb && !r.зсув && !r.прозоре && !r.клас && r.шапка === 0;
+
+  // 7а. Android: кнопка «назад» ховає клавіатуру, а фокус лишається в полі.
+  await скинути();
+  await тап7();
+  await p.evaluate((kb) => { window.__vv.height = 844 - kb; window.__fire(); }, KB);
+  await p.waitForTimeout(60);
+  await p.evaluate(() => { window.__vv.height = 844; window.__fire(); });   // клавіатура пішла, blur НЕ було
+  await p.waitForTimeout(60);
+  const андроїд = await чисто();
+  ok('🔴 Android «назад»: клавіатура сховалась без blur — нічого не висить', нічогоНеВисить(андроїд), JSON.stringify(андроїд));
+
+  // 7б. Повільна клавіатура (старий телефон, перший запуск): з'являється за 1.2 с.
+  await скинути();
+  await тап7();
+  await p.waitForTimeout(1200);
+  await p.evaluate((kb) => { window.__vv.height = 844 - kb; window.__fire(); }, KB);
+  await p.waitForTimeout(60);
+  const повільна = await p.evaluate(() => ({ off: localStorage.getItem('cstl-kb-lift-off'), відкрито: document.getElementById('scr').classList.contains('pm-kb-open'), зсув: document.getElementById('inp').style.transform }));
+  ok('🔴 повільна клавіатура (1.2 с) — трюк НЕ вимикається назавжди з першого разу', повільна.off !== '1' && повільна.відкрито && !повільна.зсув, JSON.stringify(повільна));
+
+  // 7в. Довге натискання на порожнє поле (вставити текст) — не наш тап, рідна поведінка.
+  await скинути();
+  await тап7(700);
+  await p.waitForTimeout(60);
+  const довге = await чисто();
+  ok('довге натискання — поле не підстрибує нагору', !довге.зсув && !довге.прозоре, JSON.stringify(довге));
+
+  // 7г. Поворот екрана. Висота «без клавіатури» після повороту інша; зі старою
+  // (844) ландшафтні 390 виглядали б як «клавіатура на 454px» — і чат вмикав би
+  // режим клавіатури, якої нема (поле у фокусі, клавіатуру сховано «назад»).
+  await скинути();
+  await p.setViewportSize({ width: 844, height: 390 });
+  await p.evaluate(() => { window.__vv.width = 844; window.__vv.height = 390; window.__fire(); });
+  await p.focus('#inp');                         // фокус є, клавіатури нема
+  await p.evaluate(() => window.__fire());
+  await p.waitForTimeout(60);
+  const поворот = await чисто();
+  ok('поворот екрана: у ландшафті без клавіатури режим клавіатури НЕ вмикається', !поворот.клас && !поворот.pb, JSON.stringify(поворот));
+  await p.evaluate(() => { document.getElementById('inp').blur(); window.__vv.width = 390; window.__vv.height = 844; window.__fire(); });
+  await p.setViewportSize({ width: W, height: H });
+
+  // 7д. Десять відкриттів-закриттів поспіль — нічого не накопичується.
+  await скинути();
+  for (let k = 0; k < 10; k++) {
+    await тап7();
+    await p.evaluate((kb) => { window.__vv.height = 844 - kb; window.__fire(); }, KB);
+    await p.evaluate(() => { document.getElementById('inp').blur(); window.__vv.height = 844; window.__fire(); });
+  }
+  await p.waitForTimeout(60);
+  const цикли = await чисто();
+  ok('10 відкриттів-закриттів клавіатури — нічого не висить', нічогоНеВисить(цикли), JSON.stringify(цикли));
+  await скинути();
 }
 
 // ── 6. Компʼютер: екранної клавіатури нема — механіка мовчить ───────────────
