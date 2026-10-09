@@ -199,6 +199,47 @@ ok('рух угору з середини сторінки виводить ша
    upShow.shown && upShow.top === upShow.headerBottom,
    `top ${upShow.top}, низ .app-header ${upShow.headerBottom}, клас ${upShow.shown ? 'є' : 'нема'}`);
 
+// ── 5б. 🔴 09.10 — ВИЇЗД ПЛАВНИЙ: рух веде `transform`, а не `top` ───────────
+// Вова: «коли вона вискакує, вона дергається». Анімація `top` — перерахунок
+// розкладки щокадру в головному потоці, поки прокрутку веде композитор → ривки.
+// Міряємо: (а) перехід оголошено на transform, НЕ на top; (б) посеред виїзду шапка
+// справді МІЖ схованою і показаною точкою (тобто рух є і він плавний), а `top`
+// у стилях — уже кінцевий; (в) після доїзду transform порожній.
+{
+  await page.evaluate(() => { const m = document.querySelector('.app-main'); m.scrollTop = 0; });
+  await page.waitForTimeout(450);
+  const flip = await page.evaluate(async () => {
+    const main = document.querySelector('.app-main');
+    const el = document.querySelector('#board-content .bd-controls');
+    const hdr = document.querySelector('.app-header');
+    const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    main.scrollTop = 900; await frame();
+    await new Promise(r => setTimeout(r, 450));
+    const схована = Math.round(el.getBoundingClientRect().top);
+    let mid = null;
+    for (const y of [860, 820, 780, 740]) {
+      main.scrollTop = y; await frame();
+      if (el.classList.contains('bd-controls--shown') && mid === null) {
+        await new Promise(r => setTimeout(r, 90));
+        mid = { top: Math.round(el.getBoundingClientRect().top), cssTop: getComputedStyle(el).top,
+                transform: getComputedStyle(el).transform };
+      }
+    }
+    await new Promise(r => setTimeout(r, 450));
+    return { tp: getComputedStyle(el).transitionProperty, схована, mid,
+             кінець: Math.round(el.getBoundingClientRect().top), межа: Math.round(hdr.getBoundingClientRect().bottom),
+             transformКінець: getComputedStyle(el).transform };
+  });
+  ok('🔴 перехід шапки — на transform (композитор), не на top (розкладка)',
+     /transform/.test(flip.tp) && !/(^|,\s*)top(,|$)/.test(flip.tp), flip.tp);
+  ok('🔴 посеред виїзду шапка МІЖ схованою і показаною точкою (рух плавний, не стрибок)',
+     flip.mid && flip.mid.top > flip.схована && flip.mid.top < flip.межа && flip.mid.cssTop === '0px',
+     JSON.stringify(flip));
+  ok('після доїзду шапка на своєму місці, transform порожній',
+     flip.кінець === flip.межа && (flip.transformКінець === 'none' || flip.transformКінець === 'matrix(1, 0, 0, 1, 0, 0)'),
+     JSON.stringify(flip));
+}
+
 // ── 6. 🔴 ГОЛОВНЕ ПО СКАРЗІ: показана шапка НЕ З'ЇЖДЖАЄ НИЖЧЕ СВОГО МІСЦЯ ──────
 //
 // Так виглядала вада, яку Вова описав: «зʼїжджає донизу, потім рівняється до

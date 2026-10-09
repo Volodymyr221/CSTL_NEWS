@@ -3160,7 +3160,27 @@ function setupHeaderShowOnScrollUp() {
     if (!elCache || !elCache.isConnected) elCache = getBoardRoot()?.querySelector('.bd-controls') || null;
     return elCache;
   };
-  const setShown = (el, on) => el.classList.toggle('bd-controls--shown', on);
+  // 🔴 09.10 — FLIP (First-Last-Invert-Play: запам'ятати, де була, перемкнути, повернути
+  // зсувом на старе місце, відпустити). Вова: «коли вискакує, вона дергається».
+  // Раніше клас міняв `top` липкої шапки з CSS-переходом — тобто анімував РОЗКЛАДКУ
+  // в головному потоці, поки композитор паралельно вів прокрутку. Тепер `top`
+  // міняється миттєво, а видимий шлях проходить `transform` — його анімує сам
+  // композитор, синхронно з прокруткою. Різницю міряємо, а не вгадуємо: якщо шапка
+  // не прилипла (у потоці), `top` її не рухає, різниця 0 — і руху не буде зовсім.
+  // Перемикання посеред анімації — від ПОТОЧНОЇ видимої точки (rect враховує transform).
+  const setShown = (el, on) => {
+    if (el.classList.contains('bd-controls--shown') === on) return;
+    const було = el.getBoundingClientRect().top;
+    el.style.transition = 'none';
+    el.style.transform = '';
+    el.classList.toggle('bd-controls--shown', on);
+    const різниця = Math.round(було - el.getBoundingClientRect().top);
+    if (!різниця) { el.style.transition = ''; return; }
+    el.style.transform = `translateY(${різниця}px)`;
+    void el.offsetHeight;                 // зафіксувати стартову точку перед переходом
+    el.style.transition = '';
+    el.style.transform = '';
+  };
 
   const apply = () => {
     ticking = false;
