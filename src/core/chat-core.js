@@ -18,7 +18,7 @@
 import { escapeHtml, avatarCircle } from './utils.js';
 import { cachedAvatar } from './supabase.js';   // Потік 12 Б: чуже фото по uid (кеш)
 import { openLayer, closeLayer } from './layers.js';
-import { attachKeyboardPad } from './keyboard.js';   // клавіатура: та сама механіка, що в коментарях (09.10)   // екрани ↔ історія браузера (жест «назад»)
+import { attachKeyboardPad, setupFocusLift } from './keyboard.js';   // клавіатура: та сама механіка, що в коментарях (09.10)   // екрани ↔ історія браузера (жест «назад»)
 
 // Лінійні іконки для меню дій над повідомленням (монохром, у стилі чату)
 export const ACT_ICONS = {
@@ -150,106 +150,18 @@ export function setupKeyboardResize(screen) {
   const stream = screen.querySelector('.pm-stream');
   const input = screen.querySelector('.pm-input');
   const toBottom = () => requestAnimationFrame(() => { if (stream) stream.scrollTop = stream.scrollHeight; });
-  const lift = setupFocusLift(screen, input);   // null — трюк вимкнений або не потрібен
+  // Трюк «поле нагорі в мить фокуса» (core/keyboard.js): шапка не смикається.
+  // Тап ловимо по всьому рядку вводу, а не лише по самому полю (великий палець).
+  const lift = setupFocusLift({
+    input, area: screen.querySelector('.pm-form'),
+    anchor: () => (screen.querySelector('.pm-head')?.getBoundingClientRect().bottom || 0) + 8,
+  });
   const stopPad = attachKeyboardPad(screen, {
     input, minHeight: 160, openClass: 'pm-kb-open',
     // Клавіатура щойно відкрилась → поле на своє місце, останні повідомлення над ним.
     onOpen: () => { lift?.drop(true); toBottom(); },
   });
   return () => { lift?.stop(); stopPad(); };
-}
-
-// ── ТРЮК «ПОЛЕ НАГОРІ В МИТЬ ФОКУСА» — ЩОБ ШАПКА НЕ СМИКАЛАСЬ (09.10, СПРОБА) ──────
-// 🗣️ Вова: «все добре, крім того, що смикається шапка чату, коли вилазить
-// клавіатура… хочу максимально наближено до Інстаграму». Відповів чесно: повністю
-// це може лише нативний додаток; погодились на одну спробу.
-// МЕХАНІКА СМИКАННЯ: поле стоїть унизу, де виїде клавіатура → iOS сам зсуває весь
-// webview угору (компонує миттєво), а ми дізнаємось про зсув подією й повертаємо
-// шапку на кадр пізніше. Їде — вертається = смикання. Компенсація з JS завжди позаду
-// (той самий закон, що в коментарі під `layoutCircles`, feed.js).
-// 💡 ТРЮК: у мить фокуса поле стоїть НАГОРІ (під шапкою, невидиме) — iOS бачить, що
-// клавіатура його не закриє, і НЕ зсуває сторінку взагалі. Щойно клавіатура
-// з'явилась (`attachKeyboardPad` відкрився) — поле повертається на місце, а місце під
-// клавіатуру дають відступи. Зсуву нема → компенсувати нічого → смикатись нічому.
-// ⚠️ Тап ловимо самі (`touchend` → preventDefault → `focus()`): поле в цю мить не
-// під пальцем, і рідний тап iOS промахнувся б. `focus()` у `touchend` — це жест
-// людини, тож iOS клавіатуру відкриває.
-// 🛑 СТРАХОВКА: якщо за 1.5 с після фокуса клавіатуру не розпізнано, поле
-// повертається; ДВІ такі невдачі поспіль — трюк вимикається на пристрої назавжди
-// (`cstl-kb-lift-off`), далі чат як до спроби. Вдалий раз скидає лічильник.
-// 🔴 09.10 — було 900 мс і одна невдача. Стенд «інші телефони» показав: повільна
-// клавіатура (старий телефон, перший запуск — до ~1.2 с) вимикала трюк назавжди
-// з першого ж разу. Вимкнути руками: `localStorage['cstl-kb-lift-off']='1'`.
-// 🛑 Довге натискання (> 450 мс — людина хоче «Вставити») не чіпаємо: це не тап.
-// 🔙 Відкат цілком — прибрати виклик `setupFocusLift` у `setupKeyboardResize`.
-const LIFT_OFF_KEY = 'cstl-kb-lift-off';
-const LIFT_FAIL_KEY = 'cstl-kb-lift-fail';
-const LIFT_SLOP = 10;
-const LIFT_LONGPRESS_MS = 450;
-const LIFT_GUARD_MS = 1500;
-function setupFocusLift(screen, input) {
-  if (!input || !window.visualViewport) return null;
-  try {
-    if (localStorage.getItem(LIFT_OFF_KEY) === '1') return null;
-    if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return null;
-  } catch (_) { return null; }
-  let start = null, lifted = false, guard = 0;
-  const drop = (вдалося = false) => {
-    clearTimeout(guard); guard = 0;
-    if (!lifted) return;
-    lifted = false;
-    input.style.transform = ''; input.style.opacity = '';
-    if (вдалося) { try { localStorage.removeItem(LIFT_FAIL_KEY); } catch (_) {} }
-  };
-  const lift = () => {
-    const head = screen.querySelector('.pm-head');
-    const top = (head ? head.getBoundingClientRect().bottom : 0) + 8;
-    const dy = Math.round(top - input.getBoundingClientRect().top);
-    if (dy >= 0) return false;                       // поле й так нагорі — нічого робити
-    input.style.transform = `translateY(${dy}px)`;
-    input.style.opacity = '0';                       // людина не бачить стрибка поля
-    lifted = true;
-    return true;
-  };
-  const onStart = e => {
-    const t = e.changedTouches[0];
-    start = (document.activeElement !== input && t && e.touches.length === 1) ? { x: t.clientX, y: t.clientY, t: Date.now() } : null;
-  };
-  const onEnd = e => {
-    const s = start; start = null;
-    if (!s || document.activeElement === input) return;
-    const t = e.changedTouches[0];
-    if (!t || Math.hypot(t.clientX - s.x, t.clientY - s.y) > LIFT_SLOP) return;
-    if (Date.now() - s.t > LIFT_LONGPRESS_MS) return;   // довге натискання — рідне меню iOS
-    if (!lift()) return;
-    e.preventDefault();
-    input.focus();
-    guard = setTimeout(() => {
-      if (!lifted) return;
-      // Клавіатуру так і не розпізнано → поле на місце; друга невдача поспіль —
-      // трюк на цьому пристрої вимикається.
-      drop();
-      try {
-        const n = (parseInt(localStorage.getItem(LIFT_FAIL_KEY), 10) || 0) + 1;
-        localStorage.setItem(LIFT_FAIL_KEY, String(n));
-        if (n >= 2) localStorage.setItem(LIFT_OFF_KEY, '1');
-      } catch (_) {}
-      try { input.scrollIntoView({ block: 'end' }); } catch (_) {}
-    }, LIFT_GUARD_MS);
-  };
-  const onBlur = () => drop();
-  input.addEventListener('touchstart', onStart, { passive: true });
-  input.addEventListener('touchend', onEnd, { passive: false });
-  input.addEventListener('blur', onBlur);
-  return {
-    drop,
-    stop: () => {
-      drop();
-      input.removeEventListener('touchstart', onStart);
-      input.removeEventListener('touchend', onEnd);
-      input.removeEventListener('blur', onBlur);
-    },
-  };
 }
 
 // ── Жести над бульбашкою ──────────────────────────────────────────────────

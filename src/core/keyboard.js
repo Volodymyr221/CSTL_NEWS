@@ -452,6 +452,113 @@ export function attachKeyboardPad(screen, { input, minHeight = 160, openClass = 
   };
 }
 
+// ── ТРЮК «ПОЛЕ НАГОРІ В МИТЬ ФОКУСА» — ЩОБ НІЧОГО НЕ СМИКАЛОСЬ (09.10) ─────────────
+// 🗣️ Вова: «смикається шапка чату, коли вилазить клавіатура»; після спроби —
+// «Вийшло, стоїть на місці, ура». Потім те саме попросив для листа коментарів:
+// «верх модалки… тягнеться як резина, пройшло і повернулося назад».
+// МЕХАНІКА СМИКАННЯ: поле стоїть унизу, де виїде клавіатура → iOS сам зсуває весь
+// webview угору (компонує миттєво), а ми дізнаємось про зсув подією й компенсуємо
+// на кадр пізніше. Їде — вертається = смикання / «гума».
+// 💡 ТРЮК: у мить фокуса поле стоїть НАГОРІ (у видимій зоні, невидиме) — iOS бачить,
+// що клавіатура його не закриє, і НЕ зсуває сторінку. Щойно модуль клавіатури
+// розпізнав її (гачок `onOpen` → `drop(true)`) — поле повертається на місце.
+// ⚠️ Тап ловимо самі (`touchend` → preventDefault → `focus()`): поле в цю мить не
+// під пальцем, і рідний тап iOS промахнувся б. `focus()` у `touchend` — жест людини.
+//
+// 🔴 09.10, ВЕЛИКИЙ ПАЛЕЦЬ (Вова): «натискаю великим пальцем на середину поля —
+// воно чуть-чуть піднімається і назад, клавіатура не відкривається». Тап великим
+// пальцем прокочується на 10–25px: старий поріг 10px читав це як «гортання» і
+// відступав, а iOS той самий рух уже вважав перетягуванням сторінки — тягнув
+// webview гумкою і фокус не ставив. Ніхто не відкривав поле. Тепер:
+//   • поріг 30px (рух пальця при тапі, а не гортання);
+//   • поки палець на неактивному полі, `touchmove` → preventDefault: iOS не тягне
+//     сторінку, і тап лишається тапом;
+//   • тап ловиться по ВСІЙ смузі вводу (`area`), крім кнопок — ціль більша.
+// 🛑 СТРАХОВКА: клавіатуру не розпізнано за 1.5 с → поле повертається; ДВІ невдачі
+// поспіль → трюк вимикається на пристрої (`cstl-kb-lift-off`). Вдалий раз скидає.
+// Довге натискання (> 800 мс — свідоме «Вставити») лишаємо рідним.
+const LIFT_OFF_KEY = 'cstl-kb-lift-off';
+const LIFT_FAIL_KEY = 'cstl-kb-lift-fail';
+const LIFT_SLOP = 30;
+const LIFT_LONGPRESS_MS = 800;
+const LIFT_GUARD_MS = 1500;
+export function setupFocusLift({ input, area = null, anchor } = {}) {
+  if (!input || !window.visualViewport || typeof anchor !== 'function') return null;
+  try {
+    if (localStorage.getItem(LIFT_OFF_KEY) === '1') return null;
+    if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return null;
+  } catch (_) { return null; }
+  const zone = area || input;
+  let start = null, lifted = false, guard = 0;
+  const drop = (вдалося = false) => {
+    clearTimeout(guard); guard = 0;
+    if (!lifted) return;
+    lifted = false;
+    input.style.transform = ''; input.style.opacity = '';
+    if (вдалося) { try { localStorage.removeItem(LIFT_FAIL_KEY); } catch (_) {} }
+  };
+  const lift = () => {
+    const dy = Math.round(anchor() - input.getBoundingClientRect().top);
+    if (dy >= 0) return false;                       // поле й так нагорі — нічого робити
+    input.style.transform = `translateY(${dy}px)`;
+    input.style.opacity = '0';                       // людина не бачить стрибка поля
+    lifted = true;
+    return true;
+  };
+  // Кнопки смуги (надіслати, фото, «від спільноти») — їхні, не наші.
+  const ourTarget = el => !el.closest?.('button, a, label');
+  const onStart = e => {
+    const t = e.changedTouches[0];
+    start = (document.activeElement !== input && t && e.touches.length === 1 && ourTarget(e.target))
+      ? { id: t.identifier, x: t.clientX, y: t.clientY, t: Date.now() } : null;
+  };
+  const onMove = e => {
+    if (!start) return;
+    const t = [...e.changedTouches].find(x => x.identifier === start.id);
+    if (t && Math.hypot(t.clientX - start.x, t.clientY - start.y) > LIFT_SLOP) { start = null; return; }
+    e.preventDefault();                              // не даємо iOS тягнути сторінку гумкою
+  };
+  const onEnd = e => {
+    const s = start; start = null;
+    if (!s || document.activeElement === input) return;
+    const t = [...e.changedTouches].find(x => x.identifier === s.id);
+    if (!t || Math.hypot(t.clientX - s.x, t.clientY - s.y) > LIFT_SLOP) return;
+    if (Date.now() - s.t > LIFT_LONGPRESS_MS) return;   // свідоме довге натискання — рідне меню
+    e.preventDefault();
+    lift();                                          // навіть якщо піднімати нікуди — фокус ставимо самі
+    input.focus();
+    if (!lifted) return;
+    guard = setTimeout(() => {
+      if (!lifted) return;
+      drop();
+      try {
+        const n = (parseInt(localStorage.getItem(LIFT_FAIL_KEY), 10) || 0) + 1;
+        localStorage.setItem(LIFT_FAIL_KEY, String(n));
+        if (n >= 2) localStorage.setItem(LIFT_OFF_KEY, '1');
+      } catch (_) {}
+      try { input.scrollIntoView({ block: 'end' }); } catch (_) {}
+    }, LIFT_GUARD_MS);
+  };
+  const onCancel = () => { start = null; };
+  const onBlur = () => drop();
+  zone.addEventListener('touchstart', onStart, { passive: true });
+  zone.addEventListener('touchmove', onMove, { passive: false });
+  zone.addEventListener('touchend', onEnd, { passive: false });
+  zone.addEventListener('touchcancel', onCancel);
+  input.addEventListener('blur', onBlur);
+  return {
+    drop,
+    stop: () => {
+      drop();
+      zone.removeEventListener('touchstart', onStart);
+      zone.removeEventListener('touchmove', onMove);
+      zone.removeEventListener('touchend', onEnd);
+      zone.removeEventListener('touchcancel', onCancel);
+      input.removeEventListener('blur', onBlur);
+    },
+  };
+}
+
 // Панель діагностики: живі числа поверх усього. Потрібна щоб з ОДНОГО скріншота
 // з чужого пристрою бачити реальний стан, а не будувати здогади.
 function createDebugPanel() {

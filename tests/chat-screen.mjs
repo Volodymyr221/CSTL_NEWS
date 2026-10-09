@@ -229,11 +229,12 @@ ok('клавіатура сховалась → шапка на місці, ві
 // якогось класу пристроїв; міряємо, що після нього НІЧОГО не лишилось висіти.
 {
   const cdp7 = await p.context().newCDPSession(p);
-  const тап7 = async (утримання = 0) => {
-    const { x, y } = await p.evaluate(() => { const r = document.getElementById('inp').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  const тап7 = async (утримання = 0, рух = 0, sel = '#inp', dx = 0) => {
+    const { x, y } = await p.evaluate(([s, d]) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: d ? r.x + d : r.x + r.width / 2, y: r.y + r.height / 2 }; }, [sel, dx]);
     await cdp7.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    if (рух) await cdp7.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + рух * 0.6, y: y - рух * 0.8 }] });
     if (утримання) await p.waitForTimeout(утримання);
-    await cdp7.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp7.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ x: x + рух * 0.6, y: y - рух * 0.8 }] });
   };
   const скинути = () => p.evaluate(() => {
     document.getElementById('inp').blur();
@@ -268,10 +269,42 @@ ok('клавіатура сховалась → шапка на місці, ві
 
   // 7в. Довге натискання на порожнє поле (вставити текст) — не наш тап, рідна поведінка.
   await скинути();
-  await тап7(700);
+  await тап7(1000);
   await p.waitForTimeout(60);
   const довге = await чисто();
   ok('довге натискання — поле не підстрибує нагору', !довге.зсув && !довге.прозоре, JSON.stringify(довге));
+
+  // 7в². 🔴 ВЕЛИКИЙ ПАЛЕЦЬ (Вова 09.10): тап прокочується на ~20px — це все ще тап.
+  await скинути();
+  await тап7(150, 20);
+  await p.waitForTimeout(60);
+  const палець = await p.evaluate(() => ({ фокус: document.activeElement?.id, зсув: document.getElementById('inp').style.transform }));
+  ok('🔴 тап великим пальцем з прокочуванням 20px — поле відкривається (і піднімається)', палець.фокус === 'inp' && /translateY\(-/.test(палець.зсув), JSON.stringify(палець));
+  // Гортання (рух 60px) — НЕ тап.
+  await скинути();
+  await тап7(0, 60);
+  await p.waitForTimeout(60);
+  const гортання = await p.evaluate(() => ({ фокус: document.activeElement?.id, зсув: document.getElementById('inp').style.transform }));
+  ok('🛑 рух пальця на 60px — це гортання, поле не відкриваємо', гортання.фокус !== 'inp' && !гортання.зсув, JSON.stringify(гортання));
+  // Тап по смузі вводу поруч із полем (відступ форми) — теж відкриває поле.
+  await скинути();
+  await тап7(0, 0, '.pm-form', 3);
+  await p.waitForTimeout(60);
+  const смуга = await p.evaluate(() => document.activeElement?.id);
+  ok('тап по смузі вводу поруч із полем — теж відкриває поле', смуга === 'inp', `фокус: ${смуга}`);
+  // Поки палець на неактивному полі, iOS не має тягнути сторінку: touchmove скасований.
+  await скинути();
+  const скасовано = await p.evaluate(() => {
+    const i = document.getElementById('inp'); const r = i.getBoundingClientRect();
+    const mk = (type, y) => new TouchEvent(type, { bubbles: true, cancelable: true,
+      touches: type === 'touchend' ? [] : [new Touch({ identifier: 7, target: i, clientX: r.x + 20, clientY: y })],
+      changedTouches: [new Touch({ identifier: 7, target: i, clientX: r.x + 20, clientY: y })] });
+    i.dispatchEvent(mk('touchstart', r.y + 10));
+    const mv = mk('touchmove', r.y + 2); i.dispatchEvent(mv);
+    i.dispatchEvent(mk('touchend', r.y + 2));
+    return mv.defaultPrevented;
+  });
+  ok('🔴 поки палець на неактивному полі — сторінку гумкою не тягне (touchmove скасовано)', скасовано === true, String(скасовано));
 
   // 7г. Поворот екрана. Висота «без клавіатури» після повороту інша; зі старою
   // (844) ландшафтні 390 виглядали б як «клавіатура на 454px» — і чат вмикав би
