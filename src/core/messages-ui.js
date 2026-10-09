@@ -20,6 +20,7 @@ import {
 import { escapeHtml, showToast, postTime, firstNameOf } from './utils.js';
 import { buildScreen, clockTime, threadListTime } from './chat-core.js';
 import { ICONS } from './icons.js';
+import { keepKeyboardOnTap } from './keyboard.js';   // «Надіслати» з першого тапу (09.10)
 
 // Лінійні іконки груп (монохром, стиль чату — не Apple-емодзі)
 // users — дедуп, спільна з board.js/admin.html, див. core/icons.js
@@ -328,6 +329,7 @@ export function openGroupChat(group) {
 
     api.screen.querySelector('[data-gr-manage]')?.addEventListener('click', () => openGroupManage(group));
 
+    keepKeyboardOnTap(form.querySelector('.pm-send'));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = input.value.trim();

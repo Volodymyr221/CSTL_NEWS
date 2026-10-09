@@ -15,6 +15,7 @@ import { openModal } from '../core/modal.js';
 import { createDraftStore } from '../core/draft.js';   // страховка від утрати набраного
 // Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
 import { BOARD_CATEGORIES, catShort, categoryHasPrice } from '../core/board-categories.js';
+import { keepKeyboardOnTap } from '../core/keyboard.js';   // кнопка з першого тапу при відкритій клавіатурі (09.10)
 import { ICONS } from '../core/icons.js';
 
 // Вектор-олівець у заголовку модалки — спільна іконка з core/icons.js (дедуп,
@@ -609,6 +610,7 @@ export function openBoardModal(opts = {}) {
   }
 
   // ── Submit ──
+  keepKeyboardOnTap(wrap.querySelector('.cm-board-submit'));
   wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.category) {   // Д-23: категорію обов'язково обрати (нема автовибору)

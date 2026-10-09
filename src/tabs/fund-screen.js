@@ -39,6 +39,7 @@
 import { openLayer, closeLayer } from '../core/layers.js';
 import { openModal, closeModal } from '../core/modal.js';
 import { escapeHtml, showToast } from '../core/utils.js';
+import { keepKeyboardOnTap } from '../core/keyboard.js';   // кнопка з першого тапу при відкритій клавіатурі (09.10)
 import { ICONS } from '../core/icons.js';
 import { loadFundraisers, fundCardHtml, wireFundOpen } from './home-fund.js';
 import { submitFundraiserRequest, fetchMyFundraiserRequests } from '../core/supabase.js';
@@ -205,6 +206,7 @@ function openProposeSheet() {
     bodyHtml: proposeFormHtml(),
     onMount(root) {
       const btn = root.querySelector('#fsf-send');
+      keepKeyboardOnTap(btn);
       const v = id => (root.querySelector('#' + id)?.value || '').trim();
 
       btn.addEventListener('click', async () => {

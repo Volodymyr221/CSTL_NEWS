@@ -39,7 +39,7 @@ import { onReturn } from '../core/refresh-on-return.js';
 import { paintLoading, paintOffline } from '../core/screen-state.js';   // «повернувся на вкладку → свіже» (07.08)
 import { whenSplashGone } from '../core/splash.js';   // deep-link чекає заставку (15.08)
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
-import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
+import { attachKeyboardSheet, revealInScroller, keepKeyboardOnTap, keepKeyboardOnTapIn } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 import { createDraftStore, purgeLegacyDrafts } from '../core/draft.js';       // чернетка незакінченої форми — спільна з подачею оголошення
 import { observeContentCards } from '../core/content-views.js';   // читання (21.09)
 
@@ -2820,7 +2820,12 @@ function openComments(postId, focusCommentId = null) {
   // приходить як звичайно — і приходить у кнопку, бо ніщо не зрушило.
   // Чому не «надсилати прямо на pointerdown»: тоді повідомлення пішло б ще до того, як
   // людина відпустила палець, тобто скасувати рух, повівши пальцем убік, стало б неможливо.
-  sendBtn.addEventListener('pointerdown', e => e.preventDefault());
+  // 🔴 09.10 — на айфоні ліки 26.07 не тримали (баг повернувся): `keepKeyboardOnTap`
+  // спрацьовує на відпусканні пальця, ДО того як iOS ховає клавіатуру. Див. keyboard.js.
+  keepKeyboardOnTap(sendBtn);
+  // Решта кнопок рядка вводу (голос «від спільноти», ✕ відповіді) — так само.
+  keepKeyboardOnTapIn(sheet.querySelector('.fd-com-compose'));
+  keepKeyboardOnTapIn(sheet.querySelector('.fd-com-replybar'));
   sendBtn.addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
@@ -3879,6 +3884,8 @@ function openComposer(pageId, editPost = null) {
   renderThumbs();               // показати наявні фото одразу в режимі редагування
 
   const sendBtn = back.querySelector('.fd-comp-send');
+  // 09.10: «Опублікувати» з відкритою клавіатурою — з першого тапу (keyboard.js).
+  keepKeyboardOnTap(sendBtn);
   sendBtn.addEventListener('click', async () => {
     const text = back.querySelector('.fd-comp-text').value.trim();
     // Подія: зібрати дату/час/місце. Дата — обовʼязкова; час і місце — опційні.
