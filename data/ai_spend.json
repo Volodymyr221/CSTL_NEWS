@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1791553115604,
+      "mission": "holiday:⛪ Собор Архангела Михаїла",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 330,
+      "cache_read": 0,
+      "cache_write": 1155,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0062,
+      "note": ""
+    },
+    {
       "ts": 1791467652778,
       "mission": "holiday:⛪ Собор Архангела Михаїла",
       "model": "claude-sonnet-5",
@@ -782,24 +795,11 @@
       "found": 1,
       "cost_usd": 0.0089,
       "note": ""
-    },
-    {
-      "ts": 1788435362180,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 510,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0082,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 14.358,
-    "runs": 199,
+    "cost_usd": 14.3642,
+    "runs": 200,
     "web_searches": 214
   },
   "months": {
@@ -820,13 +820,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 1.478,
-      "runs": 11,
+      "cost_usd": 1.4842,
+      "runs": 12,
       "web_searches": 28,
-      "fair_usd": 1.478
+      "fair_usd": 1.4842
     }
   },
-  "updated_ts": 1791467652778,
+  "updated_ts": 1791553115604,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
