@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1791593661848,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10607,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0213,
+      "note": ""
+    },
+    {
+      "ts": 1791593659914,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 64959,
+      "output_tokens": 6258,
+      "cache_read": 43090,
+      "cache_write": 33693,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.3253,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1791553115604,
       "mission": "holiday:⛪ Собор Архангела Михаїла",
       "model": "claude-sonnet-5",
@@ -769,38 +796,12 @@
       "found": 1,
       "cost_usd": 0.009,
       "note": ""
-    },
-    {
-      "ts": 1788523559979,
-      "mission": "olyka:news:всесвітній-день-прибирання-2026",
-      "model": "claude-opus-5",
-      "input_tokens": 5853,
-      "output_tokens": 364,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0384,
-      "note": "Всесвітній день прибирання 2026: Олицька громада запрошує долучитися"
-    },
-    {
-      "ts": 1788521855663,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 579,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0089,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 14.3642,
-    "runs": 200,
-    "web_searches": 214
+    "cost_usd": 14.7108,
+    "runs": 202,
+    "web_searches": 218
   },
   "months": {
     "2026-07": {
@@ -820,13 +821,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 1.4842,
-      "runs": 12,
-      "web_searches": 28,
-      "fair_usd": 1.4842
+      "cost_usd": 1.8308,
+      "runs": 14,
+      "web_searches": 32,
+      "fair_usd": 1.8308
     }
   },
-  "updated_ts": 1791553115604,
+  "updated_ts": 1791593661848,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
