@@ -2816,6 +2816,10 @@ const ART_CATS = [
   { type: 'holiday', emoji: '🎉', label: 'Свята' },
   { type: 'event',   emoji: '📌', label: 'Найближчі події' },
 ];
+// Прев'ю обкладинки статті + кнопка «Прибрати фото» (12.10). Без фото — порожньо.
+const артОбкладинка = (src) => src ? `
+  <img src="${escapeHtml(src)}" style="max-width:100%;border-radius:10px;margin-top:6px;display:block">
+  <button type="button" class="btn" id="af-photo-remove" style="margin-top:8px;background:#fdecea;color:#b42318;border:1px solid #f5c2bd">🗑 Прибрати фото</button>` : '';
 const DRAFT_ART = () => ({ title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null });
 
 // Екран вибору категорії — сітка 3 плиток (перевикористовує .tile/.tile-grid головного меню).
@@ -3039,7 +3043,7 @@ function renderArticleForm(el) {
       <label class="art-lbl">Фото (обкладинка)
         <input class="art-inp" id="af-photo" type="file" accept="image/*">
       </label>
-      <div id="af-preview">${d.image ? `<img src="${escapeHtml(d.image)}" style="max-width:100%;border-radius:10px;margin-top:6px">` : ''}</div>
+      <div id="af-preview">${артОбкладинка(d.image)}</div>
       ${d.status === 'published' ? `
       <div style="background:#e8f5ec;border:1px solid #bfe3c9;border-radius:10px;padding:10px 12px;font-size:14px;color:#2e6b40">
         ✅ Стаття ОПУБЛІКОВАНА — вона вже у стрічці сайту. Збереження оновить лише копію
@@ -3089,8 +3093,21 @@ function renderArticleForm(el) {
     const prev = document.getElementById('af-preview');
     prev.innerHTML = 'Завантаження…';
     const url = await uploadArticlePhoto(file);
-    if (url) { d.image = url; d.image_type = 'source'; prev.innerHTML = `<img src="${url}" style="max-width:100%;border-radius:10px;margin-top:6px">`; }
+    if (url) { d.image = url; d.image_type = 'source'; prev.innerHTML = артОбкладинка(url); }
     else { prev.innerHTML = '<span style="color:#c33">Не вдалося завантажити фото</span>'; }
+  });
+  // 🔴 12.10 — ПРИБРАТИ ФОТО. Вова: «агент вставив фото, натиснув редагувати — і не можу
+  // видалити це фото». Поле вміло лише ЗАМІНИТИ обкладинку, а зняти — ні: агент іноді
+  // бере знімок, що до статті не пасує (скан американського бюлетеня 1992 року), і
+  // доводилось або публікувати з ним, або шукати інше фото. Тепер — кнопка під прев'ю.
+  // Знімаємо разом з `image_type`/`image_credit`, інакше лишився б підпис «Фото: …» без фото.
+  // ⚠️ Делегування на контейнер: прев'ю перемальовується після завантаження нового фото,
+  // і слухач на самій кнопці зник би разом із нею.
+  document.getElementById('af-preview').addEventListener('click', e => {
+    if (!e.target.closest('#af-photo-remove')) return;
+    d.image = null; d.image_type = 'none'; d.image_credit = null;
+    document.getElementById('af-photo').value = '';
+    document.getElementById('af-preview').innerHTML = артОбкладинка(null);
   });
   const doSave = async (publish) => {
     const a = read();
