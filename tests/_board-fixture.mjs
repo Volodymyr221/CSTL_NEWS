@@ -530,6 +530,10 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             }
             return { data: null, error: null };
           },
+          // 12.10: Edge Functions (пуш підписникам після нового допису). У проді
+          // supa.functions є завжди; без заглушки створення допису падало в стенді
+          // ПІСЛЯ запису в базу — тобто стенд червонів би над справним застосунком.
+          functions: { invoke: async () => ({ data: null, error: null }) },
           storage: { from: () => ({
             upload: async () => ({ data: null, error: null }),
             getPublicUrl: () => ({ data: { publicUrl: '' } }),
