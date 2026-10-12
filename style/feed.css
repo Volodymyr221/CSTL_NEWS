@@ -420,6 +420,9 @@
   gap: 6px; align-items: flex-start; color: #fff; font-size: 13px;
   background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0)); }
 .fd-vid-err a { color: #fff; font-weight: 700; text-decoration: underline; }
+/* ⚠️ `display:flex` вище перебиває рідний [hidden] — без цього рядка блок «не
+   відтворюється» стояв на КОЖНОМУ ролику (знайдено скриншотом 13.10). */
+.fd-vid-err[hidden] { display: none; }
 .fd-video.is-err .fd-vid-play, .fd-video.is-err .fd-vid-sound { display: none; }
 
 /* Перегляд ролика на весь екран: чорне тло, рідне керування браузера (на iOS — саме

@@ -75,6 +75,10 @@ const до = (p, id) => p.evaluate(i => document.querySelector(`.fd-video[data-v
   await до(p, 801); await p.waitForTimeout(900);
   let s = await стан(p);
   ok('🔴 видимий ролик грає сам, БЕЗ звуку', s.find(x => x.id === '801').грає && s.find(x => x.id === '801').muted, JSON.stringify(s));
+  // 📐 ВИДИМІСТЬ, а не атрибут: [hidden] перебивається будь-яким display у CSS, і саме
+  // так 13.10 напис «не відтворюється» стояв на справному ролику (стенд дивився на атрибут).
+  const напис = await p.evaluate(() => getComputedStyle(document.querySelector('.fd-video[data-video="801"] .fd-vid-err')).display);
+  ok('🔴 на справному ролику напису «не відтворюється» НЕ видно', напис === 'none', напис);
 
   await до(p, 804); await p.waitForTimeout(900);
   s = await стан(p);
@@ -108,7 +112,8 @@ const до = (p, id) => p.evaluate(i => document.querySelector(`.fd-video[data-v
   // Зламаний файл.
   await до(p, 806); await p.waitForTimeout(1500);
   const err = await p.evaluate(() => { const box = document.querySelector('.fd-video[data-video="806"]');
-    return { err: box.classList.contains('is-err'), link: !box.querySelector('.fd-vid-err').hidden && !!box.querySelector('.fd-vid-err a') }; });
+    const e = box.querySelector('.fd-vid-err');
+    return { err: box.classList.contains('is-err'), link: getComputedStyle(e).display !== 'none' && !!e.querySelector('a') }; });
   ok('🔴 ролик, що не відтворюється, — обкладинка + «Відкрити відео»', err.err && err.link, JSON.stringify(err));
   await ctx.close();
 }
