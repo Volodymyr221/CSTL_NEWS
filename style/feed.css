@@ -398,6 +398,36 @@
    🔴 Z-INDEX 1400 → 3600: узято НАЙВИЩИЙ із трьох зведених, бо перегляд мусить
    лягати поверх картки жителя (3500), чату (2401) і аркуша оголошення (1100).
    Менше значення повторило б баг 02.08 — фото малювалось ПІД аркушем. */
+/* ── 🎬 ВІДЕО В КАРТЦІ (12.10, core/video-feed.js) ──────────────────────────────
+   Місце під ролик резервується ДО завантаження: --fd-var = w/h із бази, у рамці
+   4:5…16:9. Тому картки нижче не стрибають, коли ролик «доїде».
+   Обкладинку малює сам <video poster>, а ▶ видно, доки ролик не грає. */
+.fd-video { position: relative; width: 100%; aspect-ratio: var(--fd-var, 16 / 9); background: #111;
+  overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fd-video-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #111; }
+.fd-vid-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 56px; height: 56px; border-radius: 50%; background: rgba(0,0,0,0.45); color: #fff;
+  display: grid; place-items: center; pointer-events: none; transition: opacity 0.2s ease; }
+.fd-vid-play svg { width: 26px; height: 26px; margin-left: 3px; }
+.fd-video.is-playing .fd-vid-play { opacity: 0; }
+.fd-video.is-playing .fd-vid-dur { opacity: 0; transition: opacity 0.3s ease 1.2s; }
+.fd-vid-sound { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%;
+  border: 0; background: rgba(0,0,0,0.55); color: #fff; display: grid; place-items: center; cursor: pointer;
+  opacity: 0; transition: opacity 0.2s ease; }
+.fd-vid-sound svg { width: 18px; height: 18px; }
+.fd-video.is-playing .fd-vid-sound { opacity: 1; }
+.fd-vid-err { position: absolute; inset: auto 0 0 0; padding: 14px 12px; display: flex; flex-direction: column;
+  gap: 6px; align-items: flex-start; color: #fff; font-size: 13px;
+  background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0)); }
+.fd-vid-err a { color: #fff; font-weight: 700; text-decoration: underline; }
+.fd-video.is-err .fd-vid-play, .fd-video.is-err .fd-vid-sound { display: none; }
+
+/* Перегляд ролика на весь екран: чорне тло, рідне керування браузера (на iOS — саме
+   те, до якого люди звикли), закриття ✕ або свайпом униз. */
+.fd-vviewer { position: fixed; inset: 0; z-index: 3600; display: grid; place-items: center;
+  background: rgba(0,0,0, var(--vv-fade, 1)); }
+.fd-vviewer-el { width: 100%; max-height: 100%; max-height: 100dvh; background: #000; }
+
 .fd-viewer { position: fixed; inset: 0; z-index: 3600; background: rgba(0,0,0,0.96); }
 .fd-viewer-track { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   /* 🔑 `pan-x` віддає браузеру горизонтальне гортання (його нативний скрол

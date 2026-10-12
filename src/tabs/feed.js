@@ -28,7 +28,8 @@ import {
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';
-import { VIDEO_ACCEPT, videoFileProblem, readVideoMeta, uploadPostVideo, formatVideoDuration } from '../core/video.js';   // відео в дописах (12.10)   // стиснення+повтор — єдиний надійний шлях
+import { VIDEO_ACCEPT, videoFileProblem, readVideoMeta, uploadPostVideo, formatVideoDuration } from '../core/video.js';   // відео в дописах (12.10)
+import { hasVideo, videoBlockHtml, wireFeedVideos, handleVideoTap } from '../core/video-feed.js';   // відео в стрічці: картка, автоплей, перегляд   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний)
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
@@ -555,6 +556,7 @@ function togglePostText(id, btn) {
 // і робота тут одна — рідна пропорція одиночного фото.
 function wireGalleries(root) {
   wirePhotoRatios(root);
+  wireFeedVideos(root);   // 🎬 12.10: автоплей одного видимого ролика (core/video-feed.js)
 }
 
 // 🗑 27.08 — `openViewer` переїхав у `core/photo-viewer.js`: користувачів стало
@@ -952,8 +954,10 @@ function postCardHtml(post, onPage = false) {
   const authorName = (post.author_uid && post.show_author !== false)
     ? liveName('', post.author_uid, '') : '';  // вже екранований
   const imgs = postImages(post);
-  const photo = galleryHtml(imgs, post.id);
-  const hasPhoto = imgs.length > 0;
+  // 🎬 12.10: ролик стоїть на місці фото (у дописі або фото, або відео — композер стежить).
+  const відео = hasVideo(post);
+  const photo = відео ? videoBlockHtml(post) : galleryHtml(imgs, post.id);
+  const hasPhoto = відео || imgs.length > 0;
   const author = authorName
     // ⚠️ Маркер імені сидить у ГНІЗДІ, а не на самому `.fd-author`. Той —
     // блоковий `div`, тож знак, поставлений його сусідом, падав на НОВИЙ РЯДОК
@@ -4468,6 +4472,9 @@ function wireCards(root) {
     if (comBtn) { openComments(Number(comBtn.dataset.comments)); return; }
     const shareBtn = e.target.closest('[data-share]');
     if (shareBtn) { sharePost(Number(shareBtn.dataset.share)); return; }
+    // 🎬 Тап по ролику: звук / на весь екран. ПЕРЕД data-open-page — ролик лежить у
+    // картці, і тап по ньому інакше відкривав би сторінку спільноти.
+    if (handleVideoTap(e)) return;
     const view = e.target.closest('[data-view]');
     if (view) {                                  // тап по фото → повноекранний перегляд
       const post = posts.find(p => p.id === Number(view.dataset.view));
