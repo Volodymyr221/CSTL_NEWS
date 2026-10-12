@@ -7,6 +7,7 @@
   --fd-surface:#FFFFFF;     /* поверхня поста */
   --fd-ink:#16181C;         /* основний текст */
   --fd-muted:#616B76;       /* другорядний (час/підпис) */
+  --fd-media-chip: rgba(0,0,0,0.5);   /* 🎬 13.10: кнопки/мітки поверх відео (▶, звук, «готую»). Не затемнення модалки — свій токен, щоб не множити сирі числа. */
   --fd-divider:#E4E6EB;     /* лінії ВСЕРЕДИНІ картки (роздільники) */
   /* 🆕 30.07 — ОБІДОК КАРТКИ ПОСТА (Вова: «постам у Стрічці треба ободок такий як
      в карточках товарів у Дошці»). Перенесено КРИТЕРІЙ, а не hex:
@@ -406,13 +407,13 @@
   overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .fd-video-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #111; }
 .fd-vid-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 56px; height: 56px; border-radius: 50%; background: rgba(0,0,0,0.45); color: #fff;
+  width: 56px; height: 56px; border-radius: 50%; background: var(--fd-media-chip); color: #fff;
   display: grid; place-items: center; pointer-events: none; transition: opacity 0.2s ease; }
 .fd-vid-play svg { width: 26px; height: 26px; margin-left: 3px; }
 .fd-video.is-playing .fd-vid-play { opacity: 0; }
 .fd-video.is-playing .fd-vid-dur { opacity: 0; transition: opacity 0.3s ease 1.2s; }
 .fd-vid-sound { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%;
-  border: 0; background: rgba(0,0,0,0.55); color: #fff; display: grid; place-items: center; cursor: pointer;
+  border: 0; background: var(--fd-media-chip); color: #fff; display: grid; place-items: center; cursor: pointer;
   opacity: 0; transition: opacity 0.2s ease; }
 .fd-vid-sound svg { width: 18px; height: 18px; }
 .fd-video.is-playing .fd-vid-sound { opacity: 1; }
@@ -1154,11 +1155,11 @@
   background: #1c1d21; }
 .fd-comp-vprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fd-comp-vplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 52px; height: 52px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff;
+  width: 52px; height: 52px; border-radius: 50%; background: var(--fd-media-chip); color: #fff;
   display: grid; place-items: center; pointer-events: none; }
 .fd-comp-vplay svg { width: 24px; height: 24px; margin-left: 3px; }
 .fd-comp-vnote { position: absolute; left: 10px; bottom: 10px; color: #fff; font-size: 13px; font-weight: 600;
-  background: rgba(0,0,0,0.55); padding: 4px 8px; border-radius: 8px; }
+  background: var(--fd-media-chip); padding: 4px 8px; border-radius: 8px; }
 .fd-comp-vprev .fd-comp-thumb-x { width: 28px; height: 28px; top: 8px; right: 8px; }
 .fd-comp-vbar { height: 4px; border-radius: 2px; background: var(--fd-chip); margin-top: 8px; overflow: hidden; }
 .fd-comp-vbar span { display: block; height: 100%; width: 0; background: var(--fd-accent); transition: width 0.2s linear; }
