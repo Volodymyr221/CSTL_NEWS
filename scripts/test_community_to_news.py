@@ -202,7 +202,10 @@ check("2/3 її зміна пише в стан (слухач, а не лише 
       "fd-comp-tonews-cb')?.addEventListener('change'" in feed_js
       or "fd-comp-tonews-cb'" in feed_js and "toNews = e.target.checked" in feed_js)
 check("3/3 стан доїжджає в базу при СТВОРЕННІ",
-      "eventFields, showAuthor, toNews)" in feed_js, "createPagePost(…, toNews)")
+      # 12.10: після toNews іде ще аргумент відео (`finalVideo`) — важливо, що toNews
+      # передано, а не те, що він останній.
+      ("eventFields, showAuthor, toNews)" in feed_js or "eventFields, showAuthor, toNews, " in feed_js),
+      "createPagePost(…, toNews)")
 check("3/3 і при РЕДАГУВАННІ (інакше галочку не можна було б зняти)",
       "to_news: toNews" in feed_js)
 check("клієнт читає колонку `to_news` назад із бази",

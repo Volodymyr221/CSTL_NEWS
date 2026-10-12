@@ -158,7 +158,10 @@ function circleHtml(page, fresh) {
 function postHtml(p, page = null) {
   page = page || p.pages || {};
   const name = page.name || 'Громада';
-  const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null);
+  // 🎬 12.10: допис із ВІДЕО показує його обкладинку з ▶ — інакше віджет вважав би
+  // його текстовим і лишив без картинки, хоча в стрічці там ролик.
+  const відео = !!(p.video && p.video.url);
+  const img = p.image_url || (Array.isArray(p.image_urls) ? p.image_urls[0] : null) || (відео ? p.video.poster : null);
   // 📐 170 / 700 — під ЧОТИРИ рядки підпису під знімком і ЧОТИРНАДЦЯТЬ рядків
   // суцільного тексту (стеля картки, виведена в `home.css`).
   // 🔴 28.08 — БУЛО 520, І ЦЕ РІЗАЛО РАНІШЕ ЗА КАРТКУ. Обидві стелі різали той самий
@@ -188,7 +191,7 @@ function postHtml(p, page = null) {
         </span>
       </span>
       ${txt ? `<span class="hm-fd-p-txt">${escapeHtml(txt)}</span>` : ''}
-      ${img ? `<span class="hm-fd-p-img"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ''}
+      ${img ? `<span class="hm-fd-p-img${відео ? ' hm-fd-p-img--video' : ''}"><img src="${escapeHtml(img)}" alt="" loading="lazy"></span>` : ''}
     </article>`;
 }
 

@@ -425,7 +425,7 @@ COMMUNITY_REST = SUPABASE_URL + "/rest/v1/page_posts"
 def fetch_community_to_news():
     """Живі опубліковані дописи з прапорцем «і в Новинах»."""
     url = (COMMUNITY_REST
-           + "?select=id,page_id,text,image_url,image_urls,created_at,event_date,pages(name,avatar_url)"
+           + "?select=id,page_id,text,image_url,image_urls,video,created_at,event_date,pages(name,avatar_url)"
            + "&to_news=is.true&status=eq.published&deleted_at=is.null"
            + "&order=created_at.desc&limit=30")
     try:
@@ -508,7 +508,8 @@ def допис_у_статтю(row, next_id):
     """Допис спільноти → запис git-стрічки. Не копія-стаття, а показ того самого."""
     спільнота = (row.get("pages") or {}).get("name") or "Спільнота"
     текст = row.get("text") or ""
-    фото = (row.get("image_urls") or [None])[0] or row.get("image_url")
+    # 🎬 12.10: допис із відео — у Новини йде його обкладинка (колонка `video`, міграція 0010).
+    фото = (row.get("image_urls") or [None])[0] or row.get("image_url") or ((row.get("video") or {}).get("poster"))
     ts = row.get("created_at")
     try:
         import datetime as _dt
