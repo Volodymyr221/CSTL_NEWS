@@ -87,12 +87,13 @@ export function readVideoMeta(file) {
 
 // Повне завантаження: ролик (з прогресом і одним повтором) + обкладинка.
 // Повертає { ok, video: { url, poster, w, h, dur, size, mime } } або { ok:false, error }.
-export async function uploadPostVideo(file, meta, pageId, onProgress = () => {}) {
+export async function uploadPostVideo(file, meta, pageId, onProgressCb) {
+  const звіт = typeof onProgressCb === 'function' ? onProgressCb : () => {};
   const problem = videoFileProblem(file);
   if (problem) return { ok: false, error: problem };
   let res = null;
   for (let спроба = 0; спроба < 2; спроба++) {
-    res = await uploadVideoToStorage(file, pageId, p => onProgress(0.05 + p * 0.9));
+    res = await uploadVideoToStorage(file, pageId, p => звіт(0.05 + p * 0.9));
     if (res.url) break;
     // Повторюємо ЛИШЕ обрив зв'язку/збій сервера. Відмову за правами чи розміром
     // повторювати марно — вона прийде знову, а людина чекатиме вдвічі довше.
@@ -112,7 +113,7 @@ export async function uploadPostVideo(file, meta, pageId, onProgress = () => {})
     const up = await uploadPhotoToStorage(meta.poster, `video-posters/${pageId}/`);
     poster = up?.url || null;   // без обкладинки ролик однаково покажеться (темне тло + ▶)
   }
-  onProgress(1);
+  звіт(1);
   return { ok: true, video: {
     url: res.url, poster,
     w: Math.round(meta?.w || 0) || null, h: Math.round(meta?.h || 0) || null,

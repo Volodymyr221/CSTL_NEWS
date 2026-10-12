@@ -748,7 +748,8 @@ export const VIDEO_BUCKET  = 'community-videos';   // 🆕 12.10, міграці
 // 📐 Тека = id сторінки: на ній тримається політика «Page editors upload videos»
 // (`can_edit_page(папка)`), тобто чужу спільноту база не пустить навіть в обхід.
 // ⚠️ Одна спроба. Повтор і людський текст помилки — у `core/video.js`.
-export async function uploadVideoToStorage(file, pageId, onProgress = () => {}) {
+export async function uploadVideoToStorage(file, pageId, onProgressCb) {
+  const звіт = typeof onProgressCb === 'function' ? onProgressCb : () => {};
   if (!supa) return { url: null, error: 'Немає з\'єднання з базою' };
   let token = '';
   try { token = (await supa.auth.getSession())?.data?.session?.access_token || ''; } catch (_) {}
@@ -763,7 +764,7 @@ export async function uploadVideoToStorage(file, pageId, onProgress = () => {}) 
     xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
     xhr.setRequestHeader('cache-control', 'max-age=31536000');   // ролик незмінний — як фото
     xhr.setRequestHeader('x-upsert', 'false');
-    xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.upload.onprogress = e => { if (e.lengthComputable) звіт(e.loaded / e.total); };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve({ url: `${SUPABASE_URL}/storage/v1/object/public/${VIDEO_BUCKET}/${path}`, path, error: null });

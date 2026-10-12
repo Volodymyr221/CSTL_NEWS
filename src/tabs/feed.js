@@ -27,7 +27,8 @@ import {
   eventDayStart, fetchUpcomingEvents,   // 🗓 афіша громади: усі майбутні події (04.09, третій захід)
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
-import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
+import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';
+import { VIDEO_ACCEPT, videoFileProblem, readVideoMeta, uploadPostVideo, formatVideoDuration } from '../core/video.js';   // відео в дописах (12.10)   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openPhotoViewer } from '../core/photo-viewer.js';   // перегляд фото на весь екран (спільний)
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
@@ -66,6 +67,8 @@ const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // МАПНИЙ маркер (крапля з кружечком), він означає «місце», а не «закріплено».
 const IC_PIN    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></svg>';
 const IC_UNPIN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-3.249 3.249l-3.751 1.251l-1.5 1.5l7 7l1.5 -1.5l1.25 -3.75l3.25 -3.25"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/><path d="M3 3l18 18"/></svg>';
+const IC_PLAY   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52 .85l11.02 -6.86a1 1 0 0 0 0 -1.7l-11.02 -6.86a1 1 0 0 0 -1.52 .85z"/></svg>';
+const IC_VIDEO  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4z"/><path d="M3 8a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
 const IC_USERS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
 const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
@@ -3726,6 +3729,10 @@ function openComposer(pageId, editPost = null) {
   let existing = edit ? postImages(editPost).slice() : [];  // URL-и наявних фото (редагування)
   let files = [];               // масив File нових фото
   let previewUrls = [];         // objectURL-и для прев'ю нових (звільняємо при видаленні)
+  // 🎬 ВІДЕО (12.10): ОДИН ролик на допис і ЗАМІСТЬ фото. Стрічка показує допис або
+  // колажем, або плеєром — змішувати їх означало б третій, незрозумілий вигляд картки.
+  let existingVideo = edit ? (editPost.video || null) : null;   // уже опублікований ролик
+  let videoFile = null, videoMeta = null, videoPrevUrl = null;  // новий, ще не завантажений
   const CTA = edit ? 'Зберегти' : 'Опублікувати';
   // Тип поста: допис або подія. Редагування події (є event_date) → одразу «Подія».
   let postType = (edit && editPost.event_date) ? 'event' : 'post';
@@ -3789,6 +3796,7 @@ function openComposer(pageId, editPost = null) {
               <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
           </div>
           <div class="fd-comp-thumbs" hidden></div>
+          <div class="fd-comp-video" hidden></div>
         </div>
         <div class="fd-comp-bar fd-comp-bar--stack fd-comp-bar--author">
           <div class="fd-comp-as">
@@ -3804,7 +3812,8 @@ function openComposer(pageId, editPost = null) {
               <span class="fd-comp-tonews-sub">під іменем спільноти</span></span>
           </label>
           <div class="fd-comp-actions">
-            <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
+            <label class="fd-comp-photo" aria-label="Додати фото">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
+            <label class="fd-comp-photo fd-comp-vbtn" aria-label="Додати відео">${IC_VIDEO}<input class="fd-comp-vinput" type="file" accept="${VIDEO_ACCEPT}" hidden></label>
             <button class="fd-comp-send" type="button">${CTA}</button>
           </div>
         </div>
@@ -3814,6 +3823,7 @@ function openComposer(pageId, editPost = null) {
   const close = () => {
     detachKb();                                        // зняти слухачі клавіатури, повернути CSS-розкладку
     previewUrls.forEach(u => URL.revokeObjectURL(u));   // не тримати objectURL-и прев'ю
+    if (videoPrevUrl) URL.revokeObjectURL(videoPrevUrl);
     back.remove();
   };
   // Тап повз лист закриває.
@@ -3832,7 +3842,7 @@ function openComposer(pageId, editPost = null) {
       eventBox.hidden = postType !== 'event';
     }));
 
-  const fileInput = back.querySelector('input[type=file]');
+  const fileInput = back.querySelector('.fd-comp-photo:not(.fd-comp-vbtn) input[type=file]');
 
   // 🔴 ІМʼЯ ПЕРЕПИТУЄМО, КОЛИ «ХТО Я» СТАВ ФАКТОМ. Композер може відкритись
   // раніше, ніж прогрівся профіль, і тоді на кнопці стояло б запасне «Житель».
@@ -3875,6 +3885,10 @@ function openComposer(pageId, editPost = null) {
     thumbs.innerHTML = exHtml + nwHtml;
   };
   fileInput.addEventListener('change', () => {
+    if (videoFile || existingVideo) {
+      showToast('У дописі вже є відео — прибери його, щоб додати фото', 3500);
+      fileInput.value = ''; return;
+    }
     // 🔎 АУДИТ 26.07: раніше зайві фото просто відкидались `break`-ом — БЕЗ жодного слова.
     // Людина вибрала 15 знімків, побачила 10 і не розуміє, куди поділись решта.
     let skipped = 0;
@@ -3897,6 +3911,48 @@ function openComposer(pageId, editPost = null) {
   });
   renderThumbs();               // показати наявні фото одразу в режимі редагування
 
+  // ── 🎬 ВІДЕО: вибір, прев'ю, прибрати (12.10) ─────────────────────────────────
+  // Прев'ю — кадр-обкладинка (той самий, що піде в стрічку), тривалість і ✕. Сам ролик
+  // тут не програється: людина його щойно зняла, а живий плеєр у формі — зайва вага.
+  const videoBox = back.querySelector('.fd-comp-video');
+  const videoInput = back.querySelector('.fd-comp-vinput');
+  const renderVideo = (готую = false) => {
+    const poster = videoPrevUrl || existingVideo?.poster || '';
+    const dur = videoMeta?.dur || existingVideo?.dur || 0;
+    if (!videoFile && !existingVideo) { videoBox.hidden = true; videoBox.innerHTML = ''; return; }
+    videoBox.hidden = false;
+    videoBox.innerHTML = `
+      <div class="fd-comp-vprev${poster ? '' : ' is-empty'}">
+        ${poster ? `<img src="${escapeHtml(poster)}" alt="">` : ''}
+        <span class="fd-comp-vplay">${IC_PLAY}</span>
+        ${готую ? '<span class="fd-comp-vnote">Готую відео…</span>' : (dur ? `<span class="fd-vid-dur">${formatVideoDuration(dur)}</span>` : '')}
+        <button class="fd-comp-thumb-x" data-rmvideo type="button" aria-label="Прибрати відео">${IC_X}</button>
+      </div>
+      <div class="fd-comp-vbar" hidden><span></span></div>`;
+  };
+  videoInput.addEventListener('change', async () => {
+    const f = videoInput.files?.[0]; videoInput.value = '';
+    if (!f) return;
+    if (existing.length || files.length) { showToast('У дописі вже є фото — прибери їх, щоб додати відео', 3500); return; }
+    const problem = videoFileProblem(f);
+    if (problem) { showToast(problem, 6000, 'error'); return; }
+    if (videoPrevUrl) URL.revokeObjectURL(videoPrevUrl);
+    videoFile = f; videoMeta = null; videoPrevUrl = null; existingVideo = null;
+    renderVideo(true);
+    const meta = await readVideoMeta(f);
+    if (videoFile !== f) return;               // поки читали — людина обрала інший або прибрала
+    videoMeta = meta;
+    if (meta.poster) videoPrevUrl = URL.createObjectURL(meta.poster);
+    renderVideo();
+  });
+  videoBox.addEventListener('click', e => {
+    if (!e.target.closest('[data-rmvideo]')) return;
+    if (videoPrevUrl) URL.revokeObjectURL(videoPrevUrl);
+    videoFile = null; videoMeta = null; videoPrevUrl = null; existingVideo = null;
+    renderVideo();
+  });
+  renderVideo();                // наявний ролик — одразу в режимі редагування
+
   const sendBtn = back.querySelector('.fd-comp-send');
   // 09.10: «Опублікувати» з відкритою клавіатурою — з першого тапу (keyboard.js).
   keepKeyboardOnTap(sendBtn);
@@ -3915,8 +3971,8 @@ function openComposer(pageId, editPost = null) {
     // 🔎 АУДИТ 26.07: тут стояв мовчазний `return`. Людина тисне «Опублікувати» на порожній
     // формі — і НІЧОГО не відбувається: ні реакції, ні пояснення. З боку користувача це
     // читається як «кнопка не працює». Кажемо прямо, чого бракує.
-    if (!text && !existing.length && !files.length) {
-      showToast(postType === 'event' ? 'Додай опис або фото до події' : 'Напиши текст або додай фото', 3000);
+    if (!text && !existing.length && !files.length && !videoFile && !existingVideo) {
+      showToast(postType === 'event' ? 'Додай опис, фото чи відео до події' : 'Напиши текст або додай фото чи відео', 3000);
       return;
     }
     if (text && containsProfanity(text)) { showToast('🚫 Пост містить заборонені слова', 3500, 'error'); return; }
@@ -3948,16 +4004,31 @@ function openComposer(pageId, editPost = null) {
         }
       }
       const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
+      // 🎬 Відео: новий ролик вантажимо тут, з прогресом НА САМІЙ КНОПЦІ — людина бачить,
+      // що йде робота, а не «Публікую…» без змін на хвилину (і не закриває аркуш).
+      let finalVideo = existingVideo;
+      if (videoFile) {
+        const bar = videoBox.querySelector('.fd-comp-vbar');
+        if (bar) bar.hidden = false;
+        const up = await uploadPostVideo(videoFile, videoMeta || {}, pageId, p => {
+          const pct = Math.min(99, Math.round(p * 100));
+          sendBtn.textContent = `Відео ${pct}%`;
+          const fill = bar?.querySelector('span'); if (fill) fill.style.width = pct + '%';
+        });
+        if (!up.ok) { if (bar) bar.hidden = true; showToast(up.error, 5000, 'error'); return; }
+        finalVideo = up.video;
+        sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
+      }
       const res = edit
-        ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, to_news: toNews, ...eventFields })
-        : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor, toNews);
+        ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, video: finalVideo || null, show_author: showAuthor, to_news: toNews, ...eventFields })
+        : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor, toNews, finalVideo || null);
       if (res.ok) {
         // 🔴 26.08 — ПОДІЯ ДІЇ, А НЕ ПЕРЕГЛЯДУ. Логуємо в точці ПІДТВЕРДЖЕНОГО успіху,
         // а не при натисканні «Надіслати»: інакше в статистику потрапляли б спроби,
         // які база відхилила (антиспам, RLS), і «створено дописів» стало б більшим за
         // кількість дописів у самій Стрічці — тобто числа розійшлись би між собою.
         logEvent(currentUserId() || getAnonId(), edit ? 'feed_post_edit' : 'feed_post_create',
-                 { tab: 'shotam', meta: { page_id: pageId, with_photo: finalUrls.length > 0 } });
+                 { tab: 'shotam', meta: { page_id: pageId, with_photo: finalUrls.length > 0, with_video: !!finalVideo } });
         if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
         else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
         // 🔴 17.09 — ВІДЖЕТ СТРІЧКИ НА ГРОМАДІ ДІЗНАЄТЬСЯ ПРО НОВИЙ ДОПИС.
