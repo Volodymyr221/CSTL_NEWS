@@ -86,7 +86,8 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       window.__cstlTables = ${JSON.stringify(tables)};
       const T = window.__cstlTables;
       const U = ${JSON.stringify(user)};
-      const SESSION = U ? { user: U } : null;
+      // 12.10: access_token — потрібен завантаженню відео (XHR у сховище бере токен із сесії).
+      const SESSION = U ? { user: U, access_token: 'test-token' } : null;
       const AUTH_SIGNAL = ${authSignal ? 'true' : 'false'};
       // 🆕 07.08 (B-30): { назваТаблиці: мс } — відповідь приходить ПІЗНО.
       // Живий телефон майже ніколи не встигає віддати все до першого рендера, і
