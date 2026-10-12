@@ -1,6 +1,76 @@
 {
   "runs": [
     {
+      "ts": 1791836228500,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0,
+      "note": ""
+    },
+    {
+      "ts": 1791836228171,
+      "mission": "Громада №4",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.3,
+      "note": "мережевий збій — можливе списання server-side",
+      "effort": "medium",
+      "suspect_usd": 0.3
+    },
+    {
+      "ts": 1791836161390,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 7592,
+      "cache_read": 33023,
+      "cache_write": 35071,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2102,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791836040718,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 5323,
+      "cache_read": 32923,
+      "cache_write": 34415,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1859,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1791835959191,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 26199,
+      "output_tokens": 4752,
+      "cache_read": 43027,
+      "cache_write": 34383,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2345,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1791820613529,
       "mission": "holiday:⛪ Собор Архангела Михаїла",
       "model": "claude-sonnet-5",
@@ -731,77 +801,12 @@
       "found": 1,
       "cost_usd": 0.0087,
       "note": ""
-    },
-    {
-      "ts": 1788956316039,
-      "mission": "olyka:news:в-олиці-проведуть-урочистості",
-      "model": "claude-opus-5",
-      "input_tokens": 5861,
-      "output_tokens": 388,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.039,
-      "note": "В Олиці проведуть урочистості з нагоди Дня Незалежності України"
-    },
-    {
-      "ts": 1788954325429,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 696,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0101,
-      "note": ""
-    },
-    {
-      "ts": 1788867538641,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 576,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0089,
-      "note": ""
-    },
-    {
-      "ts": 1788787706781,
-      "mission": "olyka:news:в-олиці-запустили-навчальну",
-      "model": "claude-opus-5",
-      "input_tokens": 5844,
-      "output_tokens": 335,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0376,
-      "note": "В Олиці запустили навчальну онлайн-гру для дітей «Магічна подорож»"
-    },
-    {
-      "ts": 1788785822463,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 467,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0078,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 14.7332,
-    "runs": 205,
-    "web_searches": 218
+    "cost_usd": 15.6638,
+    "runs": 210,
+    "web_searches": 230
   },
   "months": {
     "2026-07": {
@@ -821,13 +826,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 1.8532,
-      "runs": 17,
-      "web_searches": 32,
-      "fair_usd": 1.8532
+      "cost_usd": 2.7838,
+      "runs": 22,
+      "web_searches": 44,
+      "fair_usd": 2.7838
     }
   },
-  "updated_ts": 1791820613529,
+  "updated_ts": 1791836228500,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
