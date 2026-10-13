@@ -737,6 +737,48 @@ export async function deleteQuestion(postId) {
 // текст повідомлення RLS захищала, а файл був доступний за прямим посиланням.
 export const PUBLIC_BUCKET = 'community-photos';
 export const CHAT_BUCKET   = 'chat-photos';
+export const VIDEO_BUCKET  = 'community-videos';   // 🆕 12.10, міграція 0010 — лише редактори сторінки
+
+// ── ВІДЕО ДОПИСУ: завантаження З ПРОГРЕСОМ (12.10) ──────────────────────────────
+// 🔑 Чому не `supa.storage.upload`: він не повідомляє, скільки вже пішло. Для фото
+// (≤1 МБ) це байдуже, а ролик у 30–50 МБ на мобільному інтернеті — це хвилина.
+// Без смуги прогресу людина бачить «Публікую…» без змін і закриває аркуш, вважаючи,
+// що застосунок завис. Тому той самий REST-запит сховища, але через XHR — лише він
+// у браузері вміє `upload.onprogress`.
+// 📐 Тека = id сторінки: на ній тримається політика «Page editors upload videos»
+// (`can_edit_page(папка)`), тобто чужу спільноту база не пустить навіть в обхід.
+// ⚠️ Одна спроба. Повтор і людський текст помилки — у `core/video.js`.
+export async function uploadVideoToStorage(file, pageId, onProgressCb) {
+  const звіт = typeof onProgressCb === 'function' ? onProgressCb : () => {};
+  if (!supa) return { url: null, error: 'Немає з\'єднання з базою' };
+  let token = '';
+  try { token = (await supa.auth.getSession())?.data?.session?.access_token || ''; } catch (_) {}
+  if (!token) return { url: null, error: 'Увійдіть, щоб додати відео' };
+  const ext = /quicktime/.test(file.type) ? 'mov' : /webm/.test(file.type) ? 'webm' : 'mp4';
+  const path = `${pageId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  return new Promise(resolve => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${VIDEO_BUCKET}/${path}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+    xhr.setRequestHeader('cache-control', 'max-age=31536000');   // ролик незмінний — як фото
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.upload.onprogress = e => { if (e.lengthComputable) звіт(e.loaded / e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve({ url: `${SUPABASE_URL}/storage/v1/object/public/${VIDEO_BUCKET}/${path}`, path, error: null });
+      } else {
+        let msg = '';
+        try { msg = JSON.parse(xhr.responseText)?.message || ''; } catch (_) {}
+        resolve({ url: null, status: xhr.status, error: msg || `HTTP ${xhr.status}` });
+      }
+    };
+    xhr.onerror = () => resolve({ url: null, status: 0, error: 'Немає зв\'язку' });
+    xhr.ontimeout = () => resolve({ url: null, status: 0, error: 'Немає зв\'язку' });
+    xhr.send(file);
+  });
+}
 
 // Скільки живе тимчасове посилання на фото чату. 12 годин — щоб відкрита
 // розмова не «згасла» серед дня, але посилання не жило вічно, якщо його
@@ -2662,7 +2704,7 @@ export async function fetchCommunityToNews(limit = 20) {
   if (!supa) return [];
   const { data, error } = await supa
     .from('page_posts')
-    .select('id, page_id, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .select('id, page_id, text, image_url, image_urls, video, created_at, pages(name, avatar_url)')
     .eq('to_news', true)
     .eq('status', 'published')
     .is('deleted_at', null)
@@ -2708,7 +2750,7 @@ export async function fetchPagePostsPage(pageId = null, { limit = 60, beforeTs =
   // міграція ще не накотилась, і `status` там ще не існує. Додати фільтр туди
   // означало б поміняти «нема галочки» на «порожня Стрічка» — ціна незрівнянна.
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url, official)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, video, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
@@ -2721,7 +2763,7 @@ export async function fetchPagePostsPage(pageId = null, { limit = 60, beforeTs =
     // `official` (міграція ще не накотилась) залишила б Стрічку ПОРОЖНЬОЮ —
     // ціна незрівнянно більша за відсутню галочку.
     let q2 = supa.from('page_posts')
-      .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
+      .select('id, page_id, author_uid, text, image_url, image_urls, video, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit + 1);
@@ -2828,7 +2870,7 @@ export async function fetchUpcomingEvents(limit = 3) {
   // законно віддає (він її автор), а віджет каже «події громади», тобто те, що
   // вже оголошено. Той самий фільтр стоїть у стрічці (`fetchPagePosts`).
   const { data, error } = await supa.from('page_posts')
-    .select('id, page_id, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url, official)')
+    .select('id, page_id, text, image_url, image_urls, video, event_date, event_time, event_location, created_at, pages(name, avatar_url, official)')
     .is('deleted_at', null)
     .eq('status', 'published')
     .not('event_date', 'is', null)
@@ -3506,11 +3548,11 @@ export async function fetchPostReadCounts(ids) {
 // false = суто від імені спільноти (вибір у композері, крок 6).
 // ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
 //    у будь-якому разі — людський текст. Поля `select` не міняв.
-const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
+const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, video, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url)';
 // Те саме плюс синя галочка спільноти. Окремим рядком, а не аргументом: у місцях,
 // де колонки `official` може ще не бути, потрібен запасний запит БЕЗ неї, і два
 // готові рядки читаються краще за складання select-а на льоту.
-const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url, official)';
+const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls, video, show_author, to_news, event_date, event_time, event_location, created_at, pinned_at, status, pages(name, avatar_url, official)';
 
 // toNews — 🔴 17.09: «показати цей допис і в Новинах, під іменем спільноти».
 // 🗣️ Замовлення Вови: «щоб ми запостили, що щось відбулося, в спільноту, і це
@@ -3519,11 +3561,14 @@ const POST_COLS_OFFICIAL = 'id, page_id, author_uid, text, image_url, image_urls
 // а не копією-статтею. Копія була б дублем, лише зробленим нами власноруч.
 // 🛑 За замовчуванням ВИМКНЕНО — правило розділення жанрів: подія-факт іде в Новини
 // і пишеться як новина; у спільноту — культура, історії, анонси своїми словами.
-export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true, toNews = false) {
+// video — 🆕 12.10 (міграція 0010): { url, poster, w, h, dur, size, mime } або null.
+// Ролик у дописі ОДИН і замість фото: композер не дає обрати і те, і те.
+export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true, toNews = false, video = null) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
   const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
   const row = {
     page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
+    video: video || null,
     show_author: showAuthor !== false,
     to_news: toNews === true,
     event_date:     event.event_date     || null,

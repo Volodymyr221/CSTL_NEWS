@@ -7,6 +7,7 @@
   --fd-surface:#FFFFFF;     /* поверхня поста */
   --fd-ink:#16181C;         /* основний текст */
   --fd-muted:#616B76;       /* другорядний (час/підпис) */
+  --fd-media-chip: rgba(0,0,0,0.5);   /* 🎬 13.10: кнопки/мітки поверх відео (▶, звук, «готую»). Не затемнення модалки — свій токен, щоб не множити сирі числа. */
   --fd-divider:#E4E6EB;     /* лінії ВСЕРЕДИНІ картки (роздільники) */
   /* 🆕 30.07 — ОБІДОК КАРТКИ ПОСТА (Вова: «постам у Стрічці треба ободок такий як
      в карточках товарів у Дошці»). Перенесено КРИТЕРІЙ, а не hex:
@@ -398,6 +399,39 @@
    🔴 Z-INDEX 1400 → 3600: узято НАЙВИЩИЙ із трьох зведених, бо перегляд мусить
    лягати поверх картки жителя (3500), чату (2401) і аркуша оголошення (1100).
    Менше значення повторило б баг 02.08 — фото малювалось ПІД аркушем. */
+/* ── 🎬 ВІДЕО В КАРТЦІ (12.10, core/video-feed.js) ──────────────────────────────
+   Місце під ролик резервується ДО завантаження: --fd-var = w/h із бази, у рамці
+   4:5…16:9. Тому картки нижче не стрибають, коли ролик «доїде».
+   Обкладинку малює сам <video poster>, а ▶ видно, доки ролик не грає. */
+.fd-video { position: relative; width: 100%; aspect-ratio: var(--fd-var, 16 / 9); background: #111;
+  overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fd-video-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #111; }
+.fd-vid-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 56px; height: 56px; border-radius: 50%; background: var(--fd-media-chip); color: #fff;
+  display: grid; place-items: center; pointer-events: none; transition: opacity 0.2s ease; }
+.fd-vid-play svg { width: 26px; height: 26px; margin-left: 3px; }
+.fd-video.is-playing .fd-vid-play { opacity: 0; }
+.fd-video.is-playing .fd-vid-dur { opacity: 0; transition: opacity 0.3s ease 1.2s; }
+.fd-vid-sound { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%;
+  border: 0; background: var(--fd-media-chip); color: #fff; display: grid; place-items: center; cursor: pointer;
+  opacity: 0; transition: opacity 0.2s ease; }
+.fd-vid-sound svg { width: 18px; height: 18px; }
+.fd-video.is-playing .fd-vid-sound { opacity: 1; }
+.fd-vid-err { position: absolute; inset: auto 0 0 0; padding: 14px 12px; display: flex; flex-direction: column;
+  gap: 6px; align-items: flex-start; color: #fff; font-size: 13px;
+  background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0)); }
+.fd-vid-err a { color: #fff; font-weight: 700; text-decoration: underline; }
+/* ⚠️ `display:flex` вище перебиває рідний [hidden] — без цього рядка блок «не
+   відтворюється» стояв на КОЖНОМУ ролику (знайдено скриншотом 13.10). */
+.fd-vid-err[hidden] { display: none; }
+.fd-video.is-err .fd-vid-play, .fd-video.is-err .fd-vid-sound { display: none; }
+
+/* Перегляд ролика на весь екран: чорне тло, рідне керування браузера (на iOS — саме
+   те, до якого люди звикли), закриття ✕ або свайпом униз. */
+.fd-vviewer { position: fixed; inset: 0; z-index: 3600; display: grid; place-items: center;
+  background: rgba(0,0,0, var(--vv-fade, 1)); }
+.fd-vviewer-el { width: 100%; max-height: 100%; max-height: 100dvh; background: #000; }
+
 .fd-viewer { position: fixed; inset: 0; z-index: 3600; background: rgba(0,0,0,0.96); }
 .fd-viewer-track { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   /* 🔑 `pan-x` віддає браузеру горизонтальне гортання (його нативний скрол
@@ -1113,6 +1147,26 @@
   background: rgba(0,0,0,0.6); color: #fff; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .fd-comp-thumb-x svg { width: 13px; height: 13px; }
 
+/* 🎬 Прев'ю ВІДЕО в композері (12.10). Кадр-обкладинка у пропорції 16:9 на всю ширину
+   форми (а не мініатюра 84px, як фото): ролик у дописі один, і людина має впізнати,
+   що саме обрала. Смуга прогресу — під кадром, поки ролик вантажиться. */
+.fd-comp-video { margin-bottom: 12px; }
+.fd-comp-vprev { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
+  background: #1c1d21; }
+.fd-comp-vprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-comp-vplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 52px; height: 52px; border-radius: 50%; background: var(--fd-media-chip); color: #fff;
+  display: grid; place-items: center; pointer-events: none; }
+.fd-comp-vplay svg { width: 24px; height: 24px; margin-left: 3px; }
+.fd-comp-vnote { position: absolute; left: 10px; bottom: 10px; color: #fff; font-size: 13px; font-weight: 600;
+  background: var(--fd-media-chip); padding: 4px 8px; border-radius: 8px; }
+.fd-comp-vprev .fd-comp-thumb-x { width: 28px; height: 28px; top: 8px; right: 8px; }
+.fd-comp-vbar { height: 4px; border-radius: 2px; background: var(--fd-chip); margin-top: 8px; overflow: hidden; }
+.fd-comp-vbar span { display: block; height: 100%; width: 0; background: var(--fd-accent); transition: width 0.2s linear; }
+/* Мітка тривалості — спільна для прев'ю і стрічки. */
+.fd-vid-dur { position: absolute; right: 10px; bottom: 10px; color: #fff; font-size: 12px; font-weight: 700;
+  font-variant-numeric: tabular-nums; background: rgba(0,0,0,0.6); padding: 3px 7px; border-radius: 6px; pointer-events: none; }
+
 /* Редактор сторінки (банер/аватар/опис) */
 .fd-edit-field { margin-bottom: 14px; }
 .fd-edit-label { font-size: 12px; font-weight: 700; color: var(--fd-muted); margin-bottom: 6px; }
@@ -1156,6 +1210,8 @@
 /* Другий ярус панелі: фото ліворуч, «Опублікувати» праворуч — та сама розкладка,
    що була в однорядковій панелі, просто тепер під вибором автора. */
 .fd-comp-actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+/* 12.10: поруч із фото — кнопка відео; обидві зліва, «Опублікувати» праворуч. */
+.fd-comp-actions .fd-comp-send { margin-left: auto; }
 /* ⚠️ Відступ згори — щоб панель не притискалась до тексту, який під неї заїжджає.
    Лінія над панеллю каже те саме, що й лінія під шапкою: «нижче — не текст, а дія».
    🛑 Модифікатор ВЛАСНИЙ, а не `--stack`: двоярусну панель уже вживає «Команда

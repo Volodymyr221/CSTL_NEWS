@@ -40,7 +40,7 @@ const WHITELIST = new Set([
   'window', 'document', 'localStorage', 'sessionStorage', 'fetch',
   'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
   'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback',
-  'IntersectionObserver', 'MutationObserver', 'ResizeObserver',
+  'IntersectionObserver', 'MutationObserver', 'ResizeObserver', 'XMLHttpRequest',
   'PerformanceObserver', 'URL', 'URLSearchParams', 'FormData', 'Blob',
   'File', 'FileReader', 'Image', 'HTMLElement', 'Element', 'Node',
   'NodeList', 'Event', 'CustomEvent', 'KeyboardEvent', 'TouchEvent',

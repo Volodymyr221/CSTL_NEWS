@@ -86,7 +86,8 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
       window.__cstlTables = ${JSON.stringify(tables)};
       const T = window.__cstlTables;
       const U = ${JSON.stringify(user)};
-      const SESSION = U ? { user: U } : null;
+      // 12.10: access_token — потрібен завантаженню відео (XHR у сховище бере токен із сесії).
+      const SESSION = U ? { user: U, access_token: 'test-token' } : null;
       const AUTH_SIGNAL = ${authSignal ? 'true' : 'false'};
       // 🆕 07.08 (B-30): { назваТаблиці: мс } — відповідь приходить ПІЗНО.
       // Живий телефон майже ніколи не встигає віддати все до першого рендера, і
@@ -529,6 +530,10 @@ export async function mockSupabase(page, tables = {}, opts = {}) {
             }
             return { data: null, error: null };
           },
+          // 12.10: Edge Functions (пуш підписникам після нового допису). У проді
+          // supa.functions є завжди; без заглушки створення допису падало в стенді
+          // ПІСЛЯ запису в базу — тобто стенд червонів би над справним застосунком.
+          functions: { invoke: async () => ({ data: null, error: null }) },
           storage: { from: () => ({
             upload: async () => ({ data: null, error: null }),
             getPublicUrl: () => ({ data: { publicUrl: '' } }),

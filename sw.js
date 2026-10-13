@@ -1,7 +1,7 @@
 // sw.js — «Громада» Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20261012-2322';
+const CACHE_NAME = 'cstl-20261013-0125';
 
 // 🔴 26.08 — ОКРЕМИЙ ВІЧНИЙ КЕШ ДЛЯ СТОРОННІХ БІБЛІОТЕК.
 // 🔑 Чому не в `STATIC_ASSETS`: `CACHE_NAME` міняється при КОЖНОМУ деплої, і передкеш
@@ -221,6 +221,14 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
   const url = new URL(e.request.url);
+
+  // 🎬 12.10 — ВІДЕО ЙДЕ ПОВЗ SERVICE WORKER. Без цього ролик потрапляв у гілку
+  // «чужий домен» нижче (`respondWith(fetch(...))`), а iOS Safari не грає відео, яке
+  // SW віддає без підтримки шматків (Range): «зависає на першому кадрі» або взагалі
+  // не стартує. Не перехоплюємо — браузер сам говорить зі сховищем, шматками, як треба.
+  // Кешувати ролики тут і не можна: 50 МБ на файл з'їли б сховище застосунку.
+  if (e.request.headers.has('range') || e.request.destination === 'video' ||
+      url.pathname.includes('/storage/v1/object/public/community-videos/')) return;
 
   // HTML-сторінки (index.html, корінь, навігаційні запити) — network-first
   // Критично для лічильника версії: завжди показуємо свіжий штамп часу деплою.

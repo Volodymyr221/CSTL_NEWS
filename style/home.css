@@ -1727,6 +1727,11 @@
    повернулась би вада 28.08, коли текст різало посеред літери.
    🛑 Стеля 400px недоторкана: віджет не росте, це пряма умова Вови. Тому кадри,
    вищі за наявне місце (4:5 і вужчі), обрізаються рамкою, як і раніше. */
+/* 🎬 12.10 — допис із відео: на обкладинці ▶, щоб було видно, що це ролик. */
+.hm-fd-p-img--video { position: relative; }
+.hm-fd-p-img--video::after { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(0,0,0,0.45) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M8 5.14v13.72a1 1 0 0 0 1.52 .85l11.02 -6.86a1 1 0 0 0 0 -1.7l-11.02 -6.86a1 1 0 0 0 -1.52 .85z'/%3E%3C/svg%3E") 55% 50% / 20px no-repeat; }
 .hm-fd-post--photo .hm-fd-p-img {
   flex: 0 1 auto;
   aspect-ratio: var(--hm-fd-ar, 16 / 9);
