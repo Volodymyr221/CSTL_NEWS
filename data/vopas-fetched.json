@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-10-13T11:18:35.220740+03:00",
+  "fetched_at": "2026-10-13T19:19:45.410535+03:00",
   "date": "13.10.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -72,8 +72,8 @@
       "carrier": "ПП \"ДЕНЕЙ\"",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
