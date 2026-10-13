@@ -1072,7 +1072,44 @@ function bumpRow(p) {
   return `<button class="pm-ad-bump" type="button" data-bump="${p.id}"><span class="pm-ad-bump-ic">${ICONS.arrowUp}</span>Підняти вгору</button>`;
 }
 
-export function openMyAds() {
+// ── «ВІДХИЛЕНЕ/ЗНЯТЕ Я ВЖЕ БАЧИВ» (13.10) ─────────────────────────────────────────
+// 🗣️ Вова: «тапнув на капсулу, побачив свої скасовані, повернувся — капсула досі
+// висить. Коли вона пропаде? Все життя?» Позначка: які відхилені оголошення людина
+// вже ПОБАЧИЛА у вкладці «Архів». Капсула на Громаді показує лише непобачені.
+// 📐 Ключ — id оголошення. Якщо людина виправила й подала знову (статус змінився),
+// капсула прибирає id з позначки (`pruneRejectedSeen`), і нове відхилення того самого
+// оголошення знову покажеться — інакше друге «знято» загубилось би назавжди.
+// ⚠️ На пристрої, не в базі: це «я бачив на ЦЬОМУ екрані», а не факт про оголошення.
+const REJ_SEEN = (uid) => `cstl-rejected-seen-v1:${uid || 'anon'}`;
+export function rejectedSeenIds(uid) {
+  try { return new Set(JSON.parse(localStorage.getItem(REJ_SEEN(uid)) || '[]').map(String)); } catch (_) { return new Set(); }
+}
+function saveRejectedSeen(uid, set) {
+  try { localStorage.setItem(REJ_SEEN(uid), JSON.stringify([...set])); } catch (_) {}
+}
+function markRejectedSeen(uid, posts) {
+  const seen = rejectedSeenIds(uid);
+  let нове = false;
+  for (const p of posts) if (p.status === 'rejected' && !seen.has(String(p.id))) { seen.add(String(p.id)); нове = true; }
+  if (!нове) return;
+  saveRejectedSeen(uid, seen);
+  // Екран оголошень відкритий ПОВЕРХ Громади — вкладка не міняється, тож без сигналу
+  // капсула не перерахувалась би, і людина побачила б її знову, повернувшись.
+  window.dispatchEvent(new CustomEvent('cstl-my-ads-seen'));
+}
+// Забути тих, хто вже не відхилений (подали знову / відновили): їхнє наступне
+// відхилення має знову дійти до людини.
+export function pruneRejectedSeen(uid, posts) {
+  const seen = rejectedSeenIds(uid);
+  const відхилені = new Set(posts.filter(p => p.status === 'rejected').map(p => String(p.id)));
+  const лишити = new Set([...seen].filter(id => відхилені.has(id)));
+  if (лишити.size !== seen.size) saveRejectedSeen(uid, лишити);
+  return лишити;
+}
+
+// startFilter — з якої вкладки відкрити (13.10: капсула «відхилено» веде в «Архів»,
+// «на модерації» — у «На модерації»; Вова: «перекидає в активні, а має в архів»).
+export function openMyAds(startFilter = 'active') {
   requireAuth('переглянути ваші оголошення', async () => {
     const me = currentUserId();
     const api = buildScreen(`
@@ -1081,9 +1118,9 @@ export function openMyAds() {
         <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${ICONS.clipboard}</span>Мої оголошення</div></div>
       </header>
       <div class="pm-ad-tabs">
-        <button class="pm-ad-tab active" type="button" data-filter="active">Активні</button>
-        <button class="pm-ad-tab" type="button" data-filter="moderation">На модерації</button>
-        <button class="pm-ad-tab" type="button" data-filter="archive">Архів</button>
+        <button class="pm-ad-tab${startFilter === 'active' ? ' active' : ''}" type="button" data-filter="active">Активні</button>
+        <button class="pm-ad-tab${startFilter === 'moderation' ? ' active' : ''}" type="button" data-filter="moderation">На модерації</button>
+        <button class="pm-ad-tab${startFilter === 'archive' ? ' active' : ''}" type="button" data-filter="archive">Архів</button>
       </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">Завантаження…</div></div>
       <button class="pm-fab-ad" type="button" data-new-ad aria-label="Нове оголошення">${EDIT_ICON_SVG}</button>
@@ -1104,7 +1141,7 @@ export function openMyAds() {
     const unreadFor = (postId) => (byPost.get(postId) || []).reduce((s, t) => s + (unread.get(t.id) || 0), 0);
     const threadsFor = (postId) => (byPost.get(postId) || []).length;
 
-    let filter = 'active';
+    let filter = ['active', 'moderation', 'archive'].includes(startFilter) ? startFilter : 'active';
 
     // Іконки для свайп-дій картки оголошення (ті самі стилі, що у списку розмов)
     const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
@@ -1219,6 +1256,8 @@ export function openMyAds() {
         return;
       }
       listEl.innerHTML = list.map(adCard).join('');
+      // Людина відкрила «Архів» і бачить свої відхилені — це і є «переглянуто».
+      if (filter === 'archive') markRejectedSeen(me, list);
     }
     render();
 
