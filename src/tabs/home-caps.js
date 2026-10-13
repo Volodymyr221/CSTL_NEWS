@@ -84,7 +84,7 @@ import {
 } from './buses.js';
 import { canonicalPlace, SETTLEMENTS } from '../core/settlements.js';
 import { openAdModalStandalone } from './board.js';
-import { openMyAds, openThreadsList, openThreadById, unreadTopCached } from './board-chat.js';
+import { openMyAds, openThreadsList, openThreadById, unreadTopCached, pruneRejectedSeen } from './board-chat.js';
 import { answersCount, openChatModal, discussionsReady, unreadQuestions } from './board-discussions.js';
 import { focusFeedPost } from './feed.js';
 
@@ -337,9 +337,17 @@ async function myCapsule() {
 
   // Відхилене важливіше за те, що ще розглядають: там від людини чекають дії
   // (виправити й подати знову), а тут — лише чекання.
-  const rejected = mine.filter(p => p.status === 'rejected');
+  // 🔴 13.10 — ЛИШЕ НЕПОБАЧЕНІ ВІДХИЛЕНІ. Вова: «переглянув свої скасовані, повернувся —
+  // капсула досі висить; вона що, все життя буде?» Побаченими вважаємо ті, що людина
+  // відкрила у вкладці «Архів» (`markRejectedSeen`, board-chat.js). Нове відхилення —
+  // знову капсула.
+  const бачені = pruneRejectedSeen(uid, mine);
+  const rejected = mine.filter(p => p.status === 'rejected' && !бачені.has(String(p.id)));
   const pending  = mine.filter(p => p.status === 'pending');
-  const pick = rejected.length ? { list: rejected, word: 'Відхилено' }
+  // «Знято» чи «Відхилено»: адмін знімає з публікації вже опубліковане (є
+  // `published_at`) або відхиляє на модерації. Людині це різні новини.
+  const знято = rejected.length && rejected.every(p => p.published_at);
+  const pick = rejected.length ? { list: rejected, word: знято ? 'Знято' : 'Відхилено', rej: true }
              : pending.length  ? { list: pending,  word: 'На модерації' }
              : null;
   if (!pick) return null;
@@ -351,8 +359,9 @@ async function myCapsule() {
   // ⚠️ Поле може бути порожнім двома різними шляхами, і обидва законні: міграція
   // ще не накатана (`scripts/supabase_reject_reason.sql`) або адмін причини не
   // вписав. Тому це НЕ обовʼязкова частина — рядок мусить лишатись осмисленим без неї.
-  const причина = (n === 1 && pick.word === 'Відхилено' && один.reject_reason
-    ? String(один.reject_reason).trim() : '');
+  // 13.10: і для кількох — якщо причина в усіх ОДНА (адмін зняв пачку з одного приводу).
+  const причини = pick.rej ? [...new Set(pick.list.map(p => String(p.reject_reason || '').trim()))] : [];
+  const причина = (причини.length === 1 && причини[0]) ? причини[0] : '';
 
   return {
     key: 'mine', icon: ICONS.user,
@@ -368,10 +377,12 @@ async function myCapsule() {
     // Причина важливіша за назву: назва вже стоїть у мітці стану, а причина —
     // єдине, що каже, ЩО РОБИТИ далі. Немає причини → назва.
     valueVariants: n > 1
-      ? [`${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')}`]
+      ? (причина ? [`${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')} · ${причина}`, `${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')}`]
+                 : [`${n} ${plural(n, 'оголошення', 'оголошення', 'оголошень')}`])
       : (причина ? [причина, назва] : [назва]),
     rank: rejected.length ? RANK.AD_REJECTED : RANK.AD_PENDING,
-    tap: () => openMyAds(),
+    // 🔴 13.10 — у ТУ вкладку, про яку капсула (Вова: «перекидає в активні, а має в архів»).
+    tap: () => openMyAds(pick.rej ? 'archive' : 'moderation'),
   };
 }
 
@@ -1597,6 +1608,9 @@ function wireCapsRefresh() {
   // Зліпок непрочитаного оновився (вхід, push, realtime, прочитання розмови) —
   // капсула повідомлень мусить зʼявитись/зникнути тим самим кроком, що й бейджі.
   window.addEventListener('cstl-unread-changed', () => renderHomeCaps());
+  // 🔴 13.10 — людина переглянула відхилені в «Архіві» → капсула гасне одразу, а не
+  // після перезапуску (екран оголошень лежить поверх Громади, вкладка не міняється).
+  window.addEventListener('cstl-my-ads-seen', () => renderHomeCaps());
   // 🔴 22.08 — під моїм дописом у Стрічці щойно відповіли (подію кидає ЖИВА
   // підписка самої Стрічки, вже відфільтрована по «це моє» — див.
   // `notifyCapsIfMine` у tabs/feed.js). Своєї підписки тут немає навмисно:
