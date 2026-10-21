@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "21.10.2026",
-  "updatedTime": "04:54",
+  "updatedTime": "10:22",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -4304,7 +4304,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -4396,7 +4396,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -4488,7 +4488,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:50",
           "arrival_time": "09:00",
           "duration_min": 70,
@@ -4530,7 +4530,7 @@
           "bus": "Баз  А 091",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:10",
           "arrival_time": "10:50",
           "duration_min": 100,
@@ -4572,7 +4572,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:20",
           "arrival_time": "10:15",
           "duration_min": 55,
@@ -4659,7 +4659,7 @@
           "bus": "БАЗ-А079.19",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:05",
           "arrival_time": "12:05",
           "duration_min": 120,
@@ -4756,7 +4756,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -5334,8 +5334,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -6236,7 +6236,7 @@
         }
       ],
       "fetchedAt": "21.10.2026",
-      "fetchedTime": "04:54"
+      "fetchedTime": "10:22"
     },
     "2026-10-22": {
       "routes": [
@@ -8370,7 +8370,7 @@
         }
       ],
       "fetchedAt": "21.10.2026",
-      "fetchedTime": "04:54"
+      "fetchedTime": "10:22"
     },
     "2026-10-23": {
       "routes": [
