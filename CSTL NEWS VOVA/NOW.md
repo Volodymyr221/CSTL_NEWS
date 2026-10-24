@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-24 15:21 UTC
+**Зріз на:** 2026-10-24 20:19 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/dreamy-archimedes-qpd9ke` |
-| останній коміт людини | `b3d573623` 24.10 15:21 — docs: аудит безпеки за скілом Cloudflare + передача в новий чат — 24.10 |
+| гілка | `claude/startuem-318d87` |
+| останній коміт людини | `1d9fc3a4` 24.10 20:18 — video: скіл проєкту + набір launch-film/shotcraft (4 ролики) + правило Вови «відео — лише через video-shotcraft» |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261014-0038` |
-| останній PR у `main` | не видно в останніх комітах |
+| останній PR у `main` | #1288 |
 | стендів на диску | 194 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-24 | є ✅ |
@@ -24,18 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `.claude/skills/video/SKILL.md`
+- `CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/docs/AUDYT_BEZPEKY_2026-10-24.md`
-- `_session-log/vova-2026-10-24.md`
+- `_session-log/vova-2026-10-24b.md`
+- `launch-film/shotcraft/README.md`
+- `launch-film/shotcraft/film/package.json`
+- `launch-film/shotcraft/film/public/textures/cuts.json`
+- `launch-film/shotcraft/film/remotion.config.ts`
+- …ще 46 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `b3d573623` 24.10 15:21 — docs: аудит безпеки за скілом Cloudflare + передача в новий чат — 24.10
-- `871f25797` 24.10 12:41 — ai(news): памʼять+чернетки+витрати 24.10 12:41 UTC
-- `6a8e8497f` 24.10 07:18 — ai(news): памʼять+чернетки+витрати 24.10 07:18 UTC
-- `d28c97724` 24.10 01:36 — ai(news): памʼять+чернетки+витрати 24.10 01:36 UTC
-- `20cbdeb92` 23.10 22:19 — ai(news): памʼять+чернетки+витрати 23.10 22:19 UTC
+- `1d9fc3a4` 24.10 20:18 — video: скіл проєкту + набір launch-film/shotcraft (4 ролики) + правило Вови «відео — лише через video-shotcraft»
+- `b7e5b39a` 24.10 20:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `19772f67` 24.10 20:10 — docs(log): промо з голосом Вови
+- `a6b42f43` 24.10 19:49 — docs(log): промо — жива карта громади замість фото
+- `cfe03f54` 24.10 19:38 — docs(log): промо під текст Вови — чернетка
 
 <!-- AUTO:END -->
 
