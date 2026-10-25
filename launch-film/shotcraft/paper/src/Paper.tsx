@@ -41,9 +41,9 @@ const Notice: React.FC = () => (
     <div style={{ position: 'absolute', left: 300, top: 360, width: 480, height: 620, background: '#FBF8F0', transform: 'rotate(-2.5deg)', boxShadow: '0 18px 30px rgba(40,30,20,0.18)' }}>
       <div style={{ position: 'absolute', left: 170, top: -14, width: 140, height: 34, background: 'rgba(230,220,180,0.75)', transform: 'rotate(3deg)' }} />
       <div style={{ padding: '54px 40px 0', fontFamily: '"JetBrains Mono", monospace', color: INK.dark }}>
-        <div style={{ fontSize: 58, fontWeight: 800, letterSpacing: '0.04em' }}>ПРОДАМ</div>
-        <div style={{ fontSize: 34, fontWeight: 600, marginTop: 14, lineHeight: 1.25 }}>Картоплю<br />домашню,<br />мішками</div>
-        <div style={{ fontSize: 26, marginTop: 18, opacity: 0.8 }}>дзвонити ввечері</div>
+        <div style={{ fontSize: 50, fontWeight: 800, letterSpacing: '0.03em', lineHeight: 1.05 }}>РЕМОНТ<br />ТЕХНІКИ</div>
+        <div style={{ fontSize: 30, fontWeight: 600, marginTop: 16, lineHeight: 1.25 }}>Телефони, ноутбуки,<br />пральні машини</div>
+        <div style={{ fontSize: 24, marginTop: 16, opacity: 0.8 }}>діагностика безкоштовно</div>
       </div>
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 170, display: 'flex', borderTop: `2px dashed ${INK.dark}66` }}>
         {Array.from({ length: 8 }, (_, i) => (
@@ -99,7 +99,7 @@ const Rumors: React.FC = () => {
 type Pair = { tag: string; before: string; after: string; art: React.ReactNode; shot: string; cy: number };
 
 const PAIRS: Pair[] = [
-  { tag: 'ОГОЛОШЕННЯ', before: 'Папірець на стовпі', after: 'Дошка оголошень', art: <Notice />, shot: '05-doshka.png', cy: 400 },
+  { tag: 'ОГОЛОШЕННЯ', before: 'Папірець на стовпі', after: 'Дошка оголошень', art: <Notice />, shot: '05-doshka-v2.png', cy: 400 },
   { tag: 'АВТОБУСИ', before: 'Розклад на зупинці', after: 'Розклад наживо', art: <BusSheet />, shot: '06-avtobusy.png', cy: 380 },
   { tag: 'НОВИНИ', before: '«Сусідка казала…»', after: 'Пост від громади', art: <Rumors />, shot: '03-strichka.png', cy: 330 },
 ];
