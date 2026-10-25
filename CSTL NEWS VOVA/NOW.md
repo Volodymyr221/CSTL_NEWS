@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-25 19:02 UTC
+**Зріз на:** 2026-10-25 21:55 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-318d87` |
-| останній коміт людини | `9294c77d` 25.10 19:02 — docs: NOW і SESSION_STATE — ролики 24-25.10 і фон Громади (варіант Б) |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261025-1837` |
-| останній PR у `main` | не видно в останніх комітах |
+| останній коміт людини | `b37a46df` 25.10 21:55 — Громада: фон «Г · тихе тло» — бордо сяйвом за привітанням, далі теплий майже-чорний; капсули й контакти — нейтральне скло |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261025-2139` |
+| останній PR у `main` | #1289 |
 | стендів на диску | 194 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-25 | **НЕМАЄ** ⚠️ |
@@ -24,23 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.claude/skills/video/SKILL.md`
-- `CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-24b.md`
-- `bundle.js`
-- `launch-film/shoot.mjs`
-- `launch-film/shotcraft/README.md`
-- …ще 74 (повністю — `git diff --name-only origin/main..HEAD`)
+- `style.min.css`
+- `style/home.css`
+- `sw.js`
+- `tests/_lib.mjs`
+- `tests/articles-split.mjs`
+- …ще 1 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `9294c77d` 25.10 19:02 — docs: NOW і SESSION_STATE — ролики 24-25.10 і фон Громади (варіант Б)
-- `8d1fcb0c` 25.10 19:02 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
-- `9ab2980f` 25.10 18:52 — Громада: фон без фото — фірмовий бордовий градієнт (варіант Б, відкат одним рядком)
-- `ca39b0d5` 25.10 18:24 — docs(log): фон Громади — три варіанти, думка, нагадування про запуск
-- `9d0fd7f7` 25.10 18:23 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `b37a46df` 25.10 21:55 — Громада: фон «Г · тихе тло» — бордо сяйвом за привітанням, далі теплий майже-чорний; капсули й контакти — нейтральне скло
+- `2cceee2c` 25.10 21:55 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `a6a6d082` 25.10 21:38 — tests: три стенди-прилади — articles-split міряє до/після, chromiumPath знає chrome-linux64, контроль tab-return-repaint не залежить від кешу зображень
+- `67d50a6a` 25.10 21:16 — docs(log): правда про повний npm test після /finish
+- `6abb4d43` 25.10 19:38 — ai(news): памʼять+чернетки+витрати 25.10 19:38 UTC
 
 <!-- AUTO:END -->
 
