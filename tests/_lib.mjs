@@ -42,7 +42,10 @@ export function chromiumPath() {
   const full = dirs.filter(d => /^chromium(-\d+)?$/.test(d)).sort().reverse();
   const shell = dirs.filter(d => d.startsWith('chromium_headless_shell')).sort().reverse();
   const candidates = [];
-  for (const d of full) candidates.push(join(base, d, 'chrome-linux', 'chrome'), join(base, d, 'chrome'));
+  // 🔴 25.10: новіші збірки Playwright кладуть браузер у `chrome-linux64/`. Без цього
+  // рядка функція мовчки скочувалась на `headless_shell` — і `dev-lock` червонів на
+  // справному замку (урізаний браузер ігнорує `--unsafely-treat-insecure-origin-as-secure`).
+  for (const d of full) candidates.push(join(base, d, 'chrome-linux64', 'chrome'), join(base, d, 'chrome-linux', 'chrome'), join(base, d, 'chrome'));
   for (const d of shell) candidates.push(join(base, d, 'chrome-headless-shell-linux64', 'chrome-headless-shell'));
   for (const c of candidates) if (existsSync(c)) return c;
   return undefined;   // undefined → Playwright візьме свій вбудований
