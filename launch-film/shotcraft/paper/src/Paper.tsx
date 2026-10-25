@@ -101,7 +101,7 @@ type Pair = { tag: string; before: string; after: string; art: React.ReactNode; 
 const PAIRS: Pair[] = [
   { tag: 'ОГОЛОШЕННЯ', before: 'Папірець на стовпі', after: 'Дошка оголошень', art: <Notice />, shot: '05-doshka-v2.png', cy: 400 },
   { tag: 'АВТОБУСИ', before: 'Розклад на зупинці', after: 'Розклад наживо', art: <BusSheet />, shot: '06-avtobusy.png', cy: 380 },
-  { tag: 'НОВИНИ', before: '«Сусідка казала…»', after: 'Пост від громади', art: <Rumors />, shot: '03-strichka.png', cy: 330 },
+  { tag: 'СТРІЧКА', before: '«Сусідка казала…»', after: 'Спільноти громади', art: <Rumors />, shot: '03-strichka-v2.png', cy: 330 },
 ];
 
 const PAIR_DUR = 178;           // 5.9 с на пару
