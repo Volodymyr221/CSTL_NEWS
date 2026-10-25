@@ -4,6 +4,11 @@ s=open('shoot.mjs').read()
 s=s.replace("from 'playwright'","from '/opt/node22/lib/node_modules/playwright/index.mjs'")
 s=s.replace("const OUT = join(ТУТ, 'shots');", "const OUT = '"+SP+"/howto/"+os.environ.get('OUTDIR','explore')+"';")
 s=s.replace("}, { profiles: [","}, { user: { id: 'u-me', email: 'oleh@example.com', user_metadata: { name: 'Олег' } }, profiles: [ { uid: 'u-me', name: 'Олег', surname: 'Коваль', avatar_url: '' },")
+# 🔑 25.10 — безпечні зони iPhone (верх 47 · низ 34): застосунок сам ставить шапку під
+# смугу годинника і піднімає таб-бар, як на справжньому телефоні. Вимкнути: SAFE=0.
+if os.environ.get('SAFE','1')!='0':
+    s=s.replace("await p.goto(url,", """await (await ctx.newCDPSession(p)).send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 47, bottom: 34, left: 0, right: 0 } });
+await p.goto(url,""",1)
 s=s.replace("await p.goto(url,", """const BAD=/загиб|загин|вбит|поранен|атакува|попрощал|Герой|Героя|війн|ракет|обстріл|санкці/i;
 await p.route('**/data/articles*.json*', async r => { const resp = await r.fetch(); let j = await resp.json();
   const f = a => (a||[]).filter(x => !BAD.test((x.title||'')+' '+(x.category||'')) && x.category!=='Війна' && x.category!=='Надзвичайне');

@@ -28,3 +28,22 @@ comments = """[
 ]"""
 s = s[:c] + f"page_reactions: {reacts}, page_comments: {comments}" + s[c + len("page_reactions: [], page_comments: []"):]
 open(p, 'w').write(s)
+
+# Міські оголошення Дошки (25.10, «не картоплю, щось серйозніше»)
+s = open(p).read()
+a = s.index("const ОГОЛОШЕННЯ = ["); b = s.index("].map((o, i) => ({ photos: [], status: 'published'", a)
+s = s[:a] + '''const ОГОЛОШЕННЯ = [
+  { id: 801, type: 'board', category: 'послуга', title: 'Ремонт телефонів і ноутбуків',
+    text: 'Заміна екрана й батареї, чистка, налаштування. Діагностика безкоштовно.',
+    price: null, price_negotiable: true, location: 'Олика', author: 'Дмитро', owner_uid: 'u2' },
+  { id: 802, type: 'board', category: 'продам', title: 'iPhone 13, 128 ГБ, стан ідеальний',
+    text: 'Батарея 89%, повний комплект і чек. Можна перевірити на місці.',
+    price: 14500, currency: 'UAH', location: 'Олика', author: 'Ірина', owner_uid: 'u3' },
+  { id: 803, type: 'board', category: 'послуга', title: 'Ремонт покрівлі, бригада з Олики',
+    text: 'Металочерепиця, профнастил, ремонт старого даху. Виїзд по громаді.',
+    price: null, price_negotiable: true, location: 'Олицька громада', author: 'Сергій', owner_uid: 'u4' },
+  { id: 804, type: 'board', category: 'шукаю', title: 'Шукаю бухгалтера на неповний день',
+    text: 'Невелике підприємство в Олиці. Досвід із ФОП, гнучкий графік.',
+    price: null, location: 'Олика', author: 'Олена', owner_uid: 'u5' },
+''' + s[b:]
+open(p, 'w').write(s)

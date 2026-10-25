@@ -50,7 +50,33 @@ export type Cam = { z: number; cx: number; cy: number; rotX?: number; rotY?: num
  * растеризуються вже на збільшеному розмірі й текст лишається різким
  * (video-shotcraft, aesthetic-rules Q2). Координати дітей — CSS px екрана 390×844.
  */
-export const Phone: React.FC<{ cam: Cam; children: React.ReactNode; shadow?: number }> = ({ cam, children, shadow = 1 }) => {
+/**
+ * Те, що iPhone малює поверх застосунку: смуга статусу (час, звʼязок, батарея),
+ * «острівець» камери і нижня риска. Знімки мають безпечні зони (mk.py, верх 47 · низ 34),
+ * тож застосунок сам лишає під це місце — як на справжньому телефоні (25.10, скарга Вови:
+ * «скрін… зверху по кутах трішки обрізається… має бути геть як в телефоні»).
+ */
+export const IOSChrome: React.FC<{ dark?: boolean }> = ({ dark = false }) => {
+  const c = dark ? '#111' : '#fff';
+  return (
+    <>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 47, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', left: 38, top: 15, fontFamily: '-apple-system, "Inter", sans-serif', fontWeight: 600, fontSize: 16.5, color: c, letterSpacing: '-0.01em' }}>9:41</div>
+        <div style={{ position: 'absolute', left: 195 - 62, top: 11, width: 124, height: 36, borderRadius: 18, background: '#000' }} />
+        <svg style={{ position: 'absolute', right: 30, top: 17 }} width="70" height="13" viewBox="0 0 70 13">
+          {[0, 1, 2, 3].map((i) => <rect key={i} x={i * 5} y={10 - i * 3} width="3.4" height={3 + i * 3} rx="0.9" fill={c} />)}
+          <path d="M30 4.3a8.6 8.6 0 0 1 11.6 0l-1.2 1.3a6.9 6.9 0 0 0-9.2 0zM32.4 6.8a5.2 5.2 0 0 1 6.8 0l-1.2 1.3a3.5 3.5 0 0 0-4.4 0zM34.6 9.4l1.2-1.2 1.2 1.2-1.2 1.3z" fill={c} />
+          <rect x="46.5" y="1.5" width="20" height="10" rx="3" fill="none" stroke={c} strokeOpacity="0.45" />
+          <rect x="48.3" y="3.3" width="14" height="6.4" rx="1.6" fill={c} />
+          <rect x="67.6" y="4.8" width="1.6" height="3.6" rx="0.8" fill={c} fillOpacity="0.45" />
+        </svg>
+      </div>
+      <div style={{ position: 'absolute', left: 195 - 67, bottom: 8, width: 134, height: 5, borderRadius: 3, background: '#111', opacity: 0.85 }} />
+    </>
+  );
+};
+
+export const Phone: React.FC<{ cam: Cam; children: React.ReactNode; shadow?: number; chrome?: boolean }> = ({ cam, children, shadow = 1, chrome = true }) => {
   const Z = PHONE_K * cam.z;
   const fy = cam.fy ?? 960;
   const tx = 540 / Z - cam.cx;
@@ -74,6 +100,7 @@ export const Phone: React.FC<{ cam: Cam; children: React.ReactNode; shadow?: num
         {/* екран */}
         <div style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, borderRadius: 50, overflow: 'hidden', background: '#fff' }}>
           {children}
+          {chrome ? <IOSChrome /> : null}
         </div>
       </div>
     </AbsoluteFill>

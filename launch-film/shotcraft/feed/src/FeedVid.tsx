@@ -8,7 +8,7 @@ import TAPS from '../public/textures/taps.json';
 // Прийоми video-shotcraft: orbit-ring-title-open (спільноти кружляють довкола назви),
 // 2.5D-камера над справжніми знімками, палець показує натиск.
 type Box = { x: number; y: number; w: number; h: number };
-const TP = TAPS as Record<string, Box>;
+const TP = TAPS as unknown as Record<string, Box>;
 export const FMT = { story: { W: 1080, H: 1920 }, post: { W: 1080, H: 1350 } };
 type Fmt = keyof typeof FMT;
 const FmtCtx = React.createContext<Fmt>('story');
@@ -113,8 +113,10 @@ const Scroll: React.FC<{ dur: number }> = ({ dur }) => {
       <AppBackdrop />
       <Phone cam={{ ...c, rotX: kf(f, [[0, 22], [30, 4], [dur, 2]], rise) }}>
         <div style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 2400, transform: `translateY(${-sc}px)` }}><Shot src="F5-tall.png" h={2400} /></div>
-        <Img src={tex('F0.png')} style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, clipPath: 'inset(0 0 783px 0)' }} />
-        <Img src={tex('F0.png')} style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, clipPath: 'inset(774px 0 0 0)' }} />
+        <Img src={tex('F0.png')} style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, clipPath: 'inset(0 0 736px 0)' }} />
+        <Img src={tex('F0.png')} style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, clipPath: 'inset(753px 0 0 0)' }} />
+        {/* кругла кнопка «Громада» виступає над баром — накладаємо і її (заміряно: обідок 730, світіння від 712) */}
+        <Img src={tex('F0.png')} style={{ position: 'absolute', left: 0, top: 0, width: 390, height: 844, clipPath: 'circle(33px at 195px 759px)' }} />
       </Phone>
       <Label kicker="01 · СТРІЧКА" text="Дописи всіх спільнот — в одній стрічці" dur={dur} />
     </AbsoluteFill>
@@ -135,7 +137,7 @@ const Community: React.FC<{ dur: number }> = ({ dur }) => {
         <Shot src="F0.png" />
         {f >= TAP + 4 ? <div style={{ position: 'absolute', inset: 0, transform: `translateX(${(1 - slide) * 390}px)`, boxShadow: '-20px 0 40px rgba(0,0,0,0.18)' }}><Shot src="F4-page.png" /></div> : null}
         {/* дзвіночок спільноти: лише підсвітка, натиску не показуємо (див. звіт) */}
-        <div style={{ position: 'absolute', left: 350 - 6, top: 8 - 6, width: 52, height: 52, borderRadius: 26, boxShadow: `0 0 0 ${3 * bell}px rgba(255,255,255,0.95), 0 0 24px ${8 * bell}px rgba(255,200,210,${0.5 * bell})`, opacity: bell > 0 ? 1 : 0 }} />
+        <div style={{ position: 'absolute', left: 350 - 6, top: 47 + 8 - 6, width: 52, height: 52, borderRadius: 26, boxShadow: `0 0 0 ${3 * bell}px rgba(255,255,255,0.95), 0 0 24px ${8 * bell}px rgba(255,200,210,${0.5 * bell})`, opacity: bell > 0 ? 1 : 0 }} />
         <Tap box={TP.circle2} at={TAP} f={f} />
       </Phone>
       <Label kicker="02 · СПІЛЬНОТИ" text="Кожна спільнота — своя сторінка" dur={dur} />
