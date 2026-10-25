@@ -100,9 +100,12 @@ const { ctx, p } = await open({ viewport: { width: 1440, height: 900 } });
     return { top: Math.round(r.top), radius: cs.borderTopLeftRadius, border: cs.borderTopWidth }; });
   ok('🖥 бордова шапка Громади — картка з полем зверху й заокругленими кутами (верх на одній лінії з меню, 16px)',
      шапка && Math.abs(шапка.top - 16) <= 1 && шапка.radius === '20px' && шапка.border === '0px', JSON.stringify(шапка));
-  // Вова 08.10: «без фото головна не йде — втрачає стиль». Фото лишається тлом Громади.
-  const фото = await p.evaluate(() => getComputedStyle(document.querySelector('.hm-bg') || document.body).display);
-  ok('🖥 Громада на компʼютері — з фото на тлі (без нього капсули й скло втрачають стиль)', фото !== 'none', фото);
+  // Вова 08.10: «без фото головна не йде — втрачає стиль» (тоді пробували ГОЛИЙ фон).
+  // 25.10 фото знято на користь фірмового бордо («Роби Б»), але сенс правила той самий:
+  // під «склом» капсул мусить лежати ТЕМНЕ тло, а не порожнеча. Міряємо шар і його колір.
+  const тло = await p.evaluate(() => { const b = document.querySelector('.hm-bg'); if (!b) return null;
+    const cs = getComputedStyle(b); return { display: cs.display, bg: cs.backgroundImage !== 'none' || cs.backgroundColor !== 'rgba(0, 0, 0, 0)' }; });
+  ok('🖥 Громада на компʼютері — з темним тлом під склом капсул (фото або фірмовий бордо)', тло && тло.display !== 'none' && тло.bg, JSON.stringify(тло));
   const значок = await p.evaluate(() => {
     const c = document.querySelector('.tab-bar .tab-home-circle'); const cs = getComputedStyle(c);
     const l = [...document.querySelectorAll('.tab-bar .tab-item .tab-label')].map(x => Math.round(x.getBoundingClientRect().left));

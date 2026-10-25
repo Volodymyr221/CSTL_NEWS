@@ -1,0 +1,13 @@
+const L = {};
+const bb = async (k, loc) => { const b = await loc.boundingBox().catch(() => null); L[k] = b && { x: b.x, y: b.y, w: b.width, h: b.height }; };
+await кадр('F0b', { tab: 'shotam' });
+await bb('circle2', p.locator('.fd-circle:visible').nth(1));
+await bb('like1', p.locator('.fd-like:visible').first());
+await bb('remind', p.locator('.fd-remind-btn:visible').first());
+await bb('cbtn2', p.locator('.fd-cbtn:visible').nth(1));
+await bb('event', p.locator('.fd-post:visible, .fd-card:visible').nth(1));
+await p.locator('.fd-circle:visible').nth(1).click({ force: true }); await p.waitForTimeout(1800); await shot('F4-page'); await dump('page');
+await p.goBack().catch(() => {}); await p.waitForTimeout(1500);
+await p.setViewportSize({ width: 390, height: 2400 }); await p.waitForTimeout(1500);
+await кадр('F5-tall');
+(await import('fs')).writeFileSync(OUT + '/taps.json', JSON.stringify(L, null, 1)); console.log(JSON.stringify(L));
