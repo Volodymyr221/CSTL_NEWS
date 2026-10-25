@@ -9,17 +9,17 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-24 20:19 UTC
+**Зріз на:** 2026-10-25 19:02 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-318d87` |
-| останній коміт людини | `1d9fc3a4` 24.10 20:18 — video: скіл проєкту + набір launch-film/shotcraft (4 ролики) + правило Вови «відео — лише через video-shotcraft» |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261014-0038` |
-| останній PR у `main` | #1288 |
+| останній коміт людини | `8d1fcb0c` 25.10 19:02 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261025-1837` |
+| останній PR у `main` | не видно в останніх комітах |
 | стендів на диску | 194 |
-| незакомічених файлів | 0 ✅ |
-| журнал за 2026-10-24 | є ✅ |
+| незакомічених файлів | 3 ⚠️ |
+| журнал за 2026-10-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
@@ -28,19 +28,19 @@
 - `CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
 - `_session-log/vova-2026-10-24b.md`
+- `bundle.js`
+- `launch-film/shoot.mjs`
 - `launch-film/shotcraft/README.md`
-- `launch-film/shotcraft/film/package.json`
-- `launch-film/shotcraft/film/public/textures/cuts.json`
-- `launch-film/shotcraft/film/remotion.config.ts`
-- …ще 46 (повністю — `git diff --name-only origin/main..HEAD`)
+- `launch-film/shotcraft/feed/cap-all.mjs`
+- …ще 73 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `1d9fc3a4` 24.10 20:18 — video: скіл проєкту + набір launch-film/shotcraft (4 ролики) + правило Вови «відео — лише через video-shotcraft»
-- `b7e5b39a` 24.10 20:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
-- `19772f67` 24.10 20:10 — docs(log): промо з голосом Вови
-- `a6b42f43` 24.10 19:49 — docs(log): промо — жива карта громади замість фото
-- `cfe03f54` 24.10 19:38 — docs(log): промо під текст Вови — чернетка
+- `8d1fcb0c` 25.10 19:02 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `9ab2980f` 25.10 18:52 — Громада: фон без фото — фірмовий бордовий градієнт (варіант Б, відкат одним рядком)
+- `ca39b0d5` 25.10 18:24 — docs(log): фон Громади — три варіанти, думка, нагадування про запуск
+- `9d0fd7f7` 25.10 18:23 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `c1f8cf66` 25.10 18:22 — video: екран як на справжньому iPhone — безпечні зони в зйомці + смуга статусу, острівець і риска в рамці
 
 <!-- AUTO:END -->
 
@@ -87,6 +87,8 @@
 огляд · тизер у біт · інструкція Дошки з озвучкою · промо під голос Вови (9:16 і 1:1).
 🔴 **Правило Вови: будь-яке відео — лише через цей скіл** → `.claude/skills/video/`,
 код і граблі — `launch-film/shotcraft/README.md`. Відео-файли в git НЕ лежать.
+🎬 25.10: ще 2 ролики (`paper/` 4:5 · `feed/` Стрічка 9:16+4:5), екран як iPhone (`IOSChrome`).
+🎨 **Фон Громади без фото — бордовий градієнт** (варіант Б, `hm-bg--brand`; відкат — розкоментувати `<img>` у `community.js`).
 
 ## 🚧 НЕ ДОРОБЛЕНО
 
@@ -106,6 +108,7 @@
 4. 🟡 **`weather` 26/27** — опис 13px: 14 чи 12? (реєстр Г).
 5. 🔑 **Код заслінки** після гранту — змінити.
 6. Стеля `3`/добу і вікно `6:00-9:00` — лишаю як є, доки не скажеш інакше.
+7. 🎬 Перезняти старі ролики (огляд/тизер/інструкція) з новою рамкою й «міськими» оголошеннями? Перезаписати 2 фрази ElevenLabs із «Громада»?
 
 ## ➡️ ДАЛІ
 
