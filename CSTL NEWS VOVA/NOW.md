@@ -14,11 +14,11 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-318d87` |
-| останній коміт людини | `8d1fcb0c` 25.10 19:02 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87 |
+| останній коміт людини | `9294c77d` 25.10 19:02 — docs: NOW і SESSION_STATE — ролики 24-25.10 і фон Громади (варіант Б) |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261025-1837` |
 | останній PR у `main` | не видно в останніх комітах |
 | стендів на диску | 194 |
-| незакомічених файлів | 3 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-25 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -27,20 +27,20 @@
 - `.claude/skills/video/SKILL.md`
 - `CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-24b.md`
 - `bundle.js`
 - `launch-film/shoot.mjs`
 - `launch-film/shotcraft/README.md`
-- `launch-film/shotcraft/feed/cap-all.mjs`
-- …ще 73 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 74 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `9294c77d` 25.10 19:02 — docs: NOW і SESSION_STATE — ролики 24-25.10 і фон Громади (варіант Б)
 - `8d1fcb0c` 25.10 19:02 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
 - `9ab2980f` 25.10 18:52 — Громада: фон без фото — фірмовий бордовий градієнт (варіант Б, відкат одним рядком)
 - `ca39b0d5` 25.10 18:24 — docs(log): фон Громади — три варіанти, думка, нагадування про запуск
 - `9d0fd7f7` 25.10 18:23 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
-- `c1f8cf66` 25.10 18:22 — video: екран як на справжньому iPhone — безпечні зони в зйомці + смуга статусу, острівець і риска в рамці
 
 <!-- AUTO:END -->
 
