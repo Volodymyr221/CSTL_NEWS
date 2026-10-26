@@ -14,11 +14,11 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-318d87` |
-| останній коміт людини | `c4170879` 26.10 10:43 — docs: Б5 закрито, правки темного тла під стенди |
+| останній коміт людини | `378ccd1b` 26.10 11:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87 |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261026-1042` |
 | останній PR у `main` | #1290 |
 | стендів на диску | 195 |
-| незакомічених файлів | 3 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-26 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -26,21 +26,21 @@
 
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-24b.md`
 - `bundle.js`
 - `src/tabs/news.js`
 - `style.css`
-- `style.min.css`
-- …ще 5 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 6 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `378ccd1b` 26.10 11:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `e3335944` 26.10 11:18 — docs: 195 стендів, пульс стиснуто під стелю 16 KB
 - `c4170879` 26.10 10:43 — docs: Б5 закрито, правки темного тла під стенди
 - `ca4dcec3` 26.10 10:42 — Б5: тіло статті через білий список (sanitizeArticleHtml) + стенд article-sanitize; темне тло — правки під стенди questions/sidebar-menu/tap-targets-hig
 - `c37790f9` 26.10 10:05 — docs: Б1-Б3 накочено Вовою і звірено на живій базі (13/13)
-- `7cecd8e3` 26.10 10:02 — Тло Громади на всіх вкладках (варіант «А»): style/dark-tabs.css — темне тло, світлі картки, адаптовані заголовки й липкі панелі; відкат — прибрати @import
-- `df0275fb` 26.10 09:56 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
 
 <!-- AUTO:END -->
 
