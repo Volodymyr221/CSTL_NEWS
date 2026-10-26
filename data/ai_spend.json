@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1793026618860,
+      "mission": "olyka:event:щодо-проведення-у-2026",
+      "model": "claude-opus-5",
+      "input_tokens": 5613,
+      "output_tokens": 316,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.036,
+      "note": "Подія в громаді: Щодо проведення у 2026 році Національного тесту із медіаграмотн"
+    },
+    {
       "ts": 1793026344703,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -800,24 +813,11 @@
       "found": 1,
       "cost_usd": 0.0087,
       "note": ""
-    },
-    {
-      "ts": 1789559839543,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 549,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0086,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 17.5123,
-    "runs": 218,
+    "cost_usd": 17.5483,
+    "runs": 219,
     "web_searches": 238
   },
   "months": {
@@ -838,13 +838,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 4.6323,
-      "runs": 30,
+      "cost_usd": 4.6683,
+      "runs": 31,
       "web_searches": 52,
-      "fair_usd": 4.6323
+      "fair_usd": 4.6683
     }
   },
-  "updated_ts": 1793026344703,
+  "updated_ts": 1793026618860,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
