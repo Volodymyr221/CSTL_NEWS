@@ -28,6 +28,7 @@ from editor.core.registry import register
 from editor.core.models import Draft
 from editor.core import geo as гео
 from editor.core import spend
+from editor.core.time_rule import правило_часу
 from editor.writers.base import Writer
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -84,6 +85,10 @@ class BrandWriter(Writer):
         if item.get("note"):
             частини += ["", f"ПОБАЖАННЯ ДО ЦЬОГО ПОСТА: {item['note']}"]
         частини += [
+            "",
+            # 🔴 26.10 — правило Вови про час події (модуль `editor/core/time_rule.py`).
+            # Перший прогін без нього написав «проходитиме» про тест, що стартував сьогодні.
+            правило_часу(),
             "",
             "🛑 ЗАБОРОНА 1: не додавай жодного факту, числа, дати, імені чи обіцянки, "
             "яких немає вище. Якщо чогось бракує для красивого речення — не пиши це речення.",

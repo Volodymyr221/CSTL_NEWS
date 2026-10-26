@@ -96,6 +96,8 @@ jobs:
           # бренд і навпаки — тобто те, що читають жителі.
           python3 scripts/test_history_routing.py
           python3 scripts/test_editor_pools.py
+          # 26.10 — правило Вови про час події доходить до обох агентів (11 перевірок).
+          python3 scripts/test_time_rule.py
           # ℹ️ `test_vopas_access.py` живе у власному воркфлові `test-vopas.yml`,
           # а `test_worker.py` вимагає адресу проксі аргументом — це ручний
           # інструмент, не сторож. Обидва тут навмисно відсутні.
