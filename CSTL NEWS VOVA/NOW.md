@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-26 11:18 UTC
+**Зріз на:** 2026-10-26 13:00 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/startuem-318d87` |
-| останній коміт людини | `378ccd1b` 26.10 11:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261026-1042` |
-| останній PR у `main` | #1290 |
+| останній коміт людини | `cf5f8163` 26.10 13:00 — Відкат: темне тло на Стрічці/Питаннях/Дошці/Автобусах знято (Вова: «не гарно»); Громада лишається з «Г» |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261026-1258` |
+| останній PR у `main` | #1291 |
 | стендів на диску | 195 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-26 | **НЕМАЄ** ⚠️ |
@@ -26,21 +26,21 @@
 
 - `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-24b.md`
-- `bundle.js`
-- `src/tabs/news.js`
 - `style.css`
-- …ще 6 (повністю — `git diff --name-only origin/main..HEAD`)
+- `style.min.css`
+- `style/dark-tabs.css`
+- `sw.js`
+- …ще 1 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `cf5f8163` 26.10 13:00 — Відкат: темне тло на Стрічці/Питаннях/Дошці/Автобусах знято (Вова: «не гарно»); Громада лишається з «Г»
+- `6394774f` 26.10 12:58 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
+- `e83baf4d` 26.10 11:18 — Тло Громади на всіх вкладках (варіант «А») + Б5 (XSS у статтях) + Б1-Б3 (міграція 0011) (#1291)
+- `b5af699d` 26.10 11:18 — docs(now): авто-блок
 - `378ccd1b` 26.10 11:18 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
-- `e3335944` 26.10 11:18 — docs: 195 стендів, пульс стиснуто під стелю 16 KB
-- `c4170879` 26.10 10:43 — docs: Б5 закрито, правки темного тла під стенди
-- `ca4dcec3` 26.10 10:42 — Б5: тіло статті через білий список (sanitizeArticleHtml) + стенд article-sanitize; темне тло — правки під стенди questions/sidebar-menu/tap-targets-hig
-- `c37790f9` 26.10 10:05 — docs: Б1-Б3 накочено Вовою і звірено на живій базі (13/13)
 
 <!-- AUTO:END -->
 
