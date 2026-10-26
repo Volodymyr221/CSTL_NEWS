@@ -1,6 +1,21 @@
 {
   "runs": [
     {
+      "ts": 1792977119385,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.3,
+      "note": "мережевий збій — можливе списання server-side",
+      "effort": "medium",
+      "suspect_usd": 0.3
+    },
+    {
       "ts": 1792805761400,
       "mission": "Громада №1",
       "model": "claude-sonnet-5",
@@ -796,24 +811,11 @@
       "found": 1,
       "cost_usd": 0.0081,
       "note": ""
-    },
-    {
-      "ts": 1789303317761,
-      "mission": "olyka:news:в-олицькій-громаді-запустили",
-      "model": "claude-opus-5",
-      "input_tokens": 6057,
-      "output_tokens": 399,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0403,
-      "note": "В Олицькій громаді запустили індивідуальний грант для розвитку власного господар"
     }
   ],
   "totals": {
-    "cost_usd": 16.8638,
-    "runs": 214,
+    "cost_usd": 17.1638,
+    "runs": 215,
     "web_searches": 230
   },
   "months": {
@@ -834,19 +836,19 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 3.9838,
-      "runs": 26,
+      "cost_usd": 4.2838,
+      "runs": 27,
       "web_searches": 44,
-      "fair_usd": 3.6838
+      "fair_usd": 3.9838
     }
   },
-  "updated_ts": 1792805761400,
+  "updated_ts": 1792977119385,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
-    "відновиться": "26.10",
-    "ts": 1792957089179,
-    "витрачено_міс": 3.9838,
+    "відновиться": "28.10",
+    "ts": 1792995485439,
+    "витрачено_міс": 4.2838,
     "стеля_міс": 4.8
   }
 }
