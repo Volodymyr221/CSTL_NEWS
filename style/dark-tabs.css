@@ -1,0 +1,93 @@
+/* ═══ ТЕМНЕ ТЛО ГРОМАДИ НА ВСІХ ВКЛАДКАХ (варіант «А», 26.10.2026) ═══
+   🗣️ Вова: «давай спробуємо встановити фон на всіх вкладках таким як на вкладці
+   громада… всі деталі і кольори треба буде адаптувати щоб вони не зливались з фоном»;
+   з макету обрав «А» — світлі картки на темному тлі (як низ Громади).
+
+   🔑 ЩО САМЕ: тло Стрічки, Питань, Дошки, Автобусів = «тихе тло» Громади
+   (`.hm-bg--brand` у `home.css`): бордове сяйво вгорі, далі теплий майже-чорний.
+   Картки, форми, аркуші й чат НЕ чіпаємо — лишаються світлими, тож читається так
+   само, як було. Міняється лише тло і те, що лежить ПРЯМО на ньому.
+
+   🔄 ВІДКАТ ОДНИМ РЯДКОМ: прибрати `@import url('style/dark-tabs.css')` у `style.css`.
+   Усе правило живе тут і ніде більше — саме для цього.
+
+   ⚠️ ТЛО — ЗАВЖДИ ДВА ШАРИ (урок 11.08, `base.css`): скролер `.app-main` і сторінка/
+   фіксований шар усередині. Перефарбуєш один — з-під другого визирне старе при
+   «гумовому» відскоку iOS. Тому: сяйво кладемо на `body` (він не скролиться — сяйво
+   стоїть на місці, як у Громади `position: fixed`), а ВСІ шари над ним — прозорі.
+   ⚠️ Лише телефон: компʼютерна версія (`desktop.css`) має власну сцену з карткою
+   сторінки — туди не лізь без окремого рішення. Медіа нижче — рівно доповнення до
+   умови `desktop.css`. */
+
+@media (max-width: 959px), (hover: none), (pointer: coarse) {
+  html:has(.app-main[data-tab="shotam"]) body,
+  html:has(.app-main[data-tab="discussions"]) body,
+  html:has(.app-main[data-tab="board"]) body,
+  html:has(.app-main[data-tab="buses"]) body {
+    background:
+      radial-gradient(140% 48% at 50% 0%, #5E1825 0%, #34101A 42%, rgba(21, 11, 14, 0) 78%),
+      #150B0E;
+    background-attachment: fixed;
+  }
+  /* Шари над `body` — прозорі. Колір під ними `#150B0E`, а не світлий: якщо `:has`
+     колись не спрацює (старий браузер), скролер лишиться ТЕМНИМ, а не білим під
+     білим текстом шапок. */
+  .app-main[data-tab="shotam"],
+  .app-main[data-tab="discussions"],
+  .app-main[data-tab="board"],
+  .app-main[data-tab="buses"] { background: transparent; }
+  .app-main[data-tab="shotam"] .fd-topbar,
+  .app-main[data-tab="shotam"] .fd-list,
+  .app-main[data-tab="board"] .board-bg,
+  .app-main[data-tab="discussions"] .board-bg,
+  #page-discussions,
+  #page-buses,
+  #page-shotam,
+  #page-board { background: transparent; }
+
+  /* Стрічка: картки були на всю ширину впритул одна до одної — на світлому тлі це
+     читалось як список, на темному стало б смугами. Поля і заокруглення — як у карток
+     Громади. */
+  .app-main[data-tab="shotam"] .fd-card {
+    margin: 0 12px 12px; border-radius: 18px; overflow: hidden; border: 0;
+  }
+  .app-main[data-tab="shotam"] .fd-circle-label { color: #F1E9EB; }
+
+  /* Дошка: бордова плашка «Дошка оголошень» на бордовому сяйві злилася б у пляму —
+     текст лягає прямо на тло, як привітання на Громаді. */
+  .bd-hero { background: transparent; box-shadow: none; }
+
+  /* Питання: великий заголовок і пояснення лежать прямо на тлі (`.qa-hero` навмисно
+     «НЕ плита»). Токени `--qa-ink*` НЕ перевизначаємо — ними ж пишуться картки, і
+     текст карток став би світлим на білому. Лише самі елементи заголовка. */
+  #disc-content .qa-hero-title { color: #F6EFF1; }
+  #disc-content .qa-hero-note  { color: rgba(255, 255, 255, .72); }
+  #disc-content .qa-hero-count { color: rgba(255, 255, 255, .6); }
+  #disc-content .qa-hero-need  { color: #FF9AA8; }
+  /* Липка шапка з пошуком: було світле скло `--app-glass` — на темному тлі воно
+     лягало блідо-рожевою смугою. Тепер темне скло того ж тла. */
+  #disc-content .bd-controls {
+    background: rgba(21, 11, 14, .78);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+
+  /* Автобуси: розклад — суцільний світлий лист на всю ширину. За варіантом «А»
+     він стає світлою КАРТКОЮ з полями (як картки Стрічки), а верхні панелі — днів
+     тижня і пошуку — темним склом, бо вони лежать прямо на тлі. */
+  .app-main[data-tab="buses"] .bus-list {
+    margin: 0 12px; border-radius: 18px; overflow: hidden; background: var(--app-bg);
+  }
+  .bus-week-strip,
+  .bus-search {
+    background: rgba(21, 11, 14, .82);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  /* Світлий ореол під пошуком (`::after`) на темному тлі був би білою смугою. */
+  .bus-search::after { background: linear-gradient(to bottom, rgba(21, 11, 14, .6), transparent); }
+  .bus-week-day-name { color: rgba(255, 255, 255, .62); }
+  .bus-week-day-num  { color: #F6EFF1; }
+  .bus-week-day--active { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .3); }
+  .bus-week-day--today .bus-week-day-name,
+  .bus-week-day--today .bus-week-day-num { color: #FF9AA8; }
+  .bus-week-day--today { border-color: #FF9AA8; }
+}
