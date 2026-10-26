@@ -109,15 +109,10 @@ ok('🔴 тло меню НЕ кремове (теплота R−B ≤ 6; у б�
 // 🔄 10.08 — і саме ТОЙ САМИЙ сірий, що у вкладці «Автобуси» (вибір Вови).
 // Порівнюємо з живою вкладкою, а не з hex у голові: перефарбують Автобуси —
 // меню має поїхати за ними, і стенд це покаже.
-// 🔄 26.10 — тло вкладок стало темним (`style/dark-tabs.css`, варіант «А»), і скролер
-// Автобусів тепер ПРОЗОРИЙ: сірий, який Вова обрав для меню, живе на поверхні самого
-// розкладу (`.bus-list` — світла картка на темному тлі). Міряємо її: це той самий
-// сірий, що й був, і та сама прив'язка «перефарбують Автобуси — меню поїде за ними».
 const автобуси = await p.evaluate(async () => {
   window.switchTab && window.switchTab('buses');
   await new Promise(r => setTimeout(r, 900));
-  const поверхня = document.querySelector('#page-buses .bus-list') || document.querySelector('.app-main');
-  return getComputedStyle(поверхня).backgroundColor;
+  return getComputedStyle(document.querySelector('.app-main')).backgroundColor;
 });
 ok('🔴 тло меню = тло вкладки «Автобуси» (замовлення Вови)',
    тло.hex === автобуси, `меню ${тло.hex} · Автобуси ${автобуси}`);
