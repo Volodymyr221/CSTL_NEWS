@@ -812,9 +812,77 @@ function decodeEntities(str) {
   return ta.value;
 }
 
-// Рендер тіла статті. Новий формат — БАГАТИЙ HTML (санітизований парсером:
-// лише p/h3/ul/li/strong/em/br/blockquote, без атрибутів/скриптів) → рендеримо як
-// є. Легасі-плоский текст (старі статті) → розбиваємо по \n\n на <p> з escapeHtml.
+// 🔐 26.10 — Б5 З АУДИТУ БЕЗПЕКИ: ТІЛО СТАТТІ ЧИСТИТЬСЯ ТУТ, ПЕРЕД ПОКАЗОМ.
+//
+// Було: «багатий HTML» ішов у `innerHTML` як є — з вірою, що його вже почистив
+// парсер. Але статей три джерела (RSS, кабінет редактора, AI-агент), і кабінет
+// чистив лише навігацію (`polish_markup`), не теги й атрибути. Тобто редактор — або
+// текст, скопійований з чужого сайту, — міг внести `<img onerror=…>`, і скрипт
+// виконався б у КОЖНОГО читача, з його сесією входу в localStorage.
+// 🔑 Чистимо в ОДНОМУ місці показу, а не в кожному з трьох джерел: копії правила
+// в джерелах колись розійдуться, а це місце бачить усі статті без винятку.
+// 📐 Білий список ЗАМІРЯНО по 400 статтях 26.10: тегів 11 (p a strong li figure img
+// ul em h3 blockquote br) + figcaption, атрибутів рівно п'ять — у посиланні
+// href/target/rel, у фото src/alt. Решта не потрібна жодній живій статті.
+// ⚠️ Розбір — `DOMParser`: він будує ІНЕРТНИЙ документ (скрипти не виконуються,
+// картинки не вантажаться), тож навіть розбір шкідливого тексту нічого не запускає.
+const ART_TAGS = new Set(['P', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'B', 'I',
+  'BLOCKQUOTE', 'BR', 'A', 'FIGURE', 'FIGCAPTION', 'IMG']);
+// Ці викидаються РАЗОМ із вмістом (у них або код, або вбудований чужий документ).
+// Решта незнайомих тегів розгортається — текст лишається, обгортка зникає.
+const ART_DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'FRAME', 'FRAMESET', 'OBJECT',
+  'EMBED', 'SVG', 'MATH', 'TEMPLATE', 'NOSCRIPT', 'TEXTAREA', 'SELECT', 'BUTTON',
+  'INPUT', 'FORM', 'LINK', 'META', 'BASE', 'AUDIO', 'VIDEO', 'SOURCE', 'CANVAS']);
+
+// Лише http(s). Перевіряє розбір адреси, а не регулярка: браузер викидає з адреси
+// табуляції й переноси, тож «java\tscript:» регулярку обійшов би, а розбір — ні.
+function safeArticleUrl(v) {
+  const s = (v || '').trim();
+  if (!s) return '';
+  try {
+    const u = new URL(s, location.href);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? s : '';
+  } catch { return ''; }
+}
+
+function sanitizeArticleHtml(html) {
+  const doc = new window.DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  const out = doc.createElement('div');
+  const copy = (src, dst) => {
+    for (const n of src.childNodes) {
+      if (n.nodeType === 3) { dst.appendChild(doc.createTextNode(n.nodeValue)); continue; }
+      if (n.nodeType !== 1) continue;                       // коментарі — геть
+      const tag = n.tagName;
+      if (ART_DROP.has(tag)) continue;
+      if (!ART_TAGS.has(tag)) { copy(n, dst); continue; }
+      let el;
+      if (tag === 'A') {
+        const href = safeArticleUrl(n.getAttribute('href'));
+        if (!href) { copy(n, dst); continue; }              // небезпечна адреса → просто текст
+        el = doc.createElement('a');
+        el.setAttribute('href', href);
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener');
+      } else if (tag === 'IMG') {
+        const src = safeArticleUrl(n.getAttribute('src'));
+        if (!src) continue;
+        el = doc.createElement('img');
+        el.setAttribute('src', src);
+        el.setAttribute('alt', n.getAttribute('alt') || '');
+      } else {
+        el = doc.createElement(tag.toLowerCase());
+      }
+      copy(n, el);
+      dst.appendChild(el);
+    }
+  };
+  copy(doc.body, out);
+  return out.innerHTML;
+}
+
+// Рендер тіла статті. Новий формат — БАГАТИЙ HTML → проходить `sanitizeArticleHtml`
+// (білий список вище). Легасі-плоский текст (старі статті) → розбиваємо по \n\n на
+// <p> з escapeHtml.
 function renderArticleBody(content) {
   const raw = content || '';
   // ⚠️ `a` у переліку з 27.08. Тіло статті майже завжди має `<p>`, тож без нього
@@ -822,7 +890,7 @@ function renderArticleBody(content) {
   // в ньому дірку означало б, що наступна зміна розмітки мовчки провалиться в
   // гілку «плоский легасі-текст» і поїде через `escapeHtml`, тобто посилання
   // покажеться людині як текст із кутовими дужками.
-  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br|a|figure|img)\b/i.test(raw)) return raw;
+  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br|a|figure|img)\b/i.test(raw)) return sanitizeArticleHtml(raw);
   const text = decodeEntities(raw);
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (!paragraphs.length) return '';
