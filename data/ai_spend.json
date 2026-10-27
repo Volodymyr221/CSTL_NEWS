@@ -1,6 +1,45 @@
 {
   "runs": [
     {
+      "ts": 1793104547518,
+      "mission": "holiday:🇺🇦 День Гідності та Свободи",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 483,
+      "cache_read": 0,
+      "cache_write": 1139,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0077,
+      "note": ""
+    },
+    {
+      "ts": 1793104537257,
+      "mission": "holiday:⛪ Введення в храм Пресвятої ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 522,
+      "cache_read": 0,
+      "cache_write": 1122,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.008,
+      "note": ""
+    },
+    {
+      "ts": 1793104523796,
+      "mission": "holiday:⛪ Собор Архангела Михаїла",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 384,
+      "cache_read": 0,
+      "cache_write": 1155,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0067,
+      "note": ""
+    },
+    {
       "ts": 1793046757842,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -774,50 +813,11 @@
       "found": 1,
       "cost_usd": 0.0085,
       "note": ""
-    },
-    {
-      "ts": 1789904671233,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 526,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0084,
-      "note": ""
-    },
-    {
-      "ts": 1789816995396,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 627,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0094,
-      "note": ""
-    },
-    {
-      "ts": 1789780436781,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10996,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0221,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 18.1345,
-    "runs": 224,
+    "cost_usd": 18.1569,
+    "runs": 227,
     "web_searches": 249
   },
   "months": {
@@ -838,13 +838,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 5.2545,
-      "runs": 36,
+      "cost_usd": 5.2769,
+      "runs": 39,
       "web_searches": 63,
-      "fair_usd": 5.2545
+      "fair_usd": 5.2769
     }
   },
-  "updated_ts": 1793046757842,
+  "updated_ts": 1793104547518,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
