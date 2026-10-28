@@ -1,6 +1,46 @@
 {
   "posts": [
     {
+      "ts": 1793046764408,
+      "title": "Індустріальний парк «Олика Індастрі» отримав керуючу компанію",
+      "category": "Економіка",
+      "sources": [
+        "https://olytska-gromada.gov.ua/docs/"
+      ],
+      "key": "керуючу компанію олика отримав парк індастрі індустріальний"
+    },
+    {
+      "ts": 1793046761091,
+      "title": "До обласної програми відродження спадщини Олики внесли зміни: що передбачають оновлені плани",
+      "category": "Культура",
+      "sources": [
+        "https://history.rayon.in.ua/news/369971-do-oblasnoyi-programi-vidrodzhennia-istoriko-arhitekturnoyi-spadshchini-oliki-vnesli-zmini"
+      ],
+      "key": "внесли відродження зміни обласної олики оновлені передбачають плани програми спадщини"
+    },
+    {
+      "ts": 1793027247168,
+      "title": "Носовичі: заповіт Станіслава Радзивілла і маловідомі сторінки минулого села",
+      "category": "Культура",
+      "sources": [
+        "https://uk.wikipedia.org/wiki/%D0%9D%D0%BE%D1%81%D0%BE%D0%B2%D0%B8%D1%87%D1%96",
+        "http://svitlanabubalo.blogspot.com/p/blog-page_21.html"
+      ],
+      "key": "заповіт маловідомі минулого носовичі радзивілла села станіслава сторінки"
+    },
+    {
+      "ts": 1793027247167,
+      "title": "Колегіальний костел Пресвятої Трійці в Олиці: будівництво, архітектура і доля споруди",
+      "category": "Інфраструктура",
+      "sources": [
+        "https://drymba.com/uk/1034950-kostel-triytsi-kolehiata-olyka",
+        "https://catholic.volyn.ua/index.php/ua/skhematyzm/parafii/44-olyka-parafiia-sviatykh-apostoliv-petra-i-pavla",
+        "https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D0%BB%D0%B5%D0%B3%D1%96%D0%B0%D0%BB%D1%8C%D0%BD%D0%B8%D0%B9_%D0%BA%D0%BE%D1%81%D1%82%D0%B5%D0%BB_%D0%A1%D0%B2%D1%8F%D1%82%D0%BE%D1%97_%D0%A2%D1%80%D1%96%D0%B9%D1%86%D1%96_(%D0%9E%D0%BB%D0%B8%D0%BA%D0%B0)",
+        "https://olytska-gromada.gov.ua/news/1718111561/"
+      ],
+      "key": "архітектура будівництво доля колегіальний костел олиці пресвятої споруди трійці"
+    },
+    {
       "ts": 1793026353739,
       "title": "На Волині поховали захисника Олександра Нестерука, який помер через раптове погіршення здоров'я",
       "category": "Війна",
@@ -713,5 +753,5 @@
       "key": "генератор громада олицька отримала партнерів тайваню"
     }
   ],
-  "updated_ts": 1793026353739
+  "updated_ts": 1793046764408
 }
