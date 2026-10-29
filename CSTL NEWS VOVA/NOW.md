@@ -9,31 +9,38 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-10-28 20:06 UTC
+**Зріз на:** 2026-10-29 21:25 UTC
 
 | поле | значення |
 |---|---|
-| гілка | `claude/startuem-318d87` |
-| останній коміт людини | `b9e6a794` 28.10 20:06 — docs: передача в новий чат — 28.10 |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261026-1258` |
-| останній PR у `main` | не видно в останніх комітах |
+| гілка | `claude/intelligent-gates-999uos` |
+| останній коміт людини | `ed4a066aa` 29.10 21:25 — style(weather): опис погоди 14px від 390px; NOW — рішення Вови 29.10 |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261029-2325` |
+| останній PR у `main` | #1295 |
 | стендів на диску | 195 |
 | незакомічених файлів | 0 ✅ |
-| журнал за 2026-10-28 | **НЕМАЄ** ⚠️ |
+| журнал за 2026-10-29 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `_session-log/vova-2026-10-24b.md`
+- `_session-log/vova-2026-10-28.md`
+- `bundle.js`
+- `src/tabs/board-chat.js`
+- `style.min.css`
+- `style/home.css`
+- `sw.js`
+- `tests/qa-chat-search.mjs`
+- …ще 1 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `b9e6a794` 28.10 20:06 — docs: передача в новий чат — 28.10
-- `3b5e15d5` 28.10 20:05 — Merge remote-tracking branch 'origin/main' into claude/startuem-318d87
-- `281b3beb` 28.10 13:25 — ai(editor): свята-чернетки 28.10 13:25 UTC
-- `b37d4a0a` 28.10 11:45 — cms: статті кабінету у стрічку 28.10 11:45 UTC
+- `ed4a066aa` 29.10 21:25 — style(weather): опис погоди 14px від 390px; NOW — рішення Вови 29.10
+- `500fda7a7` 29.10 21:05 — fix(chat): пошук розмов за живим імʼям із профілю, а не вмороженим у тред
+- `f598ae6a9` 29.10 21:04 — Merge branch 'main' of https://github.com/Volodymyr221/CSTL_NEWS into claude/intelligent-gates-999uos
+- `b78b4d85c` 29.10 20:42 — docs(log): баг пошуку за імʼям у Повідомленнях
+- `2df0f9dae` 29.10 20:37 — docs(log): Usage і Disk IO в нормі
 
 <!-- AUTO:END -->
 
