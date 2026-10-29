@@ -625,7 +625,10 @@
   font: 600 12px/1.2 system-ui, -apple-system, sans-serif;
   color: rgba(255, 255, 255, .78);
 }
-.hm-wx-desc { font: 400 13px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
+/* 🔴 29.10 — 13 → 14px на телефонах від 390px. 🗣️ Вова: «Давай 14 спробуємо».
+   На 375px (SE, 13 mini) лишається 13px — правило `@media (max-width: 389px)`
+   нижче: там 14 гарантує трикрапку в «Мінлива хмарність» (заміри 19.08). */
+.hm-wx-desc { font: 400 14px/1.25 system-ui, -apple-system, sans-serif; color: #fff;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
               flex: 0 1 auto; min-width: 0; }
 .hm-wx-mm   { flex: 0 0 auto; white-space: nowrap; }

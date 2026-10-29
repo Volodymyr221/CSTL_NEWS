@@ -206,8 +206,14 @@ async function відкрити(таб) {
   ];
 
   const { p, впало } = await відкрити('board');
+  // 🔴 29.10 — ЖИВЕ ІМʼЯ ≠ ВМОРОЖЕНЕ. Дмитро в треді записаний як «Дмитро Гринь»,
+  // а в профілі він уже «Дмитро Коваленко» — саме його людина і бачить у списку.
   await mockSupabase(p, { posts: ADS, threads: THREADS, messages: [],
-                          thread_user_state: [], announcements: [] }, { user: ME });
+                          thread_user_state: [], announcements: [] },
+                     { user: ME, profiles: [
+                       { uid: 'u-oksana', name: 'Оксана Мельник',   avatar_url: '' },
+                       { uid: 'u-dmytro', name: 'Дмитро Коваленко', avatar_url: '' },
+                     ] });
   await p.route('**://api.open-meteo.com/**', r => r.abort());
   await p.goto(url, { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(2500);
@@ -270,6 +276,13 @@ async function відкрити(таб) {
      b5.length === 1 && /Дмитро/i.test(b5[0]), b5.join(' | ') || '—');
   const b6 = await шукатиЧат('вертоліт');
   ok('чужий запит не знаходить жодної розмови', b6.length === 0, b6.join(' | ') || '—');
+  // ── 5. 🔴 ЖИВЕ ІМʼЯ (29.10: шукали вморожене, тож прізвище з профілю — мимо) ──
+  const b8 = await шукатиЧат('Коваленко');
+  ok('прізвище з ПРОФІЛЮ (не вморожене в тред) знаходить розмову',
+     b8.length === 1 && /Коваленко/i.test(b8[0]), b8.join(' | ') || '—');
+  const b9 = await шукатиЧат('Гринь');
+  ok('старе вморожене прізвище вже НЕ знаходить (на екрані його нема)',
+     b9.length === 0, b9.join(' | ') || '—');
   const b7 = await шукатиЧат('');
   ok('порожній запит повертає обидві розмови', b7.length === 2, `${b7.length}`);
 

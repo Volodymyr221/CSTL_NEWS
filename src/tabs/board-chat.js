@@ -28,7 +28,7 @@ import {
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
-  hydrateAvatars, hydrateNames, nameSlot,
+  hydrateAvatars, hydrateNames, nameSlot, cachedName,
   CHAT_BUCKET,
 } from '../core/supabase.js';
 import { onReturn } from '../core/refresh-on-return.js';   // «повернувся → свіже» (07.08)
@@ -761,8 +761,13 @@ export function openThreadsList() {
     // `text` (вага 15).
     // ⚠️ Беремо ВСІ оголошення розмови, а не лише останнє: людина шукає «велосипед»,
     // а він може бути другим контекстом. Це правило було й до 06.09, воно збережене.
+    // 🔴 29.10 — ШУКАЄМО ТЕ ІМʼЯ, ЯКЕ ЛЮДИНА БАЧИТЬ. На екрані імʼя живе (профіль
+    // через `hydrateNames`), а `c.otherName` — вморожене в тред при створенні
+    // («Покупець», імʼя з Google, старе імʼя). 🗣️ Вова 29.10: за назвою оголошення
+    // знаходить, «а якщо шукаю по імені чи прізвищу — не находить». Вморожене
+    // лишаємо запасним, поки кеш імен ще порожній.
     const полеРозмови = (c) => ({
-      title: c.otherName,
+      title: cachedName(c.otherUid) || c.otherName,
       text: `${c.threads.map(threadPostTitle).join(' ')} ${c.last?.last_message_text || ''}`,
     });
 

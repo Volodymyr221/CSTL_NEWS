@@ -22,6 +22,16 @@
 
 
 ---
+## 🆕 29.10 — 🔑 РУЧНІ КРОКИ ЗАКРИТО · 🔎 ПОШУК ЗА ІМʼЯМ У ПОВІДОМЛЕННЯХ · 📅 ДАТИ ЗАПУСКУ
+
+Гілка `claude/intelligent-gates-999uos`, журнал `_session-log/vova-2026-10-28.md`.
+- 🔑 Push тип 4 сухий прогін: 200 `no ripe questions`, `kyiv_hour` 22 (зимовий час ок). ⚠️ Ручний виклик МУСИТЬ мати `Authorization: Bearer <publishable>` — без нього 401 `UNAUTHORIZED_NO_AUTH_HEADER` (моя помилка в інструкції).
+- 💳 Usage 21.10-21.11: Cached Egress 0,005 ГБ (04.10 — 4,17), Egress 0,127, Disk IO balance 99% → Pro не треба. ⚠️ «Grace period is over»: перевищення = сервер мовчить.
+- 🐞→✅ Пошук розмов за імʼям: шукали вморожене `otherName` треду, показ — живе імʼя профілю. `board-chat.js` → `cachedName(c.otherUid) || c.otherName`; `qa-chat-search` 25/25, мутація 23/25.
+- 🌤 `.hm-wx-desc` 13 → 14px (≤389px лишається 13: на 375 «Мінлива хмарність» ріжеться).
+- 📅 Дати запуску: тихий нд 15.11, гучний нд 29.11. Домен — до 15.11. Ролики — перезняти всі. Код заслінки лишаємо.
+- ⚡ Новий пункт: порадник «Auth RLS Initialization Plan» — `(select auth.uid())` у політиках.
+
 ## 🆕 24-25.10«b» — 🎬 6 РОЛИКІВ НА СКІЛІ VIDEO-SHOTCRAFT + 🎨 ФОН ГРОМАДИ БЕЗ ФОТО
 Журнал: `_session-log/vova-2026-10-24b.md` · гілка `claude/startuem-318d87` · `CACHE_NAME` `cstl-20261025-1837`.
 - Ролики (код — `launch-film/shotcraft/`, відео в git НЕ кладемо): огляд · тизер у біт · інструкція Дошки з озвучкою (нейроголос ukrainian-tts) · промо під голос Вови (DTW-монтаж, 9:16+1:1) · «З паперу» 4:5 · Стрічка 9:16+4:5.
