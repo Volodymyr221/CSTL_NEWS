@@ -233,7 +233,16 @@ export function attachSheetDismiss({
   headerZone = 64,       // верхня смуга (рисочка/заголовок), за яку можна тягнути завжди
 }) {
   if (!panel) return;
-  let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
+  let startY = 0, startX = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
+  // 🔴 30.10 — НАПРЯМОК ЖЕСТУ ВИРІШУЄТЬСЯ ОДИН РАЗ, НА ПЕРШОМУ РУСІ. 🗣️ Вова (аркуш
+  // погоди): «коли свайпаю до низу то вміст в модалці "плаває" в ліво, в право,
+  // вверх, вниз». Причина — ДВА рухи разом: ми тягнемо аркуш `transform`ом, а iOS
+  // уже почав свою прокрутку (гума аркуша або стрічка годин убік), бо перший рух
+  // пальця був убік чи вгору і `preventDefault` не прозвучав. Почату нативну
+  // прокрутку iOS не віддає до кінця жесту (`cancelable` = false).
+  // ➡️ Правило: перший рух убік або вгору — жест НАТИВНИЙ до кінця, аркуш не
+  // чіпаємо. Перший рух униз — наш, і блокуємо нативне з першого ж кадру.
+  let axis = null;   // null — ще не вирішено · 'drag' — тягнемо аркуш · 'native' — віддали системі
   const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
 
   panel.addEventListener('touchstart', e => {
@@ -242,7 +251,7 @@ export function attachSheetDismiss({
     // У тілі — лише коли скрол на самому верху, інакше це звичайний скрол.
     const inHeader = (y - panel.getBoundingClientRect().top) < headerZone;
     if (!inHeader && scroller.scrollTop > 0) return;
-    startY = y; dragging = true; dy = 0;
+    startY = y; startX = e.touches[0].clientX; dragging = true; dy = 0; axis = null;
     wasScrolling = false;   // новий жест — замок знято (ставиться на першій же прокрутці)
     travel = Math.max(panel.offsetHeight || 1, 1);   // повний шлях аркуша — міряємо раз за жест
     drag.start(y);
@@ -251,6 +260,21 @@ export function attachSheetDismiss({
   panel.addEventListener('touchmove', e => {
     if (!dragging) return;
     dy = e.touches[0].clientY - startY;
+    if (axis === null) {
+      const dx = e.touches[0].clientX - startX;
+      // Тремтіння пальця (до 4px) ще не напрямок: iOS сама рушає прокрутку лише після
+      // ~10px, тож до того події скасовні і рішення не запізнюється.
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      // Убік (стрічка годин, каруселі) або вгору (прокрутка вмісту) — не наш жест.
+      axis = (Math.abs(dx) > Math.abs(dy) || dy < 0) ? 'native' : 'drag';
+    }
+    // Нативна прокрутка вже йде — `preventDefault` її не спинить, а transform поверх
+    // неї і дає «плавання». Віддаємо жест системі до кінця.
+    if (axis === 'native' || !e.cancelable) {
+      axis = 'native'; dragging = false;
+      panel.style.transform = ''; backdrop?.track(0); dy = 0;
+      return;
+    }
     if (dy <= 0) { panel.style.transform = ''; backdrop?.track(0); return; }   // тягнуть вгору — віддаємо нативному скролу
     // Зсув-закриття вмикаємо ЛИШЕ коли контент на самому верху — як у рідних
     // аркушах iOS. Якщо ще прокручений, віддаємо нативному скролу довести його
