@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1793369008697,
+      "mission": "olyka:event:кіберліга-захисників-ветеранів-та",
+      "model": "claude-opus-5",
+      "input_tokens": 6141,
+      "output_tokens": 525,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0438,
+      "note": "Подія в громаді: «Кіберліга Захисників»: ветеранів та ветеранок Олицької громади"
+    },
+    {
       "ts": 1793366671455,
       "mission": "holiday:🌾 День Андрія Первозванного ",
       "model": "claude-sonnet-5",
@@ -797,24 +810,11 @@
       "found": 1,
       "cost_usd": 0.0087,
       "note": ""
-    },
-    {
-      "ts": 1790422959123,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 507,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0082,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 18.8059,
-    "runs": 243,
+    "cost_usd": 18.8497,
+    "runs": 244,
     "web_searches": 259
   },
   "months": {
@@ -835,13 +835,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 5.9259,
-      "runs": 55,
+      "cost_usd": 5.9697,
+      "runs": 56,
       "web_searches": 73,
-      "fair_usd": 5.9259
+      "fair_usd": 5.9697
     }
   },
-  "updated_ts": 1793366671455,
+  "updated_ts": 1793369008697,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
