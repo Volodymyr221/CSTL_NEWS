@@ -170,8 +170,15 @@ has(/scroller\.scrollTop\s*>\s*0\s*\)\s*\{[\s\S]{0,1000}wasScrolling\s*=\s*true/
 // підсовуємо її `modal.js`, переписавши в ньому саме цей імпорт на blob.
 const ctl = await pg.evaluate(async ([base, f]) => {
   const rawMotion = await (await fetch(base + f)).text();
-  const brokenMotion = rawMotion.replace(/\n\s*if \(wasScrolling\) \{[^\n]*\n/, '\n');
+  // 🔴 30.10 — ПРИБИРАЄМО ОБИДВА ЗАМКИ. Того ж дня в `attachSheetDismiss` зʼявився
+  // замок НАПРЯМКУ (перший рух угору → жест нативний до кінця), і цей сценарій
+  // («прокрутив угору і розвернувся») він ловить теж. Без нього контроль показував
+  // би «нічого не рухається» навіть без `wasScrolling` — тобто міряв би не те.
+  const brokenMotion = rawMotion
+    .replace(/\n\s*if \(wasScrolling\) \{[^\n]*\n/, '\n')
+    .replace(/axis = \(Math\.abs\(dx\) > Math\.abs\(dy\) \|\| dy < 0\) \? 'native' : 'drag';/, "axis = 'drag';");
   if (/if \(wasScrolling\)/.test(brokenMotion)) return 'не вдалось прибрати замок — регулярка не збіглась';
+  if (/\? 'native' : 'drag'/.test(brokenMotion)) return 'не вдалось прибрати замок напрямку — регулярка не збіглась';
   const motionUrl = URL.createObjectURL(new Blob([brokenMotion], { type: 'text/javascript' }));
   const rawModal = await (await fetch(base + '/src/core/modal.js')).text();
   const old = rawModal

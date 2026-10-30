@@ -235,12 +235,20 @@
 .app-modal--weather .app-modal-sheet {
   max-width: 520px;
   margin: 0 auto;
-  background: linear-gradient(180deg, #2E6FC4 0%, #1D4E96 45%, #0E2A52 100%);
+  /* 🔴 30.10«b» — ВЕРХНІ 54px ГРАДІЄНТА РІВНІ (#2E6FC4 до 54px). 🗣️ Вова: «видно
+     перехід з шапки і фону, треба злити їх». Шапка (10px падінгу + 44px) зафарбована
+     ОДНИМ кольором, а градієнт під нею вже темнішав — на нижньому краї шапки виходив
+     шов. Тепер аркуш починає темніти рівно там, де шапка закінчується. */
+  background: linear-gradient(180deg, #2E6FC4 0, #2E6FC4 54px, #1D4E96 45%, #0E2A52 100%);
   color: #FFFFFF;
   padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
   max-height: 86vh;
 }
 .app-modal--weather .app-modal-handle { background: rgba(255, 255, 255, 0.6); }
+/* 🔴 30.10 — БЕЗ «ГУМИ» ВСЕРЕДИНІ АРКУША. 🗣️ Вова: вміст «плаває» при свайпі вниз.
+   Аркуш на верху тягнеться донизу ЦІЛИМ (свайп-закриття) — гумова прокрутка вмісту
+   в тому ж напрямку лише змагалась із ним. Напрямок жесту стереже `sheet-motion.js`. */
+.app-modal--weather .app-modal-sheet { overscroll-behavior: none; }
 /* 🔴 30.10 — БІЛА СМУГА ВГОРІ АРКУША. 🗣️ Вова: «зверху в модалці біла полоска,
    якийсь глюк». Липка шапка (`.app-modal-head`, 01.09 «c») має власну НЕПРОЗОРУ
    заливку `--modal-bg` — білу; синім аркуш фарбував лише себе. Тому: синя дуга
@@ -311,6 +319,7 @@
   display: flex; gap: 8px;
   list-style: none; margin: 0 -16px; padding: 0 16px 4px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;     /* 30.10 — гортання годин не передається аркушу */
   margin-bottom: 10px;                /* смужка-прогрес нижче має власний відступ */
   scroll-snap-type: x proximity;
   /* 🔴 08.08 — БЕЗ ЦЬОГО РЯДКА КАРТКА ПРИЛИПАЄ ДО САМОГО КРАЮ ЕКРАНА.
