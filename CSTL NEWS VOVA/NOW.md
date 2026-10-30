@@ -14,33 +14,33 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/intelligent-gates-999uos` |
-| останній коміт людини | `73b02d68f` 30.10 08:53 — Merge remote-tracking branch 'origin/main' into claude/intelligent-gates-999uos |
+| останній коміт людини | `68d2e5a45` 30.10 08:53 — docs: 196 стендів, пульс під стелею 16 KB |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261030-1053` |
 | останній PR у `main` | #1297 |
 | стендів на диску | 196 |
-| незакомічених файлів | 3 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-10-30 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
+- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-28.md`
 - `bundle.js`
 - `src/core/sheet-motion.js`
 - `style.min.css`
-- `style/community.css`
-- `sw.js`
-- `tests/modal-scroll-lock.mjs`
-- …ще 2 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 5 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `68d2e5a45` 30.10 08:53 — docs: 196 стендів, пульс під стелею 16 KB
+- `da849caf2` 30.10 08:53 — docs: фініш 30.10«b» — свайп аркушів
 - `73b02d68f` 30.10 08:53 — Merge remote-tracking branch 'origin/main' into claude/intelligent-gates-999uos
 - `7dbe30cd8` 30.10 08:16 — fix(sheets): напрямок жесту вирішується один раз — вміст аркуша не «плаває» при свайпі
 - `1caa349d9` 30.10 07:50 — fix(weather): градієнт аркуша рівний під шапкою — без шва
-- `c1f84eb90` 30.10 07:48 — Merge origin/main
-- `e64818b6c` 30.10 07:40 — docs(log): PR #1297, деплой #7479
 
 <!-- AUTO:END -->
 
