@@ -235,7 +235,11 @@
 .app-modal--weather .app-modal-sheet {
   max-width: 520px;
   margin: 0 auto;
-  background: linear-gradient(180deg, #2E6FC4 0%, #1D4E96 45%, #0E2A52 100%);
+  /* 🔴 30.10«b» — ВЕРХНІ 54px ГРАДІЄНТА РІВНІ (#2E6FC4 до 54px). 🗣️ Вова: «видно
+     перехід з шапки і фону, треба злити їх». Шапка (10px падінгу + 44px) зафарбована
+     ОДНИМ кольором, а градієнт під нею вже темнішав — на нижньому краї шапки виходив
+     шов. Тепер аркуш починає темніти рівно там, де шапка закінчується. */
+  background: linear-gradient(180deg, #2E6FC4 0, #2E6FC4 54px, #1D4E96 45%, #0E2A52 100%);
   color: #FFFFFF;
   padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
   max-height: 86vh;
