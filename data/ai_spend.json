@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1793449992003,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 11121,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0224,
+      "note": ""
+    },
+    {
+      "ts": 1793449990016,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 2468,
+      "cache_read": 36216,
+      "cache_write": 28625,
+      "web_searches": 3,
+      "found": 3,
+      "cost_usd": 0.1335,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1793369008697,
       "mission": "olyka:event:кіберліга-захисників-ветеранів-та",
       "model": "claude-opus-5",
@@ -784,38 +811,12 @@
       "found": 1,
       "cost_usd": 0.0085,
       "note": ""
-    },
-    {
-      "ts": 1790605313957,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 552,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0086,
-      "note": ""
-    },
-    {
-      "ts": 1790511701165,
-      "mission": "holiday:🇺🇦⛪ День захисників і захисн",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 563,
-      "cache_read": 0,
-      "cache_write": 1242,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0087,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 18.8497,
-    "runs": 244,
-    "web_searches": 259
+    "cost_usd": 19.0056,
+    "runs": 246,
+    "web_searches": 262
   },
   "months": {
     "2026-07": {
@@ -835,13 +836,13 @@
       "fair_usd": 4.0244
     },
     "2026-10": {
-      "cost_usd": 5.9697,
-      "runs": 56,
-      "web_searches": 73,
-      "fair_usd": 5.9697
+      "cost_usd": 6.1256,
+      "runs": 58,
+      "web_searches": 76,
+      "fair_usd": 6.1256
     }
   },
-  "updated_ts": 1793369008697,
+  "updated_ts": 1793449992003,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
