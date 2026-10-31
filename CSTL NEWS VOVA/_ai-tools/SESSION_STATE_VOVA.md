@@ -22,6 +22,12 @@
 
 
 ---
+## 🆕 31.10«b» — ⚡ МІГРАЦІЯ 0013: `auth.uid()` → `(select auth.uid())` У ПОЛІТИКАХ
+- 🗣️ Вова: «давай поки 2 закриєм». Файл `supabase/migrations/0013_rls_auth_initplan.sql`: читає ЖИВІ `pg_policies` (public + storage) і переписує лише виклики `auth.uid/jwt/role/email()` — бо `scripts/*.sql` розійшлись із продом. Сбій однієї політики не зриває решту.
+- 🐞 Стенд піймав ваду першої редакції: база показує обгорнуте як `( SELECT auth.uid() AS uid)`, порівняння текстів «до/після» вважало все зміненим (повтор «міняв» 8). Тепер ознака — «чи лишився ГОЛИЙ виклик».
+- 📐 Стенд `scripts/bench/0013_rls_initplan/` (локальний Postgres 16): ДО 7 голих · накат 7/0 · повтор 0 · план `Filter: current_setting…` → `InitPlan 1` · доступ двох користувачів до/після байт у байт · мутант → контроль 7 червоних.
+- ⏳ НЕ накатано: Supabase MCP (підключення до бази) у сесії впав (ERR_PROXY_TUNNEL) — накочує Вова в SQL Editor.
+
 ## 🆕 31.10 — 💸 ПЕРЕНОСНИЙ НАБІР ЕКОНОМІЇ ТОКЕНІВ
 
 - 🗣️ «всі скіли які допомагають з економією токенів, збери в один файл… закинути в чат клода з новим репозиторієм». `_ai-tools/EKONOMIYA_TOKENIV_KIT.md` (34 KB): інструкція для Claude + 11 узагальнених файлів (CLAUDE.md з 10 правилами економії, docs/NOW.md, now_update.mjs, docs-fresh.mjs, caveman, /start, /onovy, token-guard, context-warning за usage, session-git-sync, settings.json через `$CLAUDE_PROJECT_DIR`). Перевірено на чистому git-репо; round-trip 11/11 дослівно. Свої хуки CSTL НЕ чіпали.
