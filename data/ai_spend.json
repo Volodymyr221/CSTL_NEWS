@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "ts": 1793803729502,
+      "mission": "holiday:🌾 День Андрія Первозванного ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 545,
+      "cache_read": 0,
+      "cache_write": 1132,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0083,
+      "note": ""
+    },
+    {
+      "ts": 1793803715098,
+      "mission": "holiday:🇺🇦 День Гідності та Свободи",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 470,
+      "cache_read": 0,
+      "cache_write": 1139,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0076,
+      "note": ""
+    },
+    {
+      "ts": 1793803705216,
+      "mission": "holiday:⛪ Введення в храм Пресвятої ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 545,
+      "cache_read": 0,
+      "cache_write": 1122,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0083,
+      "note": ""
+    },
+    {
+      "ts": 1793803692216,
+      "mission": "holiday:⛪ Собор Архангела Михаїла",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 420,
+      "cache_read": 0,
+      "cache_write": 1155,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0071,
+      "note": ""
+    },
+    {
       "ts": 1793716470151,
       "mission": "holiday:🌾 День Андрія Первозванного ",
       "model": "claude-sonnet-5",
@@ -746,69 +798,11 @@
       "note": "мережевий збій — можливе списання server-side",
       "effort": "medium",
       "suspect_usd": 0.3
-    },
-    {
-      "ts": 1792455711264,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.3,
-      "note": "мережевий збій — можливе списання server-side",
-      "effort": "medium",
-      "suspect_usd": 0.3
-    },
-    {
-      "ts": 1792285425710,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.3,
-      "note": "мережевий збій — можливе списання server-side",
-      "effort": "medium",
-      "suspect_usd": 0.3
-    },
-    {
-      "ts": 1791836228500,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0,
-      "note": ""
-    },
-    {
-      "ts": 1791836228171,
-      "mission": "Громада №4",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.3,
-      "note": "мережевий збій — можливе списання server-side",
-      "effort": "medium",
-      "suspect_usd": 0.3
     }
   ],
   "totals": {
-    "cost_usd": 19.8467,
-    "runs": 268,
+    "cost_usd": 19.878,
+    "runs": 272,
     "web_searches": 275
   },
   "months": {
@@ -835,13 +829,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 0.6921,
-      "runs": 16,
+      "cost_usd": 0.7234,
+      "runs": 20,
       "web_searches": 11,
-      "fair_usd": 0.6921
+      "fair_usd": 0.7234
     }
   },
-  "updated_ts": 1793716470151,
+  "updated_ts": 1793803729502,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
