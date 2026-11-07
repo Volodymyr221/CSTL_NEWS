@@ -47,6 +47,11 @@ const scene = (opts) => `<!doctype html><html><head><meta charset="utf-8"></head
   const isLoggedIn = () => logged;
   const onAuthChange = (cb) => { window.__auth = cb; };
   ${opts.seen ? `try { localStorage.setItem('cstl-join-invite-v1', String(Date.now())); } catch {}` : ''}
+  // 🆕 07.11 — «не в перший день»: за замовчуванням людина вже ВЧОРАШНЯ (перший
+  // візит 2 доби тому), тож старі сцени міряють те, що й міряли. Сцени першого дня
+  // передають firstSeenAgoH явно.
+  try { localStorage.setItem('cstl-first-seen-v1', String(Date.now() - ${opts.firstSeenAgoH ?? 48} * 3600e3)); } catch {}
+  ${opts.firstSeenAgoH === 'none' ? `try { localStorage.removeItem('cstl-first-seen-v1'); } catch {}` : ''}
   ${inline}
 
   let invites = 0;
@@ -142,6 +147,23 @@ if (!src) {
     tab(); tab(); tab(); tab(); await wait(1200);
     out.разів = invites;` });
   ok('уже показане раніше — не повторюємо', d.разів === 0, `запрошень: ${d.разів}`);
+
+  // 7. 🔴 07.11 — НЕ В ПЕРШИЙ ДЕНЬ (🗣️ Вова: «показуємо пізніше»).
+  // Свіжий гість із реклами: мітки першого візиту ще немає — модуль ставить її сам.
+  const e = await run({ firstSeenAgoH: 'none', body: `
+    const out = {};
+    tab(); tab(); tab(); tab(); tab(); await wait(1200);
+    out.разів = invites;
+    out.мітка = !!localStorage.getItem('cstl-first-seen-v1');` });
+  ok('🔴 перший візит: навіть після 5 переходів — мовчить', e.разів === 0, `запрошень: ${e.разів}`);
+  ok('перший візит запамʼятовується на пристрої', e.мітка === true);
+  // Межа доби з обох боків: 23 год — ще ні, 25 год — так.
+  const f = await run({ firstSeenAgoH: 23, body: `
+    const out = {}; tab(); tab(); tab(); await wait(1200); out.разів = invites;` });
+  ok('🔴 23 год після першого візиту — ще мовчить', f.разів === 0, `запрошень: ${f.разів}`);
+  const g2 = await run({ firstSeenAgoH: 25, body: `
+    const out = {}; tab(); tab(); tab(); await wait(1200); out.разів = invites;` });
+  ok('🔴 повернувся наступного дня — запрошення приходить', g2.разів === 1, `запрошень: ${g2.разів}`);
 }
 
 await stop();

@@ -31,6 +31,17 @@ const SEEN_KEY       = 'cstl-join-invite-v1';
 const ACTIONS_BEFORE = 3;
 const SNOOZE_DAYS    = 30;
 const SETTLE_MS      = 900;
+// 🔴 07.11 — НЕ В ПЕРШИЙ ДЕНЬ. 🗣️ Вова: «було б класно, якби вони просто
+// наблюдали поки що… як веб-1», і на питання про це вікно — «показуємо пізніше».
+// Аудит 07.11 спіймав: гість із реклами погортав три вкладки, нічого не натискав —
+// і отримав «Приєднайтесь до громади». У перший день людина знайомиться; просити
+// вхід, поки вона ще не вирішила, чи їй тут цікаво, — та сама «реклама», від якої
+// цей модуль і стерегся лічбою дій.
+// ✅ Перший візит запамʼятовується на пристрої; запрошення можливе лише коли від
+// нього минуло FIRST_DAY_MS (тобто людина ПОВЕРНУЛАСЬ — найчесніший знак інтересу),
+// і далі як раніше: три переходи в сеансі.
+const FIRST_SEEN_KEY = 'cstl-first-seen-v1';
+const FIRST_DAY_MS   = 24 * 60 * 60 * 1000;
 
 let actions = 0;
 let done    = false;   // за один запуск — не більше одного разу
@@ -41,6 +52,18 @@ function shownRecently() {
     return t && (Date.now() - t) < SNOOZE_DAYS * 24 * 60 * 60 * 1000;
   } catch { return false; }
 }
+// Перший візит: якщо мітки ще немає — ставимо зараз і віддаємо «щойно».
+// Сховище недоступне (приватний режим) → вважаємо візит першим: краще не запросити,
+// ніж запросити в перший же день.
+function firstSeenAt() {
+  try {
+    const t = Number(localStorage.getItem(FIRST_SEEN_KEY) || 0);
+    if (t) return t;
+    localStorage.setItem(FIRST_SEEN_KEY, String(Date.now()));
+  } catch {}
+  return Date.now();
+}
+function firstDayOver() { return Date.now() - firstSeenAt() >= FIRST_DAY_MS; }
 function remember() { try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch {} }
 
 // 🛑 НЕ ПЕРЕБИВАЄМО ТЕ, ЩО ВЖЕ НА ЕКРАНІ. Три випадки, і кожен коштував би
@@ -67,6 +90,7 @@ function screenBusy() {
 function maybeInvite() {
   if (done || isLoggedIn() || shownRecently()) return;
   if (actions < ACTIONS_BEFORE) return;
+  if (!firstDayOver()) return;
   if (screenBusy()) return;
   done = true;
   remember();
@@ -80,6 +104,7 @@ function maybeInvite() {
 }
 
 export function initJoinInvite() {
+  firstSeenAt();   // мітка першого візиту ставиться при старті, а не на третьому переході
   if (isLoggedIn() || shownRecently()) return;
   // Людина увійшла сама, поки ми лічили — більше нічого не пропонуємо.
   onAuthChange(() => { if (isLoggedIn()) done = true; });
