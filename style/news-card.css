@@ -646,3 +646,30 @@ img.nc-img { display: block; object-fit: cover; }
   font: 400 12px/1 system-ui, -apple-system, sans-serif;
   color: var(--nc-line-quiet, rgba(255, 255, 255, .62));
 }
+
+/* 🔴 07.11 — «📅 Відбулося 5 листопада» / «📅 Анонс від 27 серпня» на анонсах, що
+   вже позаду (`pastAnnounce` у news.js). Тиха мітка, а не тривога: новина не
+   хибна, вона просто про минуле — колір тексту застосунку, без червоного.
+   Кегль цілий (12px), без капсу — правила дизайн-системи. */
+.nc-past {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(16, 18, 22, 0.06);
+  color: var(--ink-mute);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.nc-meta .nc-past { margin: 0 0 0 6px; }
+/* У великій картці текст лежить на затемненому фото — мітка біла на склі. */
+.nc--hero .nc-past {
+  margin: 0 8px 0 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+}

@@ -308,6 +308,9 @@
     .agent-sum  { font-size: 22px; font-weight: 700; color: #6B1B2B; line-height: 1.1; }
     .agent-meta { font-size: 12px; color: #666; margin-top: 3px; }
     .agent-last { font-size: 11px; color: #999; margin-top: 5px; }
+    /* 07.11 — стан агента: «стоїть» червоним, решта тихо */
+    .agent-st { font-size: 12px; margin-top: 6px; line-height: 1.35; color: #555; }
+    .agent-st--stop { color: #A3262F; font-weight: 600; }
     .agent-note { font-size: 12px; color: #8a6d3b; background: #FFF7E6; border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
     .spend-row-agent { font-size: 12px; color: #6B1B2B; }
     .agent-state { border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid; }
@@ -784,9 +787,18 @@ let testers        = [];
 // насправді «Відповідями», відірваними від питання, до якого належать.
 let allPosts       = [];
 const ЦЕ_ПИТАННЯ   = p => p.type === 'chat';
-const оголошення   = () => allPosts.filter(p => !ЦЕ_ПИТАННЯ(p));
-const питання      = () => allPosts.filter(ЦЕ_ПИТАННЯ);
-const відповідіДо  = (postId) => comments.filter(c => c.post_id === postId)
+// 🔴 07.11 — ВИДАЛЕНЕ НЕ ЖИВЕ В АДМІНЦІ. 🗣️ Вова: «питання я сам видалив, і воно
+// досі в адмінці… не можу нічого з ним зробити». Корінь: адмін за RLS бачить і
+// рядки з `deleted_at` (політика `posts read` = `… or is_admin()`), а ці помічники
+// відсіювали лише ТИП. Питання №99, видалене автором 31.10 без відповідей, і далі
+// стояло в черзі «без відповіді». Та сама вада чекала оголошень (сховані 07.11
+// мʼяким видаленням) — вони лягли б у «Опубліковані».
+// 🔑 Одне правило в одному місці: кожен список адмінки бере пости й відповіді
+// лише через `живий`, тож видалене не потрапить ні в лічильник, ні в чергу.
+const живий        = r => !r.deleted_at;
+const оголошення   = () => allPosts.filter(p => живий(p) && !ЦЕ_ПИТАННЯ(p));
+const питання      = () => allPosts.filter(p => живий(p) && ЦЕ_ПИТАННЯ(p));
+const відповідіДо  = (postId) => comments.filter(c => c.post_id === postId && живий(c))
                                         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
 // Скільки днів бездіяльності робить діючий доступ «забутим».
@@ -819,6 +831,7 @@ let communityEdit  = null;    // page_id який зараз редагуємо 
 // `fundraisers` (те, що бачить людина) і `fundraiser_requests` (заявки жителів),
 // файл `scripts/supabase_fundraisers.sql`.
 let fundraisers    = [];      // усі збори, включно з прихованими (адмін бачить усе)
+let агентиСтан     = {};      // 🆕 07.11 — стан агентів із data/ai_spend.json (`agents_state`)
 let fundRequests   = [];      // заявки, нові зверху
 let fundDraft      = null;    // null = список; обʼєкт = форма створення/редагування
 let fundReqFilter  = 'new';   // фільтр списку заявок; у змінній — розділ перемальовується цілком
@@ -1169,7 +1182,7 @@ async function loadAll() {
       Promise.resolve({ data: [] }),
       supa.from('announcements').select('*').order('created_at', { ascending: false }),
       supa.from('admins').select('*').order('created_at', { ascending: true }),
-      supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
+      supa.from('comments').select('id, post_id, author, text, created_at, deleted_at').order('created_at', { ascending: false }).limit(200),
       // Спільноти-канали «Стрічки» — за порядком sort_order (керується тут же).
       // ⚠️ `official` (09.08) — синя галочка спільноти. Колонка додана міграцією
       // `scripts/supabase_official_badge.sql`; поле лише читається, ставить його
@@ -1192,8 +1205,8 @@ async function loadAll() {
     ]);
     allPosts       = pending.data   || [];
     // Похідні лишаються заради решти розділів, які на них спираються.
-    pendingPosts   = allPosts.filter(p => p.status === 'pending');
-    publishedPosts = allPosts.filter(p => p.status === 'published');
+    pendingPosts   = allPosts.filter(p => живий(p) && p.status === 'pending');
+    publishedPosts = allPosts.filter(p => живий(p) && p.status === 'published');
     announcements  = ann.data       || [];
     admins         = ad.data        || [];
     comments       = com.data       || [];
@@ -1204,6 +1217,14 @@ async function loadAll() {
     // мусить відкритись і без скарг, а не впасти цілком.
     adReports    = rep.data  || [];
     fundraisers  = fnd.data  || [];
+    // 🔴 07.11 — СТАН АГЕНТІВ НА ГОЛОВНИЙ ЕКРАН. Аудит ботів: тиждень агенти
+    // «успішно» мовчали, бо причина жила лише в лозі GitHub. Агенти тепер самі пишуть
+    // стан (`agents_state`), а черга дій показує, хто стоїть. Fail-soft: файла нема —
+    // адмінка відкривається як завжди.
+    try {
+      const r = await fetch('data/ai_spend.json?_=' + Date.now());
+      агентиСтан = r.ok ? ((await r.json()).agents_state || {}) : {};
+    } catch (_) { агентиСтан = {}; }
     fundRequests = freq.data || [];
 
     // 🔑 Список доступів вантажимо ТУТ, а не при вході в розділ — саме тому, що
@@ -1331,7 +1352,7 @@ function menuItems() {
     // ті, що зараз у стані «лише колу», тобто ЧЕКАЮТЬ його рішення. Той самий
     // принцип, що в решті розділів: не «скільки всього», а «скільки чекає дії».
     { id: 'updates',       icon: ICO_ROCKET,         label: 'Оновлення',    show: can('updates'),     group: 'Система',    count: () => features.filter(f => f.stage === 'circle').length },
-    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: can('spend'),     group: 'Система',    count: () => 0 },
+    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: can('spend'),     group: 'Система',    count: () => агентиЩоСтоять().length },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: can('analytics'),     group: 'Система',    count: () => 0 },
     // 🔴 21.09 — «ДИРЕКЦІЯ»: щотижневий звіт агента CEO проти курсу.
     // 🔑 Видно ЛИШЕ власнику і CEO, і це не про секретність, а про адресата:
@@ -1401,6 +1422,8 @@ function чергаДій() {
   рядок('board',       'оголошення', 'оголошення', 'оголошень', ' на модерації');
   рядок('questions',   'питання',  'питання',  'питань',     ' без відповіді');
   рядок('fundraisers', 'заявка',   'заявки',   'заявок',     ' на збір');
+  // 🆕 07.11 — агент, що стоїть, теж чекає дії людини (теми / вичитка кабінету).
+  рядок('spend',       'агент стоїть', 'агенти стоять', 'агентів стоять', ' — потрібна твоя дія', true);
   // 🔑 «Стаття» відмінюється разом із «чернеткою», тож у цього рядка обидва
   // слова змінні: «1 чернетка статті» / «4 чернетки статей».
   рядок('articles',    'чернетка статті', 'чернетки статей', 'чернеток статей');
@@ -1660,6 +1683,13 @@ function renderAdReports(el) {
   });
 }
 
+// Агенти, що СТОЯТЬ (нема з чого писати / кабінет повний) — потрібна людина.
+// «чекає» і «пауза» сюди не йдуть: перше — звичайна черга на публікацію, друге
+// минає саме (бюджет відновиться).
+function агентиЩоСтоять() {
+  return Object.entries(агентиСтан || {}).filter(([, s]) => s && s.стан === 'стоїть');
+}
+
 // ── TAB: Витрати AI (лічильник автопостингу новин) ────────────────────
 async function renderSpend(el) {
   el.innerHTML = '<div class="empty">Завантаження…</div>';
@@ -1732,11 +1762,19 @@ async function renderSpend(el) {
           <div class="agent-meta">${a.прогонів} ${a.прогонів === 1 ? 'запуск' : 'запусків'}${
             a.статей ? ' · ' + a.статей + ' матер.' : ''}${a.пошуків ? ' · ' + a.пошуків + ' пош.' : ''}</div>
           <div class="agent-last">${a.останній ? escapeHtml(formatDate(a.останній)) : 'цього місяця не запускався'}</div>
+          ${стануРядок((d.agents_state || {})[a.id])}
         </article>`).join('')}
     </div>
     ${неповний ? `<p class="agent-note">⚠️ Розклад рахується з останніх ${runs.length} прогонів у журналі — старіші підрізані, тож сума нижче за «${usd(місяцьУсього)}» згори на ${usd(місяцьУсього - сумаРозкладу)}.</p>` : ''}`;
 
   const st = d.agent_status;
+  // 🆕 07.11 — рядок стану на картці агента (пише сам агент, див. editor/core/spend.py).
+  function стануРядок(s) {
+    if (!s || !s.стан) return '';
+    const іконка = { 'працює': '🟢', 'чекає': '🟡', 'пауза': '⏸', 'стоїть': '⛔' }[s.стан] || '•';
+    return `<div class="agent-st agent-st--${s.стан === 'стоїть' ? 'stop' : 'ok'}">${іконка} ${escapeHtml(s.стан)}${
+      s.причина ? ' — ' + escapeHtml(s.причина) : ''}${s.ts ? ' · з ' + escapeHtml(formatDate(s.ts)) : ''}</div>`;
+  }
   let банер = '';
   if (st && st.стан === 'пауза') {
     банер = `<div class="agent-state agent-state--pause">
