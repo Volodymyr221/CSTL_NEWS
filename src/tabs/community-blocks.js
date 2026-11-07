@@ -37,7 +37,7 @@ import { startAutoCarousel } from '../core/auto-carousel.js';
 // стара стрічка плиток дописувала мітку розділу на КОЖНУ картку, бо в одному
 // вікні лежали новини з різних розділів. Тепер сторінка = один розділ, і його
 // назву каже шапка секції — мітка на картці повторювала б її втретє.
-import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, markArticleSeen, newsLoadFailed, handleImgError } from './news.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle, NEWS_GEO_GROUPS, articlesOfGroup, countNewCommunity, markArticleSeen, newsLoadFailed, handleImgError, pastAnnounce } from './news.js';
 import { openNewsHub } from './news-hub.js';   // повноекранний хаб новин (шар поверх Громади)
 import { openModal } from '../core/modal.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
@@ -1659,8 +1659,12 @@ let _stopNewsCarousel = null;
 // ⚠️ Якщо фото немає в УСІЙ категорії — беремо найсвіжішу як є; вона намалюється
 // з монограмою джерела (`.nc-img--mono`), і це свідомо, бо порожній розділ гірший
 // за розділ без картинки.
+// 🔴 07.11 — МИНУЛИЙ АНОНС НЕ ВІДКРИВАЄ ВІДЖЕТ. Велика картка — перше, що бачить
+// людина на Громаді; анонс події, яка вже минула, туди не ставимо (його позначку
+// «📅 Відбулося…» видно в рядку нижче — він не прихований, лише не головний).
 function heroOf(list) {
-  return list.find(a => a.image) || list[0];
+  const свіжі = list.filter(a => !pastAnnounce(a));
+  return свіжі.find(a => a.image) || свіжі[0] || list.find(a => a.image) || list[0];
 }
 
 // Сторінка каруселі = одна категорія: велика картка + до двох тихих рядків.
@@ -1670,7 +1674,9 @@ function newsPageOf(arts, group) {
   const all = articlesOfGroup(arts, group);
   if (!all.length) return null;
   const hero = heroOf(all);
-  const lines = all.filter(a => a !== hero).slice(0, NEWS_LINES_PER_PAGE);
+  // Свіжі — першими, минулі анонси — у хвіст (стабільно: всередині груп порядок той самий).
+  const решта = all.filter(a => a !== hero);
+  const lines = [...решта.filter(a => !pastAnnounce(a)), ...решта.filter(a => pastAnnounce(a))].slice(0, NEWS_LINES_PER_PAGE);
   return { group, hero, lines };
 }
 

@@ -633,6 +633,51 @@ const CATEGORY_DEFAULT = 'Суспільство';
 // 🛑 Наслідок: у мітки більше НЕМА власного кольору на рівні розмітки — усі три
 // (гео, категорія, ексклюзив) беруть колір з поверхні. Це навмисно: різнокольорові
 // мітки і були тим, що робило список строкатим.
+// ── 🔴 07.11 — АНОНС, ЩО ВЖЕ МИНУВ, НЕ СМІЄ ЧИТАТИСЬ ЯК МАЙБУТНІЙ ────────────────
+// 🗣️ Вова 07.11: «Якщо якась стара інфа, то позначати, що це було там тоді-то».
+// Аудит 07.11: на ПЕРШОМУ екрані Громади стояло «5 листопада, відбудеться чергова
+// онлайн-зустріч» — а було 7 листопада. Правило часу (`editor/core/time_rule.py`)
+// стоїть лише в ШІ-агентах; новини з чужих сайтів ми не переписуємо — тому
+// позначаємо.
+// 🔑 РАХУЄМО В ЗАСТОСУНКУ, А НЕ В ПАРСЕРІ: «минуло» залежить від СЬОГОДНІ, а не від
+// дня розбору. Позначка в даних застаріла б так само, як сам анонс.
+// Правило: є слово майбутнього часу (анонс) →
+//   • у тексті є дата «5 листопада» / «5-7 листопада» і її кінець минув → «Відбулося 5 листопада»;
+//   • дати немає, а анонсу більше 3 днів → «Анонс від 27 серпня» (чесно: ми не знаємо,
+//     коли подія, але знаємо, коли про неї писали).
+// 🛑 Без слова майбутнього часу — нічого: звіт «відбулася зустріч» уже сам каже минуле.
+const МІСЯЦІ_Р = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+const АНОНС_RE = /(^|[^а-яіїєґ'ʼ])(відбудеться|відбудуться|відбуватиметься|відбуватимуться|проведуть|проводитиметься|проводитимуть|запрошуємо|запрошують|запрошує|стартує|стартують|розпочнеться|розпочнуться|триватиме|пройде|пройдуть|організовують|збираються)(?=$|[^а-яіїєґ'ʼ])/i;
+const ДАТА_RE = new RegExp(`(\\d{1,2})(?:\\s*[-–—]\\s*(\\d{1,2}))?\\s+(${МІСЯЦІ_Р.join('|')})`, 'i');
+const АНОНС_СТАРИЙ_МС = 3 * 86400000;
+
+export function pastAnnounce(a, now = Date.now()) {
+  if (!a) return null;
+  const head = `${a.title || ''} ${(a.excerpt || '').slice(0, 300)}`;
+  if (!АНОНС_RE.test(head)) return null;
+  // Дата з заголовка важить більше: в описі трапляються дати реєстрації, дедлайни.
+  const m = (a.title || '').match(ДАТА_RE) || head.match(ДАТА_RE);
+  const опубл = new Date(Number(a.ts) || now);
+  if (m) {
+    const день = Number(m[2] || m[1]);
+    const міс = МІСЯЦІ_Р.indexOf(m[3].toLowerCase());
+    if (міс < 0 || день < 1 || день > 31) return null;
+    let рік = опубл.getFullYear();
+    // анонс у грудні про «15 січня» — це наступний рік
+    if (міс < опубл.getMonth() - 6) рік += 1;
+    const кінець = new Date(рік, міс, день, 23, 59, 59).getTime();
+    return now > кінець ? { kind: 'past', label: `Відбулося ${Number(m[1])}${m[2] ? '–' + день : ''} ${МІСЯЦІ_Р[міс]}` } : null;
+  }
+  if (now - опубл.getTime() > АНОНС_СТАРИЙ_МС) {
+    return { kind: 'old', label: `Анонс від ${опубл.getDate()} ${МІСЯЦІ_Р[опубл.getMonth()]}` };
+  }
+  return null;
+}
+function pastBadgeHtml(a) {
+  const p = pastAnnounce(a);
+  return p ? `<span class="nc-past" data-past="${p.kind}">📅 ${escapeHtml(p.label)}</span>` : '';
+}
+
 function badgesHtml(a) {
   const cat = normCategory(a.category);
   return `
@@ -744,7 +789,7 @@ function renderHeroCard(a) {
         <div class="nc-kicker">${джерело}</div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
-        <div class="nc-foot">${formatTime(a.ts)}<span class="nc-fsrc"> · ${джерело}</span></div>
+        <div class="nc-foot">${pastBadgeHtml(a)}${formatTime(a.ts)}<span class="nc-fsrc"> · ${джерело}</span></div>
       </div>
     </article>
   `;
@@ -777,7 +822,7 @@ function renderLineCard(a) {
       ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="nc-body">
         <h3 class="nc-title">${escapeHtml(a.title)}</h3>
-        <div class="nc-foot">${escapeHtml(a.source || '')} · ${formatTime(a.ts)}</div>
+        <div class="nc-foot">${pastBadgeHtml(a)}${escapeHtml(a.source || '')} · ${formatTime(a.ts)}</div>
       </div>
     </article>
   `;
@@ -796,7 +841,7 @@ function renderCard(a, variant) {
         // клітинку, тож висоти рівні незалежно від того, чи дало джерело картинку.
         : ''}
       <div class="nc-body">
-        <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span></div>
+        <div class="nc-meta">${badgesHtml(a)}<span class="nc-src">${escapeHtml(a.source)}</span>${pastBadgeHtml(a)}</div>
         <h2 class="nc-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
         <div class="nc-foot">${formatTime(a.ts)}</div>
