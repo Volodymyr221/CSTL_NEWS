@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 15:48 UTC
+**Зріз на:** 2026-11-07 16:17 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1711` |
-| останній PR у `main` | не видно в останніх комітах |
+| останній коміт людини | `2a23d35d1` 07.11 16:17 — feat(board): редизайн модалки «Нове оголошення» — світлий аркуш, білі поля, мітки без капсу, новий вибраний чіп |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1816` |
+| останній PR у `main` | #1301 |
 | стендів на диску | 198 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-11-07 | **НЕМАЄ** ⚠️ |
@@ -24,23 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/docs/AUDYT_BOTIV_2026-11-07.md`
+- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-after.png`
+- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-before.png`
 - `_session-log/vova-2026-10-31.md`
 - `bundle.js`
-- `scripts/bench/0013_rls_initplan/bench_probe.sql`
-- `scripts/bench/0013_rls_initplan/bench_setup.sql`
-- …ще 12 (повністю — `git diff --name-only origin/main..HEAD`)
+- `src/tabs/community-modal.js`
+- …ще 6 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish
-- `88786d073` 07.11 15:12 — docs: NOW — шліфовка Стрічки 07.11, стиснуто під 16 KB
-- `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі
-- `1cf2818a1` 07.11 15:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
-- `a32e44550` 07.11 15:03 — feat(feed): прибрати «👁 N» з карток (запис подій лишається) — WIP
+- `2a23d35d1` 07.11 16:17 — feat(board): редизайн модалки «Нове оголошення» — світлий аркуш, білі поля, мітки без капсу, новий вибраний чіп
+- `e0d1c368b` 07.11 16:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `c85c2fa5b` 07.11 16:02 — docs: аудит ботів 07.11 — звіт і журнал
+- `a58116179` 07.11 15:49 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `7c7a355a1` 07.11 15:48 — docs(log): PR #1301, деплой #7751
 
 <!-- AUTO:END -->
 
