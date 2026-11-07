@@ -26,6 +26,12 @@ def _сторінка_місії(mission: dict):
         return None
 
 
+def _агент(mission: dict) -> str:
+    """Ідентифікатор агента для адмінки — той самий, що в мітці прогону
+    (`spend_prefix` «olyka:» → «olyka»), щоб назва не жила у двох місцях."""
+    return (mission.get("spend_prefix") or mission.get("name") or "").rstrip(":") or mission.get("name", "?")
+
+
 def main():
     ap = argparse.ArgumentParser(description="AI-редактор CSTL")
     ap.add_argument("--mission", required=True, help="назва місії (editor/missions/<name>.json)")
@@ -51,6 +57,7 @@ def main():
         if блок:
             print(f"⛔ {блок}")
             print("— прогін пропущено (запобіжник витрат, не помилка)")
+            spend.set_agent_state(_агент(mission), "пауза", блок)
             return
     # 🔴 СТЕЛЯ ШУХЛЯДИ — ТЕЖ ПЕРЕД РОБОТОЮ. Замовлення Вови 29.08: «щоб для кожної
     # спільноти, в якій працює агент, було 2 пости — один публікується, другий на
@@ -71,6 +78,8 @@ def main():
             print(f"  🗂 у спільноті вже {є} чернетк(и) при стелі {стеля} — "
                   f"нових не пишемо, модель не кличемо")
             print("— готово: 0 чернеток (шухляда повна, це не помилка)")
+            spend.set_agent_state(_агент(mission), "чекає",
+                                  f"{є} чернетк(и) у спільноті чекають публікації")
             return
         else:
             можна = стеля - є
@@ -85,6 +94,17 @@ def main():
         print(f"  • {d.title}  [{img} {d.image_query}]")
     where = "dry" if args.dry_run else (args.sink or mission.get("sink"))
     print(f"— готово: {len(drafts)} чернеток (sink: {where})")
+    if not args.dry_run:
+        # 🔑 0 чернеток у місії з ПЛАНОМ = теми вичерпано: агент пише лише з фактів,
+        # тож без нових фактів він стоятиме мовчки (аудит 07.11). Для календарної
+        # місії (свята) 0 — нормальний стан: у вікні просто нема свята.
+        if drafts:
+            spend.set_agent_state(_агент(mission), "працює", f"остання чернетка: {drafts[-1].title[:80]}")
+        elif mission.get("source") == "plan":
+            spend.set_agent_state(_агент(mission), "стоїть",
+                                  "теми вичерпано — потрібні нові факти (editor/plans)")
+        else:
+            spend.set_agent_state(_агент(mission), "працює", "у вікні нема на що писати — це нормально")
 
 
 if __name__ == "__main__":

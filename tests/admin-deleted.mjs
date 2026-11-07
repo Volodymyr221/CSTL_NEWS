@@ -43,4 +43,9 @@ const черги = admin.slice(admin.indexOf('pendingPosts   = allPosts'), admin
 ok('🔴 черга модерації й «Опубліковані» відсіюють видалене',
    /pendingPosts\s*=\s*allPosts\.filter\(p => живий\(p\)/.test(черги) && /publishedPosts\s*=\s*allPosts\.filter\(p => живий\(p\)/.test(черги));
 
+// Фільтр відповідей марний, якщо поле не вантажиться: заглушка дані подавала сама,
+// а справжній запит `comments` брав колонки БЕЗ deleted_at (спіймано 07.11 читанням).
+ok('🔴 запит відповідей вантажить deleted_at (інакше фільтр нічого не бачить)',
+   /from\('comments'\)\.select\('[^']*deleted_at[^']*'\)/.test(admin));
+
 done();
