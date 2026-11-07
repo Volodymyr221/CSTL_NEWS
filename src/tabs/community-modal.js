@@ -21,7 +21,6 @@ import { ICONS } from '../core/icons.js';
 // Вектор-олівець у заголовку модалки — спільна іконка з core/icons.js (дедуп,
 // раніше локальна копія EDIT_ICON_SVG з board.js; icons.js не створює циклу,
 // на відміну від прямого імпорту з board.js).
-const PENCIL_ICON_SVG = ICONS.pencil;
 
 // Д-6: векторний пін локації в прев'ю — мірор board.js PIN_ICON_SVG/renderLoc (не імпортуємо
 // з board.js через циклічний імпорт). Щоб прев'ю показувало локацію так само, як реальна картка.
@@ -190,7 +189,7 @@ export function openBoardModal(opts = {}) {
 
   const bodyHtml = `
     <div class="cm-board-modal-head">
-      <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>${isEdit ? 'Редагувати оголошення' : 'Нове оголошення'}</h3>
+      <h3 class="cm-board-modal-title">${isEdit ? 'Редагувати оголошення' : 'Нове оголошення'}</h3>
       <p class="cm-board-modal-sub">${isEdit ? 'Змініть потрібні поля.' : 'Заповніть поля нижче.'}</p>
     </div>
 

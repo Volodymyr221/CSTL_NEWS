@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 15:48 UTC
+**Зріз на:** 2026-11-07 16:54 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1711` |
-| останній PR у `main` | не видно в останніх комітах |
+| останній коміт людини | `06d38c1a6` 07.11 16:54 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1816` |
+| останній PR у `main` | #1301 |
 | стендів на диску | 198 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-11-07 | **НЕМАЄ** ⚠️ |
@@ -24,23 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/docs/AUDYT_BOTIV_2026-11-07.md`
+- `CSTL NEWS VOVA/docs/AUDYT_ZASTOSUNKU_2026-11-07.md`
+- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-after.png`
+- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-before.png`
 - `_session-log/vova-2026-10-31.md`
 - `bundle.js`
-- `scripts/bench/0013_rls_initplan/bench_probe.sql`
-- `scripts/bench/0013_rls_initplan/bench_setup.sql`
-- …ще 12 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 7 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish
-- `88786d073` 07.11 15:12 — docs: NOW — шліфовка Стрічки 07.11, стиснуто під 16 KB
-- `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі
-- `1cf2818a1` 07.11 15:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
-- `a32e44550` 07.11 15:03 — feat(feed): прибрати «👁 N» з карток (запис подій лишається) — WIP
+- `06d38c1a6` 07.11 16:54 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `ed068b210` 07.11 16:23 — docs: аудит застосунку очима гостя 07.11
+- `8fb74b023` 07.11 16:17 — docs(now): стиснуто під 16 KB
+- `3c776b5d9` 07.11 16:17 — docs(now): авto-блок
+- `2a23d35d1` 07.11 16:17 — feat(board): редизайн модалки «Нове оголошення» — світлий аркуш, білі поля, мітки без капсу, новий вибраний чіп
 
 <!-- AUTO:END -->
 
@@ -64,10 +64,9 @@
 
 ## ✅ ЗРОБЛЕНО В ЦІЙ СЕСІЇ
 
+🆕 **07.11b:** 🎨 редизайн «Нове оголошення» · 🔎 аудит ботів (`docs/AUDYT_BOTIV_2026-11-07.md`) — рішення Вови по 5 пунктах.
 🆕 **07.11 Стрічка:** 🗑 лишились 4 спільноти (3 видалено з дописами) · 👁 «прочитали N» знято (запис лишився) · ⌨️ «Відповісти» з першого тапу при відкритій клавіатурі (Стрічка + Питання) — ⏳ палець Вови на айфоні.
-🆕 **31.10:** 💸 набір економії токенів — `_ai-tools/EKONOMIYA_TOKENIV_KIT.md`.
 🆕 **30.10:** аркуш погоди без смуги; 🫳 свайп аркушів — напрям жесту раз (`sheet-gesture-axis`) — ⏳ палець Вови.
-🆕 **29.10** (журнал `_session-log/vova-2026-10-28.md`): ручні кроки закрито (push тип 4 сухий прогін 200 · Usage — Pro не треба, Disk IO 99%) · 🔎 пошук розмов у Повідомленнях за ЖИВИМ імʼям (`board-chat.js`, `qa-chat-search` 25/25) · 🌤 опис погоди 14px (13 на 375) · 📅 дати запуску 15.11 / 29.11.
 🔐 **Аудит безпеки 24.10** → `docs/AUDYT_BEZPEKY_2026-10-24.md`: 5 дір + 8 зміцнень.
 ✅ **Б1-Б3 закрито 26.10** — `0011_chat_page_guards.sql` (тригери-сторожі; Вова накотив
 у SQL Editor; звірено на живій базі 13/13 у відкаченій транзакції).

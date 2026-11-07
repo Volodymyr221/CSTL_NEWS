@@ -1402,7 +1402,12 @@
      Лист відкривається з FAB Дошки і мусить читатись як її продовження.
      ⚠️ Правимо ТІЛЬКИ цей лист, а не глобальний `--bg-card`: той токен носять усі
      модалки застосунку, і зміна зачепила б екрани, яких Вова не просив. */
-  background: var(--board-bg);
+  /* 🔴 07.11 — РЕДИЗАЙН (🗣️ Вова: «фон якийсь незрозумілий, взагалі тьмяний,
+     кнопки такі собі… максимально сучасно і просто»). `--board-bg #E6E6E3` — колір
+     ДОШКИ, на якій лежать картки; для форми він тьмяний, і білі поля на ньому не
+     «світяться». Беремо загальний сірий застосунку `--app-bg` (Стрічка, Автобуси):
+     світліший, нейтральний, і нового hex у систему не додає. */
+  background: var(--app-bg);
   /* padding-top = 0: скрол-контент починається з самого верху, щоб липка шапка
      (рисочка+✕) сиділа ФЛЕШ до верху без прозорої смуги над нею (iOS Safari sticky
      не пінить впритул при негативному верхньому margin — тому padding-top прибрано). */
@@ -1433,15 +1438,15 @@
 .app-modal--board-compose .app-modal-sheet { --modal-pad-x: 18px; }
 /* Шапка НЕ успадковує колір аркуша: під нею проїжджає форма, тож заливка власна.
    Міняєш `--board-bg` — тут нічого не чіпаєш, це той самий токен. */
-.app-modal--board-compose .app-modal-head { background: var(--board-bg); }
+.app-modal--board-compose .app-modal-head { background: var(--app-bg); }
 /* ✕ на поверхні Дошки зливався б із фоном — тінь лишається (фідбек Вови 29.07). */
 .app-modal--board-compose .app-modal-close { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16); }
-.app-modal--board-compose #bm-location { width: auto; max-width: 100%; }
+.app-modal--board-compose #bm-location { width: auto; min-width: 220px; max-width: 100%; }
 .app-modal--board-compose #bm-contact  { width: auto; }
 .app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
 /* Поле числа вимкнене, коли стоїть «Договірна» — видно, що вводити нема сенсу. */
 .app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
-#bm-text { min-height: 88px; resize: none; }
+#bm-text { min-height: 104px; resize: none; line-height: 1.45; }
 @keyframes bm-spin {
   to { transform: rotate(360deg); }
 }
