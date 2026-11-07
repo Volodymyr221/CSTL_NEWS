@@ -302,7 +302,7 @@
   z-index: 5;
   margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
   padding: 0 46px 0 18px;   /* правий 46px — місце під ✕; нижній 0 (границю піднято максимально — фідбек Вови) */
-  background: var(--board-bg);   /* 29.07 — та сама поверхня, що й аркуш (див. коментар у .app-modal-handle вище) */
+  background: var(--app-bg);   /* 07.11 — та сама поверхня, що й аркуш (редизайн, community.css) */
   border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
   transition: border-color 0.2s ease;
 }
@@ -312,30 +312,22 @@
   border-bottom-color: rgba(0, 0, 0, 0.07);
 }
 .cm-board-modal-title {
-  font-size: 18px;
+  /* 🔴 07.11 — РЕДИЗАЙН: заголовок аркуша без іконки олівця. Іконка поруч із
+     назвою не каже нічого нового («нове оголошення» і так про написання), а
+     займає 30px і зсуває підзаголовок. Ієрархію тримають розмір і вага. */
+  font-size: 22px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 0;            /* підзаголовок ближче до заголовка (фідбек Вови) */
+  margin-bottom: 2px;
   line-height: 1.15;
-  letter-spacing: -0.01em;   /* 03.09 — без капсу (дизайн-аудит) */
-  display: flex;
-  align-items: center;
-  gap: 8px;                     /* відступ вектор-олівець → текст */
+  letter-spacing: -0.02em;   /* великий текст — негативний трекінг (apple-design §15) */
 }
-.cm-board-title-ic {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--red);   /* олівець бордовий (SVG stroke=currentColor) */
-}
-.cm-board-title-ic svg { width: 22px; height: 22px; }
 .cm-board-modal-sub {
-  font-size: 13px;
-  color: var(--ink-soft);
+  font-size: 14px;
+  color: var(--ink-mute);
   margin-bottom: 0;   /* нижній відступ дає padding .cm-board-modal-head (підзаголовок у шапці) */
-  margin-left: 30px;  /* вирівняти під ТЕКСТ заголовка (олівець 22px + gap 8px), не під олівець */
+  padding-bottom: 6px;
 }
-.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: var(--elev-1); }   /* тінь — щоб поле не зливалось з фоном */
-.app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
 /* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
    як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
    рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
@@ -367,9 +359,9 @@
      padding, а не розміру квадратика — квадратик 18px виглядає правильно. */
   min-height: 44px;
   padding: 2px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-soft);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -378,62 +370,81 @@
 .cm-board-price--word { font-size: 14px; letter-spacing: 0; }
 .cm-board-input {
   width: 100%;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  /* 🔴 07.11 — РЕДИЗАЙН: поле = біла картка на світлому аркуші. 48px — та сама
+     тап-ціль, що всюди (HIG 44 + повітря); радіус 12 у тон чіпам і кнопці.
+     Тінь знято: край дає білизна поля на сірому, тінь лише бруднила б межу. */
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 12px;
   font-size: 16px;        /* мін 16px — інакше iOS Safari зумить екран при фокусі (і не завжди повертає) */
   font-family: inherit;
+  color: var(--ink);
   resize: vertical;
-  background: #FAFAFA;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }   /* авто-зростання (autoGrowTextarea) — скрол сам лист */
-.cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
-.cm-board-input--small { padding: 8px 11px; font-size: 16px; }
+.cm-board-input::placeholder { color: #9AA0A8; }
+/* Фокус — бордова межа + мʼякий ореол: видно, ДЕ зараз пишеш, навіть кутом ока. */
+.cm-board-input:focus { outline: none; border-color: var(--red); background: #fff; box-shadow: 0 0 0 4px rgba(114, 47, 55, 0.12); }
+.cm-board-input--small { font-size: 16px; }
+/* Список «Локація» — власна стрілка замість системної: системна на iOS — сірий
+   «⌃⌄» без відступу, що й виглядало «такі собі». */
+select.cm-board-input {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 40px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23636872' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+}
 
 .cm-board-submit {
   width: 100%;
-  margin-top: 10px;
-  padding: 11px;
+  margin-top: 8px;
+  /* 🔴 07.11 — РЕДИЗАЙН: головна дія виросла до 54px і 17px — найсильніший елемент
+     аркуша. Кольорової тіні НЕ даємо: дизайн-система дозволяє її лише кнопці
+     «Громада» в таб-барі (стенд `design-system`). */
+  min-height: 54px;
+  padding: 14px;
   background: var(--brand-grad-sm);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 14px;
+  font-size: 17px;
   font-weight: 600;
   font-family: inherit;
-  /* 🔴 03.09 — головна дія без капсу: 14px капсом із tracking 1px виглядало
-     дрібнішим за свою роль. 16px/600 звичайним — читабельніше і спокійніше. */
   letter-spacing: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease-out;
 }
-.cm-board-submit:active { background: var(--brand-grad-press); }
+/* Відгук на натиск — миттєвий, на дотик (apple-design §1). */
+.cm-board-submit:active { background: var(--brand-grad-press); transform: scale(0.98); }
 
 .cm-board-hint {
-  font-size: 11px;
-  color: var(--gray);
+  font-size: 12px;
+  color: var(--ink-mute);
   text-align: center;
-  margin-top: 8px;
-  line-height: 1.4;
+  margin-top: 10px;
+  line-height: 1.45;
 }
 
 /* ===== BOARD MODAL FORM v2 (Tier 4 — 16.05.2026) ===== */
 
-.bm-section { margin-bottom: 14px; }
+.bm-section { margin-bottom: 20px; }
+/* 🔴 07.11 — РЕДИЗАЙН: мітки звичайними літерами. 12px КАПСОМ із розрядкою —
+   «анкетна» інтонація; 13px/600 у кольорі тексту читається як підпис, а не як
+   наказ, і стоїть ближче до свого поля (6 → 8px повітря під міткою). */
 .bm-label {
   display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
 }
 .bm-label-hint {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--ink-mute);
-  text-transform: none;
-  letter-spacing: 0;
   margin-left: 4px;
 }
 /* Позначка обов'язкового поля (Д-16) */
@@ -477,7 +488,8 @@ textarea.cm-board-input.bm-invalid {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 14px;
+  min-height: 48px;
+  padding: 0 16px;
   border-radius: 12px;
   background: var(--board-card);
   /* 🔴 30.07 (аудит Д-А1) — МЕЖА З РОДИНИ ДОШКИ. Було `--border #E5E5E5`, і на поверхні
@@ -486,7 +498,7 @@ textarea.cm-board-input.bm-invalid {
      не кидався в очі: елемент читався, а його межа — ні.
      ⚠️ Це хвіст кремового проходу 29.07: заливки я перевів, межі — ні. Модель OLX
      тримається саме на ЛІНІЇ (контраст ≈1.40), не на різниці заливок. */
-  border: 1px solid var(--board-line);
+  border: 1px solid var(--field-line);   /* 07.11 — межа полів форми (редизайн) */
   font-size: 15px;
   font-weight: 600;
   color: var(--ink, #2A2520);
@@ -501,45 +513,48 @@ textarea.cm-board-input.bm-invalid {
 }
 .bm-author-fixed .bm-author-ic svg { width: 17px; height: 17px; }
 
-/* Категорії — чіпи */
+/* Категорії — чіпи.
+   🔴 07.11 — РЕДИЗАЙН. Вибраний чіп БІЛЬШЕ НЕ ЗАЛИТИЙ темним градієнтом: суцільна
+   бордова пляма серед семи білих чіпів важила більше за саму кнопку «Опублікувати»
+   і перетягувала погляд. Тепер вибір = світла бордова підкладка + бордова межа +
+   бордовий текст — видно однозначно, але головною лишається головна дія.
+   44px — тап-ціль HIG (чіпи стоять щільно, промах коштує зайвого тапу). */
 .bm-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .bm-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
-  /* 🔴 30.07 (аудит Д-А1/Д-В) — біле тіло + ЛІНІЯ, як уже зроблено для `.pm-chip`
-     у `messages.css`. Було `--gray-light #F5F5F5` без межі (`transparent`): на поверхні
-     листа це давало **1.147** і чіп тримався лише на тіні — тобто рівно те, від чого
-     пішли на картці Дошки. Тепер той самий прийом, що всюди в зоні: заливка виступає,
-     межа визначає край. */
-  background: var(--board-card);
-  border: 1.5px solid var(--board-line);
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid var(--field-line);
   border-radius: 999px;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  /* Тінь знято (30.07): вона була костилем «щоб чіп не зливався з кремовим фоном»,
-     а тепер край дає межа. Тримати обидва — це «подвійний розділювач», від якого
-     пішли 29.07 на картці Дошки (два розділювача в одному місці = каша). */
-  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s ease-out;
 }
 .bm-chip:active { transform: scale(0.96); }
 .bm-chip.active {
-  background: var(--brand-grad-sm);
+  /* Підкладка ПОВЕРХ білого: прозора бордова на сірому аркуші давала брудний
+     сіро-рожевий (заміряно на знімку). Теплота R−B = 3.5 — у межах сторожа `board-cream`. */
+  background: linear-gradient(rgba(114, 47, 55, 0.07), rgba(114, 47, 55, 0.07)), #fff;
   border-color: var(--red);
-  color: white;
+  box-shadow: inset 0 0 0 0.5px var(--red);   /* межа 1.5px без зсуву вмісту */
+  color: var(--red);
+  font-weight: 600;
 }
 .bm-chip-emoji { font-size: 14px; line-height: 1; display: inline-flex; }
-/* Активний чіп — червоний фон: іконка теж біла (перебиває семантичний .cat-c-*). */
-.bm-chip.active .bm-chip-emoji { color: #fff; }
+.bm-chip-emoji svg { width: 18px; height: 18px; }
+/* Вибраний чіп — іконка теж бордова (перебиває семантичний .cat-c-*). */
+.bm-chip.active .bm-chip-emoji { color: var(--red); }
 .bm-chip-label { text-transform: capitalize; }
 
 /* Фото-слоти — горизонтальний скрол (до 5, видно ~3, решта гортанням) */
@@ -564,8 +579,8 @@ textarea.cm-board-input.bm-invalid {
   background: var(--board-card);
   background-size: cover;
   background-position: center;
-  border: 1.5px dashed var(--board-line);
-  border-radius: 10px;
+  border: 1.5px dashed #C9CDD3;   /* 07.11 — світліший пунктир під світлий аркуш */
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -588,9 +603,9 @@ textarea.cm-board-input.bm-invalid {
   background-color: transparent;
 }
 .bm-photo-plus {
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 300;
-  color: var(--ink-mute);
+  color: #9AA0A8;
   line-height: 1;
   user-select: none;
 }
@@ -650,15 +665,13 @@ textarea.cm-board-input.bm-invalid {
   border-bottom: 1px solid rgba(16, 18, 22, 0.10);
 }
 .bm-preview-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   /* 🔴 29.07 — той самий колір, що підказка порожнього стану Дошки (`.bd-group-empty-hint`,
      `--ink-soft` = 5.83:1). Було `#FFF4D6` + тінь — світлий текст під темний корок; на
      світлому фоні він засліп би (1.05:1). Пряме прохання Вови: «підбери такий колір,
      як ми підбирали для „Немає оголошень“ — щоб зливався з фоном». */
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  color: var(--ink-mute);
+  font-size: 13px;
   text-align: center;
   margin-bottom: 12px;
 }
