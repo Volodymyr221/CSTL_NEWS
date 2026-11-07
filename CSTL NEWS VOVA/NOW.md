@@ -14,7 +14,7 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `35dee6cd1` 07.11 19:52 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
+| останній коміт людини | `e080ca722` 07.11 19:52 — docs(now): пульс перед finish |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261107-2115` |
 | останній PR у `main` | #1303 |
 | стендів на диску | 200 |
@@ -24,6 +24,7 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/docs/img/board-empty-2026-11-07.png`
 - `_session-log/vova-2026-10-31.md`
 - `bundle.js`
@@ -31,16 +32,15 @@
 - `src/tabs/community-modal.js`
 - `style.min.css`
 - `style/board.css`
-- `sw.js`
-- …ще 1 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 2 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `e080ca722` 07.11 19:52 — docs(now): пульс перед finish
 - `35dee6cd1` 07.11 19:52 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
 - `0a598dd51` 07.11 19:15 — feat(board): порожня Дошка видима і зрозуміла — вітрина, речення, приклади-категорії (тап = форма з категорією)
 - `e2f936a48` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
 - `c193ecbac` 07.11 19:05 — До реклами: свята в Новини, «Відбулося…», стан агентів, адмінка без видаленого (#1303)
-- `b8c4c4f34` 07.11 19:05 — docs(now): пульс перед finish
 
 <!-- AUTO:END -->
 
