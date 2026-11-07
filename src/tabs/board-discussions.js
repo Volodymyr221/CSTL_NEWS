@@ -33,7 +33,7 @@ import { getSavedIds, saveBtnHtml, isSaved, toggleSaved, syncSaveButtons,
          adoptLegacyScopedKey, chatSeenTs } from '../core/board-shared.js';
 import { fetchSeenThreads, markThreadSeenRemote, updateQuestion, deleteQuestion } from '../core/supabase.js';
 import { openLayer, closeLayer } from '../core/layers.js';   // повноекранний шар + системний жест «назад»
-import { revealInScroller, keepKeyboardOnTap } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
+import { revealInScroller, keepKeyboardOnTap, keepKeyboardOnTapIn } from '../core/keyboard.js';      // підтягти елемент у видиму зону скролера
 import { keepScroll } from '../core/list-patch.js';          // якір прокрутки (спільний з Дошкою і «Стрічкою»)
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
@@ -1228,6 +1228,12 @@ export function openChatModal(post, focusCommentId = null) {
   // «Редагувати» і «Видалити» — лише на своїй (редакція 5).
   _discReplyTo = null; _discEditing = null;
   const bodyEl = screen.querySelector('.qa-body');
+  // 🔴 07.11 — «Відповісти» / «Редагувати» / «Ще N» при ВІДКРИТІЙ клавіатурі
+  // спрацьовують з першого тапу, без ховання клавіатури (та сама вада, що у
+  // «Стрічці», 🗣️ Вова 31.10: «такі речі мають працювати відразу»). Механіка й
+  // захист від тапу-що-спиняє-прокрутку — у `core/keyboard.js` (`wireTap`).
+  keepKeyboardOnTapIn(bodyEl);
+  keepKeyboardOnTap(screen.querySelector('#bd-compose-x'));   // ✕ відповіді/правки
   bodyEl?.addEventListener('click', (e) => {
     // 🔴 РОЗГОРНУТИ / ЗГОРНУТИ ГІЛКУ — перенесено зі «Стрічки» разом із двома
     // вилікуваними там пастками прокрутки (див. `expandQaThread` нижче).

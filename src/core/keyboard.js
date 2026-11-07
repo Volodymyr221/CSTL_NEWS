@@ -48,12 +48,21 @@ export function kbDebugOn() {
 // повівши вбік) — нічого не робимо, рішення лишається за людиною.
 // Мишка/компʼютер — старий шлях: `pointerdown` тримає фокус, `click` звичайний.
 const TAP_SLOP = 10;
+// 🛑 07.11 — ДОТИК, ЩО ЗУПИНЯЄ ПРОКРУТКУ, НЕ Є ТАПОМ. Відколи через це йдуть і
+// кнопки СПИСКУ коментарів (вони в скролері), палець, що спиняє інерцію гортання,
+// міг опинитись на «Відповісти» — і ми б її «натиснули». iOS у такому разі `click`
+// не шле, тож і ми не шлемо: прокрутка всередині `root` за останні 150 мс → не тап.
+// `scroll` не спливає, але ловиться на ЗАХОПЛЕННІ (`capture`) у предка.
+const SCROLL_QUIET_MS = 150;
 function wireTap(root, pick) {
   let start = null;
+  let lastScroll = -1e9;
+  root.addEventListener('scroll', () => { lastScroll = performance.now(); }, { capture: true, passive: true });
   root.addEventListener('touchstart', e => {
     const t = e.changedTouches[0];
     const btn = pick(e.target);
-    start = (btn && t && e.touches.length === 1) ? { btn, id: t.identifier, x: t.clientX, y: t.clientY } : null;
+    const гортали = performance.now() - lastScroll < SCROLL_QUIET_MS;
+    start = (btn && t && e.touches.length === 1 && !гортали) ? { btn, id: t.identifier, x: t.clientX, y: t.clientY } : null;
   }, { passive: true });
   root.addEventListener('touchmove', e => {
     if (!start) return;

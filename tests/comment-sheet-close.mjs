@@ -27,17 +27,20 @@ const { ok, done } = reporter();
 //   BUNDLE_REV=origin/main node tests/comment-sheet-close.mjs
 const REV = process.env.BUNDLE_REV || '';
 const SRC = projectFile('src/tabs/feed.js', REV);
+// 🆕 07.11 — `keepFocusOnButtons` тепер лише кличе `keepKeyboardOnTapIn` з
+// `core/keyboard.js`, тож механіку тапу вклеюємо звідти ж (тієї самої ревізії).
+const KB = projectFile('src/core/keyboard.js', REV);
 
 // ── Витягуємо дві функції з живого файлу ──────────────────────────────────────
 // Якщо їх немає (стара версія) — підставляємо ТУ САМУ логіку, що була до фікса.
 // Так контрольний прогін міряє справжню стару поведінку, а не «функції не знайшлись».
-function grab(name) {
-  const i = SRC.indexOf(`function ${name}(`);
+function grab(name, SRC_ = SRC) {
+  const i = SRC_.indexOf(`function ${name}(`);
   if (i < 0) return null;
   let d = 0, started = false;
-  for (let j = i; j < SRC.length; j++) {
-    if (SRC[j] === '{') { d++; started = true; }
-    else if (SRC[j] === '}') { d--; if (started && d === 0) return SRC.slice(i, j + 1); }
+  for (let j = i; j < SRC_.length; j++) {
+    if (SRC_[j] === '{') { d++; started = true; }
+    else if (SRC_[j] === '}') { d--; if (started && d === 0) return SRC_.slice(i, j + 1); }
   }
   return null;
 }
@@ -47,6 +50,12 @@ const LEGACY_CLOSE = `function attachBackdropClose(back, vpEl, close) {
 const backdropFn = grab('attachBackdropClose') || LEGACY_CLOSE;
 const focusFn    = grab('keepFocusOnButtons')  || 'function keepFocusOnButtons() {}';
 const FIXED = !!grab('attachBackdropClose') && !!grab('keepFocusOnButtons');
+// Константи й функції тапу з keyboard.js. Стара `keepFocusOnButtons` їх не кличе,
+// тож на старій ревізії вони просто лежать без діла.
+const kbConst = (n) => (KB.match(new RegExp(`const ${n} = [^;]+;`)) || [''])[0];
+const kbFns = [kbConst('TAP_SLOP'), kbConst('SCROLL_QUIET_MS'),
+  grab('wireTap', KB), grab('keepKeyboardOnTapIn', KB)].filter(Boolean).join('\n');
+const SCROLL_GUARD = !!kbConst('SCROLL_QUIET_MS');
 console.log(`\n── код: ${FIXED ? 'З ФІКСОМ' : '🕰 СТАРИЙ (контроль)'}${REV ? `  [${REV}]` : ''}`);
 
 const html = `<!doctype html><meta charset="utf-8">
@@ -70,13 +79,17 @@ const html = `<!doctype html><meta charset="utf-8">
 </div></div></div>
 <script>
 ${backdropFn}
+${kbFns}
 ${focusFn}
 window.__state = { closed: false, replied: 0, pdOnButton: null, pdOnInput: null };
 const back = document.getElementById('back'), vp = document.getElementById('vp');
 const sheet = document.getElementById('sheet'), list = document.getElementById('list');
 list.innerHTML = Array.from({length: 12}, (_, i) =>
   '<div class="row">Коментар ' + i + ' <button class="reply">Відповісти</button></div>').join('');
-list.addEventListener('click', e => { if (e.target.closest('.reply')) window.__state.replied++; });
+list.addEventListener('click', e => { if (e.target.closest('.reply')) {
+  window.__state.replied++;
+  if (!e.isTrusted) window.__progClicks = (window.__progClicks || 0) + 1;   // натиск із коду (wireTap)
+} });
 
 attachBackdropClose(back, vp, () => { window.__state.closed = true; });
 keepFocusOnButtons(sheet);
@@ -88,6 +101,16 @@ sheet.addEventListener('pointerdown', e => {
 });
 
 // Те, що робить blur поля: лист повертається з повної висоти у висоту спокою.
+// 🍎 МОДЕЛЬ iOS (07.11). Chromium сам тримає фокус, якщо на \`pointerdown\` стоїть
+// \`preventDefault\`, — тому старі ліки тут зеленіли, а на айфоні Вови ні. iOS
+// переносить фокус на мишачих подіях ПІСЛЯ \`touchend\`, і зупиняє це лише
+// \`preventDefault\` на самому \`touchend\`. Модель рівно така: дотик до кнопки
+// закінчився, і ніхто його не перехопив → поле втрачає фокус (клавіатура ховається).
+window.addEventListener('touchend', e => {
+  if (e.defaultPrevented || !e.target.closest || !e.target.closest('button')) return;
+  const a = document.activeElement;
+  if (a && a.id === 'input') { a.blur(); window.__state.kbHidden = true; }
+});
 window.__shrink = () => sheet.style.setProperty('--h', '520px');
 window.__reset = () => {
   sheet.style.setProperty('--h', '700px');
@@ -185,6 +208,50 @@ await p.evaluate(() => window.__reset());
   // 🛑 На полі вводу preventDefault ставити НЕ можна — воно мусить отримувати фокус.
   ok('🛑 поле вводу фокус ОТРИМУЄ (на ньому preventDefault заборонений)',
      st.pdOnInput === false, `defaultPrevented=${st.pdOnInput}`);
+}
+
+// ── 🔴 07.11: «ВІДПОВІСТИ» ПРИ ВІДКРИТІЙ КЛАВІАТУРІ — З ПЕРШОГО ТАПУ ─────────
+// 🗣️ Вова 31.10: «натискаю "Відповісти" — клавіатура ховається… тільки коли
+// клавіатура заховалася і я знову натискаю — відкривається». На моделі iOS
+// (вище) старий код ховає клавіатуру; новий — ні, і тап спрацьовує одразу.
+await p.evaluate(() => { window.__reset(); window.__progClicks = 0; });
+{
+  await p.evaluate(() => document.getElementById('input').focus());
+  const rBox = await p.locator('.reply').nth(2).boundingBox();
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart',
+    touchPoints: [{ x: rBox.x + rBox.width / 2, y: rBox.y + rBox.height / 2, id: 1 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await p.waitForTimeout(80);
+  const st = await p.evaluate(() => ({ ...window.__state,
+    focused: !!document.activeElement && document.activeElement.id === 'input' }));
+  ok('🔴 iOS: тап «Відповісти» при відкритій клавіатурі НЕ ховає її',
+     st.focused && !st.kbHidden, `фокус у полі: ${st.focused}, сховалась: ${!!st.kbHidden}`);
+  ok('🔴 iOS: «Відповісти» спрацьовує з ПЕРШОГО тапу, рівно один раз',
+     st.replied === 1, `спрацювань: ${st.replied}`);
+}
+
+// ── 🛑 ДОТИК, ЩО СПИНЯЄ ПРОКРУТКУ, — НЕ ТАП ────────────────────────────────────
+// Кнопки тепер «натискаються» з коду на `touchend`; без захисту палець, що
+// зупиняє інерцію гортання, натиснув би «Відповісти», яку людина й не цілила.
+if (SCROLL_GUARD) {
+  const rBox = await p.locator('.reply').nth(4).boundingBox();
+  const тапнути = async () => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart',
+      touchPoints: [{ x: rBox.x + rBox.width / 2, y: rBox.y + rBox.height / 2, id: 1 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await p.waitForTimeout(60);
+  };
+  await p.evaluate(() => { window.__reset(); window.__progClicks = 0;
+    document.getElementById('list').scrollTop = 1; });
+  await p.waitForTimeout(20);                       // подія `scroll` дійшла — «щойно гортали»
+  await тапнути();
+  const щойно = await p.evaluate(() => window.__progClicks);
+  ok('🛑 дотик одразу після прокрутки не натискає кнопку з коду', щойно === 0, `натисків: ${щойно}`);
+  await p.waitForTimeout(250);                      // тиша довша за SCROLL_QUIET_MS
+  await p.evaluate(() => { window.__reset(); window.__progClicks = 0; });
+  await тапнути();
+  const тиша = await p.evaluate(() => window.__progClicks);
+  ok('🔴 контроль: після тиші той самий тап спрацьовує', тиша === 1, `натисків: ${тиша}`);
 }
 
 await b.close();
