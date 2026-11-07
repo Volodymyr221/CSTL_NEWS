@@ -121,8 +121,15 @@ def маршрут(row):
 
 
 def _готові():
-    """Усі готові матеріали кабінету одним запитом — далі їх ділить `маршрут`."""
-    url = REST + "?status=eq.ready&type=eq.news&select=*&order=ts.asc"
+    """Усі готові матеріали кабінету одним запитом — далі їх ділить `маршрут`.
+
+    🔴 07.11 — СЮДИ Ж ЇДУТЬ СВЯТА (`type=holiday`). До цього готове свято йшло в
+    `data/events.json`, а той файл застосунок не показує НІДЕ з 04.09 (Афішу тоді
+    прибрали) — тобто свято, навіть опубліковане, людина не бачила. Тепер свято
+    в свій день стає новиною в «Новини → Громада» тим самим шляхом і з тим самим
+    дедупом, що й решта статей кабінету (див. `promote_holidays_today`).
+    """
+    url = REST + "?status=eq.ready&type=in.(news,holiday)&select=*&order=ts.asc"
     headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=20) as r:
@@ -281,6 +288,36 @@ def promote_scheduled():
         print(f"⚠ promote_scheduled: {e}")
 
 
+# ── 🔴 07.11 — СВЯТА ПУБЛІКУЮТЬСЯ САМІ У СВІЙ ДЕНЬ ──────────────────────────────
+# 🗣️ Вова 07.11: «свята так публікуються самі в свій день».
+# Аудит ботів 07.11: агент свят пише чернетки вчасно (за 31 день), але з 24.08 не
+# вийшло жодне — редактора немає, а ручну вичитку ніхто не робить.
+# 🔑 Лише СЬОГОДНІ за Києвом, не «сьогодні й раніше»: чернетка свята, що минуло,
+# виглядала б як привітання із запізненням — її не публікуємо зовсім.
+# ⚠️ Дата — київська, бо cron живе в UTC: о 00:30 за Києвом в UTC ще вчора.
+def kyiv_today() -> str:
+    try:
+        from zoneinfo import ZoneInfo
+        import datetime as _dt
+        return _dt.datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d")
+    except Exception:
+        return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 2 * 3600))
+
+
+def holiday_promote_url(today: str) -> str:
+    """Адреса PATCH: чернетки свят із датою рівно `today` → ready."""
+    return REST + "?status=eq.draft&type=eq.holiday&event_date=eq." + today
+
+
+def promote_holidays_today():
+    today = kyiv_today()
+    try:
+        _req("PATCH", holiday_promote_url(today), {"status": "ready"})
+        print(f"🎉 свята на {today}: чернетки → ready (публікуються новиною)")
+    except Exception as e:
+        print(f"⚠ promote_holidays_today: {e}")
+
+
 def heal_phantom_drafts():
     """Само-лікування «фантомних чернеток»: рядок зі status='draft', але з git_id —
     стаття ВЖЕ викладена у стрічку (git), а потім щось повернуло статус у чернетки
@@ -302,8 +339,10 @@ def heal_phantom_drafts():
 
 
 def fetch_shotam_ready():
-    """Готові свята/події (type=holiday/event) для «Шо в селі»."""
-    url = REST + "?status=eq.ready&type=in.(holiday,event)&select=*&order=event_date.asc"
+    """Готові події (type=event) для «Шо в селі».
+    🔴 07.11 — свята звідси ПРИБРАНО: вони йдуть у Новини (`_готові`). Лишити тут —
+    і свято забрав би той крок, що спрацює першим, у невидимий events.json."""
+    url = REST + "?status=eq.ready&type=eq.event&select=*&order=event_date.asc"
     headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=20) as r:
@@ -721,7 +760,7 @@ def main():
     # 🔑 `sync_pages` СЕРЕД цих кроків, а не після новин: історичні статті не
     # мають чекати, поки доїде стрічка, і не мають страждати від її ранніх
     # `return`ів («немає готових статей» нижче стосується ЛИШЕ новин).
-    for step in (promote_scheduled, heal_phantom_drafts, publish_shotam, sync_pages):
+    for step in (promote_scheduled, promote_holidays_today, heal_phantom_drafts, publish_shotam, sync_pages):
         try:
             step()
         except Exception as e:
