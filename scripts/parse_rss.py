@@ -1378,6 +1378,60 @@ def classify_entry(title: str, text: str) -> str:
     return "news"
 
 
+def resolve_event_year(day: int, month: int, explicit_year, ts) -> int:
+    """Рік події без явного року в тексті.
+
+    🔴 07.11 — РІК ВІД ДАТИ НОВИНИ, А НЕ ВІД ДНЯ РОЗБОРУ. Аудит 07.11 знайшов у
+    `events.json` подію на 31.10.**2027**: новина від 31.10 про «з 30 жовтня»
+    розібрана вже в листопаді, і старе правило («місяць раніший за поточний →
+    наступний рік») відправило її на рік уперед. Новина пише про СВІЙ час: «30
+    жовтня» в тексті від 31.10 — це цей жовтень. На наступний рік переносимо лише
+    тоді, коли місяць набагато раніший за місяць публікації (грудневий анонс
+    «15 січня» — це вже наступний рік).
+    """
+    if explicit_year:
+        return int(explicit_year)
+    base = datetime.date.today()
+    try:
+        if ts:
+            base = datetime.datetime.utcfromtimestamp(int(ts) / 1000).date()
+    except (ValueError, OverflowError, OSError):
+        pass
+    year = base.year
+    if month < base.month - 6:
+        year += 1
+    return year
+
+
+# Скільки днів уперед може стояти автоматична подія з місцевої новини.
+# Новини громади анонсують на тижні, рідко на місяці; рік уперед — це вже не
+# анонс, а підпис вади «зсунутого року» (див. `resolve_event_year`).
+AUTO_EVENT_MAX_AHEAD_DAYS = 300
+
+
+def keep_event(e: dict, today: "datetime.date") -> bool:
+    """Чи лишається подія в events.json.
+
+    ручні (Алла) — завжди · auto не з громади — геть (ТЗ) · минулі — геть ·
+    🔴 07.11 — auto понад AUTO_EVENT_MAX_AHEAD_DAYS уперед — геть: так файл сам
+    лікується від подій, яким старе правило року дописало +1 рік (31.10.2027).
+    """
+    if not e.get("auto"):
+        return True
+    if e.get("source") != "Олицька громада":
+        return False
+    date = e.get("date") or "9999"
+    if date < today.strftime("%Y-%m-%d"):
+        return False
+    try:
+        d = datetime.date.fromisoformat(date)
+        if (d - today).days > AUTO_EVENT_MAX_AHEAD_DAYS:
+            return False
+    except ValueError:
+        pass
+    return True
+
+
 def extract_event_data(title: str, text: str, ts: int) -> dict:
     """Витягує дату, час і локацію з тексту події."""
     today = datetime.date.today()
@@ -1389,9 +1443,7 @@ def extract_event_data(title: str, text: str, ts: int) -> dict:
         month = MONTHS_UK.get(m.group(2).lower(), 0)
         if not month:
             continue
-        year = int(m.group(3)) if m.group(3) else today.year
-        if year == today.year and month < today.month:
-            year += 1
+        year = resolve_event_year(day, month, m.group(3), ts)
         try:
             d = datetime.date(year, month, day)
             if d >= today:
@@ -3874,16 +3926,8 @@ def main():
         print("Нових статей немає.")
 
     # Зберегти events.json — події ЛИШЕ з громади (ТЗ) + ручні (Алла)
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
 
-    def _keep_event(e):
-        if not e.get("auto"):
-            return True                              # ручні (Алла) — завжди лишаємо
-        if e.get("source") != "Олицька громада":
-            return False                             # auto не з громади — прибрати (ТЗ)
-        return e.get("date", "9999") >= today_str    # застарілі (минула дата) — геть
-
-    active_existing = [e for e in existing_events if _keep_event(e)]
+    active_existing = [e for e in existing_events if keep_event(e, datetime.date.today())]
     cleaned = len(existing_events) - len(active_existing)
     if new_events or cleaned:
         all_events = new_events + active_existing
