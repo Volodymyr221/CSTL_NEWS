@@ -9,38 +9,38 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 16:54 UTC
+**Зріз на:** 2026-11-07 18:10 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `06d38c1a6` 07.11 16:54 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1816` |
-| останній PR у `main` | #1301 |
-| стендів на диску | 198 |
+| останній коміт людини | `0b1b4883a` 07.11 18:10 — docs: журнал, літопис, пульс 07.11c |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-2010` |
+| останній PR у `main` | #1302 |
+| стендів на диску | 200 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-11-07 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `.github/workflows/tests.yml`
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
-- `CSTL NEWS VOVA/docs/AUDYT_BOTIV_2026-11-07.md`
-- `CSTL NEWS VOVA/docs/AUDYT_ZASTOSUNKU_2026-11-07.md`
-- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-after.png`
-- `CSTL NEWS VOVA/docs/img/board-compose-2026-11-07-before.png`
 - `_session-log/vova-2026-10-31.md`
+- `admin.html`
 - `bundle.js`
-- …ще 7 (повністю — `git diff --name-only origin/main..HEAD`)
+- `editor/core/spend.py`
+- `editor/run.py`
+- …ще 15 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `06d38c1a6` 07.11 16:54 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
-- `ed068b210` 07.11 16:23 — docs: аудит застосунку очима гостя 07.11
-- `8fb74b023` 07.11 16:17 — docs(now): стиснуто під 16 KB
-- `3c776b5d9` 07.11 16:17 — docs(now): авto-блок
-- `2a23d35d1` 07.11 16:17 — feat(board): редизайн модалки «Нове оголошення» — світлий аркуш, білі поля, мітки без капсу, новий вибраний чіп
+- `0b1b4883a` 07.11 18:10 — docs: журнал, літопис, пульс 07.11c
+- `37b136a8d` 07.11 18:10 — feat(agents): кожен агент пише свій стан (працює/чекає/пауза/стоїть); адмінка показує, хто стоїть, у черзі дій
+- `d943644f7` 07.11 18:07 — fix(parser): рік події від дати новини, не від дня розбору; events.json сам лікується від подій +1 рік
+- `192e05be5` 07.11 18:07 — feat(news): «📅 Відбулося 5 листопада» / «Анонс від…» на анонсах, що вже позаду; віджет не відкривається минулим
+- `122604a80` 07.11 17:59 — feat(cms): свята публікуються самі у свій день — у Новини (events.json свят більше не бере)
 
 <!-- AUTO:END -->
 
