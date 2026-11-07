@@ -784,9 +784,18 @@ let testers        = [];
 // насправді «Відповідями», відірваними від питання, до якого належать.
 let allPosts       = [];
 const ЦЕ_ПИТАННЯ   = p => p.type === 'chat';
-const оголошення   = () => allPosts.filter(p => !ЦЕ_ПИТАННЯ(p));
-const питання      = () => allPosts.filter(ЦЕ_ПИТАННЯ);
-const відповідіДо  = (postId) => comments.filter(c => c.post_id === postId)
+// 🔴 07.11 — ВИДАЛЕНЕ НЕ ЖИВЕ В АДМІНЦІ. 🗣️ Вова: «питання я сам видалив, і воно
+// досі в адмінці… не можу нічого з ним зробити». Корінь: адмін за RLS бачить і
+// рядки з `deleted_at` (політика `posts read` = `… or is_admin()`), а ці помічники
+// відсіювали лише ТИП. Питання №99, видалене автором 31.10 без відповідей, і далі
+// стояло в черзі «без відповіді». Та сама вада чекала оголошень (сховані 07.11
+// мʼяким видаленням) — вони лягли б у «Опубліковані».
+// 🔑 Одне правило в одному місці: кожен список адмінки бере пости й відповіді
+// лише через `живий`, тож видалене не потрапить ні в лічильник, ні в чергу.
+const живий        = r => !r.deleted_at;
+const оголошення   = () => allPosts.filter(p => живий(p) && !ЦЕ_ПИТАННЯ(p));
+const питання      = () => allPosts.filter(p => живий(p) && ЦЕ_ПИТАННЯ(p));
+const відповідіДо  = (postId) => comments.filter(c => c.post_id === postId && живий(c))
                                         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
 // Скільки днів бездіяльності робить діючий доступ «забутим».
@@ -1192,8 +1201,8 @@ async function loadAll() {
     ]);
     allPosts       = pending.data   || [];
     // Похідні лишаються заради решти розділів, які на них спираються.
-    pendingPosts   = allPosts.filter(p => p.status === 'pending');
-    publishedPosts = allPosts.filter(p => p.status === 'published');
+    pendingPosts   = allPosts.filter(p => живий(p) && p.status === 'pending');
+    publishedPosts = allPosts.filter(p => живий(p) && p.status === 'published');
     announcements  = ann.data       || [];
     admins         = ad.data        || [];
     comments       = com.data       || [];
