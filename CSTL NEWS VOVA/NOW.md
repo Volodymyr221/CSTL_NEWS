@@ -9,12 +9,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 15:11 UTC
+**Зріз на:** 2026-11-07 15:48 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі |
+| останній коміт людини | `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1711` |
 | останній PR у `main` | не видно в останніх комітах |
 | стендів на диску | 198 |
@@ -24,23 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-31.md`
 - `bundle.js`
 - `scripts/bench/0013_rls_initplan/bench_probe.sql`
 - `scripts/bench/0013_rls_initplan/bench_setup.sql`
-- `src/core/keyboard.js`
-- `src/tabs/board-discussions.js`
-- …ще 10 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 12 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `79ee12085` 07.11 15:16 — docs: 198 стендів у CLAUDE.md/START_HERE.md, журнал finish
+- `88786d073` 07.11 15:12 — docs: NOW — шліфовка Стрічки 07.11, стиснуто під 16 KB
 - `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі
 - `1cf2818a1` 07.11 15:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
 - `a32e44550` 07.11 15:03 — feat(feed): прибрати «👁 N» з карток (запис подій лишається) — WIP
-- `836487624` 07.11 13:28 — ai(editor): свята-чернетки 07.11 13:28 UTC
-- `d25ea05c6` 06.11 14:32 — ai(editor): свята-чернетки 06.11 14:32 UTC
 
 <!-- AUTO:END -->
 
