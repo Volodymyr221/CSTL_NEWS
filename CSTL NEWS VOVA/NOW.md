@@ -9,14 +9,14 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 19:05 UTC
+**Зріз на:** 2026-11-07 19:52 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `793df0d43` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
-| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-2010` |
-| останній PR у `main` | #1302 |
+| останній коміт людини | `e080ca722` 07.11 19:52 — docs(now): пульс перед finish |
+| `CACHE_NAME` (з `sw.js`) | `cstl-20261107-2115` |
+| останній PR у `main` | #1303 |
 | стендів на диску | 200 |
 | незакомічених файлів | 0 ✅ |
 | журнал за 2026-11-07 | **НЕМАЄ** ⚠️ |
@@ -24,23 +24,23 @@
 
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
-- `.github/workflows/tests.yml`
-- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
-- `CSTL NEWS VOVA/START_HERE.md`
-- `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
+- `CSTL NEWS VOVA/docs/img/board-empty-2026-11-07.png`
 - `_session-log/vova-2026-10-31.md`
-- `admin.html`
 - `bundle.js`
-- …ще 17 (повністю — `git diff --name-only origin/main..HEAD`)
+- `src/tabs/board.js`
+- `src/tabs/community-modal.js`
+- `style.min.css`
+- `style/board.css`
+- …ще 2 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
-- `793df0d43` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
-- `cf6af7399` 07.11 18:10 — docs: 200 стендів, пульс під 16 KB
-- `b3ebfe53c` 07.11 18:10 — docs(now): авто-блок
-- `0b1b4883a` 07.11 18:10 — docs: журнал, літопис, пульс 07.11c
-- `37b136a8d` 07.11 18:10 — feat(agents): кожен агент пише свій стан (працює/чекає/пауза/стоїть); адмінка показує, хто стоїть, у черзі дій
+- `e080ca722` 07.11 19:52 — docs(now): пульс перед finish
+- `35dee6cd1` 07.11 19:52 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `0a598dd51` 07.11 19:15 — feat(board): порожня Дошка видима і зрозуміла — вітрина, речення, приклади-категорії (тап = форма з категорією)
+- `e2f936a48` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `c193ecbac` 07.11 19:05 — До реклами: свята в Новини, «Відбулося…», стан агентів, адмінка без видаленого (#1303)
 
 <!-- AUTO:END -->
 

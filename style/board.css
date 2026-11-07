@@ -2165,12 +2165,71 @@ textarea.cm-board-input.bm-invalid {
 /* Тіло — порожній стан і стрічка */
 .bd-body { min-height: 50vh; }
 .bd-empty {
+  /* 🔴 07.11 — БЕЗ ЦИХ ДВОХ РЯДКІВ ПОРОЖНІЙ СТАН БУВ НЕВИДИМИЙ: `.board-bg`
+     (fixed, z-index 0, непрозорий) лежав поверх нього. Картки й підписи розділів
+     уже мали цю правку («інакше ховається під .board-bg»), порожній стан — ні.
+     Знімок Вови: порожній сірий екран, хоча текст і кнопка в розмітці БУЛИ. */
+  position: relative;
+  z-index: 1;
   text-align: center;
   padding: 60px 24px;
   color: var(--gray);
   font-size: 14px;
   line-height: 1.5;
 }
+/* 🆕 07.11 — порожня Дошка: вітрина → назва → речення → приклади → кнопка. */
+.bd-empty-art {
+  width: 112px; height: 112px;
+  margin: -20px auto 18px;
+  border-radius: 50%;
+  background: var(--board-card);
+  border: 1px solid var(--board-line);
+  color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+}
+.bd-empty-art svg { width: 72px; height: 72px; }
+.bd-empty-title {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.bd-empty-text {
+  display: block;
+  max-width: 300px;
+  margin: 0 auto;
+  color: var(--ink-mute);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.bd-empty-cats {
+  /* Рівна сітка 2×2: чотири пігулки в один рядок на 390pt не вміщаються, а 3+1
+     читається як недбалість. Однакова ширина клітинок — однакова вага прикладів. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 22px auto 0;
+  max-width: 300px;
+}
+.bd-empty-cat {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 46px; padding: 0 12px;
+  background: var(--board-card);
+  border: 1px solid var(--board-line);
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease-out, background 0.15s;
+}
+.bd-empty-cat:active { transform: scale(0.97); background: var(--board-press); }
+.bd-empty-cat-ic { display: inline-flex; }
+.bd-empty-cat-ic svg { width: 18px; height: 18px; }
 /* 🔴 07.08 (B-2) — «Скинути фільтри» В САМОМУ ПОРОЖНЬОМУ СТАНІ.
    Розкладка: `.bd-empty` має padding 60px/24px, тобто на екрані 390px вміст
    отримує 342px. Кнопка `inline-block` з padding 12px/18px і font-size 14px

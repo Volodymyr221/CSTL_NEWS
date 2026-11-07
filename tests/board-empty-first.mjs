@@ -38,12 +38,12 @@ const { url, stop } = await serve();
 const b = await launch(chromium);
 const errs = [];
 
-async function дошка(posts) {
+async function дошка(posts, user = null) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
                                    hasTouch: true, serviceWorkers: 'block' });
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(String(e)));
-  await mockSupabase(p, { posts, threads: [], messages: [], thread_user_state: [], announcements: [] });
+  await mockSupabase(p, { posts, threads: [], messages: [], thread_user_state: [], announcements: [] }, user ? { user } : {});
   await p.route('**://api.open-meteo.com/**', r => r.abort());
   if (BUNDLE_REV) {
     const body = projectFile('bundle.js', BUNDLE_REV);
@@ -86,9 +86,31 @@ function зріз(p) {
      /продають/.test(s.текст) && /шукають/.test(s.текст), s.текст.slice(0, 80));
   ok('🛑 старий текст-тупик прибрано', !/Тут поки порожньо/.test(s.текст),
      /Тут поки порожньо/.test(s.текст) ? 'лишився' : 'прибрано');
-  ok('є дія, і вона про подання оголошення', s.кнопка === 'Подати перше оголошення', s.кнопка || '(кнопки немає)');
-  ok('кнопка веде тим самим шляхом, що пункт FAB (data-bd-post)', s.дія === 'bdPost', s.дія || '(без атрибута)');
-  ok('кнопка не вилазить за екран', s.влазить);
+  // 🔴 07.11 — РЕДИЗАЙН: окрема кнопка поступилась чотирьом прикладам-категоріям
+  // (кругла «Подати оголошення» стоїть на Дошці завжди — дубль змагався б із нею).
+  const приклади = await p.evaluate(() => [...document.querySelectorAll('.bd-empty [data-bd-post-cat]')]
+    .map(b => ({ id: b.dataset.bdPostCat, r: b.getBoundingClientRect().right <= innerWidth + 1, h: b.getBoundingClientRect().height })));
+  ok('🔑 є чотири приклади: продам · куплю · віддам · шукаю',
+     приклади.map(x => x.id).join(',') === 'продам,куплю,віддам,шукаю', приклади.map(x => x.id).join(','));
+  ok('приклади не вилазять за екран і мають ціль ≥44px', приклади.every(x => x.r && x.h >= 44), JSON.stringify(приклади.map(x => x.h)));
+  ok('є малюнок-вітрина', await p.evaluate(() => !!document.querySelector('.bd-empty .bd-empty-art svg')));
+
+  // 🔴 ВИДНО ОКОМ, А НЕ ЛИШЕ Є В РОЗМІТЦІ. До 07.11 цей стенд був зелений, а Вова
+  // бачив порожній сірий екран: `.board-bg` (fixed, z-index 0, непрозорий) лежав
+  // поверх тексту. elementFromPoint тут бреше (шар без pointer-events), тому
+  // міряємо ПІКСЕЛІ: на місці заголовка мусять бути темні точки тексту.
+  const r = await p.evaluate(() => { const e = document.querySelector('.bd-empty-title').getBoundingClientRect();
+    return { x: e.left, y: e.top, width: e.width, height: e.height }; });
+  const png = await p.screenshot({ clip: r });
+  const темних = await p.evaluate(async (b64) => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 300) n++;
+    return n;
+  }, png.toString('base64'));
+  ok('🔴 заголовок ВИДНО на екрані (темні пікселі тексту є)', темних > 30, `темних пікселів: ${темних}`);
   await ctx.close();
 }
 
@@ -111,6 +133,16 @@ function зріз(p) {
      /Нічого не знайшлось/.test(s.текст), s.текст.slice(0, 80));
   ok('КОНТРОЛЬ: і кнопка тут не «подати», а повернути список',
      s.кнопка !== 'Подати перше оголошення', s.кнопка);
+  await ctx.close();
+}
+
+// 🆕 07.11 — тап по прикладу відкриває форму з цією категорією вже вибраною.
+{
+  const { p, ctx } = await дошка([], { id: 'uid-me', email: 'me@example.com', user_metadata: { full_name: 'Вова' } });
+  await p.evaluate(() => document.querySelector('[data-bd-post-cat="віддам"]')?.click());
+  await p.waitForTimeout(900);
+  const активна = await p.evaluate(() => document.querySelector('.app-modal--board-compose .bm-chip.active')?.dataset.cat || null);
+  ok('🔑 «Віддам» відкриває форму з категорією «віддам»', активна === 'віддам', `вибрано: ${активна}`);
   await ctx.close();
 }
 

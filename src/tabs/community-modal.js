@@ -166,6 +166,12 @@ export function openBoardModal(opts = {}) {
     state.location   = restored.location   ?? state.location;
     state.contact    = restored.contact    ?? state.contact;
   }
+  // 🆕 07.11 — ВХІД ІЗ КАТЕГОРІЄЮ. Порожня Дошка показує приклади «Продам · Куплю ·
+  // Віддам · Шукаю», і тап по прикладу відкриває форму з ним уже вибраним. Перебиває
+  // і чернетку: людина щойно сказала, ЩО хоче подати, — це свіжіше за старий вибір.
+  if (!isEdit && opts.category && BOARD_CATEGORIES.some(c => c.id === opts.category)) {
+    state.category = opts.category;
+  }
 
   // Запис відкладений: `renderPreview()` кличеться на КОЖНЕ натискання клавіші, а
   // запис у сховище — синхронна операція з серіалізацією. 400мс достатньо, щоб не
