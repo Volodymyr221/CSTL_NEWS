@@ -9,12 +9,12 @@
 > 🤖 **Блок нижче генерує `scripts/now_update.mjs`. Руками не правити** —
 > при наступному прогоні правку зітре. Проза під блоком не чіпається ніколи.
 
-**Зріз на:** 2026-11-07 18:10 UTC
+**Зріз на:** 2026-11-07 19:05 UTC
 
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `0b1b4883a` 07.11 18:10 — docs: журнал, літопис, пульс 07.11c |
+| останній коміт людини | `793df0d43` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261107-2010` |
 | останній PR у `main` | #1302 |
 | стендів на диску | 200 |
@@ -25,22 +25,22 @@
 **Не доїхало в `main`** (чесна мірка — `diff` на дві крапки):
 
 - `.github/workflows/tests.yml`
+- `CSTL NEWS VOVA/CLAUDE.md`
 - `CSTL NEWS VOVA/NOW.md`
+- `CSTL NEWS VOVA/START_HERE.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-31.md`
 - `admin.html`
 - `bundle.js`
-- `editor/core/spend.py`
-- `editor/run.py`
-- …ще 15 (повністю — `git diff --name-only origin/main..HEAD`)
+- …ще 17 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `793df0d43` 07.11 19:05 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
+- `cf6af7399` 07.11 18:10 — docs: 200 стендів, пульс під 16 KB
+- `b3ebfe53c` 07.11 18:10 — docs(now): авто-блок
 - `0b1b4883a` 07.11 18:10 — docs: журнал, літопис, пульс 07.11c
 - `37b136a8d` 07.11 18:10 — feat(agents): кожен агент пише свій стан (працює/чекає/пауза/стоїть); адмінка показує, хто стоїть, у черзі дій
-- `d943644f7` 07.11 18:07 — fix(parser): рік події від дати новини, не від дня розбору; events.json сам лікується від подій +1 рік
-- `192e05be5` 07.11 18:07 — feat(news): «📅 Відбулося 5 листопада» / «Анонс від…» на анонсах, що вже позаду; віджет не відкривається минулим
-- `122604a80` 07.11 17:59 — feat(cms): свята публікуються самі у свій день — у Новини (events.json свят більше не бере)
 
 <!-- AUTO:END -->
 
