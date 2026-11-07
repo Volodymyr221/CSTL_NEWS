@@ -14,11 +14,11 @@
 | поле | значення |
 |---|---|
 | гілка | `claude/fervent-maxwell-i5yzzl` |
-| останній коміт людини | `1cf2818a1` 07.11 15:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl |
+| останній коміт людини | `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі |
 | `CACHE_NAME` (з `sw.js`) | `cstl-20261107-1711` |
 | останній PR у `main` | не видно в останніх комітах |
 | стендів на диску | 198 |
-| незакомічених файлів | 12 ⚠️ |
+| незакомічених файлів | 0 ✅ |
 | журнал за 2026-11-07 | **НЕМАЄ** ⚠️ |
 | потік `/byyou` | idle — потік не названо |
 
@@ -27,15 +27,16 @@
 - `CSTL NEWS VOVA/NOW.md`
 - `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_VOVA.md`
 - `_session-log/vova-2026-10-31.md`
+- `bundle.js`
 - `scripts/bench/0013_rls_initplan/bench_probe.sql`
 - `scripts/bench/0013_rls_initplan/bench_setup.sql`
-- `src/tabs/feed.js`
-- `style/feed.css`
-- `supabase/migrations/0013_rls_auth_initplan.sql`
-- …ще 2 (повністю — `git diff --name-only origin/main..HEAD`)
+- `src/core/keyboard.js`
+- `src/tabs/board-discussions.js`
+- …ще 10 (повністю — `git diff --name-only origin/main..HEAD`)
 
 **Останні кроки (без автокомітів парсерів):**
 
+- `57e279da9` 07.11 15:11 — feat(feed): шліфовка Стрічки — без «👁 N», «Відповісти» з першого тапу при відкритій клавіатурі
 - `1cf2818a1` 07.11 15:03 — Merge remote-tracking branch 'origin/main' into claude/fervent-maxwell-i5yzzl
 - `a32e44550` 07.11 15:03 — feat(feed): прибрати «👁 N» з карток (запис подій лишається) — WIP
 - `836487624` 07.11 13:28 — ai(editor): свята-чернетки 07.11 13:28 UTC
@@ -65,9 +66,8 @@
 
 🆕 **07.11 Стрічка:** 🗑 лишились 4 спільноти (3 видалено з дописами) · 👁 «прочитали N» знято (запис лишився) · ⌨️ «Відповісти» з першого тапу при відкритій клавіатурі (Стрічка + Питання) — ⏳ палець Вови на айфоні.
 🆕 **31.10:** 💸 набір економії токенів — `_ai-tools/EKONOMIYA_TOKENIV_KIT.md`.
-🆕 **30.10:** аркуш погоди — без білої смуги й шва під шапкою; 🫳 свайп аркушів: напрямок жесту раз (`sheet-motion.js`, стенд `sheet-gesture-axis`) — ⏳ палець Вови.
+🆕 **30.10:** аркуш погоди без смуги; 🫳 свайп аркушів — напрям жесту раз (`sheet-gesture-axis`) — ⏳ палець Вови.
 🆕 **29.10** (журнал `_session-log/vova-2026-10-28.md`): ручні кроки закрито (push тип 4 сухий прогін 200 · Usage — Pro не треба, Disk IO 99%) · 🔎 пошук розмов у Повідомленнях за ЖИВИМ імʼям (`board-chat.js`, `qa-chat-search` 25/25) · 🌤 опис погоди 14px (13 на 375) · 📅 дати запуску 15.11 / 29.11.
-📓 24-28.10 — `_session-log/vova-2026-10-24b.md`.
 🔐 **Аудит безпеки 24.10** → `docs/AUDYT_BEZPEKY_2026-10-24.md`: 5 дір + 8 зміцнень.
 ✅ **Б1-Б3 закрито 26.10** — `0011_chat_page_guards.sql` (тригери-сторожі; Вова накотив
 у SQL Editor; звірено на живій базі 13/13 у відкаченій транзакції).
