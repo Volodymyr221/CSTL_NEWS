@@ -1,6 +1,61 @@
 {
   "runs": [
     {
+      "ts": 1794098582028,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10976,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0221,
+      "note": ""
+    },
+    {
+      "ts": 1794098579822,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 10574,
+      "cache_read": 37762,
+      "cache_write": 38361,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2492,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1794098417205,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3912,
+      "cache_read": 36901,
+      "cache_write": 37107,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1793,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1794098352010,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 7183,
+      "cache_read": 37089,
+      "cache_write": 39044,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2169,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1794058081931,
       "mission": "holiday:⛪ День Святого Миколая Чудот",
       "model": "claude-sonnet-5",
@@ -735,64 +790,12 @@
       "found": 1,
       "cost_usd": 0.0443,
       "note": "Подія в громаді: Запрошуємо з 30 жовтня взяти участь у тестуванні з фінансової г"
-    },
-    {
-      "ts": 1793193942311,
-      "mission": "holiday:🇺🇦 День Гідності та Свободи",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 516,
-      "cache_read": 0,
-      "cache_write": 1139,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.008,
-      "note": ""
-    },
-    {
-      "ts": 1793193930229,
-      "mission": "holiday:⛪ Введення в храм Пресвятої ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 475,
-      "cache_read": 0,
-      "cache_write": 1122,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0076,
-      "note": ""
-    },
-    {
-      "ts": 1793193918061,
-      "mission": "holiday:⛪ Собор Архангела Михаїла",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 374,
-      "cache_read": 0,
-      "cache_write": 1155,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0066,
-      "note": ""
-    },
-    {
-      "ts": 1793107887174,
-      "mission": "istoriya:hist:колегіальний-костел-пресвятої-трійці",
-      "model": "claude-opus-5",
-      "input_tokens": 4882,
-      "output_tokens": 590,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0392,
-      "note": "Колегіальний костел Пресвятої Трійці в Олиці: будівництво, архітектура і доля сп"
     }
   ],
   "totals": {
-    "cost_usd": 19.9967,
-    "runs": 287,
-    "web_searches": 275
+    "cost_usd": 20.6642,
+    "runs": 291,
+    "web_searches": 287
   },
   "months": {
     "2026-07": {
@@ -818,13 +821,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 0.8421,
-      "runs": 35,
-      "web_searches": 11,
-      "fair_usd": 0.8421
+      "cost_usd": 1.5096,
+      "runs": 39,
+      "web_searches": 23,
+      "fair_usd": 1.5096
     }
   },
-  "updated_ts": 1794058081931,
+  "updated_ts": 1794098582028,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
@@ -835,9 +838,9 @@
   },
   "agents_state": {
     "news": {
-      "стан": "стоїть",
-      "причина": "у кабінеті ≥10 чернеток — вичитай або видали, тоді агент продовжить",
-      "ts": 1794084823064
+      "стан": "працює",
+      "причина": "",
+      "ts": 1794098238818
     }
   }
 }
