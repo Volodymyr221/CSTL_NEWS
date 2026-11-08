@@ -1,6 +1,71 @@
 {
   "runs": [
     {
+      "ts": 1794145642121,
+      "mission": "holiday:⛪ День Святого Миколая Чудот",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 675,
+      "cache_read": 0,
+      "cache_write": 1222,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0098,
+      "note": ""
+    },
+    {
+      "ts": 1794145627435,
+      "mission": "holiday:🌾 День Андрія Первозванного ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 506,
+      "cache_read": 0,
+      "cache_write": 1132,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0079,
+      "note": ""
+    },
+    {
+      "ts": 1794145614996,
+      "mission": "holiday:🇺🇦 День Гідності та Свободи",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 423,
+      "cache_read": 0,
+      "cache_write": 1139,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0071,
+      "note": ""
+    },
+    {
+      "ts": 1794145605528,
+      "mission": "holiday:⛪ Введення в храм Пресвятої ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 500,
+      "cache_read": 0,
+      "cache_write": 1122,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1794145593773,
+      "mission": "holiday:⛪ Собор Архангела Михаїла",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 434,
+      "cache_read": 0,
+      "cache_write": 1155,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0072,
+      "note": ""
+    },
+    {
       "ts": 1794098582028,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -724,77 +789,11 @@
       "cost_usd": 0.1974,
       "note": "",
       "effort": "medium"
-    },
-    {
-      "ts": 1793308132262,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 6,
-      "output_tokens": 2327,
-      "cache_read": 35061,
-      "cache_write": 30184,
-      "web_searches": 3,
-      "found": 2,
-      "cost_usd": 0.1358,
-      "note": "",
-      "effort": "medium"
-    },
-    {
-      "ts": 1793280836563,
-      "mission": "holiday:🇺🇦 День Гідності та Свободи",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 584,
-      "cache_read": 0,
-      "cache_write": 1139,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0087,
-      "note": ""
-    },
-    {
-      "ts": 1793280823794,
-      "mission": "holiday:⛪ Введення в храм Пресвятої ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 469,
-      "cache_read": 0,
-      "cache_write": 1122,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0075,
-      "note": ""
-    },
-    {
-      "ts": 1793280812147,
-      "mission": "holiday:⛪ Собор Архангела Михаїла",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 487,
-      "cache_read": 0,
-      "cache_write": 1155,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0078,
-      "note": ""
-    },
-    {
-      "ts": 1793195884813,
-      "mission": "olyka:event:запрошуємо-з-30-жовтня",
-      "model": "claude-opus-5",
-      "input_tokens": 6129,
-      "output_tokens": 546,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0443,
-      "note": "Подія в громаді: Запрошуємо з 30 жовтня взяти участь у тестуванні з фінансової г"
     }
   ],
   "totals": {
-    "cost_usd": 20.6642,
-    "runs": 291,
+    "cost_usd": 20.704,
+    "runs": 296,
     "web_searches": 287
   },
   "months": {
@@ -821,13 +820,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 1.5096,
-      "runs": 39,
+      "cost_usd": 1.5494,
+      "runs": 44,
       "web_searches": 23,
-      "fair_usd": 1.5096
+      "fair_usd": 1.5494
     }
   },
-  "updated_ts": 1794098582028,
+  "updated_ts": 1794145642121,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
@@ -841,6 +840,11 @@
       "стан": "стоїть",
       "причина": "у кабінеті ≥10 чернеток — вичитай або видали, тоді агент продовжить",
       "ts": 1794122549873
+    },
+    "holiday": {
+      "стан": "працює",
+      "причина": "остання чернетка: ⛪ День Святого Миколая Чудотворця",
+      "ts": 1794145644395
     }
   }
 }
