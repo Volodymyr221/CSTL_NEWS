@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "ts": 1794323423705,
+      "mission": "holiday:⛪ День Святого Миколая Чудот",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 505,
+      "cache_read": 0,
+      "cache_write": 1222,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0081,
+      "note": ""
+    },
+    {
+      "ts": 1794323413383,
+      "mission": "holiday:🌾 День Андрія Первозванного ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 460,
+      "cache_read": 0,
+      "cache_write": 1132,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0074,
+      "note": ""
+    },
+    {
+      "ts": 1794323402219,
+      "mission": "holiday:🇺🇦 День Гідності та Свободи",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 491,
+      "cache_read": 0,
+      "cache_write": 1139,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1794323391249,
+      "mission": "holiday:⛪ Введення в храм Пресвятої ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 437,
+      "cache_read": 0,
+      "cache_write": 1122,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0072,
+      "note": ""
+    },
+    {
       "ts": 1794245082361,
       "mission": "olyka:event:молодь-яка-тримає-державу",
       "model": "claude-opus-5",
@@ -734,64 +786,11 @@
       "found": 0,
       "cost_usd": 0.0224,
       "note": ""
-    },
-    {
-      "ts": 1793449990016,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 6,
-      "output_tokens": 2468,
-      "cache_read": 36216,
-      "cache_write": 28625,
-      "web_searches": 3,
-      "found": 3,
-      "cost_usd": 0.1335,
-      "note": "",
-      "effort": "medium"
-    },
-    {
-      "ts": 1793369008697,
-      "mission": "olyka:event:кіберліга-захисників-ветеранів-та",
-      "model": "claude-opus-5",
-      "input_tokens": 6141,
-      "output_tokens": 525,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0438,
-      "note": "Подія в громаді: «Кіберліга Захисників»: ветеранів та ветеранок Олицької громади"
-    },
-    {
-      "ts": 1793366671455,
-      "mission": "holiday:🌾 День Андрія Первозванного ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 500,
-      "cache_read": 0,
-      "cache_write": 1132,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0078,
-      "note": ""
-    },
-    {
-      "ts": 1793366658739,
-      "mission": "holiday:🇺🇦 День Гідності та Свободи",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 442,
-      "cache_read": 0,
-      "cache_write": 1139,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0073,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 20.7748,
-    "runs": 301,
+    "cost_usd": 20.8053,
+    "runs": 305,
     "web_searches": 287
   },
   "months": {
@@ -818,13 +817,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 1.6202,
-      "runs": 49,
+      "cost_usd": 1.6507,
+      "runs": 53,
       "web_searches": 23,
-      "fair_usd": 1.6202
+      "fair_usd": 1.6507
     }
   },
-  "updated_ts": 1794245082361,
+  "updated_ts": 1794323423705,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
