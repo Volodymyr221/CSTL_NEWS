@@ -1,6 +1,33 @@
 {
   "runs": [
     {
+      "ts": 1794410117546,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10577,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0213,
+      "note": ""
+    },
+    {
+      "ts": 1794410115710,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 5875,
+      "cache_read": 66190,
+      "cache_write": 37116,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2048,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1794409555591,
       "mission": "olyka:event:жителів-громади-запрошують-до",
       "model": "claude-opus-5",
@@ -759,39 +786,12 @@
       "found": 1,
       "cost_usd": 0.0078,
       "note": ""
-    },
-    {
-      "ts": 1793482616121,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10754,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0216,
-      "note": ""
-    },
-    {
-      "ts": 1793482614172,
-      "mission": "Громада №1",
-      "model": "claude-sonnet-5",
-      "input_tokens": 4,
-      "output_tokens": 1480,
-      "cache_read": 12079,
-      "cache_write": 23705,
-      "web_searches": 2,
-      "found": 1,
-      "cost_usd": 0.0965,
-      "note": "",
-      "effort": "medium"
     }
   ],
   "totals": {
-    "cost_usd": 20.8804,
-    "runs": 310,
-    "web_searches": 287
+    "cost_usd": 21.1065,
+    "runs": 312,
+    "web_searches": 291
   },
   "months": {
     "2026-07": {
@@ -817,13 +817,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 1.7258,
-      "runs": 58,
-      "web_searches": 23,
-      "fair_usd": 1.7258
+      "cost_usd": 1.9519,
+      "runs": 60,
+      "web_searches": 27,
+      "fair_usd": 1.9519
     }
   },
-  "updated_ts": 1794409555591,
+  "updated_ts": 1794410117546,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
@@ -834,9 +834,9 @@
   },
   "agents_state": {
     "news": {
-      "стан": "стоїть",
-      "причина": "у кабінеті ≥10 чернеток — вичитай або видали, тоді агент продовжить",
-      "ts": 1794122549873
+      "стан": "працює",
+      "причина": "",
+      "ts": 1794410020168
     },
     "holiday": {
       "стан": "працює",
