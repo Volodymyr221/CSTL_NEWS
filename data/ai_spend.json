@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "ts": 1794497537226,
+      "mission": "holiday:⛪ День Святого Миколая Чудот",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 520,
+      "cache_read": 0,
+      "cache_write": 1222,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0083,
+      "note": ""
+    },
+    {
+      "ts": 1794497525330,
+      "mission": "holiday:🌾 День Андрія Первозванного ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 529,
+      "cache_read": 0,
+      "cache_write": 1132,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0081,
+      "note": ""
+    },
+    {
+      "ts": 1794497511711,
+      "mission": "holiday:🇺🇦 День Гідності та Свободи",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 538,
+      "cache_read": 0,
+      "cache_write": 1139,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
+      "ts": 1794497500568,
+      "mission": "holiday:⛪ Введення в храм Пресвятої ",
+      "model": "claude-sonnet-5",
+      "input_tokens": 2,
+      "output_tokens": 425,
+      "cache_read": 0,
+      "cache_write": 1122,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0071,
+      "note": ""
+    },
+    {
       "ts": 1794410117546,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -734,63 +786,11 @@
       "found": 1,
       "cost_usd": 0.0071,
       "note": ""
-    },
-    {
-      "ts": 1793540592107,
-      "mission": "holiday:🌾 День Андрія Первозванного ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 481,
-      "cache_read": 0,
-      "cache_write": 1132,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0076,
-      "note": ""
-    },
-    {
-      "ts": 1793540580525,
-      "mission": "holiday:🇺🇦 День Гідності та Свободи",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 561,
-      "cache_read": 0,
-      "cache_write": 1139,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0085,
-      "note": ""
-    },
-    {
-      "ts": 1793540568374,
-      "mission": "holiday:⛪ Введення в храм Пресвятої ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 471,
-      "cache_read": 0,
-      "cache_write": 1122,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0075,
-      "note": ""
-    },
-    {
-      "ts": 1793540557349,
-      "mission": "holiday:⛪ Собор Архангела Михаїла",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 487,
-      "cache_read": 0,
-      "cache_write": 1155,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0078,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 21.1065,
-    "runs": 312,
+    "cost_usd": 21.1382,
+    "runs": 316,
     "web_searches": 291
   },
   "months": {
@@ -817,13 +817,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 1.9519,
-      "runs": 60,
+      "cost_usd": 1.9836,
+      "runs": 64,
       "web_searches": 27,
-      "fair_usd": 1.9519
+      "fair_usd": 1.9836
     }
   },
-  "updated_ts": 1794410117546,
+  "updated_ts": 1794497537226,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
