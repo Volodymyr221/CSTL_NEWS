@@ -1,6 +1,75 @@
 {
   "runs": [
     {
+      "ts": 1794695484651,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 11214,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0225,
+      "note": ""
+    },
+    {
+      "ts": 1794695483766,
+      "mission": "Громада №3 (повтор)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 3738,
+      "cache_read": 34953,
+      "cache_write": 35025,
+      "web_searches": 4,
+      "found": 0,
+      "cost_usd": 0.1719,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1794695424124,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 5800,
+      "cache_read": 35950,
+      "cache_write": 34243,
+      "web_searches": 4,
+      "found": 0,
+      "cost_usd": 0.1908,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1794695329237,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 5164,
+      "cache_read": 36859,
+      "cache_write": 37623,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.1931,
+      "note": "",
+      "effort": "medium"
+    },
+    {
+      "ts": 1794695245503,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 7286,
+      "cache_read": 33508,
+      "cache_write": 32424,
+      "web_searches": 4,
+      "found": 2,
+      "cost_usd": 0.2006,
+      "note": "",
+      "effort": "medium"
+    },
+    {
       "ts": 1794663918843,
       "mission": "holiday:⛪ День Святого Миколая Чудот",
       "model": "claude-sonnet-5",
@@ -718,77 +787,12 @@
       "found": 1,
       "cost_usd": 0.0083,
       "note": ""
-    },
-    {
-      "ts": 1793803692216,
-      "mission": "holiday:⛪ Собор Архангела Михаїла",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 420,
-      "cache_read": 0,
-      "cache_write": 1155,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0071,
-      "note": ""
-    },
-    {
-      "ts": 1793716470151,
-      "mission": "holiday:🌾 День Андрія Первозванного ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 462,
-      "cache_read": 0,
-      "cache_write": 1132,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0075,
-      "note": ""
-    },
-    {
-      "ts": 1793716458821,
-      "mission": "holiday:🇺🇦 День Гідності та Свободи",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 498,
-      "cache_read": 0,
-      "cache_write": 1139,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0078,
-      "note": ""
-    },
-    {
-      "ts": 1793716447356,
-      "mission": "holiday:⛪ Введення в храм Пресвятої ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 523,
-      "cache_read": 0,
-      "cache_write": 1122,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.008,
-      "note": ""
-    },
-    {
-      "ts": 1793716434925,
-      "mission": "holiday:⛪ Собор Архангела Михаїла",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 466,
-      "cache_read": 0,
-      "cache_write": 1155,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0076,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 21.201,
-    "runs": 324,
-    "web_searches": 291
+    "cost_usd": 21.9799,
+    "runs": 329,
+    "web_searches": 307
   },
   "months": {
     "2026-07": {
@@ -814,13 +818,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 2.0464,
-      "runs": 72,
-      "web_searches": 27,
-      "fair_usd": 2.0464
+      "cost_usd": 2.8253,
+      "runs": 77,
+      "web_searches": 43,
+      "fair_usd": 2.8253
     }
   },
-  "updated_ts": 1794663918843,
+  "updated_ts": 1794695484651,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
@@ -831,9 +835,9 @@
   },
   "agents_state": {
     "news": {
-      "стан": "стоїть",
-      "причина": "у кабінеті ≥10 чернеток — вичитай або видали, тоді агент продовжить",
-      "ts": 1794434419504
+      "стан": "працює",
+      "причина": "",
+      "ts": 1794695127426
     },
     "holiday": {
       "стан": "працює",
