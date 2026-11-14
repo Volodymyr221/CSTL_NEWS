@@ -30,6 +30,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT))
 
 import ai_news_agent as ag  # noqa: E402
+# 🔴 14.11 — ЖУРНАЛ ВИТРАТ У ТИМЧАСОВИЙ ФАЙЛ. З 07.11 агент пише свій стан
+# (`agents_state`) у `data/ai_spend.json`, і цей стенд, проганяючи агента, мовчки
+# переписував БОЙОВИЙ журнал (спіймано `git diff` після локального прогону).
+# Стенд не сміє торкатися даних, які показує адмінка.
+_тимч_журнал = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+_тимч_журнал.write(b'{"runs": [], "totals": {}, "months": {}}'); _тимч_журнал.close()
+ag.SPEND_PATH = Path(_тимч_журнал.name)
 
 ok_count = fail_count = 0
 

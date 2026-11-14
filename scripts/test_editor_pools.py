@@ -29,6 +29,12 @@ sys.path.insert(0, str(ROOT))
 from editor.core.config import load_mission          # noqa: E402
 from editor.core.registry import load_plugins, get   # noqa: E402
 from editor.sources import plan as plan_src          # noqa: E402
+# 🔴 14.11 — журнал витрат на весь прогін — у тимчасовий файл: з 07.11 `editor.run`
+# пише стан агента (`agents_state`), і стенд переписував бойовий `data/ai_spend.json`.
+from editor.core import spend as _spend_guard          # noqa: E402
+_тимч_журнал_весь = tempfile.NamedTemporaryFile(suffix=".json", delete=False); _тимч_журнал_весь.close()
+Path(_тимч_журнал_весь.name).write_text('{"runs": [], "totals": {}, "months": {}}', encoding="utf-8")
+_spend_guard.SPEND_PATH = Path(_тимч_журнал_весь.name)
 
 ok_count = fail_count = 0
 
