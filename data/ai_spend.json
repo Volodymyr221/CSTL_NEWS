@@ -1,6 +1,21 @@
 {
   "runs": [
     {
+      "ts": 1795208788655,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.3,
+      "note": "мережевий збій — можливе списання server-side",
+      "effort": "medium",
+      "suspect_usd": 0.3
+    },
+    {
       "ts": 1795017348714,
       "mission": "holiday:⛪ День Святого Миколая Чудот",
       "model": "claude-sonnet-5",
@@ -773,24 +788,11 @@
       "found": 1,
       "cost_usd": 0.0072,
       "note": ""
-    },
-    {
-      "ts": 1794098582028,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10976,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0221,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 22.497,
-    "runs": 350,
+    "cost_usd": 22.797,
+    "runs": 351,
     "web_searches": 314
   },
   "months": {
@@ -817,13 +819,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 3.3424,
-      "runs": 98,
+      "cost_usd": 3.6424,
+      "runs": 99,
       "web_searches": 50,
       "fair_usd": 3.3424
     }
   },
-  "updated_ts": 1795017348714,
+  "updated_ts": 1795208788655,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
@@ -834,9 +836,9 @@
   },
   "agents_state": {
     "news": {
-      "стан": "стоїть",
-      "причина": "у кабінеті ≥10 чернеток — вичитай або видали, тоді агент продовжить",
-      "ts": 1795039082557
+      "стан": "працює",
+      "причина": "",
+      "ts": 1795208786958
     },
     "holiday": {
       "стан": "працює",
