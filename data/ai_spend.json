@@ -1,6 +1,21 @@
 {
   "runs": [
     {
+      "ts": 1795437931128,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.3,
+      "note": "мережевий збій — можливе списання server-side",
+      "effort": "medium",
+      "suspect_usd": 0.3
+    },
+    {
       "ts": 1795401981978,
       "mission": "Громада №1",
       "model": "claude-sonnet-5",
@@ -791,24 +806,11 @@
       "found": 1,
       "cost_usd": 0.0384,
       "note": "Подія в громаді: «Молодь, яка тримає державу»: триває набір команд до міжрегіона"
-    },
-    {
-      "ts": 1794242821131,
-      "mission": "holiday:⛪ День Святого Миколая Чудот",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 542,
-      "cache_read": 0,
-      "cache_write": 1222,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0085,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 25.197,
-    "runs": 359,
+    "cost_usd": 25.497,
+    "runs": 360,
     "web_searches": 314
   },
   "months": {
@@ -835,13 +837,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 6.0424,
-      "runs": 107,
+      "cost_usd": 6.3424,
+      "runs": 108,
       "web_searches": 50,
-      "fair_usd": 5.7424
+      "fair_usd": 6.0424
     }
   },
-  "updated_ts": 1795401981978,
+  "updated_ts": 1795437931128,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
