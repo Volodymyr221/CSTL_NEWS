@@ -1,6 +1,21 @@
 {
   "runs": [
     {
+      "ts": 1795580147395,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.3,
+      "note": "мережевий збій — можливе списання server-side",
+      "effort": "medium",
+      "suspect_usd": 0.3
+    },
+    {
       "ts": 1795481552568,
       "mission": "Громада №1",
       "model": "claude-sonnet-5",
@@ -795,24 +810,11 @@
       "found": 1,
       "cost_usd": 0.0078,
       "note": ""
-    },
-    {
-      "ts": 1794323391249,
-      "mission": "holiday:⛪ Введення в храм Пресвятої ",
-      "model": "claude-sonnet-5",
-      "input_tokens": 2,
-      "output_tokens": 437,
-      "cache_read": 0,
-      "cache_write": 1122,
-      "web_searches": 0,
-      "found": 1,
-      "cost_usd": 0.0072,
-      "note": ""
     }
   ],
   "totals": {
-    "cost_usd": 25.797,
-    "runs": 361,
+    "cost_usd": 26.097,
+    "runs": 362,
     "web_searches": 314
   },
   "months": {
@@ -839,13 +841,13 @@
       "fair_usd": 6.2746
     },
     "2026-11": {
-      "cost_usd": 6.6424,
-      "runs": 109,
+      "cost_usd": 6.9424,
+      "runs": 110,
       "web_searches": 50,
-      "fair_usd": 6.3424
+      "fair_usd": 6.6424
     }
   },
-  "updated_ts": 1795481552568,
+  "updated_ts": 1795580147395,
   "agent_status": {
     "стан": "пауза",
     "причина": "темп випереджає бюджет — вирівнюється, щоб вистачило до кінця місяця",
