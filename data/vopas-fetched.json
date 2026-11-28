@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-11-28T02:19:09.429327+03:00",
+  "fetched_at": "2026-11-28T07:53:58.918424+03:00",
   "date": "28.11.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -27,8 +27,8 @@
       "carrier": "під.Поліщук М.С-",
       "bus": "ПАЗ-4234",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -267,9 +267,9 @@
       "carrier": "САНРАЙЗ Л.Т.Д.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -387,9 +387,9 @@
       "carrier": "Львів АТП 14631",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
